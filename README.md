@@ -1,69 +1,113 @@
-# White Noise Android Store Screenshot Prototype
+# White Noise Android Prototype
 
-A standalone, deterministic Jetpack Compose harness for five White Noise store
-screenshots. It contains no backend, networking, persistence, authentication,
-or Marmot bindings.
+This repository is the staged Android-native port of the White Noise iOS
+prototype. The previous Android workspace was removed and the new application
+was bootstrapped from a clean Kotlin/Compose foundation.
 
-The screenshots use Android Material 3 structure with the product's
-black-and-white visual direction:
-`Scaffold`, top app bars, tonal cards, `ListItem` rows, badges, a modal bottom
-sheet, a chat FAB, monochrome message colors, and neutral tonal surfaces.
-The iOS prototype supplies content hierarchy, fixtures, and imagery only.
+## Direction
 
-## Scenes
+- Preserve the iOS prototype's product features, copy, deterministic behavior,
+  fixtures, and important states.
+- Re-express them with Kotlin, Jetpack Compose, Material 3, AndroidX, public
+  Android APIs, and Android navigation and system surfaces.
+- Keep the White Noise visual identity monochrome—black, white, and neutral
+  gray—without carrying over Apple-specific control geometry or interaction.
+- Implement the port in the ordered batches in `docs/port/batches.md`, then
+  inspect and polish one screen or small flow at a time with the user.
 
-- `whitenoise-screenshots://scene/relays`
-- `whitenoise-screenshots://scene/profile-switcher`
-- `whitenoise-screenshots://scene/chats`
-- `whitenoise-screenshots://scene/conversation`
-- `whitenoise-screenshots://scene/share-connect`
+## Current Android baseline
 
-Launching the app normally opens a development-only scene picker. Deep links
-open the selected store scene directly.
+- Application ID: `dev.ipf.whitenoise.android.prototype`
+- Namespace: `dev.ipf.whitenoise`
+- Minimum SDK: 23
+- Compile and target SDK: 37
+- Android Gradle Plugin: 9.3.1
+- Gradle: 9.7.0
+- Kotlin: 2.4.10 using AGP built-in Kotlin support
+- Compose BOM: 2026.08.00
+- Google Code Scanner: 16.1.0, with transitive network permissions removed
+- AndroidX ExifInterface: 1.4.2
+- ZXing core: 3.5.4 for local QR encoding
+- One `app` module and one launcher activity
 
-## Build
+The runtime is intentionally offline and deterministic. It declares no
+network, storage, camera, microphone, notification, or location permission.
+
+Implementation status: Batches 0–9 are complete at the static verification
+gate. The app includes the complete accepted onboarding, profile, Chats,
+creation, conversation, composer, media, speech simulation, interaction,
+search, information, membership, relay, Settings, support, developer, and
+destructive-flow surface. Batch 9 adds relay consequence hardening, private-key
+export safety, notification dependencies, adaptive/RTL/large-font coverage,
+resource integrity, and native adaptive/monochrome launcher assets.
+
+The final clean gate passed on 2026-08-15 with 89 unit tests, 39 compiled
+Compose instrumentation tests, zero lint issues, and both APKs. Device and
+visual acceptance are reserved for the later screen-by-screen polish pass.
+
+## Repository map
+
+- `AGENTS.md` — project authority, platform boundaries, workflow, and
+  completion rules.
+- `.agents/skills/white-noise-android-prototype/` — repository-local skill for
+  Android implementation and review work.
+- `docs/decisions.md` — durable Android project decisions.
+- `docs/handoff.md` — final architecture, system boundaries, known device
+  backlog, and the ordered visual-polish sequence.
+- `docs/product-language.md` and `docs/terminology.md` — product voice and
+  canonical terms.
+- `docs/port/` — feature inventory, parity process, and source-to-destination
+  map, including the autonomous batch sequence.
+- `docs/references/` — Android platform router, native-UI evaluation method,
+  iOS snapshot provenance, and resource guidance.
+- `docs/screens/` — Android screen briefs created only when a screen is
+  selected.
+- `reference/wn-ios-prototype-snapshot/` — read-only local snapshot of the
+  iOS product docs, source, tests, and reusable resources.
+
+## Source snapshot
+
+The reference snapshot was captured from the sibling iOS working tree on
+2026-08-15 at commit `58785a4724f33e23135c4dd3f98f231fca6a809d`.
+It intentionally includes the current uncommitted edits listed in
+`docs/references/ios-prototype.md` because those files represented the newest
+available product behavior at capture time.
+
+The snapshot is evidence, not an Android dependency. Production source must
+not reference it at runtime or build time.
+
+## Build and verification
+
+Run from the repository root:
 
 ```bash
-./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+./gradlew assembleDebug
+./gradlew lintDebug
+./gradlew testDebugUnitTest
+./gradlew assembleDebugAndroidTest
 ```
 
-## Pixel 10 Pro XL capture
-
-Create the API 36 ARM64 emulator once:
+The complete static batch gate, including a clean rebuild, is:
 
 ```bash
-./scripts/setup-pixel-10-pro-xl-avd.sh
+./gradlew clean testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
 ```
 
-Launch `WhiteNoise_Pixel_10_Pro_XL_API_36`, wait for it to finish booting, then:
+Run device tests only when an emulator or physical-device inspection has been
+explicitly requested:
 
 ```bash
-./scripts/capture-store-screens.sh
+./gradlew connectedDebugAndroidTest
 ```
 
-The capture script installs the debug app, locks the device to light portrait
-mode and font scale 1.0, enables a deterministic System UI demo state, and
-writes 1344×2992 PNGs to `screenshots/raw/`.
+The debug APK is generated at
+`app/build/outputs/apk/debug/app-debug.apk`. The instrumentation-test APK is
+generated at
+`app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`.
 
-To keep the running emulator clock fixed at 18:15 during manual review:
+## Continuing with visual polish
 
-```bash
-./scripts/lock-emulator-clock.sh
-```
-
-The clock lock uses Android System UI demo mode and should be reapplied after
-rebooting the emulator. The capture script reapplies it automatically when it
-finishes.
-
-## Visual sources and assets
-
-- Deterministic copy, fixture ordering, and local imagery:
-  `/Users/vladimirkrstic/Workspaces/wn-ios-prototype`
-- Material 3 component patterns, Manrope fonts,
-  spacing/radius tokens, and launcher assets:
-  `/Users/vladimirkrstic/Workspaces/wn-android`
-
-All portraits and conversation media are copied locally from the iOS
-prototype’s asset catalog. Their public-marketing provenance and rights
-assumptions are documented in that prototype’s screen briefs. The source
-projects are not modified by this harness.
+Use the ordered screen list and device checklist in `docs/handoff.md`. Select
+one screen or bounded flow, compare it on the agreed Android reference device,
+polish its hierarchy and interaction without regressing model parity, rerun the
+static gate, and record visual evidence before marking it accepted.

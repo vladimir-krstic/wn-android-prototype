@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288"
+    tools:ignore="VectorRaster">
+    <!-- 598 × 460 at 0.25 = 149.5 × 115 dp, centered to match Welcome exactly. -->
+    <group
+        android:scaleX="0.25"
+        android:scaleY="0.25"
+        android:translateX="69.25"
+        android:translateY="86.5">
+        <path
+            android:fillColor="@color/wn_mark"
+            android:pathData="M0,460V0H154V140.901L222,0H376V140.901L444,0H598V460H444V319.099L376,460H222V319.099L154,460H0ZM130,24H24V410.27L130,190.631V24ZM468,436H574V49.73L468,269.369V436ZM360.934,436L559.769,24H459.066L260.231,436H360.934ZM337.769,24H237.066L38.231,436H138.934L337.769,24ZM352,49.73L246,269.369V410.27L352,190.631V49.73Z" />
+    </group>
+</vector>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "White Noise Android Prototype"
+  short_description: "Build native Android White Noise UI"
+  default_prompt: "Use $white-noise-android-prototype to build or review one agreed native Android screen using local parity guidance and current official Android sources."

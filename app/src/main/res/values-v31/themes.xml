@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.WhiteNoise.Splash" parent="Theme.WhiteNoise">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_white_noise_splash</item>
+        <item name="android:windowSplashScreenBackground">@color/wn_background</item>
+    </style>
+</resources>

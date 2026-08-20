@@ -14,6 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WhiteNoiseStoreScreenshots"
+rootProject.name = "WhiteNoiseAndroidPrototype"
 include(":app")
-

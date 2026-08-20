@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.WhiteNoiseScreenshots" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:fontFamily">@font/manrope_medium</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/white</item>
-        <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:windowActionModeOverlay">true</item>
+    <style name="Theme.WhiteNoise" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:colorAccent">@android:color/black</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">@color/wn_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
-</resources>
 
+    <style name="Theme.WhiteNoise.Splash" parent="Theme.WhiteNoise" />
+</resources>

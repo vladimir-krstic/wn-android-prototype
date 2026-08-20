@@ -1,7 +1,24 @@
-.gradle/
+# Android Studio and local SDK state
 .idea/
-.kotlin/
-local.properties
-**/build/
 *.iml
+local.properties
+.kotlin/
+
+# Gradle output and caches
+.gradle/
+**/build/
+build/
+
+# Native build output
+.cxx/
+**/.cxx/
+*.apk
+*.aab
+
+# Device and visual-inspection output
+captures/
+screenshots/
+
+# Operating-system files
 .DS_Store
+Thumbs.db

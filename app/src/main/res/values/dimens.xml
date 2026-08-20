@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the visible path bounds inside the centered 288 dp Android splash canvas. -->
+    <dimen name="wn_launch_mark_width">149.5dp</dimen>
+    <dimen name="wn_launch_mark_height">115dp</dimen>
+</resources>
