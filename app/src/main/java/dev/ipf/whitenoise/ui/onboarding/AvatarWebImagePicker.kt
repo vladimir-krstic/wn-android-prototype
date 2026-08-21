@@ -1,7 +1,6 @@
 package dev.ipf.whitenoise.ui.onboarding
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -28,12 +28,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -43,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -56,8 +53,9 @@ import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AvatarWebImageCatalog
 import dev.ipf.whitenoise.model.AvatarWebImageChoice
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 import dev.ipf.whitenoise.ui.components.drawableResource
-import dev.ipf.whitenoise.ui.components.whiteNoiseOutlinedTextFieldColors
+import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 private enum class WebImageMode {
@@ -189,34 +187,29 @@ private fun SearchWebImages(
             title = stringResource(R.string.search_privacy),
             detail = stringResource(R.string.search_privacy_detail),
         )
-        OutlinedTextField(
+        WhiteNoiseTextField(
             state = query,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
             label = { Text(stringResource(R.string.search_images)) },
-            labelPosition = TextFieldLabelPosition.Above(),
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_search),
+                    contentDescription = null,
+                )
+            },
             lineLimits = TextFieldLineLimits.SingleLine,
-            colors = whiteNoiseOutlinedTextFieldColors(),
         )
         if (query.text.toString().trim().isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    Text(
-                        text = stringResource(R.string.search_images),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.search_images_empty),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                WhiteNoiseEmptyState(
+                    title = stringResource(R.string.search_images),
+                    detail = stringResource(R.string.search_images_empty),
+                )
             }
         } else {
             LazyVerticalGrid(
@@ -249,19 +242,18 @@ private fun UrlWebImage(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(bottom = 16.dp),
+            .padding(bottom = WhiteNoiseSpacing.CompactScreenMargin),
     ) {
         PrivacyDisclosure(
             title = stringResource(R.string.image_privacy),
             detail = stringResource(R.string.image_privacy_detail),
         )
-        OutlinedTextField(
+        WhiteNoiseTextField(
             state = imageUrl,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
             label = { Text(stringResource(R.string.image_url)) },
-            labelPosition = TextFieldLabelPosition.Above(),
             placeholder = { Text(stringResource(R.string.image_url_prompt)) },
             supportingText = {
                 Text(
@@ -275,9 +267,9 @@ private fun UrlWebImage(
                 )
             },
             isError = imageUrlText.isNotEmpty() && choice == null,
+            errorMessage = stringResource(R.string.image_url_invalid),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             lineLimits = TextFieldLineLimits.SingleLine,
-            colors = whiteNoiseOutlinedTextFieldColors(),
         )
         if (choice != null) {
             Text(
@@ -311,7 +303,7 @@ private fun PrivacyDisclosure(
             vertical = WhiteNoiseSpacing.FormField,
         ),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(
             modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
@@ -356,19 +348,19 @@ private fun WebImageTile(
             contentScale = ContentScale.Crop,
         )
         if (selected) {
-            Box(
+            Surface(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                contentAlignment = Alignment.Center,
+                    .size(32.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
             ) {
-                Text(
-                    text = "✓",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    style = MaterialTheme.typography.labelLarge,
+                Icon(
+                    painter = painterResource(R.drawable.ic_check),
+                    contentDescription = null,
+                    modifier = Modifier.padding(6.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }

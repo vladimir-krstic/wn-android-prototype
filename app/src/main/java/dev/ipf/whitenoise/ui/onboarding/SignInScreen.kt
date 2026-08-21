@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise.ui.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,26 +12,30 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
@@ -47,8 +52,9 @@ import dev.ipf.whitenoise.model.PrivateKeyState
 import dev.ipf.whitenoise.model.PrivateKeyValidator
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseFilledTonalButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
-import dev.ipf.whitenoise.ui.components.whiteNoiseOutlinedTextFieldColors
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSecureTextField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 
@@ -118,29 +124,36 @@ fun SignInScreen(
             )
         },
         bottomBar = {
-            WhiteNoiseButton(
-                onClick = ::beginSignIn,
-                enabled = keyState == PrivateKeyState.Valid && !isSigningIn,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(WhiteNoiseSpacing.PinnedActionInset)
-                    .semantics {
-                        if (isSigningIn) {
-                            contentDescription = signingInDescription
-                            stateDescription = inProgressDescription
-                        }
-                    },
+                    .padding(WhiteNoiseSpacing.PinnedActionInset),
+                contentAlignment = Alignment.Center,
             ) {
-                if (isSigningIn) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.padding(vertical = 2.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text(stringResource(R.string.sign_in))
+                WhiteNoiseButton(
+                    onClick = ::beginSignIn,
+                    enabled = keyState == PrivateKeyState.Valid && !isSigningIn,
+                    modifier = Modifier
+                        .widthIn(max = 520.dp)
+                        .fillMaxWidth()
+                        .semantics {
+                            if (isSigningIn) {
+                                contentDescription = signingInDescription
+                                stateDescription = inProgressDescription
+                            }
+                        },
+                ) {
+                    if (isSigningIn) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(stringResource(R.string.sign_in))
+                    }
                 }
             }
         },
@@ -152,6 +165,8 @@ fun SignInScreen(
         ) {
             Column(
                 modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .widthIn(max = 520.dp)
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(
@@ -160,11 +175,10 @@ fun SignInScreen(
                     ),
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
-                OutlinedSecureTextField(
+                WhiteNoiseSecureTextField(
                     state = privateKey,
                     enabled = !isSigningIn,
                     modifier = Modifier.fillMaxWidth(),
-                    labelPosition = TextFieldLabelPosition.Above(),
                     label = { Text(stringResource(R.string.private_key)) },
                     placeholder = { Text(stringResource(R.string.enter_private_key)) },
                     trailingIcon = {
@@ -199,25 +213,32 @@ fun SignInScreen(
                         )
                     },
                     isError = keyState == PrivateKeyState.Invalid,
+                    errorMessage = stringResource(R.string.private_key_invalid),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Go,
                     ),
-                    colors = whiteNoiseOutlinedTextFieldColors(),
                 )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(
+                    WhiteNoiseFilledTonalButton(
                         onClick = ::beginScan,
                         enabled = !isSigningIn,
                     ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_qr_code),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(
+                            Modifier.width(WhiteNoiseSpacing.Related),
+                        )
                         Text(stringResource(R.string.scan_qr_code))
                     }
                 }
-                Spacer(Modifier.weight(1f))
             }
         }
     }

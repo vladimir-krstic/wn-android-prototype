@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -18,7 +19,11 @@ import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.state.AppUiState
 import dev.ipf.whitenoise.ui.chats.ChatsScreen
 import dev.ipf.whitenoise.ui.conversation.ConversationScreen
+import dev.ipf.whitenoise.ui.chats.GroupSetupScreen
+import dev.ipf.whitenoise.ui.onboarding.SignUpScreen
 import dev.ipf.whitenoise.ui.settings.SupportScreen
+import dev.ipf.whitenoise.ui.settings.SettingsScreen
+import dev.ipf.whitenoise.ui.settings.SignOutSheet
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
 import org.junit.Rule
 import org.junit.Test
@@ -45,6 +50,60 @@ class AdaptiveLayoutTest {
     }
 
     @Test
+    fun settingsRootKeepsProfileAndDestinationHierarchyAtLargeTextAndRtl() {
+        val profile = ProfileFixtures.marmota
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 2f),
+                LocalLayoutDirection provides LayoutDirection.Rtl,
+            ) {
+                WhiteNoiseTheme {
+                    SettingsScreen(
+                        uiState = AppUiState(listOf(profile), profile.id, setOf(profile.id)),
+                        onBack = {},
+                        onSelectProfile = {},
+                        onAddProfile = {},
+                        onShareConnect = {},
+                        onEditProfile = {},
+                        onProfileKeys = {},
+                        onNotifications = {},
+                        onAppearance = {},
+                        onPrivacy = {},
+                        onDataUsage = {},
+                        onRelays = {},
+                        onSupport = {},
+                        onDonate = {},
+                        onManageProfiles = {},
+                        onDeveloperTools = {},
+                        onSignOut = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Settings").assertIsDisplayed()
+        composeRule.onNodeWithText("Share & Connect").assertIsDisplayed()
+        composeRule.onNodeWithText("Profile Keys").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun destructiveSheetKeepsConfirmationAndPrimaryActionAtLargeTextAndRtl() {
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 2f),
+                LocalLayoutDirection provides LayoutDirection.Rtl,
+            ) {
+                WhiteNoiseTheme {
+                    SignOutSheet(ProfileFixtures.marmota, onDismiss = {}, onComplete = {})
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Profile name").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Sign Out").assertIsDisplayed()
+    }
+
+    @Test
     fun chatsSurfaceConstrainsContentAtExpandedWidth() {
         val profile = ProfileFixtures.marmota
         composeRule.setContent {
@@ -52,12 +111,9 @@ class AdaptiveLayoutTest {
                 Box(Modifier.requiredWidth(900.dp)) {
                     ChatsScreen(
                         uiState = AppUiState(listOf(profile), profile.id, setOf(profile.id)),
-                        onSelectProfile = {},
-                        onAddProfile = {},
                         onNewMessage = {},
                         onOpenChat = {},
                         onMarkUnread = { _, _ -> },
-                        onReadAll = {},
                         onTogglePin = {},
                         onMute = { _, _ -> },
                         onArchive = { _, _ -> },
@@ -89,5 +145,48 @@ class AdaptiveLayoutTest {
         }
 
         composeRule.onNodeWithText("Fiatjaf").assertIsDisplayed()
+    }
+
+    @Test
+    fun signUpKeepsProfileFieldsReachableAtLargeTextAndRtl() {
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 2f),
+                LocalLayoutDirection provides LayoutDirection.Rtl,
+            ) {
+                WhiteNoiseTheme {
+                    SignUpScreen(
+                        initialName = "Marmota",
+                        onBack = {},
+                        onSignUp = { _, _, _ -> },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Add Photo").assertIsDisplayed()
+        composeRule.onNodeWithText("About").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun groupSetupKeepsMembersReachableAtLargeTextAndRtl() {
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 2f),
+                LocalLayoutDirection provides LayoutDirection.Rtl,
+            ) {
+                WhiteNoiseTheme {
+                    GroupSetupScreen(
+                        profile = ProfileFixtures.marmota,
+                        selectedPersonIds = listOf("maya-chen"),
+                        onBack = {},
+                        onCreate = { _, _, _ -> true },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Members").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Maya Chen").performScrollTo().assertIsDisplayed()
     }
 }

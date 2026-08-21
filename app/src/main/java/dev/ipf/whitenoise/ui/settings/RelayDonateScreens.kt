@@ -5,19 +5,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,13 +27,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileRelay
-import dev.ipf.whitenoise.model.ProfileSettingsPolicy
 import dev.ipf.whitenoise.model.RelayConnectionStatus
 import dev.ipf.whitenoise.model.RelayRole
 import dev.ipf.whitenoise.model.ProfileRelayFixtures
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 
 @Composable
@@ -57,38 +59,55 @@ fun ProfileRelaysScreen(
             onConnected(relayId)
         }
     }
-    SettingsScaffold(title = "Relays", onBack = onBack) {
+    SettingsScaffold(
+        title = "Relays",
+        onBack = onBack,
+        bottomBar = {
+            SettingsBottomAction {
+                WhiteNoiseButton(
+                    onClick = { addDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Add relay") }
+            }
+        },
+    ) {
         SettingsList {
             item {
                 val recovery = ProfileRelayFixtures.recoverySummary(profile.settings.relays)
                 if (recovery != null) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        Text("Profile relays need attention", color = MaterialTheme.colorScheme.tertiary)
-                        Text(recovery, style = MaterialTheme.typography.bodySmall)
-                    }
+                    SettingsCallout(
+                        title = "Profile relays need attention",
+                        text = recovery,
+                    )
                 } else {
                     SettingsExplainer("Relays let your profile publish information, receive chat invitations, and deliver messages.")
                 }
             }
             item { SettingsSection("Profile relays") }
-            items(profile.settings.relays.size, key = { profile.settings.relays[it].id }) { index ->
-                val relay = profile.settings.relays[index]
-                SettingsLink(
-                    title = relay.name,
-                    subtitle = "${relay.url}${if (relay.isReadOnly) " (Read Only)" else ""} · ${relay.status.label}",
-                    onClick = { onRelay(relay.id) },
-                )
-            }
             item {
-                Button(onClick = { addDialog = true }, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text("Add relay")
+                SettingsGroup {
+                    profile.settings.relays.forEach { relay ->
+                        SettingsLink(
+                            title = relay.name,
+                            subtitle = "${relay.url}${if (relay.isReadOnly) " · Read only" else ""} · ${relay.status.label}",
+                            onClick = { onRelay(relay.id) },
+                        )
+                    }
                 }
-                TextButton(
-                    onClick = { restoreDialog = true },
-                    enabled = profile.settings.relays != ProfileRelayFixtures.defaults,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Restore default relays")
+            }
+            item { SettingsSection("Defaults") }
+            item {
+                SettingsGroup {
+                    SettingsAction(
+                        title = "Restore default relays",
+                        subtitle = if (profile.settings.relays == ProfileRelayFixtures.defaults) {
+                            "The seven default relays are already in use."
+                        } else {
+                            "Replace custom relays and role changes with the seven defaults."
+                        },
+                        enabled = profile.settings.relays != ProfileRelayFixtures.defaults,
+                        onClick = { restoreDialog = true },
+                    )
                 }
             }
         }
@@ -123,40 +142,54 @@ fun ProfileRelayDetailsScreen(
 ) {
     var removeDialog by remember { mutableStateOf(false) }
     SettingsScaffold(title = relay.name, onBack = onBack) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            ListItem(headlineContent = { Text("Name") }, trailingContent = { Text(relay.name) })
-            ListItem(
-                headlineContent = { Text("URL") },
-                supportingContent = { Text(relay.url + if (relay.isReadOnly) " (Read Only)" else "") },
-            )
-            ListItem(
-                headlineContent = { Text("Status") },
-                trailingContent = { Text(relay.status.label) },
-            )
-            HorizontalDivider()
-            SettingsSection("Roles")
-            RelayRole.entries.forEach { role ->
-                SettingsSwitch(
-                    title = role.label,
-                    checked = role in relay.roles,
-                    enabled = !relay.isReadOnly,
-                    onCheckedChange = { onSetRole(role, it) },
-                    subtitle = when (role) {
-                        RelayRole.Profile -> "Publish and discover profile metadata."
-                        RelayRole.Inbox -> "Receive invitations and incoming events."
-                        RelayRole.ChatMessages -> "Use for newly created chats and support."
+        SettingsList {
+            item { SettingsSection("Relay") }
+            item {
+                SettingsGroup {
+                    SettingsValue("Name", relay.name)
+                    SettingsValue("URL", relay.url + if (relay.isReadOnly) " · Read only" else "")
+                    SettingsValue("Status", relay.status.label)
+                }
+            }
+            item { SettingsSection("Roles") }
+            item {
+                SettingsGroup {
+                    RelayRole.entries.forEach { role ->
+                        SettingsSwitch(
+                            title = role.label,
+                            checked = role in relay.roles,
+                            enabled = !relay.isReadOnly,
+                            onCheckedChange = { onSetRole(role, it) },
+                            subtitle = when (role) {
+                                RelayRole.Profile -> "Publish and discover profile metadata."
+                                RelayRole.Inbox -> "Receive invitations and incoming events."
+                                RelayRole.ChatMessages -> "Use for newly created chats and support."
+                            },
+                        )
+                    }
+                }
+            }
+            item {
+                SettingsExplainer(
+                    if (relay.isReadOnly) {
+                        "This relay is read only, so this profile can’t use it to send data."
+                    } else {
+                        "Role changes are immediate. A disconnected relay cannot make new chats available."
                     },
                 )
             }
-            SettingsExplainer(
-                if (relay.isReadOnly) "This relay is read only, so this profile can’t use it to send data."
-                else "Role changes are immediate. A disconnected relay cannot make new chats available.",
-            )
             if (!relay.isReadOnly) {
-                OutlinedButton(
-                    onClick = { removeDialog = true },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                ) { Text("Remove Relay", color = MaterialTheme.colorScheme.error) }
+                item { SettingsSection("Relay access") }
+                item {
+                    SettingsGroup {
+                        SettingsAction(
+                            title = "Remove Relay",
+                            subtitle = "Stop using this relay for the active profile.",
+                            onClick = { removeDialog = true },
+                            destructive = true,
+                        )
+                    }
+                }
             }
         }
     }
@@ -178,15 +211,30 @@ fun ProfileRelayDetailsScreen(
 
 @Composable
 private fun RelayInputDialog(onDismiss: () -> Unit, onAdd: (String, Set<RelayRole>) -> Unit) {
-    var value by rememberSaveable { mutableStateOf("wss://") }
+    val value = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState(initialText = "wss://") }
     var roles by remember { mutableStateOf(RelayRole.entries.toSet()) }
     var submitted by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add relay") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value, { value = it }, label = { Text("Secure relay URL") }, singleLine = true)
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            ) {
+                WhiteNoiseTextField(
+                    state = value,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Secure relay URL") },
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    isError = submitted,
+                    errorMessage = "Enter a unique wss:// relay URL.",
+                    supportingText = if (submitted) {
+                        { Text("Enter a unique wss:// relay URL.") }
+                    } else {
+                        null
+                    },
+                )
                 RelayRole.entries.forEach { role ->
                     SettingsSwitch(
                         title = role.label,
@@ -196,12 +244,11 @@ private fun RelayInputDialog(onDismiss: () -> Unit, onAdd: (String, Set<RelayRol
                         },
                     )
                 }
-                if (submitted) Text("Enter a unique wss:// relay URL.", color = MaterialTheme.colorScheme.error)
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { submitted = true; onAdd(value, roles) },
+                onClick = { submitted = true; onAdd(value.text.toString(), roles) },
                 enabled = roles.isNotEmpty(),
             ) { Text("Add") }
         },
@@ -223,13 +270,33 @@ fun DonateScreen(onBack: () -> Unit) {
         DonationMethod.Lightning -> "lnurl1dp68gurn8ghj7mrww4exctnrdakj7mrww4exctn0d3sk6urvv5hxxmmd9ashq6f0wcc"
         DonationMethod.Bitcoin -> "bc1q2z9k7x5m3v8c4n6p1s7h9d2f5j8a3e6u4w7r9t"
     }
-    SettingsScaffold(title = "Donate", onBack = onBack) {
+    SettingsScaffold(
+        title = "Donate",
+        onBack = onBack,
+        bottomBar = {
+            SettingsBottomAction {
+                WhiteNoiseButton(
+                    onClick = { copyToClipboard(context, "${method.label} donation address", value) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Copy ${method.label} address") }
+            }
+        },
+    ) {
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                    vertical = WhiteNoiseSpacing.Section,
+                ),
+            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
         ) {
             Text("Support White Noise", style = MaterialTheme.typography.headlineSmall)
-            Text("White Noise is free and open source. Donations help us improve it and keep it available to everyone.")
+            Text(
+                "White Noise is free and open source. Donations help us improve it and keep it available to everyone.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             PrimaryTabRow(selectedTabIndex = selected) {
                 DonationMethod.entries.forEachIndexed { index, candidate ->
                     Tab(
@@ -239,19 +306,38 @@ fun DonateScreen(onBack: () -> Unit) {
                     )
                 }
             }
-            ProfileCode(value, Modifier.fillMaxWidth().padding(24.dp))
-            Text(
-                when (method) {
-                    DonationMethod.Lightning -> "Lightning Address"
-                    DonationMethod.Bitcoin -> "Bitcoin Silent Payment"
-                },
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Text(value, style = MaterialTheme.typography.bodySmall)
-            Button(
-                onClick = { copyToClipboard(context, "${method.label} donation address", value) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Copy ${method.label} address") }
+            Surface(
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.CenterHorizontally)
+                    .widthIn(max = 280.dp)
+                    .fillMaxWidth(),
+                color = Color.White,
+                shape = MaterialTheme.shapes.extraLarge,
+            ) {
+                ProfileCode(
+                    value = value,
+                    modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
+                    contentDescription = "${method.label} donation QR code",
+                )
+            }
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Column(
+                    modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    Text(
+                        when (method) {
+                            DonationMethod.Lightning -> "Lightning Address"
+                            DonationMethod.Bitcoin -> "Bitcoin Silent Payment"
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Text(value, style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }

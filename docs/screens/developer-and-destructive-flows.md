@@ -1,6 +1,7 @@
 # Developer and destructive flows
 
-Status: Implemented; static verification complete on 2026-08-15
+Status: Implemented and visually refreshed; static verification complete on
+2026-08-21; device visual acceptance pending
 
 ## Purpose
 
@@ -69,13 +70,21 @@ continue.**
 
 ## Android composition
 
-Material settings lists, `ListItem`, `Switch`, typed Navigation Compose routes,
-scrollable Surface console, ordinary/outlined buttons, and `AlertDialog` own
-the developer hierarchy. Full-height `ModalBottomSheet` surfaces contain the
-multi-field Sign Out and Erase confirmation tasks. A focused `AlertDialog`
-owns the smaller Remove Profile and Clear Audit Logs confirmations. Destructive
-buttons use the semantic error color and remain in the task body rather than
-an app-bar action.
+Material settings lists, tonal groups, `ListItem`, merged `Switch` rows, typed
+Navigation Compose routes, one scrollable Surface console, responsive outlined
+actions, and `AlertDialog` own the developer hierarchy. A compact Live pill
+communicates status with text and semantics; technical identifiers use
+monospaced supporting text and explicit copy rows. Key publication is the one
+pinned task on its destination.
+
+Full-height `ModalBottomSheet` surfaces contain the multi-field Sign Out and
+Erase confirmation tasks. They use a standard close action, scrollable task
+body, label-above tonal fields with content-line alignment and explicit
+focus/error rings, and one pinned semantic-error action;
+dismissal stays disabled during progress. A focused `AlertDialog` owns the
+smaller Remove Profile and Clear Audit Logs confirmations. The generated erase
+phrase is selectable, and Manage Profiles groups only inactive identities
+without adding an action to the active profile.
 
 ## Behavior and state
 
@@ -100,13 +109,18 @@ destructive buttons expose native roles/state. Confirmation fields have visible
 labels and ordinary IME behavior. Progress labels state the active consequence.
 Developer values use text labels in addition to semantic status colors. Sheets
 consume safe-drawing insets; settings lists and consoles scroll at larger font
-and display scales. Final device-level TalkBack, keyboard, RTL, and predictive
-Back inspection remains Batch 9 under the no-unrequested-emulator rule.
+and display scales. Static Compose coverage checks disabled/ready confirmation
+actions, exact typed gates, Live and empty diagnostics, and large-text RTL
+reachability. Final device-level TalkBack, keyboard, IME, and predictive Back
+inspection remains the explicit device-acceptance pass.
 
 ## Governing Android sources
 
 - [Create a bottom sheet](https://developer.android.com/develop/ui/compose/quick-guides/content/create-bottom-sheet) — modal task ownership and removal from composition.
 - [Compose dialogs](https://developer.android.com/develop/ui/compose/components/dialog) — focused confirmation and input tasks.
+- [Android settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings) — grouped hierarchy, switch rows, supporting explanations, and child destinations.
+- [Text input](https://developer.android.com/develop/ui/compose/text/user-input) — state-based label-above confirmation fields and IME behavior.
+- [Accessibility in Compose](https://developer.android.com/develop/ui/compose/accessibility) — disabled/ready state, live progress, merged rows, and named copy actions.
 - [Material 3 insets](https://developer.android.com/develop/ui/compose/system/material-insets) — safe sheet and Scaffold layout.
 - [Android security checklist](https://developer.android.com/privacy-and-security/security-tips) — do not place personal or sensitive values in logs; keep local technical data app-scoped.
 
@@ -127,7 +141,8 @@ Android uses Material modal bottom sheets for the two large destructive tasks
 instead of iOS large-detent Form sheets. Remove Profile is an explicit Manage
 Profiles destination because Android's existing profile switcher remains a
 focused selection surface. Developer events use a static Live text indicator;
-motion is deferred to visual polish and is not necessary to communicate state.
+no looping motion is added because text and accessibility semantics already
+communicate the state without distraction.
 
 ## Observable acceptance criteria
 
@@ -142,3 +157,7 @@ motion is deferred to visual polish and is not necessary to communicate state.
   group-identifier value.
 - Every destructive confirmation rejects incorrect input and cancellation is a
   no-op; each successful consequence and root route is model-tested.
+- Developer sections retain technical density inside deliberate groups;
+  Diagnostics retains one Live/empty console and responsive actions.
+- Sign Out and Erase keep their consequence, confirmation, disabled/ready
+  action, progress, and close behavior reachable at large text and RTL.

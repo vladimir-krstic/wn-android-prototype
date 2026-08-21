@@ -1,6 +1,7 @@
 # Chats and chat creation
 
-Status: Implemented; static verification complete on 2026-08-15
+Status: Chats direction accepted; chat-creation visual refresh implemented and
+statically verified on 2026-08-21; device visual acceptance pending
 
 ## Source evidence
 
@@ -16,14 +17,46 @@ Status: Implemented; static verification complete on 2026-08-15
 
 ## Android-native adaptation
 
-- Use a Material 3 top app bar titled **Chats**. The iOS titleless toolbar is not a parity requirement.
-- Enter search from a top-app-bar action and expose a normal Android back/cancel affordance while search is active.
-- Expose Chats, Unread, Archived, and Left through a Material menu. The active scope is always announced in the UI and to accessibility services.
+- Use a clean Material 3 top app bar with the active-profile avatar, the active
+  scope as title, a filter action, and a collapsed search action.
+- The avatar opens Settings; profile switching and profile addition live in
+  the Settings profile header rather than in a Chats-owned switcher.
+- Enter search from the top-app-bar search action and expose a normal Android
+  back/cancel affordance while search is active.
+- Expose Chats, Unread, Archived, and Left through a Material dropdown menu
+  opened by the adjacent filter action. The active scope remains visible in
+  the title and accessibility state; a non-default scope also gives the filter
+  action a restrained tonal selected treatment.
+- Do not show **Read All** as a persistent top-app-bar action. Preserve the
+  authoritative model operation for any bounded contextual treatment selected
+  later; visual polish does not silently remove product behavior.
 - Use a `LazyColumn` for rows and a floating action button for **New Message**.
+  The list sits directly on the ordinary screen surface: no enclosing rounded
+  container and no individual card around each normal chat row.
 - Use a row overflow action and a Material modal bottom sheet for the complete action set. This replaces UIKit multi-action swipe geometry while preserving every operation with discoverable, keyboard-accessible targets.
 - Use Material alert dialogs for destructive and constrained operations.
 - Use full-screen destinations for New Message, person profile, member selection, group setup, and the temporary conversation entry screen. Successful direct or group creation clears the creation flow before opening the conversation.
 - Keep the compact layout phone-first. Expanded-width list/detail behavior is deferred until the conversation surface exists in Batch 3; content still respects the repository adaptive width boundary.
+- New Message and New Group keep search visible because finding people is the
+  primary task on both destinations. The rounded Material search field uses a
+  leading search symbol, an on-demand clear action, and the shared no-results
+  composition; New Group remains the first distinct tonal action on New
+  Message.
+- New Group uses selected `InputChip` items with avatars and explicit removal,
+  plus toggleable person rows with a vector check. Stable order and selection
+  semantics replace the previous Unicode check and remove glyphs.
+- Person Profile uses a bounded identity hierarchy, compact role treatment,
+  tonal About and secondary-action groups, semantic verified state, and one
+  pinned primary Message action. When Chat Message relays are unavailable,
+  that action becomes **Check Chat Relays** and opens the established recovery
+  destination.
+- Set Up Group uses the shared fully rounded tonal fields with label, input,
+  icon, and supporting copy on one 16 dp content line, plus a compact tonal
+  photo action, visible preparation/error states,
+  a grouped read-only member review, and a bounded 56 dp pinned Create action.
+  Its empty unnamed avatar uses a semantic group symbol rather than a fake
+  profile initial; the preview becomes the name monogram or chosen photo as
+  input changes. Photo Picker and Files remain completely system-owned.
 
 ## Deterministic data contract
 
@@ -73,5 +106,18 @@ Status: Implemented; static verification complete on 2026-08-15
 ## Acceptance gates
 
 - Unit tests prove fixture counts/order, projections, diacritic search, authoritative Read All, stable pin behavior, direct deduplication, group validation/membership, relay copying, and profile isolation.
-- Compose navigation tests compile for the principal entry points. Device execution and visual inspection remain explicitly deferred until requested.
+- Compose tests compile for avatar-to-Settings navigation, on-demand Chats
+  search, scope-menu selection, absence of persistent Read All chrome,
+  creation search-empty treatment, required member/name validation, photo
+  sources, relay recovery, and large-text RTL reachability. Device execution
+  and visual inspection remain explicitly deferred until requested.
 - `clean testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest` succeeds with no lint errors.
+
+## Current official Android sources
+
+- [Search bar](https://developer.android.com/develop/ui/compose/components/search-bar)
+- [Lazy lists](https://developer.android.com/develop/ui/compose/lists)
+- [Material chips](https://developer.android.com/develop/ui/compose/components/chip)
+- [Compose text input](https://developer.android.com/develop/ui/compose/text/user-input)
+- [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics)
+- [Adaptive apps](https://developer.android.com/develop/adaptive-apps)

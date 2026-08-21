@@ -122,6 +122,8 @@ fun WhiteNoiseTheme(
     }
     MaterialTheme(
         colorScheme = if (darkTheme) WhiteNoiseDarkColors else WhiteNoiseLightColors,
+        typography = WhiteNoiseTypography,
+        shapes = WhiteNoiseShapes,
         content = content,
     )
 }

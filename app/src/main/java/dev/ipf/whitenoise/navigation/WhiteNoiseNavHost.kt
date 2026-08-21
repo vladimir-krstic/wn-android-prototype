@@ -116,12 +116,9 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.SignedIn> {
             ChatsScreen(
                 uiState = uiState,
-                onSelectProfile = appViewModel::selectProfile,
-                onAddProfile = { navController.navigate(AppRoute.Welcome(OnboardingOrigin.AddProfile)) },
                 onNewMessage = { navController.navigate(AppRoute.NewChat) },
                 onOpenChat = { openConversation(it, clearsCreationFlow = false) },
                 onMarkUnread = appViewModel::markChatUnread,
-                onReadAll = appViewModel::markAllChatsRead,
                 onTogglePin = appViewModel::toggleChatPin,
                 onMute = appViewModel::setChatMute,
                 onArchive = appViewModel::setChatArchived,
@@ -344,6 +341,7 @@ fun WhiteNoiseNavHost(
                         val chat = contextChat ?: return@PersonProfileScreen false
                         appViewModel.removeGroupMember(chat.id, person.id)
                     },
+                    onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 )
             }
         }
@@ -373,6 +371,7 @@ fun WhiteNoiseNavHost(
                         if (chatId != null) openConversation(chatId, clearsCreationFlow = true)
                         chatId != null
                     },
+                    onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 )
             }
         }

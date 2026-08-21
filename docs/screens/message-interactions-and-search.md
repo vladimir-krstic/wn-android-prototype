@@ -1,6 +1,6 @@
 # Message interactions and conversation search
 
-Status: Implemented; static verification complete on 2026-08-15
+Status: Visual-polish static gate passed on 2026-08-21; device acceptance pending
 
 ## Source evidence
 
@@ -36,6 +36,33 @@ Status: Implemented; static verification complete on 2026-08-15
 - Group composer mention suggestions derive only from active members and insert
   the selected visible name into the authoritative draft.
 
+## Visual-polish translation
+
+- The long-press sheet now keeps a compact tonal preview of the focused
+  message, a horizontally scrollable quick-reaction strip, a clear **More
+  Reactions** tonal action, and icon-leading Material command rows. Retry stays
+  first and Delete retains the semantic error role.
+- The emoji sheet uses a rounded Material search field with named Clear and
+  Configure actions, full category labels in a scrollable chip row, and an
+  adaptive grid whose emoji targets remain at least 48dp instead of forcing an
+  iPhone-specific eight-column geometry at every Android width.
+- Reaction configuration uses six named replacement targets with Reset and
+  Done hierarchy. Forwarding uses the same search-field treatment, native
+  checkbox semantics, a visible five-chat limit, tonal selected rows, a useful
+  no-results state, and one pinned 56dp completion action.
+- Selection replaces text-heavy bars with a Close app-bar action, a live
+  selected count, named Delete/Forward icon actions, and visible explanation
+  when the accepted deleted-message or 32-message rule disables forwarding.
+- Conversation search stays in the transcript, requests focus on entry, owns
+  an in-field Clear action, preserves the draft, and uses compact previous/next
+  icon controls around a live result count. The current result has explicit
+  containment, noncurrent content is subdued, text occurrences use a
+  high-contrast semantic highlight, and result-position semantics are
+  localized.
+- Message Details now follows the child-destination app-bar hierarchy and
+  groups the shared message plus delivery/sender/recipient information on
+  restrained tonal surfaces without exposing protocol data.
+
 ## Current official Android guidance
 
 - Android Developers recommends `combinedClickable` for long-click context
@@ -44,6 +71,10 @@ Status: Implemented; static verification complete on 2026-08-15
   alternatives to gesture-only operations.
 - Material search fields, modal bottom sheets, lists, checkboxes, dialogs, and
   navigation remain the default platform composition for the bounded flows.
+- Sources rechecked for this pass: [tap and press](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press),
+  [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics),
+  [Material search](https://developer.android.com/develop/ui/compose/components/search-bar),
+  and [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets).
 
 ## Acceptance gates
 
@@ -52,4 +83,7 @@ Status: Implemented; static verification complete on 2026-08-15
   deletion scopes, and per-profile isolation.
 - Compose tests for long-click alternatives, selection, forwarding, details,
   emoji configuration, mention suggestions, and in-place search compile.
+- Focused tests cover the message context/title, reaction configuration slots,
+  selection controls, forwarding limit/search, focused conversation search,
+  named Clear, and previous/next result actions.
 - The complete clean static gate and permission/export audit pass.

@@ -1,6 +1,6 @@
 # Chat and group information
 
-Status: Implemented; static verification complete on 2026-08-15
+Status: Visual-polish static gate passed on 2026-08-21; device acceptance pending
 
 ## Source evidence
 
@@ -28,11 +28,59 @@ Status: Implemented; static verification complete on 2026-08-15
 - Archive, mute, disappearing, leave, role, member, metadata, relationship,
   and relay changes mutate only the active profile's authoritative chat graph.
 
+## Visual-polish translation
+
+- Direct and group identity remain uncontained and centered, with selective
+  scale for the avatar and title. Compact Verified Nostr Address, public-key,
+  description, member-count, and ended-membership treatment use semantic
+  supporting roles instead of an enclosing hero card.
+- About, Mute/Unmute, Disappearing, and Search use equal 56dp filled-tonal icon
+  controls with visible captions and one concise accessibility name. Group
+  Info retains the same system without reserving an empty About position.
+- Shared content, members, administration, and chat actions use restrained
+  `surfaceContainerLow` groups, transparent Material list items, standard
+  symbols, and disclosure chevrons only for routes. Archive and destructive
+  leave actions no longer pretend to navigate.
+- Disappearing-message selection uses a radio-button group; Add People uses
+  whole-row checkbox semantics and tonal selected state. Member profiles
+  separate relationship actions from role/removal actions, and the existing
+  model still gates all administration and sole-admin consequences.
+- Shared-content destinations use one open three-column media grid or ordinary
+  rich-content lists. A grid selection opens that exact attachment in the
+  shared pager; empty content now has a complete title/detail state.
+- Edit Group uses the shared fully rounded tonal fields with label-above
+  content alignment and focus/error rings, a 120dp identity preview,
+  Photo Picker-owned selection, explicit photo
+  preparation/error feedback, and one pinned 56dp Save action.
+- Chat Relays groups the independent endpoints, uses named remove icon actions,
+  explains empty history-preserving recovery, distinguishes Restore Defaults,
+  and keeps final-relay removal behind the accepted consequence dialog.
+
+## Current official Android guidance
+
+- Material top app bars and Scaffold own destination navigation and content
+  structure; lists and lazy grids retain stable collection identity.
+- Modal bottom sheets own short duration choices, AlertDialog owns focused
+  destructive consequences, and native radio/checkbox controls expose current
+  selection without glyph-only state.
+- Android Photo Picker remains permissionless and system-owned. AdaptiveContent
+  constrains expanded layouts while compact screens retain the shared 16dp
+  content margin and 8/24dp relationship rhythm.
+- Sources rechecked for this pass: [app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
+  [lists and grids](https://developer.android.com/develop/ui/compose/lists),
+  [icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button),
+  [bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+  [dialogs](https://developer.android.com/develop/ui/compose/components/dialog),
+  [Compose accessibility](https://developer.android.com/develop/ui/compose/accessibility),
+  [Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker),
+  and [canonical adaptive layouts](https://developer.android.com/develop/adaptive-apps/guides/canonical-layouts).
+
 ## Acceptance gates
 
 - Unit tests cover shared-content projection, relay normalization/isolation,
   group edits/members/roles/events, last-admin rules, groups in common, timer
   changes, and recovery after final-relay removal.
 - Compose route tests for direct/group info, shared categories, admin/member
-  states, group editing, add people, and chat relays compile.
+  states, selected duration treatment, role-aware member profiles, group
+  editing, add people, and normal/empty chat relays compile.
 - Clean build, lint, tests, APKs, and permission/export audits pass.

@@ -5,10 +5,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.DrawableRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,17 +22,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,11 +49,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -58,6 +70,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
+import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AvatarWebImageCatalog
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileAvatar
@@ -66,8 +79,13 @@ import dev.ipf.whitenoise.model.ProfileSettingsPolicy
 import dev.ipf.whitenoise.state.AppUiState
 import dev.ipf.whitenoise.ui.chats.ProfileSwitcherSheet
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSecureTextField
+import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.onboarding.AvatarWebImagePicker
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.launch
 
 @Composable
@@ -92,60 +110,125 @@ fun SettingsScreen(
     initiallyShowSwitcher: Boolean = false,
 ) {
     val profile = uiState.activeProfile ?: return
+    val canEditProfile = ProfileSettingsPolicy.canPublishProfile(profile.settings)
     var switcherOpen by remember(initiallyShowSwitcher) { mutableStateOf(initiallyShowSwitcher) }
     var signOutOpen by remember { mutableStateOf(false) }
-    SettingsScaffold(title = "Settings", onBack = onBack) {
+    SettingsScaffold(
+        title = "Settings",
+        onBack = onBack,
+        prominentTitle = true,
+    ) {
         SettingsList {
             item {
-                ListItem(
-                    headlineContent = { Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    supportingContent = { Text(profile.nostrAddress.ifBlank { profile.shortPublicKey }) },
-                    leadingContent = {
-                        ProfileAvatar(profile.name, profile.avatar, Modifier.size(56.dp), contentDescription = null)
+                SettingsProfileHeader(
+                    profile = profile,
+                    profileCount = uiState.signedInProfiles.size,
+                    onShareConnect = onShareConnect,
+                    onProfileManagement = {
+                        if (uiState.signedInProfiles.size > 1) {
+                            switcherOpen = true
+                        } else {
+                            onAddProfile()
+                        }
                     },
-                    trailingContent = { Text("Edit") },
-                    modifier = Modifier.fillMaxWidth(),
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedButton(onClick = onShareConnect, modifier = Modifier.weight(1f)) {
-                        Text("Share & Connect")
-                    }
-                    OutlinedButton(onClick = { switcherOpen = true }, modifier = Modifier.weight(1f)) {
-                        Text("Switch profile")
-                    }
-                }
-                HorizontalDivider()
             }
             item { SettingsSection("Profile") }
             item {
-                SettingsLink(
-                    "Profile",
-                    if (ProfileSettingsPolicy.canPublishProfile(profile.settings)) {
-                        "Name, address, about, and photo"
-                    } else {
-                        "Choose a connected Profile relay to edit"
-                    },
-                    onEditProfile,
-                    enabled = ProfileSettingsPolicy.canPublishProfile(profile.settings),
-                )
+                SettingsGroup {
+                    SettingsHubLink(
+                        title = "Profile",
+                        icon = R.drawable.ic_settings_profile,
+                        iconTag = "profile",
+                        onClick = onEditProfile,
+                        subtitle = if (canEditProfile) null else "Choose a connected Profile relay to edit",
+                        enabled = canEditProfile,
+                    )
+                    SettingsHubLink(
+                        title = "Profile Keys",
+                        icon = R.drawable.ic_settings_key,
+                        iconTag = "profile_keys",
+                        onClick = onProfileKeys,
+                    )
+                    SettingsHubLink(
+                        title = "Manage Profiles",
+                        icon = R.drawable.ic_settings_manage_accounts,
+                        iconTag = "manage_profiles",
+                        onClick = onManageProfiles,
+                    )
+                }
             }
-            item { SettingsLink("Profile Keys", "View, copy, and export your keys", onProfileKeys) }
-            item { SettingsLink("Manage Profiles", "Remove another stored profile", onManageProfiles) }
             item { SettingsSection("Preferences") }
-            item { SettingsLink("Notifications", "Local and native push preferences", onNotifications) }
-            item { SettingsLink("Appearance", profile.settings.appearance.label, onAppearance) }
-            item { SettingsLink("Privacy & Security", "Device protection and auto-lock", onPrivacy) }
-            item { SettingsLink("Data Usage", "Downloads and sent-media quality", onDataUsage) }
-            item { SettingsLink("Relays", "${profile.settings.relays.size} profile relays", onRelays) }
+            item {
+                SettingsGroup {
+                    SettingsHubLink(
+                        title = "Notifications",
+                        icon = R.drawable.ic_settings_notifications,
+                        iconTag = "notifications",
+                        onClick = onNotifications,
+                    )
+                    SettingsHubLink(
+                        title = "Appearance",
+                        icon = R.drawable.ic_settings_palette,
+                        iconTag = "appearance",
+                        onClick = onAppearance,
+                        value = profile.settings.appearance.label,
+                    )
+                    SettingsHubLink(
+                        title = "Privacy & Security",
+                        icon = R.drawable.ic_settings_shield,
+                        iconTag = "privacy_security",
+                        onClick = onPrivacy,
+                    )
+                    SettingsHubLink(
+                        title = "Data Usage",
+                        icon = R.drawable.ic_settings_data_usage,
+                        iconTag = "data_usage",
+                        onClick = onDataUsage,
+                    )
+                    SettingsHubLink(
+                        title = "Relays",
+                        icon = R.drawable.ic_settings_hub,
+                        iconTag = "relays",
+                        onClick = onRelays,
+                    )
+                }
+            }
             item { SettingsSection("Help") }
-            item { SettingsLink("Chat with support", "A unique local support conversation", onSupport) }
-            item { SettingsLink("Donate", "Lightning or Bitcoin", onDonate) }
-            item { SettingsLink("Developer Tools", "Development and testing only", onDeveloperTools) }
+            item {
+                SettingsGroup {
+                    SettingsHubLink(
+                        title = "Chat with support",
+                        icon = R.drawable.ic_settings_chat,
+                        iconTag = "support",
+                        onClick = onSupport,
+                    )
+                    SettingsHubLink(
+                        title = "Donate",
+                        icon = R.drawable.ic_settings_favorite,
+                        iconTag = "donate",
+                        onClick = onDonate,
+                    )
+                    SettingsHubLink(
+                        title = "Developer Tools",
+                        icon = R.drawable.ic_settings_developer_mode,
+                        iconTag = "developer_tools",
+                        onClick = onDeveloperTools,
+                    )
+                }
+            }
             item { SettingsSection("Session") }
-            item { SettingsLink("Sign Out", "End this profile’s session", onClick = { signOutOpen = true }) }
+            item {
+                SettingsGroup {
+                    SettingsHubLink(
+                        title = "Sign Out",
+                        icon = R.drawable.ic_settings_logout,
+                        iconTag = "sign_out",
+                        onClick = { signOutOpen = true },
+                        destructive = true,
+                    )
+                }
+            }
             item { SettingsExplainer("White Noise for Android · Version 0.1") }
         }
     }
@@ -174,6 +257,115 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun SettingsHubLink(
+    title: String,
+    @DrawableRes icon: Int,
+    iconTag: String,
+    onClick: () -> Unit,
+    subtitle: String? = null,
+    value: String? = null,
+    enabled: Boolean = true,
+    destructive: Boolean = false,
+) {
+    val iconColor = when {
+        !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        destructive -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    SettingsLink(
+        title = title,
+        subtitle = subtitle,
+        onClick = onClick,
+        leading = {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(24.dp)
+                    .testTag("settings.icon.$iconTag"),
+                tint = iconColor,
+            )
+        },
+        value = value,
+        enabled = enabled,
+        destructive = destructive,
+    )
+}
+
+@Composable
+private fun SettingsProfileHeader(
+    profile: Profile,
+    profileCount: Int,
+    onShareConnect: () -> Unit,
+    onProfileManagement: () -> Unit,
+) {
+    val shareDescription = stringResource(R.string.open_share_connect_for, profile.name)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                vertical = WhiteNoiseSpacing.Related,
+            ),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onShareConnect)
+                    .padding(vertical = WhiteNoiseSpacing.Related)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = shareDescription
+                        role = Role.Button
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+            ) {
+                ProfileAvatar(
+                    name = profile.name,
+                    avatar = profile.avatar,
+                    modifier = Modifier.size(72.dp),
+                    contentDescription = null,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = profile.name,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text(
+                        text = profile.nostrAddress.ifBlank { profile.shortPublicKey },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Share & Connect",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            WhiteNoiseOutlinedButton(
+                onClick = onProfileManagement,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (profileCount > 1) "Switch Profile" else "Add Profile")
+            }
+        }
+    }
+}
+
+@Composable
 fun ShareConnectScreen(profile: Profile, onBack: () -> Unit) {
     val context = LocalContext.current
     var foundProfile by remember { mutableStateOf<Profile?>(null) }
@@ -193,43 +385,104 @@ fun ShareConnectScreen(profile: Profile, onBack: () -> Unit) {
             .addOnFailureListener { scannerError = "Scanner unavailable. Choose the profile below instead." }
     }
     SettingsScaffold(title = "Share & Connect", onBack = onBack) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text("Share your profile", style = MaterialTheme.typography.headlineSmall)
-            ProfileCode(profile.publicKey, Modifier.fillMaxWidth(0.65f))
-            Text(profile.name, style = MaterialTheme.typography.titleLarge)
-            Text(profile.nostrAddress.ifBlank { profile.shortPublicKey }, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = { copyToClipboard(context, "Public key", profile.publicKey) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Copy public key")
-            }
-            OutlinedButton(
-                onClick = {
-                    val send = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Connect with ${profile.name} on White Noise:\n${profile.publicKey}")
+        SettingsList {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                            vertical = WhiteNoiseSpacing.Section,
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    Text("Share your profile", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "Let someone scan this code, or share your profile through Android.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Surface(
+                        modifier = Modifier
+                            .padding(vertical = WhiteNoiseSpacing.Related)
+                            .widthIn(max = 260.dp)
+                            .fillMaxWidth(),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = Color.White,
+                    ) {
+                        ProfileCode(
+                            value = profile.publicKey,
+                            modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
+                        )
                     }
-                    context.startActivity(Intent.createChooser(send, "Share profile"))
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Share with Android") }
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Connect with someone", style = MaterialTheme.typography.headlineSmall)
-            Button(
-                onClick = ::startScan,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Scan profile code") }
-            OutlinedButton(onClick = { foundProfile = demoFoundProfile() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Open Quill")
+                    Text(profile.name, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        profile.nostrAddress.ifBlank { profile.shortPublicKey },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            scannerError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Text(
-                "Scanning uses the Android system-delivered code scanner and does not request camera permission.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    WhiteNoiseButton(
+                        onClick = {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, "Connect with ${profile.name} on White Noise:\n${profile.publicKey}")
+                            }
+                            context.startActivity(Intent.createChooser(send, "Share profile"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Share with Android") }
+                    WhiteNoiseOutlinedButton(
+                        onClick = { copyToClipboard(context, "Public key", profile.publicKey) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Copy public key") }
+                }
+            }
+            item { SettingsSection("Connect with someone") }
+            item {
+                SettingsGroup {
+                    SettingsAction(
+                        title = "Scan profile code",
+                        subtitle = "Use Android’s system-delivered code scanner.",
+                        onClick = ::startScan,
+                        leading = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_qr_code),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    SettingsAction(
+                        title = "Open Quill",
+                        subtitle = "View a profile connection result.",
+                        onClick = { foundProfile = demoFoundProfile() },
+                        leading = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_person),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                }
+            }
+            scannerError?.let { message ->
+                item { SettingsCallout(text = message, title = "Couldn’t open scanner", isError = true) }
+            }
+            item {
+                SettingsExplainer(
+                    "The system scanner does not request camera permission from White Noise.",
+                )
+            }
         }
     }
     foundProfile?.let { found ->
@@ -267,31 +520,79 @@ fun EditProfileScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
-    var about by rememberSaveable(profile.id) { mutableStateOf(profile.about) }
-    var address by rememberSaveable(profile.id) { mutableStateOf(profile.nostrAddress) }
+    val name = rememberSaveable(profile.id, saver = TextFieldState.Saver) {
+        TextFieldState(initialText = profile.name)
+    }
+    val about = rememberSaveable(profile.id, saver = TextFieldState.Saver) {
+        TextFieldState(initialText = profile.about)
+    }
+    val address = rememberSaveable(profile.id, saver = TextFieldState.Saver) {
+        TextFieldState(initialText = profile.nostrAddress)
+    }
+    val nameValue = name.text.toString()
+    val aboutValue = about.text.toString()
+    val addressValue = address.text.toString()
     var avatar by remember(profile.id) { mutableStateOf(profile.avatar) }
     var photoMenu by remember { mutableStateOf(false) }
     var webPicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var isPreparingPhoto by remember { mutableStateOf(false) }
     fun prepare(uri: Uri) {
         scope.launch {
+            isPreparingPhoto = true
+            error = null
             val bytes = runCatching { AvatarImageProcessor.prepare(context.contentResolver, uri) }.getOrNull()
-            if (bytes == null) error = "This image could not be prepared." else avatar = ProfileAvatar.DeviceImage(bytes)
+            isPreparingPhoto = false
+            if (bytes == null) {
+                error = "This image could not be prepared."
+            } else {
+                avatar = ProfileAvatar.DeviceImage(bytes)
+            }
         }
     }
     val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { it?.let(::prepare) }
     val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(::prepare) }
 
-    SettingsScaffold(title = "Profile", onBack = onBack) {
+    SettingsScaffold(
+        title = "Profile",
+        onBack = onBack,
+        bottomBar = {
+            SettingsBottomAction {
+                WhiteNoiseButton(
+                    onClick = {
+                        val detailsSaved = onSave(nameValue, aboutValue, avatar)
+                        val addressSaved = addressValue == profile.nostrAddress || onSaveAddress(addressValue)
+                        if (detailsSaved || addressSaved) {
+                            onBack()
+                        } else {
+                            error = "Enter a name and a valid address."
+                        }
+                    },
+                    enabled = nameValue.isNotBlank() &&
+                        ProfileSettingsPolicy.isValidNostrAddress(addressValue) &&
+                        !isPreparingPhoto,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Save") }
+            }
+        },
+    ) {
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                    vertical = WhiteNoiseSpacing.Section,
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
         ) {
-            ProfileAvatar(name, avatar, Modifier.size(112.dp))
+            ProfileAvatar(nameValue, avatar, Modifier.size(120.dp))
             Box {
-                TextButton(onClick = { photoMenu = true }) { Text("Change photo") }
+                FilledTonalButton(
+                    onClick = { photoMenu = true },
+                    enabled = !isPreparingPhoto,
+                ) { Text(if (avatar == ProfileAvatar.Monogram) "Add photo" else "Change photo") }
                 DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
                     DropdownMenuItem(text = { Text("Choose photos") }, onClick = {
                         photoMenu = false
@@ -305,31 +606,60 @@ fun EditProfileScreen(
                         photoMenu = false
                         webPicker = true
                     })
-                    DropdownMenuItem(text = { Text("Remove photo", color = MaterialTheme.colorScheme.error) }, onClick = {
-                        photoMenu = false
-                        avatar = ProfileAvatar.Monogram
-                    })
+                    if (avatar != ProfileAvatar.Monogram) {
+                        DropdownMenuItem(text = { Text("Remove photo", color = MaterialTheme.colorScheme.error) }, onClick = {
+                            photoMenu = false
+                            avatar = ProfileAvatar.Monogram
+                        })
+                    }
                 }
             }
-            OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Name") }, singleLine = true)
-            OutlinedTextField(address, { address = it }, Modifier.fillMaxWidth(), label = { Text("Verified Nostr Address") }, singleLine = true)
+            if (isPreparingPhoto) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text("Preparing photo")
+                }
+            }
+            WhiteNoiseTextField(
+                state = name,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Name") },
+                lineLimits = TextFieldLineLimits.SingleLine,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
+                ),
+            )
+            WhiteNoiseTextField(
+                state = address,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Verified Nostr Address") },
+                lineLimits = TextFieldLineLimits.SingleLine,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next,
+                ),
+            )
             Text(
-                if (profile.isNostrAddressVerified && address == profile.nostrAddress) "Verified address" else "Save a valid name@domain address to verify it.",
+                if (profile.isNostrAddressVerified && addressValue == profile.nostrAddress) {
+                    "Verified address"
+                } else {
+                    "Save a valid name@domain address to verify it."
+                },
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
-            OutlinedTextField(about, { about = it }, Modifier.fillMaxWidth(), label = { Text("About") }, minLines = 3, maxLines = 6)
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(
-                onClick = {
-                    val detailsSaved = onSave(name, about, avatar)
-                    val addressSaved = address == profile.nostrAddress || onSaveAddress(address)
-                    if (detailsSaved || addressSaved) onBack() else error = "Enter a name and a valid address."
-                },
-                enabled = name.isNotBlank() && ProfileSettingsPolicy.isValidNostrAddress(address),
+            WhiteNoiseTextField(
+                state = about,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Save") }
+                label = { Text("About") },
+                lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6),
+            )
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
     }
     if (webPicker) {
@@ -351,56 +681,86 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
     var exportContent by remember { mutableStateOf("") }
     var passwordDialog by remember { mutableStateOf(false) }
     var rawExportDialog by remember { mutableStateOf(false) }
-    var password by rememberSaveable { mutableStateOf("") }
-    var confirmation by rememberSaveable { mutableStateOf("") }
+    val password = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
+    val confirmation = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
+    val passwordValue = password.text.toString()
+    val confirmationValue = confirmation.text.toString()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         uri?.let { context.contentResolver.openOutputStream(it)?.bufferedWriter()?.use { writer -> writer.write(exportContent) } }
     }
     SettingsScaffold(title = "Profile Keys", onBack = onBack) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text("Public key", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Share this key so people can find and connect with you.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            KeyValue(profile.publicKey, profile.publicKey)
-            OutlinedButton(onClick = { copyToClipboard(context, "Public key", profile.publicKey) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Copy public key")
+        SettingsList {
+            item { SettingsSection("Public key") }
+            item {
+                SettingsGroup {
+                    KeyValue(profile.publicKey, profile.publicKey)
+                    SettingsAction(
+                        title = "Copy public key",
+                        subtitle = "Share this key so people can find and connect with you.",
+                        onClick = { copyToClipboard(context, "Public key", profile.publicKey) },
+                        leading = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_content_copy),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                }
             }
-            HorizontalDivider()
-            Text("Private key", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Keep this key private. Anyone with it can use your profile, and White Noise can’t recover it.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            KeyValue(
-                value = if (showPrivate) ProfileKeyFixtures.PRIVATE_KEY else "••••••••••••••••••••••••••••••••",
-                accessibilityText = if (showPrivate) "Private key revealed. Use the copy action to retrieve it." else "Private key hidden",
-            )
-            OutlinedButton(onClick = { showPrivate = !showPrivate }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (showPrivate) "Hide private key" else "Show private key")
+            item { SettingsSection("Private key") }
+            item {
+                SettingsCallout(
+                    title = "Keep this private",
+                    text = "Anyone with this key can use your profile, and White Noise can’t recover it.",
+                )
             }
-            OutlinedButton(
-                onClick = { copyToClipboard(context, "Private key", ProfileKeyFixtures.PRIVATE_KEY) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Copy private key") }
-            Button(
-                onClick = { passwordDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Export Encrypted Private Key") }
-            OutlinedButton(onClick = { rawExportDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Export Private Key")
+            item {
+                SettingsGroup(
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
+                ) {
+                    KeyValue(
+                        value = if (showPrivate) ProfileKeyFixtures.PRIVATE_KEY else "••••••••••••••••••••••••••••••••",
+                        accessibilityText = if (showPrivate) {
+                            "Private key revealed. Use the copy action to retrieve it."
+                        } else {
+                            "Private key hidden"
+                        },
+                    )
+                    SettingsAction(
+                        title = if (showPrivate) "Hide private key" else "Show private key",
+                        onClick = { showPrivate = !showPrivate },
+                    )
+                    SettingsAction(
+                        title = "Copy private key",
+                        onClick = { copyToClipboard(context, "Private key", ProfileKeyFixtures.PRIVATE_KEY) },
+                        leading = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_content_copy),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                }
             }
-            Text(
-                "Exports use Android’s document picker. Keep exported key files private.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            item { SettingsSection("Export") }
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    WhiteNoiseButton(
+                        onClick = { passwordDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Export Encrypted Private Key") }
+                    WhiteNoiseOutlinedButton(
+                        onClick = { rawExportDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Export Private Key") }
+                }
+            }
+            item { SettingsExplainer("Exports use Android’s document picker. Keep exported key files private.") }
         }
     }
     if (rawExportDialog) {
@@ -426,16 +786,26 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
             title = { Text("Protect export") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(password, { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation())
-                    OutlinedTextField(confirmation, { confirmation = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation())
+                    WhiteNoiseSecureTextField(
+                        state = password,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Password") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    )
+                    WhiteNoiseSecureTextField(
+                        state = confirmation,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Confirm password") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    )
                     Text("Use at least 8 characters.", style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = {
                 TextButton(
-                    enabled = ProfileSettingsPolicy.isValidExportPassword(password, confirmation),
+                    enabled = ProfileSettingsPolicy.isValidExportPassword(passwordValue, confirmationValue),
                     onClick = {
-                        exportContent = ProfileKeyFixtures.encryptedExport(profile, password)
+                        exportContent = ProfileKeyFixtures.encryptedExport(profile, passwordValue)
                         passwordDialog = false
                         export.launch("${profile.id}-white-noise-key.wnkey.txt")
                     },
@@ -448,33 +818,41 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
 
 @Composable
 private fun KeyValue(value: String, accessibilityText: String) {
-    Text(
-        text = value,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clearAndSetSemantics { contentDescription = accessibilityText }
-            .padding(12.dp),
-        fontFamily = FontFamily.Monospace,
-        style = MaterialTheme.typography.bodyMedium,
-    )
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.padding(WhiteNoiseSpacing.Related),
+    ) {
+        Text(
+            text = value,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clearAndSetSemantics { contentDescription = accessibilityText }
+                .padding(WhiteNoiseSpacing.FormField),
+            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable
-internal fun ProfileCode(value: String, modifier: Modifier = Modifier) {
-    val foreground = MaterialTheme.colorScheme.onSurface
-    val background = MaterialTheme.colorScheme.surface
+internal fun ProfileCode(
+    value: String,
+    modifier: Modifier = Modifier,
+    contentDescription: String = "Profile QR code",
+) {
     val matrix = remember(value) { qrMatrix(value) }
     Canvas(
         modifier = modifier
             .aspectRatio(1f)
-            .semantics { contentDescription = "Profile QR code" },
+            .semantics { this.contentDescription = contentDescription },
     ) {
-        drawRect(background)
+        drawRect(Color.White)
         val cell = size.minDimension / matrix.width
         for (row in 0 until matrix.height) {
             for (column in 0 until matrix.width) {
                 if (matrix[column, row]) {
-                    drawRect(foreground, topLeft = androidx.compose.ui.geometry.Offset(column * cell, row * cell), size = androidx.compose.ui.geometry.Size(cell, cell))
+                    drawRect(Color.Black, topLeft = androidx.compose.ui.geometry.Offset(column * cell, row * cell), size = androidx.compose.ui.geometry.Size(cell, cell))
                 }
             }
         }

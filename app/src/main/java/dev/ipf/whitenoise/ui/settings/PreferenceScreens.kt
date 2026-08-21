@@ -7,20 +7,9 @@ import android.os.Build
 import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,12 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.AutoLockDuration
 import dev.ipf.whitenoise.model.MediaDownloadPolicy
@@ -52,42 +36,57 @@ fun NotificationsScreen(
     var previewPicker by remember { mutableStateOf(false) }
     val settings = profile.settings
     SettingsScaffold(title = "Notifications", onBack = onBack) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            SettingsSection("Delivery")
-            SettingsSwitch(
-                title = "Local notifications",
-                checked = settings.localNotifications,
-                onCheckedChange = {
-                    onChange(
-                        settings.copy(
-                            localNotifications = it,
-                            nativePushNotifications = settings.nativePushNotifications && it,
-                        ),
+        SettingsList {
+            item { SettingsSection("Delivery") }
+            item {
+                SettingsGroup {
+                    SettingsSwitch(
+                        title = "Local notifications",
+                        checked = settings.localNotifications,
+                        onCheckedChange = {
+                            onChange(
+                                settings.copy(
+                                    localNotifications = it,
+                                    nativePushNotifications = settings.nativePushNotifications && it,
+                                ),
+                            )
+                        },
+                        subtitle = "Show notifications created on this device.",
                     )
-                },
-                subtitle = "Show notifications created on this device.",
-            )
-            SettingsSwitch(
-                title = "Native push",
-                checked = settings.nativePushNotifications,
-                enabled = settings.localNotifications,
-                onCheckedChange = { onChange(settings.copy(nativePushNotifications = it)) },
-                subtitle = "Use native push delivery for new messages.",
-            )
-            SettingsSection("Preview")
-            SettingsLink(
-                "Message preview",
-                if (settings.localNotifications) settings.notificationPreviewMode.label else "Local notifications are off",
-                onClick = { previewPicker = true },
-                enabled = settings.localNotifications,
-            )
-            SettingsExplainer("Android notification controls remain available in system settings.")
-            Button(
-                onClick = {
-                    context.startActivity(notificationSettingsIntent(context))
-                },
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-            ) { Text("Open Android notification settings") }
+                    SettingsSwitch(
+                        title = "Native push",
+                        checked = settings.nativePushNotifications,
+                        enabled = settings.localNotifications,
+                        onCheckedChange = { onChange(settings.copy(nativePushNotifications = it)) },
+                        subtitle = if (settings.localNotifications) {
+                            "Use native push delivery for new messages."
+                        } else {
+                            "Turn on local notifications first."
+                        },
+                    )
+                }
+            }
+            item { SettingsSection("Preview") }
+            item {
+                SettingsGroup {
+                    SettingsLink(
+                        "Message preview",
+                        if (settings.localNotifications) settings.notificationPreviewMode.label else "Local notifications are off",
+                        onClick = { previewPicker = true },
+                        enabled = settings.localNotifications,
+                    )
+                }
+            }
+            item { SettingsSection("Android") }
+            item {
+                SettingsGroup {
+                    SettingsAction(
+                        title = "Open Android notification settings",
+                        subtitle = "Control app-level permission, channels, sound, and visibility.",
+                        onClick = { context.startActivity(notificationSettingsIntent(context)) },
+                    )
+                }
+            }
         }
     }
     if (previewPicker) {
@@ -126,27 +125,35 @@ fun AppearanceScreen(
 ) {
     val settings = profile.settings
     SettingsScaffold(title = "Appearance", onBack = onBack) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            SettingsSection("Theme")
-            AppearancePreference.entries.forEach { preference ->
-                ChoiceRow(
-                    label = preference.label,
-                    selected = settings.appearance == preference,
-                    onClick = { onChange(settings.copy(appearance = preference)) },
-                )
+        SettingsList {
+            item { SettingsSection("Theme") }
+            item {
+                SettingsGroup {
+                    AppearancePreference.entries.forEach { preference ->
+                        SettingsChoice(
+                            title = preference.label,
+                            selected = settings.appearance == preference,
+                            onClick = { onChange(settings.copy(appearance = preference)) },
+                        )
+                    }
+                }
             }
-            SettingsSection("Language")
-            ChoiceRow(
-                label = "System default (English)",
-                selected = settings.language == "System default (English)",
-                onClick = { onChange(settings.copy(language = "System default (English)")) },
-            )
-            ChoiceRow(
-                label = "English",
-                selected = settings.language == "English",
-                onClick = { onChange(settings.copy(language = "English")) },
-            )
-            SettingsExplainer("English is currently available. Theme changes apply immediately to the active profile.")
+            item { SettingsSection("Language") }
+            item {
+                SettingsGroup {
+                    SettingsChoice(
+                        title = "System default (English)",
+                        selected = settings.language == "System default (English)",
+                        onClick = { onChange(settings.copy(language = "System default (English)")) },
+                    )
+                    SettingsChoice(
+                        title = "English",
+                        selected = settings.language == "English",
+                        onClick = { onChange(settings.copy(language = "English")) },
+                    )
+                }
+            }
+            item { SettingsExplainer("English is currently available. Theme changes apply immediately to the active profile.") }
         }
     }
 }
@@ -166,35 +173,48 @@ fun PrivacySecurityScreen(
     var eraseOpen by remember { mutableStateOf(false) }
     val settings = profile.settings
     SettingsScaffold(title = "Privacy & Security", onBack = onBack) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            SettingsSection("Device protection")
-            SettingsSwitch(
-                title = "Hide Screen in Recents",
-                checked = settings.hideScreenInRecents,
-                onCheckedChange = { onChange(settings.copy(hideScreenInRecents = it)) },
-                subtitle = "Uses Android secure-window protection for previews and screenshots.",
-            )
-            SettingsSwitch(
-                title = "Require device authentication",
-                checked = settings.requireDeviceAuthentication,
-                enabled = secure,
-                onCheckedChange = { onChange(settings.copy(requireDeviceAuthentication = it)) },
-                subtitle = if (secure) "Require the device screen lock when returning to White Noise." else "Set a device screen lock first.",
-            )
-            if (!secure) {
-                TextButton(
-                    onClick = { context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                ) { Text("Open Android security settings") }
+        SettingsList {
+            item { SettingsSection("Device protection") }
+            item {
+                SettingsGroup {
+                    SettingsSwitch(
+                        title = "Hide Screen in Recents",
+                        checked = settings.hideScreenInRecents,
+                        onCheckedChange = { onChange(settings.copy(hideScreenInRecents = it)) },
+                        subtitle = "Protect previews and screenshots with Android’s secure window.",
+                    )
+                    SettingsSwitch(
+                        title = "Require device authentication",
+                        checked = settings.requireDeviceAuthentication,
+                        enabled = secure,
+                        onCheckedChange = { onChange(settings.copy(requireDeviceAuthentication = it)) },
+                        subtitle = if (secure) {
+                            "Use the device screen lock when returning to White Noise."
+                        } else {
+                            "Set a device screen lock first."
+                        },
+                    )
+                    if (!secure) {
+                        SettingsAction(
+                            title = "Open Android security settings",
+                            onClick = { context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
+                        )
+                    }
+                    SettingsLink("Auto-lock", settings.autoLockDuration.label, onClick = { autoLockPicker = true })
+                }
             }
-            SettingsLink("Auto-lock", settings.autoLockDuration.label, onClick = { autoLockPicker = true })
-            SettingsExplainer("Security preferences are stored separately for each profile.")
-            SettingsSection("Device data")
-            SettingsLink(
-                title = "Erase App Data",
-                subtitle = "Signs out every profile and permanently removes all White Noise data from this device.",
-                onClick = { eraseOpen = true },
-            )
+            item { SettingsExplainer("Security preferences are stored separately for each profile.") }
+            item { SettingsSection("Device data") }
+            item {
+                SettingsGroup {
+                    SettingsAction(
+                        title = "Erase App Data",
+                        subtitle = "Signs out every profile and permanently removes all White Noise data from this device.",
+                        onClick = { eraseOpen = true },
+                        destructive = true,
+                    )
+                }
+            }
         }
     }
     if (autoLockPicker) {
@@ -229,28 +249,37 @@ fun DataUsageScreen(
     var picker by remember { mutableStateOf<DataPicker?>(null) }
     var qualityPicker by remember { mutableStateOf(false) }
     SettingsScaffold(title = "Data Usage", onBack = onBack) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            SettingsSection("Automatic downloads")
-            SettingsLink("Photos", settings.photoDownloadPolicy.label, onClick = { picker = DataPicker.Photos })
-            SettingsLink("Videos", settings.videoDownloadPolicy.label, onClick = { picker = DataPicker.Videos })
-            SettingsLink("Audio", settings.audioDownloadPolicy.label, onClick = { picker = DataPicker.Audio })
-            SettingsLink("Files", settings.fileDownloadPolicy.label, onClick = { picker = DataPicker.Files })
-            TextButton(
-                onClick = {
-                    onChange(
-                        settings.copy(
-                            photoDownloadPolicy = ProfileSettings().photoDownloadPolicy,
-                            videoDownloadPolicy = ProfileSettings().videoDownloadPolicy,
-                            audioDownloadPolicy = ProfileSettings().audioDownloadPolicy,
-                            fileDownloadPolicy = ProfileSettings().fileDownloadPolicy,
-                        ),
+        SettingsList {
+            item { SettingsSection("Automatic downloads") }
+            item {
+                SettingsGroup {
+                    SettingsLink("Photos", settings.photoDownloadPolicy.label, onClick = { picker = DataPicker.Photos })
+                    SettingsLink("Videos", settings.videoDownloadPolicy.label, onClick = { picker = DataPicker.Videos })
+                    SettingsLink("Audio", settings.audioDownloadPolicy.label, onClick = { picker = DataPicker.Audio })
+                    SettingsLink("Files", settings.fileDownloadPolicy.label, onClick = { picker = DataPicker.Files })
+                    SettingsAction(
+                        title = "Reset download settings",
+                        subtitle = "Restore the default policy for every media type.",
+                        onClick = {
+                            onChange(
+                                settings.copy(
+                                    photoDownloadPolicy = ProfileSettings().photoDownloadPolicy,
+                                    videoDownloadPolicy = ProfileSettings().videoDownloadPolicy,
+                                    audioDownloadPolicy = ProfileSettings().audioDownloadPolicy,
+                                    fileDownloadPolicy = ProfileSettings().fileDownloadPolicy,
+                                ),
+                            )
+                        },
                     )
-                },
-                modifier = Modifier.padding(8.dp),
-            ) { Text("Reset download settings") }
-            SettingsSection("Sent media")
-            SettingsLink("Photo and video quality", settings.sentMediaQuality.label, onClick = { qualityPicker = true })
-            SettingsExplainer("Choose when White Noise may download each media type.")
+                }
+            }
+            item { SettingsSection("Sent media") }
+            item {
+                SettingsGroup {
+                    SettingsLink("Photo and video quality", settings.sentMediaQuality.label, onClick = { qualityPicker = true })
+                }
+            }
+            item { SettingsExplainer("Choose when White Noise may download each media type.") }
         }
     }
     picker?.let { target ->
@@ -302,19 +331,6 @@ private enum class DataPicker(val label: String) {
 }
 
 @Composable
-private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(label) },
-        leadingContent = { RadioButton(selected = selected, onClick = null) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { role = Role.RadioButton }
-            .clickable(onClick = onClick),
-    )
-    HorizontalDivider()
-}
-
-@Composable
 private fun <T> ChoiceDialog(
     title: String,
     values: List<T>,
@@ -329,10 +345,10 @@ private fun <T> ChoiceDialog(
         text = {
             Column {
                 values.forEach { value ->
-                    ListItem(
-                        headlineContent = { Text(label(value)) },
-                        leadingContent = { RadioButton(selected = value == selected, onClick = null) },
-                        modifier = Modifier.fillMaxWidth().clickable { onSelect(value) },
+                    SettingsChoice(
+                        title = label(value),
+                        selected = value == selected,
+                        onClick = { onSelect(value) },
                     )
                 }
             }

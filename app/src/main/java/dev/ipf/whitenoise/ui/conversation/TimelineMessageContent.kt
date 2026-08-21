@@ -15,22 +15,30 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,8 +50,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +71,8 @@ import dev.ipf.whitenoise.model.MediaLayout
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
 import dev.ipf.whitenoise.model.ProfileAvatar
+import dev.ipf.whitenoise.model.VoiceMessageFixture
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 import java.io.File
 import java.util.Locale
@@ -102,9 +119,18 @@ private fun TimelineMediaGrid(
     }
     val visible = frames.take(MediaLayout.visibleCount(frames.size))
     val overflow = MediaLayout.overflowCount(frames.size)
+    val attachmentCountDescription = pluralStringResource(
+        R.plurals.media_attachment_count,
+        frames.size,
+        frames.size,
+    )
     // Material count layouts preserve reading order and share one viewer target.
     Column(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).clickable(onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 6.dp)
+            .semantics { contentDescription = attachmentCountDescription }
+            .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         when (MediaLayout.forCount(frames.size)) {
@@ -139,15 +165,22 @@ private fun TimelineMediaGrid(
 
 @Composable
 private fun MediaTile(frame: VisualFrame, modifier: Modifier, overflow: Int = 0) {
-    Box(modifier.clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surface)) {
+    Box(modifier.clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.surfaceContainer)) {
         frame.image?.let { ComposerImage(it, Modifier.fillMaxSize()) }
             ?: Text(frame.attachment.label, Modifier.align(Alignment.Center).padding(8.dp))
         if (frame.attachment.kind == MessageAttachmentKind.Video) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
-            ) { Text("▶", Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) }
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.88f),
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_play_arrow),
+                    contentDescription = stringResource(R.string.play),
+                    modifier = Modifier.padding(10.dp).size(24.dp),
+                )
+            }
         }
         if (overflow > 0) {
             Box(
@@ -160,21 +193,47 @@ private fun MediaTile(frame: VisualFrame, modifier: Modifier, overflow: Int = 0)
 
 @Composable
 private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
-    val container = if (outgoing) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+    val container = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val secondaryContent = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Surface(
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = container,
+        contentColor = content,
     ) {
-        Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.padding(WhiteNoiseSpacing.Related),
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        ) {
             attachment.images.firstOrNull()?.let {
-                ComposerImage(it, Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)))
+                ComposerImage(it, Modifier.size(56.dp).clip(MaterialTheme.shapes.small))
             }
             Column(Modifier.weight(1f)) {
-                Text(attachment.linkTitle ?: attachment.label, fontWeight = FontWeight.SemiBold)
-                attachment.linkDomain?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
+                Text(
+                    attachment.linkTitle ?: attachment.label,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                attachment.linkDomain?.let {
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = secondaryContent)
+                }
                 attachment.linkSummary?.let {
-                    Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        it,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = secondaryContent,
+                    )
                 }
             }
         }
@@ -188,20 +247,47 @@ private fun DocumentOrContactCard(attachment: MessageAttachment, outgoing: Boole
     val canOpen = attachment.externalUri?.let {
         runCatching { it.toUri().scheme == "content" }.getOrDefault(false)
     } == true || bundled != null
-    val container = if (outgoing) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+    val container = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
     Surface(
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = container,
+        contentColor = content,
     ) {
         Row(
-            Modifier.padding(10.dp),
+            Modifier.padding(WhiteNoiseSpacing.Related),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
         ) {
             attachment.images.firstOrNull()?.let {
-                ComposerImage(it, Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)))
-            } ?: Text(if (attachment.kind == MessageAttachmentKind.File) "▤" else "●")
+                ComposerImage(it, Modifier.size(48.dp).clip(CircleShape))
+            } ?: Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = if (outgoing) {
+                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.14f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                contentColor = content,
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (attachment.kind == MessageAttachmentKind.File) {
+                            R.drawable.ic_description
+                        } else {
+                            R.drawable.ic_person
+                        },
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
             Text(attachment.label, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (canOpen) {
                 TextButton(onClick = {
@@ -211,7 +297,7 @@ private fun DocumentOrContactCard(attachment: MessageAttachment, outgoing: Boole
                         openContentUri(context, attachment.externalUri.orEmpty())
                     }
                 }) {
-                    Text(stringResource(R.string.open_attachment, attachment.label))
+                    Text(stringResource(R.string.open_attachment, attachment.label), color = content)
                 }
             }
         }
@@ -224,6 +310,7 @@ private fun VoiceMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
     var isPlaying by remember(attachment.id) { mutableStateOf(false) }
     var progress by remember(attachment.id) { mutableFloatStateOf(0f) }
     var transcriptVisible by remember(attachment.id) { mutableStateOf(false) }
+    var localTranscript by remember(attachment.id) { mutableStateOf(attachment.transcript) }
     val context = LocalContext.current
     LaunchedEffect(isPlaying) {
         if (!isPlaying) return@LaunchedEffect
@@ -236,31 +323,101 @@ private fun VoiceMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
             isPlaying = false
         }
     }
-    val container = if (outgoing) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+    val container = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val secondaryContent = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Surface(
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = container,
+        contentColor = content,
     ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { isPlaying = !isPlaying }) {
-                    Text(stringResource(if (isPlaying) R.string.pause else R.string.play))
+        Column(
+            Modifier.padding(WhiteNoiseSpacing.Related),
+            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            ) {
+                FilledTonalIconButton(onClick = { isPlaying = !isPlaying }) {
+                    Icon(
+                        painter = painterResource(
+                            if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow,
+                        ),
+                        contentDescription = stringResource(
+                            if (isPlaying) R.string.pause else R.string.play,
+                        ),
+                    )
                 }
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.weight(1f))
-                Text("0:${duration.toString().padStart(2, '0')}", style = MaterialTheme.typography.labelMedium)
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.weight(1f),
+                    color = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                    trackColor = content.copy(alpha = 0.24f),
+                )
+                Text(
+                    "0:${duration.toString().padStart(2, '0')}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = secondaryContent,
+                )
             }
-            attachment.transcript?.let { transcript ->
+            val transcript = localTranscript
+            if (transcript == null) {
+                if (!outgoing) {
+                    TextButton(
+                        onClick = {
+                            localTranscript = VoiceMessageFixture.transcript
+                            transcriptVisible = true
+                        },
+                    ) {
+                        Text(stringResource(R.string.transcribe), color = content)
+                    }
+                }
+            } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = { transcriptVisible = !transcriptVisible }) {
-                        Text(stringResource(if (transcriptVisible) R.string.hide_transcript else R.string.show_transcript))
+                        Text(
+                            stringResource(
+                                if (transcriptVisible) R.string.hide_transcript else R.string.show_transcript,
+                            ),
+                            color = content,
+                        )
                     }
                     TextButton(onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText("Transcript", transcript))
-                    }) { Text(stringResource(R.string.copy_transcript)) }
+                    }) { Text(stringResource(R.string.copy_transcript), color = content) }
                 }
-                if (transcriptVisible) Text(transcript, style = MaterialTheme.typography.bodyMedium)
+                if (transcriptVisible) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.small,
+                        color = if (outgoing) {
+                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        },
+                        contentColor = content,
+                    ) {
+                        Column(Modifier.padding(WhiteNoiseSpacing.Related)) {
+                            Text(
+                                stringResource(R.string.transcribed),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = secondaryContent,
+                            )
+                            Text(transcript, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
             }
         }
     }
@@ -271,6 +428,7 @@ internal fun ReadAloudAction(text: String) {
     val context = LocalContext.current
     var ready by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
+    var progress by remember(text) { mutableFloatStateOf(0f) }
     val engine = remember {
         var tts: TextToSpeech? = null
         tts = TextToSpeech(context.applicationContext) { status ->
@@ -281,12 +439,28 @@ internal fun ReadAloudAction(text: String) {
     }
     DisposableEffect(engine) {
         engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) = updateSpeaking(true)
-            override fun onDone(utteranceId: String?) = updateSpeaking(false)
+            override fun onStart(utteranceId: String?) = postUpdate {
+                speaking = true
+                progress = 0f
+            }
+
+            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                postUpdate { progress = (end.toFloat() / text.length.coerceAtLeast(1)).coerceIn(0f, 1f) }
+            }
+
+            override fun onDone(utteranceId: String?) = postUpdate {
+                speaking = false
+                progress = 0f
+            }
+
             @Deprecated("Platform callback")
-            override fun onError(utteranceId: String?) = updateSpeaking(false)
-            private fun updateSpeaking(value: Boolean) {
-                Handler(Looper.getMainLooper()).post { speaking = value }
+            override fun onError(utteranceId: String?) = postUpdate {
+                speaking = false
+                progress = 0f
+            }
+
+            private fun postUpdate(update: () -> Unit) {
+                Handler(Looper.getMainLooper()).post(update)
             }
         })
         onDispose {
@@ -294,47 +468,110 @@ internal fun ReadAloudAction(text: String) {
             engine.shutdown()
         }
     }
-    TextButton(
-        onClick = {
-            if (speaking) engine.stop() else engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "white-noise-message")
-            speaking = !speaking
-        },
-        enabled = ready,
-        contentPadding = PaddingValues(horizontal = 0.dp),
-    ) { Text(stringResource(if (speaking) R.string.stop_reading else R.string.read_aloud)) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TextButton(
+            onClick = {
+                if (speaking) {
+                    engine.stop()
+                    speaking = false
+                    progress = 0f
+                } else {
+                    engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "white-noise-message")
+                    speaking = true
+                }
+            },
+            enabled = ready,
+            contentPadding = PaddingValues(horizontal = 0.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_volume_up),
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp).size(18.dp),
+            )
+            Text(stringResource(if (speaking) R.string.stop_reading else R.string.read_aloud))
+        }
+        if (speaking) {
+            val percentage = (progress * 100).toInt()
+            val progressDescription = stringResource(R.string.reading_aloud_progress, percentage)
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = progressDescription
+                        liveRegion = LiveRegionMode.Polite
+                    },
+            )
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReadOnlyMediaViewer(
     attachments: List<MessageAttachment>,
     onDismiss: () -> Unit,
+    initialAttachmentIndex: Int = 0,
 ) {
-    val frames = attachments.filter(MessageAttachment::isVisual).flatMap { attachment ->
+    val visualAttachments = attachments.filter(MessageAttachment::isVisual)
+    val frames = visualAttachments.flatMap { attachment ->
         if (attachment.images.isEmpty()) listOf(VisualFrame(attachment, null))
         else attachment.images.map { VisualFrame(attachment, it) }
     }
     if (frames.isEmpty()) return
-    val pagerState = rememberPagerState { frames.size }
+    val safeAttachmentIndex = initialAttachmentIndex.coerceIn(0, visualAttachments.lastIndex)
+    val initialPage = visualAttachments.take(safeAttachmentIndex).sumOf { attachment ->
+        maxOf(attachment.images.size, 1)
+    }
+    val pagerState = rememberPagerState(initialPage = initialPage) { frames.size }
     val context = LocalContext.current
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().padding(vertical = 24.dp)) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
-                    Text(stringResource(R.string.media_viewer), style = MaterialTheme.typography.titleLarge)
-                    Text("${pagerState.currentPage + 1}/${frames.size}")
-                }
-                HorizontalPager(state = pagerState, modifier = Modifier.weight(1f).fillMaxWidth()) { index ->
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            contentWindowInsets = WindowInsets.safeDrawing,
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.media_viewer)) },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_close),
+                                contentDescription = stringResource(R.string.close),
+                            )
+                        }
+                    },
+                    actions = {
+                        Text(
+                            "${pagerState.currentPage + 1}/${frames.size}",
+                            modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+                )
+            },
+        ) { contentPadding ->
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize().padding(contentPadding),
+                pageSpacing = WhiteNoiseSpacing.Section,
+            ) { index ->
                     val frame = frames[index]
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        frame.image?.let { ComposerImage(it, Modifier.fillMaxSize().padding(16.dp)) }
+                        frame.image?.let {
+                            ComposerImage(
+                                image = it,
+                                modifier = Modifier.fillMaxSize().padding(WhiteNoiseSpacing.CompactScreenMargin),
+                                contentScale = ContentScale.Fit,
+                            )
+                        }
                             ?: Text(frame.attachment.label)
                         if (frame.attachment.kind == MessageAttachmentKind.Video) {
                             Button(
@@ -351,12 +588,11 @@ internal fun ReadOnlyMediaViewer(
                                         )
                                     }
                                 },
-                                modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp),
+                                modifier = Modifier.align(Alignment.BottomCenter).padding(WhiteNoiseSpacing.Section),
                             ) { Text(stringResource(R.string.open_video)) }
                         }
                     }
                 }
-            }
         }
     }
 }

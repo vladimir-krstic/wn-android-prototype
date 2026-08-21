@@ -2,35 +2,49 @@ package dev.ipf.whitenoise.ui.conversation
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,15 +52,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatMessage
+import dev.ipf.whitenoise.model.ComposerAvailability
 import dev.ipf.whitenoise.model.MessageAction
 import dev.ipf.whitenoise.model.MessageActionPolicy
 import dev.ipf.whitenoise.model.MessageDeletionScope
@@ -54,9 +78,11 @@ import dev.ipf.whitenoise.model.MessageDeliveryState
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ReactionCatalog
 import dev.ipf.whitenoise.model.composerAvailability
-import dev.ipf.whitenoise.model.ComposerAvailability
+import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,30 +95,129 @@ internal fun MessageActionsSheet(
     onAction: (MessageAction) -> Unit,
 ) {
     val selectedReaction = message.reactions.firstOrNull { profile.id in it.personIds }?.emoji
+    val actions = MessageActionPolicy.available(message, profile.id)
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 560.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = WhiteNoiseSpacing.CompactScreenMargin),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
-                ReactionCatalog.quickStrip(profile.quickReactions, selectedReaction).forEach { emoji ->
-                    FilterChip(
-                        selected = emoji == selectedReaction,
-                        onClick = { onReaction(emoji, emoji == selectedReaction) },
-                        label = { Text(emoji) },
-                    )
+                Text(
+                    stringResource(R.string.message_actions),
+                    modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.Section),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                MessageContextPreview(profile, message)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    items(
+                        ReactionCatalog.quickStrip(profile.quickReactions, selectedReaction),
+                        key = { it },
+                    ) { emoji ->
+                        FilterChip(
+                            selected = emoji == selectedReaction,
+                            onClick = { onReaction(emoji, emoji == selectedReaction) },
+                            label = {
+                                Text(emoji, style = MaterialTheme.typography.titleMedium)
+                            },
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        )
+                    }
+                    item {
+                        FilledTonalButton(
+                            onClick = onMoreReactions,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_add),
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = WhiteNoiseSpacing.Related).size(18.dp),
+                            )
+                            Text(stringResource(R.string.more_reactions))
+                        }
+                    }
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                ) {
+                    items(actions, key = { it.name }) { action ->
+                        val destructive = action == MessageAction.Delete
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    actionLabel(action),
+                                    color = if (destructive) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    painter = painterResource(actionIcon(action)),
+                                    contentDescription = null,
+                                    tint = if (destructive) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { onAction(action) },
+                        )
+                    }
                 }
             }
-            TextButton(onClick = onMoreReactions, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text(stringResource(R.string.more_reactions))
+        }
+    }
+}
+
+@Composable
+private fun MessageContextPreview(profile: Profile, message: ChatMessage) {
+    val outgoing = message.authorId == profile.id
+    val person = profile.people.firstOrNull { it.id == message.authorId }
+    val authorName = if (outgoing) stringResource(R.string.you) else person?.name
+        ?: stringResource(R.string.unknown_person)
+    val avatar = if (outgoing) profile.avatar else person?.avatar
+    val summary = message.visibleText(profile.id).ifBlank {
+        message.attachments.firstOrNull()?.label.orEmpty()
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        ) {
+            avatar?.let {
+                ProfileAvatar(authorName, it, Modifier.size(40.dp), contentDescription = null)
             }
-            MessageActionPolicy.available(message, profile.id).forEach { action ->
-                ListItem(
-                    headlineContent = { Text(actionLabel(action)) },
-                    modifier = Modifier.clickable { onAction(action) },
+            Column(Modifier.weight(1f)) {
+                Text(authorName, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    summary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -112,6 +237,16 @@ internal fun actionLabel(action: MessageAction): String = stringResource(
     },
 )
 
+private fun actionIcon(action: MessageAction): Int = when (action) {
+    MessageAction.RetrySend -> R.drawable.ic_refresh
+    MessageAction.Reply -> R.drawable.ic_reply
+    MessageAction.Forward -> R.drawable.ic_forward
+    MessageAction.Copy -> R.drawable.ic_content_copy
+    MessageAction.Select -> R.drawable.ic_check
+    MessageAction.Info -> R.drawable.ic_info
+    MessageAction.Delete -> R.drawable.ic_delete
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EmojiPickerSheet(
@@ -124,46 +259,97 @@ internal fun EmojiPickerSheet(
     val values = if (query.isBlank()) ReactionCatalog.categories.getValue(category) else ReactionCatalog.all
     val filtered = values.filter { query.isBlank() || it.contains(query) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp)) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            Column(
+                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp).navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
-                TextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text(stringResource(R.string.search_emoji)) },
-                    singleLine = true,
-                )
-                onConfigure?.let { configure ->
-                    TextButton(onClick = configure) { Text(stringResource(R.string.configure_reactions)) }
-                }
-            }
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        ReactionCatalog.categories.keys.forEach { name ->
-                            FilterChip(
-                                selected = category == name,
-                                onClick = { category = name; query = "" },
-                                label = { Text(name.take(1)) },
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    TextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text(stringResource(R.string.search_emoji)) },
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.ic_search), contentDescription = null)
+                        },
+                        trailingIcon = if (query.isNotEmpty()) ({
+                            IconButton(onClick = { query = "" }) {
+                                Icon(
+                                    painterResource(R.drawable.ic_close),
+                                    contentDescription = stringResource(R.string.clear_search),
+                                )
+                            }
+                        }) else null,
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                    )
+                    onConfigure?.let { configure ->
+                        FilledTonalIconButton(onClick = configure) {
+                            Icon(
+                                painterResource(R.drawable.ic_tune),
+                                contentDescription = stringResource(R.string.configure_reactions),
                             )
                         }
                     }
                 }
-                item {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(8),
-                        modifier = Modifier.fillMaxWidth().size(360.dp),
-                        userScrollEnabled = false,
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    items(ReactionCatalog.categories.keys.toList(), key = { it }) { name ->
+                        FilterChip(
+                            selected = category == name && query.isBlank(),
+                            onClick = {
+                                category = name
+                                query = ""
+                            },
+                            label = { Text(name) },
+                        )
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                if (filtered.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        items(filtered) { emoji ->
-                            TextButton(onClick = { onEmoji(emoji) }, contentPadding = PaddingValues(0.dp)) {
+                        Text(
+                            stringResource(R.string.no_emoji_found),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 48.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .heightIn(min = 160.dp, max = 440.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                            vertical = WhiteNoiseSpacing.Related,
+                        ),
+                    ) {
+                        items(filtered, key = { it }) { emoji ->
+                            TextButton(
+                                onClick = { onEmoji(emoji) },
+                                modifier = Modifier.size(48.dp),
+                                contentPadding = PaddingValues(0.dp),
+                            ) {
                                 Text(emoji, style = MaterialTheme.typography.titleLarge)
                             }
                         }
@@ -184,23 +370,56 @@ internal fun ConfigureReactionsSheet(
 ) {
     var draft by remember(current) { mutableStateOf(current) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(stringResource(R.string.configure_reactions), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.configure_reactions_guidance))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                draft.forEachIndexed { index, emoji ->
-                    TextButton(onClick = { onPickSlot(index, draft) }) { Text(emoji, style = MaterialTheme.typography.titleLarge) }
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 560.dp)
+                    .navigationBarsPadding()
+                    .padding(WhiteNoiseSpacing.Section),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+            ) {
+                Text(stringResource(R.string.configure_reactions), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    stringResource(R.string.configure_reactions_guidance),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    itemsIndexed(draft, key = { index, _ -> index }) { index, emoji ->
+                        val description = stringResource(R.string.reaction_slot_description, index + 1, emoji)
+                        Surface(
+                            onClick = { onPickSlot(index, draft) },
+                            modifier = Modifier.size(56.dp).semantics {
+                                contentDescription = description
+                            },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(emoji, style = MaterialTheme.typography.titleLarge)
+                            }
+                        }
+                    }
                 }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = { draft = ReactionCatalog.defaults }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.reset))
-                }
-                Button(onClick = { onApply(draft) }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.done))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
+                    TextButton(
+                        onClick = { draft = ReactionCatalog.defaults },
+                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                    ) {
+                        Text(stringResource(R.string.reset))
+                    }
+                    WhiteNoiseButton(
+                        onClick = { onApply(draft) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.done))
+                    }
                 }
             }
         }
@@ -222,38 +441,159 @@ internal fun ForwardMessagesSheet(
             (query.isBlank() || it.title.contains(query, ignoreCase = true))
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
-            Text(stringResource(R.string.forward), Modifier.padding(20.dp), style = MaterialTheme.typography.titleLarge)
-            TextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                placeholder = { Text(stringResource(R.string.search_chats)) },
-                singleLine = true,
-            )
-            LazyColumn(Modifier.weight(1f, fill = false)) {
-                items(chats, key = Chat::id) { chat ->
-                    val checked = chat.id in selected
-                    ListItem(
-                        headlineContent = { Text(chat.title) },
-                        supportingContent = { Text(chat.displayPreview, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        leadingContent = { ProfileAvatar(chat.title, chat.avatar, Modifier.size(42.dp), contentDescription = null) },
-                        trailingContent = { Text(if (checked) "✓" else "○") },
-                        modifier = Modifier.clickable {
-                            selected = if (checked) selected - chat.id else if (selected.size < 5) selected + chat.id else selected
-                        },
-                    )
-                }
-            }
-            Button(
-                onClick = { onForward(selected.toList()) },
-                enabled = selected.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            Column(
+                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp).navigationBarsPadding(),
             ) {
                 Text(
-                    if (selected.size <= 1) stringResource(R.string.forward)
-                    else pluralStringResource(R.plurals.forward_to_chats, selected.size, selected.size),
+                    stringResource(R.string.forward),
+                    modifier = Modifier.padding(
+                        horizontal = WhiteNoiseSpacing.Section,
+                        vertical = WhiteNoiseSpacing.Related,
+                    ),
+                    style = MaterialTheme.typography.titleLarge,
                 )
+                Text(
+                    stringResource(R.string.forward_selection_limit),
+                    modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.Section),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                TextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                            vertical = WhiteNoiseSpacing.FormField,
+                        ),
+                    placeholder = { Text(stringResource(R.string.search_chats)) },
+                    leadingIcon = {
+                        Icon(painterResource(R.drawable.ic_search), contentDescription = null)
+                    },
+                    trailingIcon = if (query.isNotEmpty()) ({
+                        IconButton(onClick = { query = "" }) {
+                            Icon(
+                                painterResource(R.drawable.ic_close),
+                                contentDescription = stringResource(R.string.clear_search),
+                            )
+                        }
+                    }) else null,
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                if (chats.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(stringResource(R.string.no_results), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            stringResource(R.string.no_results_detail),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 420.dp),
+                    ) {
+                        items(chats, key = Chat::id) { chat ->
+                            val checked = chat.id in selected
+                            val enabled = checked || selected.size < 5
+                            ListItem(
+                                headlineContent = { Text(chat.title) },
+                                supportingContent = {
+                                    Text(
+                                        chat.displayPreview,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                                leadingContent = {
+                                    ProfileAvatar(
+                                        chat.title,
+                                        chat.avatar,
+                                        Modifier.size(48.dp),
+                                        contentDescription = null,
+                                    )
+                                },
+                                trailingContent = {
+                                    Checkbox(
+                                        checked = checked,
+                                        onCheckedChange = null,
+                                        enabled = enabled,
+                                        modifier = Modifier.clearAndSetSemantics { },
+                                    )
+                                },
+                                colors = ListItemDefaults.colors(
+                                    containerColor = if (checked) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                ),
+                                modifier = Modifier
+                                    .alpha(if (enabled) 1f else 0.38f)
+                                    .toggleable(
+                                        value = checked,
+                                        enabled = enabled,
+                                        role = Role.Checkbox,
+                                        onValueChange = {
+                                            selected = if (checked) selected - chat.id else selected + chat.id
+                                        },
+                                    ),
+                            )
+                        }
+                    }
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Column(Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin)) {
+                        if (selected.isNotEmpty()) {
+                            Text(
+                                pluralStringResource(
+                                    R.plurals.selected_count,
+                                    selected.size,
+                                    selected.size,
+                                ),
+                                modifier = Modifier
+                                    .align(Alignment.CenterHorizontally)
+                                    .padding(bottom = WhiteNoiseSpacing.Related),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        WhiteNoiseButton(
+                            onClick = { onForward(selected.toList()) },
+                            enabled = selected.isNotEmpty(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                if (selected.size <= 1) {
+                                    stringResource(R.string.forward)
+                                } else {
+                                    pluralStringResource(
+                                        R.plurals.forward_to_chats,
+                                        selected.size,
+                                        selected.size,
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -270,8 +610,15 @@ internal fun DeleteMessagesDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                if (messages.size == 1) stringResource(R.string.delete_message_question)
-                else pluralStringResource(R.plurals.delete_selected_question, messages.size, messages.size),
+                if (messages.size == 1) {
+                    stringResource(R.string.delete_message_question)
+                } else {
+                    pluralStringResource(
+                        R.plurals.delete_selected_question,
+                        messages.size,
+                        messages.size,
+                    )
+                },
             )
         },
         text = { Text(stringResource(R.string.delete_for_me_explanation)) },
@@ -279,7 +626,10 @@ internal fun DeleteMessagesDialog(
             Column(horizontalAlignment = Alignment.End) {
                 if (MessageActionPolicy.canDeleteForEveryone(messages, profileId)) {
                     TextButton(onClick = { onDelete(MessageDeletionScope.ForEveryone) }) {
-                        Text(stringResource(R.string.delete_for_everyone), color = MaterialTheme.colorScheme.error)
+                        Text(
+                            stringResource(R.string.delete_for_everyone),
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     }
                 }
                 TextButton(onClick = { onDelete(MessageDeletionScope.ForMe) }) {
@@ -287,7 +637,9 @@ internal fun DeleteMessagesDialog(
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
     )
 }
 
@@ -298,18 +650,50 @@ internal fun SelectionBottomBar(
     onDelete: () -> Unit,
     onForward: () -> Unit,
 ) {
-    Surface(tonalElevation = 3.dp) {
-        Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(WhiteNoiseSpacing.Related),
         ) {
-            TextButton(onClick = onDelete, enabled = selectedCount > 0) {
-                Text(stringResource(R.string.delete_selected_messages))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            ) {
+                IconButton(onClick = onDelete, enabled = selectedCount > 0) {
+                    Icon(
+                        painterResource(R.drawable.ic_delete),
+                        contentDescription = stringResource(R.string.delete_selected_messages),
+                        tint = if (selectedCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
+                    )
+                }
+                Text(
+                    pluralStringResource(R.plurals.selected_count, selectedCount, selectedCount),
+                    modifier = Modifier.weight(1f).semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    },
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                FilledTonalIconButton(onClick = onForward, enabled = canForward) {
+                    Icon(
+                        painterResource(R.drawable.ic_forward),
+                        contentDescription = stringResource(R.string.forward_selected_messages),
+                    )
+                }
             }
-            Text(pluralStringResource(R.plurals.selected_count, selectedCount, selectedCount), fontWeight = FontWeight.SemiBold)
-            TextButton(onClick = onForward, enabled = canForward) {
-                Text(stringResource(R.string.forward_selected_messages))
+            if (selectedCount > 0 && !canForward) {
+                Text(
+                    stringResource(R.string.forward_selection_unavailable),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.Related),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
@@ -322,21 +706,57 @@ internal fun SearchResultsBottomBar(
     onOlder: () -> Unit,
     onNewer: () -> Unit,
 ) {
-    Surface(tonalElevation = 3.dp) {
+    val countLabel = if (count == 0) {
+        stringResource(R.string.matches_zero)
+    } else {
+        pluralStringResource(R.plurals.match_position, count, current + 1, count)
+    }
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(
+                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                    vertical = WhiteNoiseSpacing.Related,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedButton(onClick = onOlder, enabled = count > 0 && current < count - 1) {
-                Text(stringResource(R.string.previous_match))
+            FilledTonalIconButton(
+                onClick = onOlder,
+                enabled = count > 0 && current < count - 1,
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_arrow_up),
+                    contentDescription = stringResource(R.string.previous_match),
+                )
             }
-            Text(
-                if (count == 0) stringResource(R.string.matches_zero)
-                else pluralStringResource(R.plurals.match_position, count, current + 1, count),
-            )
-            OutlinedButton(onClick = onNewer, enabled = count > 0 && current > 0) {
-                Text(stringResource(R.string.next_match))
+            Surface(
+                modifier = Modifier.weight(1f).semantics {
+                    liveRegion = LiveRegionMode.Polite
+                },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            ) {
+                Text(
+                    countLabel,
+                    modifier = Modifier.padding(
+                        horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                        vertical = 10.dp,
+                    ),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+            FilledTonalIconButton(
+                onClick = onNewer,
+                enabled = count > 0 && current > 0,
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_arrow_down),
+                    contentDescription = stringResource(R.string.next_match),
+                )
             }
         }
     }
@@ -351,58 +771,146 @@ fun MessageDetailsScreen(
     onBack: () -> Unit,
 ) {
     val outgoing = message.authorId == profile.id
-    val sender = profile.people.firstOrNull { it.id == message.authorId }?.name ?: chat.title
+    val sender = profile.people.firstOrNull { it.id == message.authorId }
+    val senderName = sender?.name ?: chat.title
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.back))
+                        Icon(
+                            painterResource(R.drawable.ic_arrow_back),
+                            contentDescription = stringResource(R.string.back),
+                        )
                     }
                 },
                 title = { Text(stringResource(R.string.message_details)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
             )
         },
     ) { padding ->
         AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
-            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(
+                contentPadding = PaddingValues(WhiteNoiseSpacing.CompactScreenMargin),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+            ) {
                 item {
-                    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (message.text.isNotBlank()) Text(message.text)
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin),
+                            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                        ) {
+                            if (message.text.isNotBlank()) {
+                                Text(message.text, style = MaterialTheme.typography.bodyLarge)
+                            }
                             TimelineAttachmentContent(message.attachments, outgoing, onOpenMedia = {})
                         }
                     }
                 }
                 item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(if (outgoing) R.string.sent else R.string.received)) },
-                        supportingContent = { Text("${message.dayLabel}, ${message.timeLabel}") },
-                    )
-                }
-                if (!outgoing) {
-                    item { ListItem(headlineContent = { Text(stringResource(R.string.sent_from)) }, supportingContent = { Text(sender) }) }
-                } else {
-                    val recipients = if (chat.isGroup) {
-                        chat.members.filterNot { it.personId == profile.id }.mapNotNull { member ->
-                            profile.people.firstOrNull { it.id == member.personId }?.name
-                        }
-                    } else listOf(chat.title)
-                    items(recipients) { name ->
-                        ListItem(
-                            headlineContent = { Text(name) },
-                            supportingContent = {
-                                Text(
-                                    stringResource(
-                                        when (message.deliveryState) {
-                                            MessageDeliveryState.Sending -> R.string.sending
-                                            MessageDeliveryState.Failed -> R.string.not_delivered
-                                            MessageDeliveryState.Sent -> R.string.sent
-                                        },
-                                    ),
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ) {
+                        Column {
+                            ListItem(
+                                headlineContent = {
+                                    Text(stringResource(if (outgoing) R.string.sent else R.string.received))
+                                },
+                                supportingContent = { Text("${message.dayLabel}, ${message.timeLabel}") },
+                                leadingContent = {
+                                    Icon(painterResource(R.drawable.ic_info), contentDescription = null)
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                            if (!outgoing) {
+                                ListItem(
+                                    headlineContent = { Text(stringResource(R.string.sent_from)) },
+                                    supportingContent = { Text(senderName) },
+                                    leadingContent = {
+                                        if (sender != null) {
+                                            ProfileAvatar(
+                                                sender.name,
+                                                sender.avatar,
+                                                Modifier.size(40.dp),
+                                                contentDescription = null,
+                                            )
+                                        } else {
+                                            Icon(
+                                                painterResource(R.drawable.ic_person),
+                                                contentDescription = null,
+                                            )
+                                        }
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 )
-                            },
-                        )
+                            } else {
+                                val recipients = if (chat.isGroup) {
+                                    chat.members.filterNot { it.personId == profile.id }.mapNotNull { member ->
+                                        profile.people.firstOrNull { it.id == member.personId }
+                                    }
+                                } else {
+                                    profile.people.firstOrNull { it.id == chat.id }?.let(::listOf).orEmpty()
+                                }
+                                recipients.forEach { person ->
+                                    ListItem(
+                                        headlineContent = { Text(person.name) },
+                                        supportingContent = {
+                                            Text(
+                                                stringResource(
+                                                    when (message.deliveryState) {
+                                                        MessageDeliveryState.Sending -> R.string.sending
+                                                        MessageDeliveryState.Failed -> R.string.not_delivered
+                                                        MessageDeliveryState.Sent -> R.string.sent
+                                                    },
+                                                ),
+                                            )
+                                        },
+                                        leadingContent = {
+                                            ProfileAvatar(
+                                                person.name,
+                                                person.avatar,
+                                                Modifier.size(40.dp),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    )
+                                }
+                                if (recipients.isEmpty()) {
+                                    ListItem(
+                                        headlineContent = { Text(chat.title) },
+                                        supportingContent = {
+                                            Text(
+                                                stringResource(
+                                                    when (message.deliveryState) {
+                                                        MessageDeliveryState.Sending -> R.string.sending
+                                                        MessageDeliveryState.Failed -> R.string.not_delivered
+                                                        MessageDeliveryState.Sent -> R.string.sent
+                                                    },
+                                                ),
+                                            )
+                                        },
+                                        leadingContent = {
+                                            Icon(
+                                                painterResource(R.drawable.ic_person),
+                                                contentDescription = null,
+                                            )
+                                        },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

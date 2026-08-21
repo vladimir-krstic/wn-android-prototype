@@ -1,7 +1,12 @@
 package dev.ipf.whitenoise.ui.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButtonDefaults
+import dev.ipf.whitenoise.ui.components.WhiteNoiseTextFieldDefaults
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -10,6 +15,29 @@ class WhiteNoiseThemeTest {
     fun ordinaryLightAndDarkRolesAreNeutral() {
         assertNeutral(WhiteNoiseLightColors)
         assertNeutral(WhiteNoiseDarkColors)
+    }
+
+    @Test
+    fun visualSystemUsesTheApprovedTypeWeightAndShapeScale() {
+        assertEquals(FontWeight.Medium, WhiteNoiseTypography.headlineMedium.fontWeight)
+        assertEquals(FontWeight.Medium, WhiteNoiseTypography.titleLarge.fontWeight)
+        assertEquals(RoundedCornerShape(4.dp), WhiteNoiseShapes.extraSmall)
+        assertEquals(RoundedCornerShape(8.dp), WhiteNoiseShapes.small)
+        assertEquals(RoundedCornerShape(12.dp), WhiteNoiseShapes.medium)
+        assertEquals(RoundedCornerShape(16.dp), WhiteNoiseShapes.large)
+        assertEquals(RoundedCornerShape(28.dp), WhiteNoiseShapes.extraLarge)
+    }
+
+    @Test
+    fun taskButtonsMatchTheMaterialSingleLineFieldHeight() {
+        assertEquals(56.dp, WhiteNoiseButtonDefaults.TaskHeight)
+    }
+
+    @Test
+    fun formFieldsUseTheApprovedContentLineAndStateRing() {
+        assertEquals(16.dp, WhiteNoiseTextFieldDefaults.ContentInset)
+        assertEquals(12.dp, WhiteNoiseTextFieldDefaults.AboveLabelAdditionalStartInset)
+        assertEquals(2.dp, WhiteNoiseTextFieldDefaults.StateRingWidth)
     }
 
     private fun assertNeutral(colors: ColorScheme) {

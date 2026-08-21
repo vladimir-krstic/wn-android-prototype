@@ -1,6 +1,6 @@
 # Composer, attachments, media, and speech
 
-Status: Implemented; static verification complete on 2026-08-15
+Status: Visual-polish static gate passed on 2026-08-21; device acceptance pending
 
 ## Source evidence
 
@@ -44,6 +44,33 @@ Status: Implemented; static verification complete on 2026-08-15
   transcription is view-local; Android `TextToSpeech` provides Read Aloud for
   ordinary incoming text.
 
+## Visual-polish translation
+
+- The composer is one quiet `surfaceContainerHigh` task region rather than a
+  stack of independent controls. Add, input, Send, and Record remain stable
+  Material actions; the primary Send action appears only when the draft is
+  sendable.
+- Draft media, files, contacts, GIFs, links, replies, mentions, preparation,
+  and failure feedback share the app shape, type, spacing, and tonal roles.
+  Removal controls retain 48dp targets and standard Close icons.
+- Attachment and deterministic picker sheets use Material list rows, semantic
+  icons, transparent row containers, bounded height, and platform sheet
+  behavior. Photo Picker, Files, and external camera presentation remain
+  system-owned and unchanged.
+- Draft and read-only media viewers are edge-to-edge modal tasks with safe-area
+  `TopAppBar`s, `HorizontalPager`, fit-scaled media, chronological thumbnails,
+  explicit selected state, and named Close/Done actions. Opening a draft item
+  starts on that exact item.
+- Voice record/review and received voice cards use code-native waveforms,
+  standard Play/Pause icons, tonal controls, progress, transcript provenance,
+  and editable Voice/Text/Both review. Read Aloud now exposes live progress
+  while preserving Android `TextToSpeech` ownership and lifecycle shutdown.
+- Official sources rechecked for this pass: [Compose text input](https://developer.android.com/develop/ui/compose/text/user-input),
+  [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+  [Compose pager](https://developer.android.com/develop/ui/compose/layouts/pager),
+  [Material inset handling](https://developer.android.com/develop/ui/compose/system/material-insets),
+  and [Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker).
+
 ## Deterministic composer catalog
 
 - Preserve the twelve accepted Composer rows and exact draft text.
@@ -60,6 +87,9 @@ Status: Implemented; static verification complete on 2026-08-15
 - Compose tests for text, photo album, mixed media, link preview, file/contact,
   recording/review, and received voice states compile into the instrumentation
   APK.
+- Focused semantics cover the attachment-menu actions, draft attachment count,
+  exact media-page targeting, link-preview removal, voice record/review,
+  transcription, message-format choice, playback, and transcript actions.
 - The clean static gate succeeds with no lint issue, and the merged APK still
   declares no camera, storage, microphone, network, notification, or location
   permission.

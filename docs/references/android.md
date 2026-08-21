@@ -1,6 +1,6 @@
 # Official Android reference index
 
-Last reviewed: 2026-08-20.
+Last reviewed: 2026-08-21.
 
 Use this file as a router. Open only the sources relevant to the selected
 screen, confirm that the guidance is still current, and record material links
@@ -12,7 +12,9 @@ authority; this index does not freeze library versions.
 - [Jetpack Compose overview](https://developer.android.com/develop/ui/compose)
 - [Compose UI architecture and unidirectional data flow](https://developer.android.com/develop/ui/compose/architecture)
 - [Android UI-layer architecture](https://developer.android.com/topic/architecture/ui-layer)
+- [Compose design systems](https://developer.android.com/develop/ui/compose/designsystems)
 - [Material 3 in Compose](https://developer.android.com/develop/ui/compose/designsystems/material3)
+- [Material 3 Expressive research](https://design.google/library/expressive-material-design-google-research)
 - [Material components in Compose](https://developer.android.com/develop/ui/compose/components)
 - [Interactive component guides](https://developer.android.com/develop/ui/compose/quick-guides/collections/display-interactive-components)
 - [Material Design 3](https://m3.material.io/)
@@ -28,9 +30,11 @@ authority; this index does not freeze library versions.
 - [Adaptive apps](https://developer.android.com/develop/adaptive-apps)
 - [Adaptive do's and don'ts](https://developer.android.com/develop/adaptive-apps/guides/adaptive-dos-and-donts)
 - [Window size classes](https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes)
-- [Canonical adaptive layouts](https://developer.android.com/develop/ui/compose/layouts/adaptive/canonical-layouts)
+- [Canonical adaptive layouts](https://developer.android.com/develop/adaptive-apps/guides/canonical-layouts)
 - [Edge-to-edge design](https://developer.android.com/design/ui/mobile/guides/layout-and-content/edge-to-edge)
 - [Window insets in Compose](https://developer.android.com/develop/ui/compose/system/insets)
+- [Set up window insets](https://developer.android.com/develop/ui/compose/system/insets-ui)
+- [Material 3 inset handling](https://developer.android.com/develop/ui/compose/system/material-insets)
 - [Android system bars](https://developer.android.com/design/ui/mobile/guides/foundations/system-bars)
 - [Keyboard/IME animation with insets](https://developer.android.com/develop/ui/compose/system/ime-keyboard)
 - [Splash screens](https://developer.android.com/develop/ui/views/launch/splash-screen)
@@ -44,6 +48,7 @@ authority; this index does not freeze library versions.
 - [Predictive Back design](https://developer.android.com/design/ui/mobile/guides/patterns/predictive-back)
 - [Add predictive Back support](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture)
 - [App bars](https://developer.android.com/develop/ui/compose/components/app-bars)
+- [Icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button)
 - [Bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets)
 - [Dialogs](https://developer.android.com/develop/ui/compose/components/dialog)
 - [Menus](https://developer.android.com/develop/ui/compose/components/menu)
@@ -52,10 +57,24 @@ authority; this index does not freeze library versions.
 
 ## Lists, input, gestures, and state
 
+- [Authentication and onboarding](https://developer.android.com/design/ui/mobile/guides/patterns/onboarding)
+- [Android settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings)
 - [Lists and grids](https://developer.android.com/develop/ui/compose/lists)
+- [Switches](https://developer.android.com/develop/ui/compose/components/switch)
+- [Radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button)
+- [Tabs](https://developer.android.com/develop/ui/compose/components/tabs)
+- [Pager layouts](https://developer.android.com/develop/ui/compose/layouts/pager)
+- [Chips](https://developer.android.com/develop/ui/compose/components/chip)
 - [Text input](https://developer.android.com/develop/ui/compose/text/user-input)
+- [Material TextField defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/TextFieldDefaults)
+- [Material OutlinedTextField defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/OutlinedTextFieldDefaults)
+- [Material text-field label positions](https://developer.android.com/reference/kotlin/androidx/compose/material3/TextFieldLabelPosition)
+- [Material buttons](https://developer.android.com/develop/ui/compose/components/button)
+- [Material Button defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonDefaults)
+- [Progress indicators](https://developer.android.com/develop/ui/compose/components/progress)
 - [Focus behavior](https://developer.android.com/develop/ui/compose/touch-input/focus)
 - [Understand Compose gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures)
+- [Tap and press gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press)
 - [Handling interactions and state layers](https://developer.android.com/develop/ui/compose/touch-input/user-interactions/handling-interactions)
 - [Save UI state](https://developer.android.com/develop/ui/compose/state-saving)
 - [State holders and UI state](https://developer.android.com/topic/architecture/ui-layer/stateholders)
@@ -149,11 +168,15 @@ risk.
 ### Verified project baseline
 
 The foundation was built and linted successfully on 2026-08-15 with Android
-Gradle Plugin 9.3.1, Gradle 9.7.0, compile/target SDK 37, minimum SDK 23,
+Gradle Plugin 9.3.1, and the current clean gate uses Gradle 9.7.1 with
+compile/target SDK 37, minimum SDK 23,
 Kotlin 2.4.10 through AGP built-in Kotlin, Compose BOM 2026.08.00, Activity
 Compose 1.13.0, Lifecycle 2.11.0, Navigation Compose 2.9.8, AndroidX Test
 1.7.0, JUnit extension 1.3.0, and Espresso 3.7.0. Re-check this set before an
 upgrade rather than treating it as a permanently current recommendation.
+
+Gradle 9.7.1 is the official 9.7 patch release recommended on 2026-08-21 and
+passed the complete project gate without changing the Android plugin baseline.
 
 Batch 1 additionally verified Google Code Scanner 16.1.0 and AndroidX
 ExifInterface 1.4.2. The scanner's transitive `INTERNET` and

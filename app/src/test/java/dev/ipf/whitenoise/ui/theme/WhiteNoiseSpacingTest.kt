@@ -9,6 +9,7 @@ class WhiteNoiseSpacingTest {
     @Test
     fun customLayoutTokensUseTheDocumentedAndroidGrid() {
         assertEquals(16.dp, WhiteNoiseSpacing.CompactScreenMargin)
+        assertEquals(32.dp, WhiteNoiseSpacing.SettingsSectionInset)
         assertEquals(8.dp, WhiteNoiseSpacing.Related)
         assertEquals(16.dp, WhiteNoiseSpacing.FormField)
         assertEquals(24.dp, WhiteNoiseSpacing.Section)
@@ -16,6 +17,7 @@ class WhiteNoiseSpacingTest {
 
         listOf(
             WhiteNoiseSpacing.CompactScreenMargin,
+            WhiteNoiseSpacing.SettingsSectionInset,
             WhiteNoiseSpacing.Related,
             WhiteNoiseSpacing.FormField,
             WhiteNoiseSpacing.Section,

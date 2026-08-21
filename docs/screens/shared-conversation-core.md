@@ -1,6 +1,7 @@
 # Shared conversation core
 
-Status: Implemented; static verification complete on 2026-08-15
+Status: Visual-polish refresh implemented; static verification complete on
+2026-08-21; device acceptance pending
 
 ## Source evidence
 
@@ -19,21 +20,31 @@ Status: Implemented; static verification complete on 2026-08-15
 
 - One typed full-screen destination renders direct, group, support,
   invitation, left, removed, blocked, and missing-relay states.
-- A Material center-aligned top app bar combines Back, avatar, title, and a
-  concise group-member or disappearing-message subtitle. Info navigation is
-  reserved for Batch 6.
+- A small Material top app bar combines Back, a compact clickable identity,
+  group-member or disappearing-message status, Search, and the profile-gated
+  Conversation Debug action. Left alignment gives the title a stable reading
+  edge and room for multiple actions; the identity opens the established Chat
+  or Group Info destination.
 - The timeline uses a keyed `LazyColumn`, derived chronological day sections,
   sticky date headers, and programmatic initial/new-message positioning. This
   follows the current official Android lazy-list guidance:
   <https://developer.android.com/develop/ui/compose/lists>.
-- A standard Material text field and Send button provide the bounded text
-  entry needed to prove active/invitation/ended transitions. Batch 4 replaces
-  this bounded composer with the complete multiline/attachment/speech system.
-  Current text-input authority:
+- The existing multiline/attachment/speech composer remains behaviorally
+  intact. Its boundary now shares one low tonal surface with the lifecycle
+  panels, stays within the adaptive conversation measure, and uses standard
+  Add and Microphone vectors in its resting state. Rich composer content is
+  intentionally reserved for rollout Batch 6. Current text-input authority:
   <https://developer.android.com/develop/ui/compose/text/user-input>.
 - Outgoing bubbles use the semantic primary/on-primary pair; incoming bubbles
-  use surface variant. Fully rounded, tail-free shapes and compact same-author
-  spacing preserve product identity without copying Apple Messages geometry.
+  use `surfaceContainerHigh`. Shared large/medium shapes, compact same-author
+  spacing, and a full 16 dp cluster break preserve hierarchy without copying
+  Apple Messages geometry.
+- Day headers use a pinned tonal capsule and heading semantics. Ordinary
+  events stay quiet text while support guidance uses one restrained tonal
+  notice surface, so date, event, and notice roles remain visibly distinct.
+- Selection uses a standard checkbox role and state rather than Unicode
+  selected/unselected glyphs. Failed delivery keeps a visible 48 dp retry
+  action with warning icon and error text.
 - Android accessibility actions and visible buttons own retry and invitation
   decisions. Gesture-only message actions remain Batch 5.
 
@@ -68,7 +79,8 @@ Status: Implemented; static verification complete on 2026-08-15
   with the accepted membership status.
 - A blocked direct chat preserves history and reports that messaging is
   unavailable. Missing Chat Relays preserves history and exposes **Check Chat
-  Relays** recovery copy; actual relay editing is Batch 6.
+  Relays** recovery copy; the action now opens the established Chat Info route
+  directly, where the chat-owned relay destination already lives.
 - White Noise Support uses stable ID `white-noise-support`, one shared model,
   and cannot duplicate. A new support chat requires at least one available
   profile Chat Message relay.
@@ -94,6 +106,16 @@ Status: Implemented; static verification complete on 2026-08-15
   resolution, invitation accept/decline, support uniqueness, send/retry,
   list-preview updates, profile isolation, and composer availability.
 - Compose tests for direct, group, invitation, and ended states compile into
-  the instrumentation APK. Device execution and visual inspection remain
-  deferred until requested.
+  the instrumentation APK. Focused coverage also verifies the clickable
+  identity, direct relay recovery, named failed-send retry, support notice,
+  and existing 200% font-scale RTL composition. Device execution and visual
+  inspection remain deferred until requested.
 - The clean static gate passes with zero lint issues and no new permission.
+
+## Current official Android sources
+
+- [App bars](https://developer.android.com/develop/ui/compose/components/app-bars)
+- [Lazy lists and sticky headers](https://developer.android.com/develop/ui/compose/lists)
+- [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics)
+- [Set up window insets](https://developer.android.com/develop/ui/compose/system/insets-ui)
+- [Text input](https://developer.android.com/develop/ui/compose/text/user-input)

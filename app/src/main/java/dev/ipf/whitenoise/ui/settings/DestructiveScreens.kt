@@ -6,19 +6,27 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,13 +38,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.WipeConfirmationPhrase
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButtonDefaults
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
+import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +68,8 @@ fun SignOutSheet(
     onComplete: (wipeData: Boolean) -> Unit,
 ) {
     var wipeData by rememberSaveable { mutableStateOf(true) }
-    var confirmation by rememberSaveable { mutableStateOf("") }
+    val confirmation = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState() }
+    val confirmationValue = confirmation.text.toString()
     var progress by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(progress) {
         if (progress == null) return@LaunchedEffect
@@ -59,77 +81,85 @@ fun SignOutSheet(
         contentWindowInsets = { WindowInsets.safeDrawing },
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.94f).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.94f),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("Sign Out", style = MaterialTheme.typography.headlineSmall)
-                TextButton(onClick = onDismiss, enabled = progress == null) { Text("Close") }
-            }
+            DestructiveSheetHeader(
+                title = "Sign Out",
+                onClose = onDismiss,
+                closeEnabled = progress == null,
+            )
             if (progress != null) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator()
-                    Text(progress!!, modifier = Modifier.padding(top = 16.dp))
-                }
+                DestructiveProgress(progress!!, Modifier.weight(1f))
             } else {
-                ListItem(
-                    headlineContent = { Text(profile.name) },
-                    supportingContent = { Text(profile.shortPublicKey) },
-                    leadingContent = { ProfileAvatar(profile.name, profile.avatar, Modifier.size(48.dp), contentDescription = null) },
-                )
-                HorizontalDivider()
-                ListItem(
-                    headlineContent = { Text("Wipe Data From This Device") },
-                    trailingContent = {
-                        Switch(
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Related)) {
+                        ListItem(
+                            headlineContent = { Text(profile.name) },
+                            supportingContent = { Text(profile.shortPublicKey) },
+                            leadingContent = {
+                                ProfileAvatar(
+                                    profile.name,
+                                    profile.avatar,
+                                    Modifier.size(48.dp),
+                                    contentDescription = null,
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                        SettingsSwitch(
+                            title = "Wipe Data From This Device",
                             checked = wipeData,
                             onCheckedChange = {
                                 wipeData = it
-                                if (!it) confirmation = ""
+                                if (!it) confirmation.edit { replace(0, length, "") }
+                            },
+                            subtitle = if (wipeData) {
+                                "This profile and all local data will be permanently removed. Previous chats won’t return."
+                            } else {
+                                "This profile and its local data will stay on this device."
                             },
                         )
-                    },
-                )
-                Text(
+                    }
                     if (wipeData) {
-                        "This profile and all local data will be permanently removed. Previous chats won’t return."
-                    } else {
-                        "This profile and its local data will stay on this device."
-                    },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (wipeData) {
-                    Text("Enter Profile Name", style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(
-                        value = confirmation,
-                        onValueChange = { confirmation = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Profile name") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                    )
-                    Text("Type “${profile.name}” to confirm permanent removal of this profile and its local data.")
+                        SettingsSection("Enter Profile Name")
+                        WhiteNoiseTextField(
+                            state = confirmation,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                            label = { Text("Profile name") },
+                            lineLimits = TextFieldLineLimits.SingleLine,
+                            supportingText = {
+                                Text("Type “${profile.name}” to confirm permanent removal of this profile and its local data.")
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Words,
+                            ),
+                        )
+                    }
                 }
-                Button(
-                    onClick = {
-                        progress = if (wipeData) "Signing out and wiping data…" else "Signing out…"
-                    },
-                    enabled = !wipeData || WipeConfirmationPhrase.matches(confirmation, profile.name),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-                ) { Text("Sign Out") }
+                SettingsBottomAction {
+                    DestructiveButton(
+                        label = "Sign Out",
+                        onClick = {
+                            progress = if (wipeData) {
+                                "Signing out and wiping data…"
+                            } else {
+                                "Signing out…"
+                            }
+                        },
+                        enabled = !wipeData || WipeConfirmationPhrase.matches(confirmationValue, profile.name),
+                        actionDescription = if (wipeData) "Sign Out and Wipe Data" else "Sign Out",
+                        unavailableDescription = if (wipeData) "Profile name required" else null,
+                    )
+                }
             }
         }
     }
@@ -143,65 +173,83 @@ fun EraseAppDataSheet(
     onErase: (String) -> Unit,
 ) {
     val phrase = remember(profileIds) { WipeConfirmationPhrase.make(profileIds) }
-    var confirmation by rememberSaveable { mutableStateOf("") }
+    val confirmation = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
+    val confirmationValue = confirmation.text.toString()
     var erasing by remember { mutableStateOf(false) }
     LaunchedEffect(erasing) {
         if (!erasing) return@LaunchedEffect
         delay(600)
-        onErase(confirmation)
+        onErase(confirmationValue)
     }
     ModalBottomSheet(
         onDismissRequest = { if (!erasing) onDismiss() },
         contentWindowInsets = { WindowInsets.safeDrawing },
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.94f).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.94f),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("Erase App Data", style = MaterialTheme.typography.headlineSmall)
-                TextButton(onClick = onDismiss, enabled = !erasing) { Text("Close") }
-            }
+            DestructiveSheetHeader(
+                title = "Erase App Data",
+                onClose = onDismiss,
+                closeEnabled = !erasing,
+            )
             if (erasing) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator()
-                    Text("Erasing app data…", modifier = Modifier.padding(top = 16.dp))
-                }
+                DestructiveProgress("Erasing app data…", Modifier.weight(1f))
             } else {
-                ListItem(
-                    headlineContent = { Text("This can’t be undone") },
-                    supportingContent = { Text("Every profile and all local chats, media, drafts, keys, and settings will be removed from this device.") },
-                    leadingContent = {
-                        Text("⚠", modifier = Modifier.clearAndSetSemantics { }, color = MaterialTheme.colorScheme.tertiary)
-                    },
-                )
-                Text("Type these words to confirm", style = MaterialTheme.typography.titleMedium)
-                Text(phrase, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                OutlinedTextField(
-                    value = confirmation,
-                    onValueChange = { confirmation = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Confirmation phrase") },
-                    singleLine = true,
-                )
-                Text("Enter the three words exactly to continue.")
-                Button(
-                    onClick = { erasing = true },
-                    enabled = WipeConfirmationPhrase.matches(confirmation, phrase),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-                ) { Text("Erase") }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    SettingsCallout(
+                        title = "This can’t be undone",
+                        text = "Every profile and all local chats, media, drafts, keys, and settings will be removed from this device.",
+                        modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
+                        leading = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_warning),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    SettingsSection("Type these words to confirm")
+                    SettingsGroup {
+                        SelectionContainer {
+                            Text(
+                                text = phrase,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(WhiteNoiseSpacing.FormField),
+                                fontFamily = FontFamily.Monospace,
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    }
+                    WhiteNoiseTextField(
+                        state = confirmation,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                                vertical = WhiteNoiseSpacing.FormField,
+                            ),
+                        label = { Text("Confirmation phrase") },
+                        lineLimits = TextFieldLineLimits.SingleLine,
+                        supportingText = { Text("Enter the three words exactly to continue.") },
+                    )
+                }
+                SettingsBottomAction {
+                    DestructiveButton(
+                        label = "Erase",
+                        onClick = { erasing = true },
+                        enabled = WipeConfirmationPhrase.matches(confirmationValue, phrase),
+                        actionDescription = "Erase App Data",
+                        unavailableDescription = "Confirmation phrase required",
+                    )
+                }
             }
         }
     }
@@ -219,24 +267,44 @@ fun ManageProfilesScreen(
     SettingsScaffold(title = "Manage Profiles", onBack = onBack) {
         SettingsList {
             if (removable.isEmpty()) {
-                item { SettingsExplainer("There are no other stored profiles to remove.") }
-            } else {
-                items(removable.size, key = { removable[it].id }) { index ->
-                    val profile = removable[index]
-                    ListItem(
-                        headlineContent = { Text(profile.name) },
-                        supportingContent = { Text(profile.shortPublicKey) },
-                        leadingContent = { ProfileAvatar(profile.name, profile.avatar, Modifier.size(48.dp), contentDescription = null) },
-                        trailingContent = {
-                            TextButton(onClick = { target = profile }) {
-                                Text("Remove", color = MaterialTheme.colorScheme.error)
-                            }
-                        },
+                item {
+                    WhiteNoiseEmptyState(
+                        title = "No other profiles",
+                        detail = "There are no other stored profiles to remove.",
                     )
-                    HorizontalDivider()
+                }
+            } else {
+                item { SettingsSection("Stored profiles") }
+                item {
+                    SettingsGroup {
+                        removable.forEach { profile ->
+                            ListItem(
+                                headlineContent = { Text(profile.name) },
+                                supportingContent = { Text(profile.shortPublicKey) },
+                                leadingContent = {
+                                    ProfileAvatar(
+                                        profile.name,
+                                        profile.avatar,
+                                        Modifier.size(48.dp),
+                                        contentDescription = null,
+                                    )
+                                },
+                                trailingContent = {
+                                    TextButton(onClick = { target = profile }) {
+                                        Text("Remove", color = MaterialTheme.colorScheme.error)
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+                    }
                 }
             }
-            item { SettingsExplainer("Removing another profile signs it out and permanently deletes its local chats, drafts, keys, settings, and developer artifacts from this device.") }
+            item {
+                SettingsExplainer(
+                    "Removing another profile signs it out and permanently deletes its local chats, drafts, keys, settings, and developer artifacts from this device.",
+                )
+            }
         }
     }
     target?.let { profile ->
@@ -256,27 +324,125 @@ private fun RemoveProfileDialog(
     onDismiss: () -> Unit,
     onRemove: (String) -> Unit,
 ) {
-    var confirmation by rememberSaveable(profile.id) { mutableStateOf("") }
+    val confirmation = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState() }
+    val confirmationValue = confirmation.text.toString()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Remove profile?") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Type “${profile.name}” to permanently remove this profile and its local data.")
-                OutlinedTextField(
-                    value = confirmation,
-                    onValueChange = { confirmation = it },
+            Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ProfileAvatar(
+                        profile.name,
+                        profile.avatar,
+                        Modifier.size(48.dp),
+                        contentDescription = null,
+                    )
+                    Column {
+                        Text(profile.name, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            profile.shortPublicKey,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+                WhiteNoiseTextField(
+                    state = confirmation,
+                    modifier = Modifier.fillMaxWidth(),
                     label = { Text("Profile name") },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    supportingText = {
+                        Text("Type “${profile.name}” to permanently remove this profile and its local data.")
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                    ),
                 )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onRemove(confirmation) },
-                enabled = WipeConfirmationPhrase.matches(confirmation, profile.name),
+                onClick = { onRemove(confirmationValue) },
+                enabled = WipeConfirmationPhrase.matches(confirmationValue, profile.name),
             ) { Text("Remove Profile", color = MaterialTheme.colorScheme.error) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun DestructiveSheetHeader(
+    title: String,
+    onClose: () -> Unit,
+    closeEnabled: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = WhiteNoiseSpacing.CompactScreenMargin,
+                end = WhiteNoiseSpacing.Related,
+                bottom = WhiteNoiseSpacing.Related,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        IconButton(onClick = onClose, enabled = closeEnabled) {
+            Icon(
+                painter = painterResource(R.drawable.ic_close),
+                contentDescription = "Close",
+            )
+        }
+    }
+}
+
+@Composable
+private fun DestructiveProgress(text: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = text
+                liveRegion = LiveRegionMode.Polite
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CircularProgressIndicator()
+        Text(text, modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField))
+    }
+}
+
+@Composable
+private fun DestructiveButton(
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    actionDescription: String,
+    unavailableDescription: String?,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = WhiteNoiseButtonDefaults.TaskHeight)
+            .semantics {
+                role = Role.Button
+                contentDescription = actionDescription
+                stateDescription = if (enabled) "Ready" else unavailableDescription.orEmpty()
+            },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError,
+        ),
+        contentPadding = WhiteNoiseButtonDefaults.TaskContentPadding,
+    ) {
+        Text(label)
+    }
 }

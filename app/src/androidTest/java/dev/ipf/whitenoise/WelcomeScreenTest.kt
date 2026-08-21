@@ -56,6 +56,9 @@ class WelcomeScreenTest {
     fun signInOpensTheSecureCredentialScreen() {
         composeRule.onNodeWithText("Sign In").performClick()
         composeRule.onNodeWithText("Private Key").assertIsDisplayed()
+        composeRule.onNodeWithText("Scan QR Code")
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp)
     }
 
     @Test
@@ -63,5 +66,15 @@ class WelcomeScreenTest {
         composeRule.onNodeWithText("Sign Up").performClick()
         composeRule.onNodeWithText("Name").assertIsDisplayed()
         composeRule.onNodeWithText("About").assertIsDisplayed()
+    }
+
+    @Test
+    fun signUpPhotoActionExposesTheThreeAcceptedSources() {
+        composeRule.onNodeWithText("Sign Up").performClick()
+        composeRule.onNodeWithText("Add Photo").performClick()
+
+        composeRule.onNodeWithText("Choose from Photos").assertIsDisplayed()
+        composeRule.onNodeWithText("Choose from Files").assertIsDisplayed()
+        composeRule.onNodeWithText("Find Image on Web").assertIsDisplayed()
     }
 }

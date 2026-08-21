@@ -1,53 +1,127 @@
 package dev.ipf.whitenoise.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @Composable
 internal fun SettingsScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    prominentTitle: Boolean = false,
+    bottomBar: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = { WhiteNoiseTopBar(title = title, onBack = onBack) },
+        topBar = {
+            WhiteNoiseTopBar(
+                title = title,
+                onBack = onBack,
+                titleStyle = if (prominentTitle) {
+                    MaterialTheme.typography.headlineMedium
+                } else {
+                    MaterialTheme.typography.titleLarge
+                },
+            )
+        },
+        bottomBar = bottomBar,
     ) { padding ->
         AdaptiveContent(modifier = Modifier.fillMaxSize().padding(padding)) { content() }
     }
 }
 
 @Composable
+internal fun SettingsBottomAction(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+    ) {
+        AdaptiveContent {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(WhiteNoiseSpacing.PinnedActionInset),
+                content = content,
+            )
+        }
+    }
+}
+
+@Composable
 internal fun SettingsSection(title: String) {
     Text(
-        text = title.uppercase(),
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp),
-        color = MaterialTheme.colorScheme.primary,
+        text = title,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = WhiteNoiseSpacing.SettingsSectionInset,
+                end = WhiteNoiseSpacing.SettingsSectionInset,
+                top = WhiteNoiseSpacing.Section,
+                bottom = WhiteNoiseSpacing.Related,
+            ),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelLarge,
+    )
+}
+
+@Composable
+internal fun SettingsGroup(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+        content = content,
     )
 }
 
@@ -57,26 +131,52 @@ internal fun SettingsLink(
     subtitle: String? = null,
     onClick: () -> Unit,
     leading: (@Composable () -> Unit)? = null,
+    value: String? = null,
     enabled: Boolean = true,
+    destructive: Boolean = false,
 ) {
+    val headlineColor = when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        destructive -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val supportingColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+        alpha = if (enabled) 1f else 0.38f,
+    )
     ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = subtitle?.let { { Text(it) } },
+        headlineContent = { Text(title, color = headlineColor) },
+        supportingContent = subtitle?.let { { Text(it, color = supportingColor) } },
         leadingContent = leading,
         trailingContent = {
-            Text(
-                "›",
-                modifier = Modifier.clearAndSetSemantics { },
-                style = MaterialTheme.typography.headlineSmall,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            ) {
+                value?.let {
+                    Text(
+                        text = it,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = supportingColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    tint = supportingColor,
+                )
+            }
         },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier
             .fillMaxWidth()
-            .alpha(if (enabled) 1f else 0.5f)
-            .semantics { role = Role.Button }
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics {
+                role = Role.Button
+                if (!enabled) disabled()
+            },
     )
-    HorizontalDivider()
 }
 
 @Composable
@@ -87,31 +187,200 @@ internal fun SettingsSwitch(
     subtitle: String? = null,
     enabled: Boolean = true,
 ) {
+    val headlineColor = MaterialTheme.colorScheme.onSurface.copy(
+        alpha = if (enabled) 1f else 0.38f,
+    )
+    val supportingColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+        alpha = if (enabled) 1f else 0.38f,
+    )
     ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = subtitle?.let { { Text(it) } },
+        headlineContent = { Text(title, color = headlineColor) },
+        supportingContent = subtitle?.let { { Text(it, color = supportingColor) } },
         trailingContent = {
             Switch(
                 checked = checked,
                 enabled = enabled,
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics { },
             )
         },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) },
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .semantics {
+                if (!enabled) disabled()
+            },
     )
-    HorizontalDivider()
+}
+
+@Composable
+internal fun SettingsChoice(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    subtitle: String? = null,
+    enabled: Boolean = true,
+) {
+    val alpha = if (enabled) 1f else 0.38f
+    ListItem(
+        headlineContent = {
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+            )
+        },
+        supportingContent = subtitle?.let {
+            {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                )
+            }
+        },
+        leadingContent = {
+            RadioButton(
+                selected = selected,
+                enabled = enabled,
+                onClick = null,
+                modifier = Modifier.clearAndSetSemantics { },
+            )
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            } else {
+                Color.Transparent
+            },
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = selected,
+                enabled = enabled,
+                role = Role.RadioButton,
+                onClick = onClick,
+            ),
+    )
+}
+
+@Composable
+internal fun SettingsAction(
+    title: String,
+    onClick: () -> Unit,
+    subtitle: String? = null,
+    enabled: Boolean = true,
+    destructive: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    val headlineColor = when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        destructive -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    ListItem(
+        headlineContent = { Text(title, color = headlineColor) },
+        supportingContent = subtitle?.let {
+            {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = if (enabled) 1f else 0.38f,
+                    ),
+                )
+            }
+        },
+        leadingContent = leading,
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics {
+                role = Role.Button
+                if (!enabled) disabled()
+            },
+    )
+}
+
+@Composable
+internal fun SettingsValue(
+    title: String,
+    value: String,
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Text(
+                text = value,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    )
+}
+
+@Composable
+internal fun SettingsCallout(
+    text: String,
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    isError: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    val container = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainer
+    val contentColor = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+        color = container,
+        contentColor = contentColor,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Row(
+            modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+            verticalAlignment = Alignment.Top,
+        ) {
+            leading?.invoke()
+            Column(modifier = Modifier.weight(1f)) {
+                title?.let {
+                    Text(
+                        text = it,
+                        color = contentColor,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                }
+                Text(
+                    text = text,
+                    color = contentColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+    }
 }
 
 @Composable
 internal fun SettingsList(content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), content = content)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("settings.list"),
+        contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
+        content = content,
+    )
 }
 
 @Composable
 internal fun SettingsExplainer(text: String) {
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin)) {
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     }
 }

@@ -2,10 +2,10 @@
 
 ## Purpose
 
-Port the first-launch and Add Profile paths: Welcome, Sign In, the Android QR
-scanner contract, Sign Up, avatar selection, deterministic profile creation,
-and profile switching. Completion reaches the signed-in Chats root that Batch
-2 will replace with the full chat hub.
+Port and visually unify the first-launch and Add Profile paths: Welcome, Sign
+In, the Android QR scanner contract, Sign Up, avatar selection, deterministic
+profile creation, and profile switching. Completion reaches the signed-in
+Chats root.
 
 ## Scope and non-goals
 
@@ -58,22 +58,25 @@ Not included:
   149.5 × 115 dp visible size used inside Android's centered splash-icon canvas.
   Bottom actions respect safe drawing insets independently and never reposition
   the mark as the splash is dismissed.
-- Sign In and Sign Up use Material outlined fields with persistent labels above
-  the container and a subtle `surfaceContainerLow` fill. Material continues to
-  own focus, error, disabled, outline, and accessibility states. Both screens
+- Sign In and Sign Up use fully rounded 28 dp Material-based tonal fields with
+  persistent labels above the container. `surfaceContainerHigh` owns the
+  resting boundary; focus and error use 2 dp full-shape semantic rings while
+  disabled fields use `surfaceContainerLow`. Labels, input, and supporting
+  text align to the same 16 dp directional content line. Both screens
   use a top app bar with system Back, vertically scrolling content, and a
   full-width bottom action above safe drawing and IME insets.
+- Authentication and profile forms remain centered and bounded to 520 dp at
+  wider sizes instead of stretching across the available pane. Their pinned
+  actions use the same bound while remaining full width on compact phones.
 - Full-width onboarding task actions use Material's medium 56 dp container
   height with 24 dp horizontal content padding. Compact-screen content and
   pinned actions align to 16 dp horizontal margins; Welcome actions are
   separated by 8 dp. Peer form fields use 16 dp, while the avatar/form and
   other distinct sections use 24 dp.
-- The signed-in placeholder is production-shaped: **Chats**, an active-profile
-  avatar action, and a genuine empty state. It contains no prototype or
-  implementation language and is replaced in Batch 2.
-- The profile switcher is a Material modal bottom sheet. Selecting a profile
-  is immediate; **Add Profile** dismisses the sheet and pushes the Add Profile
-  Welcome flow.
+- Completion reaches the current Chats root. Its avatar opens Settings, where
+  the active-profile header owns the Material profile switcher and **Add
+  Profile** entry. Selecting a profile is immediate; **Add Profile** dismisses
+  the switcher and pushes the Add Profile Welcome flow.
 
 ## Exact product copy
 
@@ -85,18 +88,10 @@ failure. Android-only scanner failure detail is:
 - **QR scanning isn’t available on this device right now.**
 - **Try Again**
 
-The temporary signed-in empty state uses:
-
-- **Chats**
-- **No conversations yet**
-- **Start a new conversation when you’re ready.**
-- **Switch Profile**
-- **Add Profile**
-
 ## Component and capability choices
 
-- Material 3 medium task buttons, outlined text fields, outlined secure text
-  field, top app bars, dialogs, tabs, dropdown menu, lazy list/grid, progress
+- Material 3 medium task buttons, fully rounded tonal text fields, fully
+  rounded tonal secure text field, top app bars, dialogs, tabs, dropdown menu, lazy list/grid, progress
   indicator, Snackbar, and modal bottom sheet. Find Image on Web opens directly
   as a near-full sheet capped at 94% of the available height, retaining visible
   underlying context, rounded top corners, drag handle, and scrim. It uses a
@@ -106,9 +101,14 @@ The temporary signed-in empty state uses:
   system-bar treatment, and bottom coverage remain Material-owned. The sheet,
   handle area, app bar, and tabs use one `surfaceContainerLow` background so
   the task reads as one continuous modal surface.
+- Sign In presents QR entry as a content-width, 56 dp medium filled-tonal
+  secondary action with a standard vector icon. Its height matches the private
+  key field while its width and tonal emphasis keep it subordinate to the
+  pinned primary Sign In action.
 - Ordinary onboarding form labels use Material's `TextFieldLabelPosition.Above`
-  rather than cutting into the outline. The slight neutral container surface is
-  supplementary; the standard Material outline remains the field boundary.
+  and align to the same 16 dp content line as input text or leading icon
+  artwork. The stronger neutral tonal container is the resting boundary;
+  full-shape rings appear only for focus and error.
   The web-image Search Images and Image URL inputs use the same treatment
   because they are explicit form inputs inside a bounded task. App-level search
   fields and message composers keep their specialized native patterns.
@@ -140,6 +140,9 @@ The temporary signed-in empty state uses:
 - Fields retain persistent labels, IME actions, error semantics, and disabled
   states. Loading buttons expose **Signing In** or **Signing Up** and
   **In progress**.
+- Button and photo-preparation indicators use compact geometry within their
+  existing layout. Photo-preparation failures are announced as a polite live
+  update and remain visible in the semantic error role.
 - Every ordinary Material color role, including the newer surface-container
   and fixed roles, is explicitly grayscale in both themes. Semantic error
   roles remain red and appear only for actual failures or destructive meaning.
@@ -152,6 +155,8 @@ The temporary signed-in empty state uses:
   bottom sheets, Photo Picker, Activity Result APIs, Google Code Scanner,
   insets, accessibility, and testing.
 - [Configure Compose text fields](https://developer.android.com/develop/ui/compose/text/user-input)
+- [Authentication and onboarding](https://developer.android.com/design/ui/mobile/guides/patterns/onboarding)
+- [Progress indicators](https://developer.android.com/develop/ui/compose/components/progress)
 - [TextFieldLabelPosition](https://developer.android.com/reference/kotlin/androidx/compose/material3/TextFieldLabelPosition)
 - [OutlinedTextFieldDefaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/OutlinedTextFieldDefaults)
 - [Android accessibility foundations](https://developer.android.com/design/ui/mobile/guides/foundations/accessibility)
@@ -184,6 +189,10 @@ The temporary signed-in empty state uses:
   149.5 × 115 dp, so dismissal produces no logo resize or position cut.
 - Back returns from Sign In/Sign Up to the correct initial or Add Profile
   Welcome without committing state.
+- Sign In and Sign Up form content and pinned actions do not exceed 520 dp on
+  expanded layouts, while staying full width within compact 16 dp margins.
+- QR entry is a labeled, tonal, at-least-48-dp action with a vector icon; it
+  remains available whenever Sign In is idle.
 - Empty/invalid/valid private-key states, Paste/Clear, loading, scanner result,
   wrong QR, cancellation, and unavailable recovery behave deterministically.
 - Both initial onboarding paths reach Chats with exactly one active canonical
@@ -192,8 +201,8 @@ The temporary signed-in empty state uses:
   failure states preserve the last valid draft and commit with Name/About.
 - **Add Photo** and **Change Photo** are compact filled pills 8 dp below the
   avatar, and ordinary fields and containers have no pink or lavender cast.
-- Name, About, and Private Key are outlined fields with persistent labels above
-  the outline and a slight neutral surface. Focus, error, and disabled states
+- Name, About, and Private Key are fully rounded tonal fields with persistent
+  labels aligned to their input content. Focus, error, and disabled states
   remain distinguishable without relying on the fill alone.
 - Compact onboarding margins are 16 dp, peer form-field gaps are 16 dp,
   related-action gaps are 8 dp, distinct-section gaps are 24 dp, and Material

@@ -99,11 +99,12 @@ other exported component. The application ID is
 `dev.ipf.whitenoise.android.prototype`; production source uses the
 `dev.ipf.whitenoise` namespace.
 
-The first verified baseline uses Android Gradle Plugin 9.3.1, Gradle 9.7.0,
+The current verified baseline uses Android Gradle Plugin 9.3.1, Gradle 9.7.1,
 compile/target SDK 37, minimum SDK 23, Java 17 bytecode, AGP built-in Kotlin
 2.4.10, Compose BOM 2026.08.00, Material 3, and typed Navigation Compose.
 Versions remain catalog-owned and may move only as a compatible, current,
-stable set after a clean gate passes.
+stable set after a clean gate passes. Gradle moved from 9.7.0 to the officially
+recommended 9.7.1 patch on 2026-08-21 and passed the same clean gate.
 
 The app owns explicit light and dark monochrome Material color schemes and
 does not use dynamic color. Android Navigation owns system and predictive
@@ -137,7 +138,7 @@ pixels and held only in process memory.
 ## WN-ANDROID-0009 — Android-native Chats organization and creation
 
 - Date: 2026-08-15
-- Status: Approved by implementation and static verification
+- Status: Presentation partially superseded by WN-ANDROID-0022
 
 Chats uses a titled Material top app bar, primary scrollable scope tabs,
 inline search, a New Message extended floating action button, lazy list rows,
@@ -319,7 +320,7 @@ an uncontained text action.
 ## WN-ANDROID-0018 — Ordinary form fields are outlined, labeled above, and lightly surfaced
 
 - Date: 2026-08-20
-- Status: Approved by explicit user direction and implementation
+- Status: Presentation superseded by WN-ANDROID-0023 and WN-ANDROID-0024
 
 Ordinary form input uses Material 3 outlined text fields, including the secure
 variant where required. Labels remain persistently above the container through
@@ -387,3 +388,112 @@ hierarchy. Both inputs use the approved outlined, label-above, lightly surfaced
 field treatment and the shared Android spacing tokens. The sheet, drag-handle
 area, top app bar, and tab row share `surfaceContainerLow`; component defaults
 must not create a brighter app-bar band inside this single modal surface.
+
+## WN-ANDROID-0022 — Quiet Material 3 Expressive visual-polish system
+
+- Date: 2026-08-21
+- Status: Approved by explicit user direction after Chats and Settings pilots
+
+The complete app enters a behavior-preserving visual-polish phase. The target
+is a quiet Material 3 Expressive system: strong hierarchy, selective scale,
+semantic monochrome color, deliberate tonal surfaces, a shared Material type
+and shape scale, standard icons, and native motion. Expressiveness clarifies
+the primary task and selected state; it does not add decorative containers,
+Google branding, Pixel screenshot imitation, or a new information
+architecture. Figma is not required for implementation.
+
+Chats uses a clean top app bar with active-profile avatar, visible active-scope
+title, filter action, and collapsed search action. Chats, Unread, Archived,
+and Left move from exposed tabs to a Material dropdown menu; a non-default
+scope uses both the visible title and tonal selected filter treatment. The
+conversation list has no enclosing rounded container, and ordinary rows do
+not become individual cards. Read All is not a persistent app-bar action, but
+the tested model operation is not deleted as part of visual work.
+
+The Chats avatar opens Settings. The Settings profile header owns Switch
+Profile and Add Profile access, while the existing settings destination
+hierarchy remains intact. Settings groups use restrained tonal containment
+instead of a divider after every row. All action glyphs migrate to Material
+Symbols or existing product vectors with standard targets and semantics.
+
+Implementation proceeds through the bounded batches, state contract, and
+acceptance gates in `docs/visual-polish.md`. Product behavior, typed routes,
+system surfaces, accessibility, deterministic state, and the offline boundary
+remain authoritative throughout.
+
+## WN-ANDROID-0023 — Rounded Expressive fields and medium task controls
+
+- Date: 2026-08-21
+- Status: Shape and task-control sizing remain approved; field surface and state treatment superseded by WN-ANDROID-0024
+
+Ordinary app-owned text, secure, and multiline fields retain their established
+labels, helper/error text, tonal fill, and outlined state treatment, but all
+four corners now use the shared 28 dp extra-large shape. A 56 dp single-line
+field therefore reads as a full capsule; taller multiline fields retain the
+same fixed 28 dp radius at every corner. App-level search and the message
+composer use the same full-rounded field language. Android- and OEM-owned
+pickers and settings remain untouched.
+
+A single-line Material text field and a Material Expressive medium button are
+both 56 dp high. White Noise therefore uses the official medium button height,
+padding, and pill shape for full-width, form-adjacent, pinned, and other clear
+task actions. Text buttons, dialog actions, icon buttons, toolbar actions,
+photo/source controls, reaction controls, media controls, and other contextual
+actions retain their native compact metrics. Multiline fields may grow with
+content; their paired task button does not stretch to match that expanded
+height.
+
+The latest user-approved White Noise direction intentionally uses a larger
+radius than Material's current medium `roundedShape` recommendation. The
+pinned stable Compose Material 3 version also predates the convenience
+`TextFieldDefaults.roundedShape` and
+`OutlinedTextFieldDefaults.roundedShape` properties and the named medium-button
+metrics now visible in the live API/reference source. White Noise therefore
+uses its existing `MaterialTheme.shapes.extraLarge` 28 dp role for every
+app-owned text input and the exact 56/24/8 dp medium-button metrics without
+changing dependencies solely for convenience aliases.
+
+## WN-ANDROID-0024 — Tonal form fields align labels to their content line
+
+- Date: 2026-08-21
+- Status: Approved by explicit user direction and implementation
+
+Ordinary app-owned text, secure, and multiline form fields use the existing
+fixed 28 dp extra-large shape on a stronger `surfaceContainerHigh` tonal
+container. The resting and disabled borders are transparent. Focus uses a
+2 dp full-shape `primary` ring, and error uses a 2 dp full-shape semantic
+`error` ring plus supporting copy and accessibility error semantics. Disabled
+fields move to `surfaceContainerLow` while Material retains disabled content
+colors. App-level search bars and message composers remain specialized
+Material patterns and do not gain a persistent outline.
+
+The input text or placeholder begins 16 dp from a field edge. Above-field
+labels and supporting/error text align to that same 16 dp directional content
+line, including right-to-left layouts; a 24 dp leading field icon occupies
+Material's standard 48 dp slot while its visible edge also begins on the
+16 dp line. This is a shared component rule, not a screen-local optical offset.
+Material's state-based text editing, label/supporting typography, selection,
+cursor, icon slots, and animated container state remain authoritative.
+
+## WN-ANDROID-0025 — Settings overview uses compact icon-led destinations
+
+- Date: 2026-08-21
+- Status: Approved by explicit user direction and implementation
+
+The main Settings overview uses Material `ListItem` destinations with one
+concise headline, one 24 dp rounded Material Symbol, and a trailing disclosure
+chevron. Explanatory subtitles that merely restate a destination are removed.
+Secondary text remains available only when it communicates an actionable
+unavailable reason; a short current value may instead sit beside the trailing
+chevron when it helps scanning. Appearance shows its active preference this
+way. The profile-relay dependency remains visible when Profile is unavailable.
+
+The symbols are decorative within the complete clickable row and therefore
+have null accessibility descriptions; the visible label, optional value or
+reason, button role, enabled state, and row action remain authoritative.
+Destructive destinations retain semantic error color for both label and icon.
+Section headings above tonal groups use a 32 dp directional inset: the 16 dp
+compact screen margin plus Material's 16 dp list-item content inset. This
+aligns headings with overview icons and icon-free detail-row text rather than
+with the outer container boundary. Restrained tonal groups, row order, typed
+navigation, and profile-owned state do not change.

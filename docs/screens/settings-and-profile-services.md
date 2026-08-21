@@ -1,6 +1,8 @@
 # Settings and profile services
 
-Status: Implemented; static verification complete on 2026-08-15
+Status: Main Settings and consumer detail destinations visually refreshed and
+statically verified on 2026-08-21; developer/destructive visual batch and
+device acceptance pending
 
 ## Purpose
 
@@ -14,14 +16,14 @@ This batch includes the Settings hub, Share & Connect, profile editing and
 address verification, profile-key presentation/export, Notifications,
 Appearance, Privacy & Security, Data Usage, profile Relays, support-chat
 creation, and Donate. Developer controls, sign-out, removal, and device-wide
-erase are covered by their separate Batch 8 brief. Preferences are in-memory
+erase remain in the separate visual-polish Batch 10. Preferences are in-memory
 state; notification delivery, biometric authentication, real cryptography,
 relay networking, and payments remain excluded.
 
 ## Parity contract
 
 - Settings begins with the active profile and keeps Add/Switch Profile
-  available without removing the chat-list switcher.
+  available in its profile header. Chats delegates profile management here.
 - Share & Connect renders a standards-compliant local QR code for the public
   key, copies public identity, uses Android Sharesheet, and uses permissionless
   Google Code Scanner before showing the deterministic Profile Found state.
@@ -44,10 +46,11 @@ relay networking, and payments remain excluded.
 
 ## Entry, navigation, Back, and exit
 
-The Chats app bar Settings action opens a typed Settings route. Every ordinary
-row uses a typed Navigation Compose destination. System Back returns one level;
-dialogs, menus, and the profile switcher dismiss before navigation. Successful
-profile save returns to Settings. Support exits into the unique conversation.
+The Chats app-bar avatar opens a typed Settings route. The Settings profile
+header owns Switch Profile and Add Profile access. Every ordinary row uses a
+typed Navigation Compose destination. System Back returns one level; dialogs,
+menus, and the profile switcher dismiss before navigation. Successful profile
+save returns to Settings. Support exits into the unique conversation.
 System-owned scanner, picker, Sharesheet, document creator, notification
 settings, and device-security settings return to the originating route.
 
@@ -61,12 +64,27 @@ affected publishing, invitation, or new-chat function and route recovery.
 
 ## Android composition
 
-Material 3 top app bars, lazy settings lists, `ListItem`, switches, radio rows,
-tabs, buttons, menus, and `AlertDialog` provide native hierarchy and behavior.
+Material 3 top app bars, lazy settings lists, `ListItem`, switches, selectable
+radio rows, tabs, buttons, menus, and `AlertDialog` provide native hierarchy
+and behavior. The Settings hub and consumer details group related rows with
+restrained tonal containment and sentence-case section labels rather than
+placing a divider after every row. Profile, Relays, Support, and Donate pin the
+single primary task action; forms use fully rounded, label-above tonal fields
+whose labels and supporting copy align to the 16 dp input content line;
+unavailable dependencies retain their reason and Android recovery route. The
+main overview uses compact one-line destination rows with 24 dp rounded
+Material Symbols and disclosure chevrons. It removes explanatory summaries
+that only restate the destination, retains the Profile relay dependency only
+when it is actionable, and shows the active Appearance value in the trailing
+slot. Section headings start on the group's 32 dp internal content grid,
+aligning with overview icons and icon-free detail-row text rather than the
+outer tonal-container edge. The established destination hierarchy and row
+order do not change.
 Photo Picker, `OpenDocument`, `CreateDocument`, Android Sharesheet, Google Code
 Scanner, notification/security settings intents, clipboard, and `FLAG_SECURE`
 own device integrations. ZXing core 3.5.4 generates the QR `BitMatrix`; Compose
-Canvas only renders that matrix using semantic theme colors.
+Canvas renders black modules on a white technical surface so scan contrast is
+stable in both app themes.
 
 ## Behavior and state
 
@@ -106,6 +124,11 @@ user-directed device polish pass.
 ## Governing Android sources
 
 - [Navigation with Compose](https://developer.android.com/develop/ui/compose/navigation) — typed destination ownership and Back.
+- [Android settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings) — grouped hierarchy, subordinate screens, dependency explanation, and adaptive measure.
+- [Switches](https://developer.android.com/develop/ui/compose/components/switch) and [radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button) — native boolean and mutually exclusive state semantics.
+- [Tabs](https://developer.android.com/develop/ui/compose/components/tabs) — the two peer donation methods.
+- [Text input](https://developer.android.com/develop/ui/compose/text/user-input) — state-based, label-above profile, password, and relay fields.
+- [Accessibility in Compose](https://developer.android.com/develop/ui/compose/accessibility) — merged row semantics, disabled state, QR purpose, and private-key exclusion.
 - [Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker) and [Storage Access Framework](https://developer.android.com/guide/topics/providers/document-provider) — user-selected input/output without broad storage permission.
 - [Google Code Scanner](https://developers.google.com/ml-kit/vision/barcode-scanning/code-scanner) — system-delivered scanner without camera permission.
 - [Android Sharesheet](https://developer.android.com/training/sharing/send) — public profile sharing.
@@ -123,12 +146,15 @@ user-directed device polish pass.
 
 ## Approved differences and custom exceptions
 
-Android retains the fast avatar profile switcher and adds a Settings app-bar
-action. The QR scanner is a Google system surface rather than the iOS custom
-camera. Notification and device-authentication rows are preferences/system
-handoffs only because the offline prototype does not deliver notifications or
-lock real persisted data. QR output uses a small JVM encoder because Android
-does not provide a platform QR-generation surface.
+Android uses the Chats avatar as the Settings entry and keeps profile switching
+inside the Settings profile header. The QR scanner is a Google system surface
+rather than the iOS custom camera. Notification and device-authentication rows
+are preferences/system handoffs only because the offline prototype does not
+deliver notifications or lock real persisted data. QR output uses a small JVM
+encoder because Android does not provide a platform QR-generation surface.
+Its black-on-white treatment is the intentional technical exception to
+theme-colored surfaces because code legibility and scanner interoperability
+take priority over decorative theme matching.
 
 ## Observable acceptance criteria
 
@@ -140,3 +166,15 @@ does not provide a platform QR-generation surface.
   creation, while existing chats retain their own relay configuration.
 - Restore Defaults recovers the seven accepted relay fixtures.
 - Support never duplicates; donation never starts a payment.
+- The main Settings screen keeps its active-profile header, account switching,
+  destination hierarchy, restrained tonal groups, sentence-case labels,
+  compact icon-led destination rows, current Appearance value, conditional
+  Profile dependency reason, content-grid-aligned section headings, and merged
+  switch-row semantics at compact width and large-text RTL composition.
+  Decorative row icons do not duplicate the visible label in accessibility
+  output.
+- Consumer detail screens share tonal groups, radio selection, label-above
+  fields, explanatory disabled states, and one pinned primary task where
+  appropriate. Static Compose coverage verifies profile/donation QR purpose,
+  private-key privacy, notification dependencies, relay defaults, support
+  recovery, and large-text RTL reachability.

@@ -4,41 +4,48 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +58,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -58,14 +67,19 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
@@ -93,7 +107,10 @@ import dev.ipf.whitenoise.model.composerAvailability
 import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
 import dev.ipf.whitenoise.ui.components.drawableResource
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,7 +143,6 @@ fun ConversationScreen(
     val items = remember(chat.timeline) { ConversationProjection.items(chat) }
     val listState = rememberLazyListState()
     var showDeclineConfirmation by remember { mutableStateOf(false) }
-    var showRelayInformation by remember { mutableStateOf(false) }
     var viewerAttachments by remember { mutableStateOf<List<MessageAttachment>?>(null) }
     var focusedMessageId by remember { mutableStateOf<String?>(null) }
     var isSelecting by remember { mutableStateOf(false) }
@@ -242,10 +258,11 @@ fun ConversationScreen(
                     onSendVoice = onSendVoice,
                     onAccept = onAcceptInvitation,
                     onDecline = { showDeclineConfirmation = true },
-                    onCheckRelays = { showRelayInformation = true },
+                    onCheckRelays = onOpenChatInfo,
                 )
             }
         },
+        containerColor = MaterialTheme.colorScheme.surface,
     ) { contentPadding ->
         AdaptiveContent(
             modifier = Modifier.fillMaxSize().padding(contentPadding),
@@ -253,7 +270,10 @@ fun ConversationScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 16.dp),
+                contentPadding = PaddingValues(
+                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                    vertical = WhiteNoiseSpacing.Related,
+                ),
                 verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Bottom),
             ) {
                 items.forEach { item ->
@@ -268,6 +288,17 @@ fun ConversationScreen(
                             TimelineInformation(item.entry.text, isNotice = true)
                         }
                         is ConversationItem.MessageItem -> item(key = item.id, contentType = "message") {
+                            val resultPosition = searchResults.indexOfFirst {
+                                it.messageId == item.message.id
+                            }
+                            val searchPosition = resultPosition.takeIf { it >= 0 }?.let {
+                                pluralStringResource(
+                                    R.plurals.match_position,
+                                    searchResults.size,
+                                    it + 1,
+                                    searchResults.size,
+                                )
+                            }
                             MessageRow(
                                 profile = profile,
                                 chat = chat,
@@ -280,9 +311,10 @@ fun ConversationScreen(
                                     !isSearching || searchQuery.isBlank() ||
                                     item.message.id == currentSearchMessageId
                                 ) 1f else 0.38f,
-                                searchPosition = searchResults.indexOfFirst {
-                                    it.messageId == item.message.id
-                                }.takeIf { it >= 0 }?.let { "${it + 1} of ${searchResults.size} matches" },
+                                searchQuery = searchQuery.takeIf { isSearching }.orEmpty(),
+                                isCurrentSearchResult = isSearching &&
+                                    item.message.id == currentSearchMessageId,
+                                searchPosition = searchPosition,
                                 onToggleSelection = {
                                     selectedMessageIds = if (item.message.id in selectedMessageIds) {
                                         selectedMessageIds - item.message.id
@@ -323,19 +355,6 @@ fun ConversationScreen(
             dismissButton = {
                 TextButton(onClick = { showDeclineConfirmation = false }) {
                     Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
-
-    if (showRelayInformation) {
-        AlertDialog(
-            onDismissRequest = { showRelayInformation = false },
-            title = { Text(stringResource(R.string.chat_relays_required_title)) },
-            text = { Text(stringResource(R.string.chat_relays_missing_detail)) },
-            confirmButton = {
-                TextButton(onClick = { showRelayInformation = false }) {
-                    Text(stringResource(R.string.done))
                 }
             },
         )
@@ -456,7 +475,7 @@ private fun ConversationTopBar(
             append(", ${stringResource(R.string.disappearing_header, chat.disappearingDuration.label)}")
         }
     }
-    CenterAlignedTopAppBar(
+    TopAppBar(
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
@@ -468,14 +487,19 @@ private fun ConversationTopBar(
         title = {
             Row(
                 modifier = Modifier
-                    .clickable(onClick = onInfo)
+                    .clickable(role = Role.Button, onClick = onInfo)
                     .semantics(mergeDescendants = true) { contentDescription = fullDescription },
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
-                ProfileAvatar(chat.title, chat.avatar, Modifier.size(40.dp), contentDescription = null)
+                ProfileAvatar(chat.title, chat.avatar, Modifier.size(36.dp), contentDescription = null)
                 Column(horizontalAlignment = Alignment.Start) {
-                    Text(chat.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        chat.title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     if (chat.isGroup || hasTimer) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -511,37 +535,43 @@ private fun ConversationTopBar(
             onDeveloperTools?.let { openDeveloperTools ->
                 IconButton(
                     onClick = openDeveloperTools,
-                    modifier = Modifier.semantics { contentDescription = "Conversation debug" },
                 ) {
-                    Text(
-                        "⚙",
-                        modifier = Modifier.clearAndSetSemantics { },
-                        style = MaterialTheme.typography.titleLarge,
+                    Icon(
+                        painter = painterResource(R.drawable.ic_bug_report),
+                        contentDescription = stringResource(R.string.conversation_debug),
                     )
                 }
             }
-            IconButton(
-                onClick = onSearch,
-                modifier = Modifier.semantics { contentDescription = searchDescription },
-            ) {
-                Text(
-                    "⌕",
-                    modifier = Modifier.clearAndSetSemantics { },
-                    style = MaterialTheme.typography.titleLarge,
+            IconButton(onClick = onSearch) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_search),
+                    contentDescription = searchDescription,
                 )
             }
         },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SelectionTopBar(count: Int, onClose: () -> Unit) {
-    CenterAlignedTopAppBar(
-        title = { Text(pluralStringResource(R.plurals.selected_count, count, count)) },
-        actions = {
-            TextButton(onClick = onClose) { Text(stringResource(R.string.close_selection)) }
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onClose) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_close),
+                    contentDescription = stringResource(R.string.close_selection),
+                )
+            }
         },
+        title = { Text(pluralStringResource(R.plurals.selected_count, count, count)) },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
     )
 }
 
@@ -552,37 +582,75 @@ private fun ConversationSearchTopBar(
     onQueryChanged: (String) -> Unit,
     onClose: () -> Unit,
 ) {
-    CenterAlignedTopAppBar(
+    val focusRequester = remember { FocusRequester() }
+    val searchDescription = stringResource(R.string.search_messages)
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onClose) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_close),
+                    contentDescription = stringResource(R.string.close),
+                )
+            }
+        },
         title = {
             TextField(
                 value = query,
                 onValueChange = onQueryChanged,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .semantics { contentDescription = searchDescription },
                 placeholder = { Text(stringResource(R.string.messages)) },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_search),
+                        contentDescription = null,
+                    )
+                },
+                trailingIcon = if (query.isNotEmpty()) ({
+                    IconButton(onClick = { onQueryChanged("") }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_close),
+                            contentDescription = stringResource(R.string.clear_search),
+                        )
+                    }
+                }) else null,
                 singleLine = true,
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
             )
         },
-        actions = {
-            TextButton(onClick = onClose) { Text(stringResource(R.string.close)) }
-        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
     )
 }
 
 @Composable
 private fun DayHeader(label: String) {
     Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = WhiteNoiseSpacing.FormField),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-            tonalElevation = 2.dp,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.semantics { heading() },
         ) {
             Text(
                 label,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -591,17 +659,36 @@ private fun DayHeader(label: String) {
 @Composable
 private fun TimelineInformation(text: String, isNotice: Boolean = false) {
     Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = if (isNotice) 24.dp else 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = if (isNotice) WhiteNoiseSpacing.Section else WhiteNoiseSpacing.Related),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = text,
-            modifier = Modifier
-                .widthIn(max = 360.dp)
-                .semantics { contentDescription = text },
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = if (isNotice) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.labelMedium,
-        )
+        if (isNotice) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(max = 440.dp)
+                    .semantics(mergeDescendants = true) { contentDescription = text },
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Text(
+                    text = text,
+                    modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            Text(
+                text = text,
+                modifier = Modifier.widthIn(max = 440.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -615,6 +702,8 @@ private fun MessageRow(
     isSelectionMode: Boolean,
     selected: Boolean,
     searchAlpha: Float,
+    searchQuery: String,
+    isCurrentSearchResult: Boolean,
     searchPosition: String?,
     onToggleSelection: () -> Unit,
     onShowActions: () -> Unit,
@@ -626,7 +715,7 @@ private fun MessageRow(
     val author = profile.people.firstOrNull { it.id == message.authorId }
     val authorName = if (outgoing) stringResource(R.string.you) else author?.name ?: chat.title
     val verticalPadding = when {
-        item.startsCluster -> 8.dp
+        item.startsCluster -> WhiteNoiseSpacing.FormField
         else -> 0.dp
     }
     val haptics = LocalHapticFeedback.current
@@ -640,40 +729,50 @@ private fun MessageRow(
             true
         }
     }
+    val interactionModifier = if (isSelectionMode) {
+        Modifier.toggleable(
+            value = selected,
+            role = Role.Checkbox,
+            onValueChange = { onToggleSelection() },
+        )
+    } else {
+        Modifier.combinedClickable(
+            enabled = !message.isDeleted,
+            onClick = {},
+            onLongClickLabel = showActionsLabel,
+            onLongClick = {
+                if (!message.isDeleted) {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onShowActions()
+                }
+            },
+        )
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(searchAlpha)
-            .padding(top = verticalPadding)
-            .combinedClickable(
-                enabled = isSelectionMode || !message.isDeleted,
-                onClick = { if (isSelectionMode) onToggleSelection() },
-                onLongClickLabel = showActionsLabel,
-                onLongClick = {
-                    if (!isSelectionMode && !message.isDeleted) {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onShowActions()
-                    }
+            .background(
+                color = if (isSelectionMode && selected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                } else {
+                    Color.Transparent
                 },
+                shape = MaterialTheme.shapes.large,
             )
+            .padding(top = verticalPadding)
+            .then(interactionModifier)
             .semantics {
                 if (isSelectionMode) stateDescription = selectedState
-                searchPosition?.let { contentDescription = it }
+                searchPosition?.let { stateDescription = it }
                 customActions = accessibilityActions
             },
         horizontalArrangement = if (outgoing) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
     ) {
         if (isSelectionMode) {
-            Surface(
-                modifier = Modifier.size(44.dp),
-                shape = CircleShape,
-                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-            ) {
-                Box(contentAlignment = Alignment.Center) { Text(if (selected) "✓" else "○") }
-            }
-            Spacer(Modifier.width(4.dp))
+            Checkbox(checked = selected, onCheckedChange = null)
+            Spacer(Modifier.width(WhiteNoiseSpacing.Related))
         }
         if (chat.isGroup && !outgoing) {
             if (item.endsCluster) {
@@ -703,13 +802,31 @@ private fun MessageRow(
                 item = item,
                 authorName = authorName,
                 onOpenMedia = onOpenMedia,
+                searchQuery = searchQuery,
+                isCurrentSearchResult = isCurrentSearchResult,
             )
             if (message.reactions.isNotEmpty()) {
-                ReactionRow(message = message, profileId = profile.id, onReaction = onReaction)
+                ReactionRow(
+                    message = message,
+                    profileId = profile.id,
+                    onReaction = onReaction,
+                    onShowActions = onShowActions,
+                )
             }
             if (item.endsCluster) {
                 if (message.deliveryState == MessageDeliveryState.Failed && outgoing) {
-                    TextButton(onClick = onRetry, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                    TextButton(
+                        onClick = onRetry,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_warning),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             stringResource(R.string.not_delivered_retry),
                             color = MaterialTheme.colorScheme.error,
@@ -737,6 +854,8 @@ private fun MessageBubble(
     item: ConversationItem.MessageItem,
     authorName: String,
     onOpenMedia: (List<MessageAttachment>) -> Unit,
+    searchQuery: String,
+    isCurrentSearchResult: Boolean,
 ) {
     val text = message.visibleText(profile.id)
     val description = buildString {
@@ -747,9 +866,17 @@ private fun MessageBubble(
         message.reactions.forEach { append(", ${it.emoji}, ${it.personIds.size}") }
     }
     Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.large,
+        color = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        border = if (isCurrentSearchResult) {
+            BorderStroke(
+                2.dp,
+                if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            null
+        },
         modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = description },
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -769,17 +896,67 @@ private fun MessageBubble(
                 )
             }
             if (text.isNotBlank()) {
-                Text(
-                    text = text,
-                    fontStyle = if (message.deletionState == MessageDeletionState.None) FontStyle.Normal else FontStyle.Italic,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
+                    HighlightedSearchText(
+                        text = text,
+                        query = searchQuery,
+                        outgoing = outgoing,
+                    )
+                } else {
+                    Text(
+                        text = text,
+                        fontStyle = if (message.deletionState == MessageDeletionState.None) {
+                            FontStyle.Normal
+                        } else {
+                            FontStyle.Italic
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
                 if (!outgoing && message.deletionState == MessageDeletionState.None) {
                     ReadAloudAction(text)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun HighlightedSearchText(text: String, query: String, outgoing: Boolean) {
+    val highlightContainer = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+    val highlightContent = if (outgoing) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onPrimary
+    }
+    val annotated = remember(text, query, highlightContainer, highlightContent) {
+        buildAnnotatedString {
+            var cursor = 0
+            while (cursor < text.length) {
+                val match = text.indexOf(query, startIndex = cursor, ignoreCase = true)
+                if (match < 0) {
+                    append(text.substring(cursor))
+                    break
+                }
+                append(text.substring(cursor, match))
+                withStyle(
+                    SpanStyle(
+                        color = highlightContent,
+                        background = highlightContainer,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                ) {
+                    append(text.substring(match, match + query.length))
+                }
+                cursor = match + query.length
+            }
+        }
+    }
+    Text(text = annotated, style = MaterialTheme.typography.bodyLarge)
 }
 
 @Composable
@@ -799,7 +976,7 @@ private fun ReplyQuote(profile: Profile, item: ConversationItem.MessageItem, out
     val overlay = if (outgoing) Color.White.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surface
     Surface(
         color = overlay,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
     ) {
         Column(Modifier.padding(8.dp)) {
@@ -814,29 +991,68 @@ private fun ReplyQuote(profile: Profile, item: ConversationItem.MessageItem, out
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReactionRow(message: ChatMessage, profileId: String, onReaction: (String) -> Unit) {
-    Row(
+private fun ReactionRow(
+    message: ChatMessage,
+    profileId: String,
+    onReaction: (String) -> Unit,
+    onShowActions: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    val showActionsLabel = stringResource(R.string.show_message_actions)
+    FlowRow(
         modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         message.reactions.forEach { reaction ->
             val selected = profileId in reaction.personIds
-            Surface(
-                modifier = Modifier.combinedClickable(
+            val description = pluralStringResource(
+                R.plurals.reaction_count,
+                reaction.personIds.size,
+                reaction.emoji,
+                reaction.personIds.size,
+            )
+            val selectedState = stringResource(
+                if (selected) R.string.selection_state_selected else R.string.selection_state_not_selected,
+            )
+            Box(
+                modifier = Modifier
+                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    .combinedClickable(
                     onClick = { onReaction(reaction.emoji) },
-                    onLongClick = {},
-                ),
-                shape = RoundedCornerShape(50),
-                color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        onLongClickLabel = showActionsLabel,
+                        onLongClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onShowActions()
+                        },
+                    )
+                    .semantics {
+                        contentDescription = description
+                        stateDescription = selectedState
+                    },
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "${reaction.emoji} ${reaction.personIds.size}",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    },
+                    border = BorderStroke(
+                        1.dp,
+                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                    ),
+                ) {
+                    Text(
+                        text = "${reaction.emoji} ${reaction.personIds.size}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }
@@ -886,58 +1102,68 @@ private fun ConversationBottomBar(
     onCheckRelays: () -> Unit,
 ) {
     val availability = chat.composerAvailability(profile)
-    Surface(tonalElevation = 3.dp) {
-        when (availability) {
-            ComposerAvailability.PendingInvitation -> InvitationActions(chat, onDecline, onAccept)
-            ComposerAvailability.Available -> FullConversationComposer(
-                profile = profile,
-                chat = chat,
-                onDraftTextChanged = onDraftTextChanged,
-                onAddAttachments = onAddDraftAttachments,
-                onRemoveAttachment = onRemoveDraftAttachment,
-                onSuppressLink = onSuppressDraftLink,
-                onCancelReply = onCancelDraftReply,
-                onSendDraft = onSendDraft,
-                onSendVoice = onSendVoice,
-            )
-            ComposerAvailability.Left -> ConversationStatus(
-                if (chat.isGroup) stringResource(R.string.left_group_status) else stringResource(R.string.left_chat_status),
-            )
-            ComposerAvailability.Removed -> ConversationStatus(stringResource(R.string.removed_group_status))
-            ComposerAvailability.Blocked -> ConversationStatus(
-                stringResource(R.string.blocked_chat_detail),
-                title = stringResource(R.string.messaging_unavailable),
-            )
-            ComposerAvailability.MissingRelays -> Column(
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(stringResource(R.string.chat_relays_missing_detail), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onCheckRelays) { Text(stringResource(R.string.check_chat_relays)) }
+    when (availability) {
+        ComposerAvailability.PendingInvitation -> InvitationActions(chat, onDecline, onAccept)
+        ComposerAvailability.Available -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+            AdaptiveContent {
+                FullConversationComposer(
+                    profile = profile,
+                    chat = chat,
+                    onDraftTextChanged = onDraftTextChanged,
+                    onAddAttachments = onAddDraftAttachments,
+                    onRemoveAttachment = onRemoveDraftAttachment,
+                    onSuppressLink = onSuppressDraftLink,
+                    onCancelReply = onCancelDraftReply,
+                    onSendDraft = onSendDraft,
+                    onSendVoice = onSendVoice,
+                )
             }
         }
+        ComposerAvailability.Left -> ConversationStatus(
+            if (chat.isGroup) stringResource(R.string.left_group_status) else stringResource(R.string.left_chat_status),
+        )
+        ComposerAvailability.Removed -> ConversationStatus(stringResource(R.string.removed_group_status))
+        ComposerAvailability.Blocked -> ConversationStatus(
+            stringResource(R.string.blocked_chat_detail),
+            title = stringResource(R.string.messaging_unavailable),
+        )
+        ComposerAvailability.MissingRelays -> ConversationRecovery(
+            title = stringResource(R.string.chat_relays_required_title),
+            detail = stringResource(R.string.chat_relays_missing_detail),
+            actionLabel = stringResource(R.string.check_chat_relays),
+            onAction = onCheckRelays,
+        )
     }
 }
 
 @Composable
 private fun InvitationActions(chat: Chat, onDecline: () -> Unit, onAccept: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    LifecycleBottomSurface {
         Text(
             stringResource(
                 R.string.invited_to_chat_by,
                 chat.invitationInviterName ?: stringResource(R.string.someone),
             ),
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .semantics { heading() },
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        ) {
+            WhiteNoiseOutlinedButton(
+                onClick = onDecline,
+                modifier = Modifier.weight(1f),
+            ) {
                 Text(stringResource(R.string.decline), color = MaterialTheme.colorScheme.error)
             }
-            Button(onClick = onAccept, modifier = Modifier.weight(1f)) {
+            WhiteNoiseButton(
+                onClick = onAccept,
+                modifier = Modifier.weight(1f),
+            ) {
                 Text(stringResource(R.string.accept))
             }
         }
@@ -946,12 +1172,67 @@ private fun InvitationActions(chat: Chat, onDecline: () -> Unit, onAccept: () ->
 
 @Composable
 private fun ConversationStatus(text: String, title: String? = null) {
-    Column(
-        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        title?.let { Text(it, fontWeight = FontWeight.SemiBold) }
-        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    LifecycleBottomSurface {
+        title?.let {
+            Text(
+                it,
+                modifier = Modifier.align(Alignment.CenterHorizontally).semantics { heading() },
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
+        Text(
+            text,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun ConversationRecovery(
+    title: String,
+    detail: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+) {
+    LifecycleBottomSurface {
+        Text(
+            title,
+            modifier = Modifier.align(Alignment.CenterHorizontally).semantics { heading() },
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            detail,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+        WhiteNoiseButton(
+            onClick = onAction,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(actionLabel)
+        }
+    }
+}
+
+@Composable
+private fun LifecycleBottomSurface(content: @Composable ColumnScope.() -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(WhiteNoiseSpacing.CompactScreenMargin),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                content = content,
+            )
+        }
     }
 }

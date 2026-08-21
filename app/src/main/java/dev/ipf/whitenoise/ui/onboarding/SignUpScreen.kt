@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -24,10 +25,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -54,7 +55,7 @@ import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
-import dev.ipf.whitenoise.ui.components.whiteNoiseOutlinedTextFieldColors
+import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -135,28 +136,36 @@ fun SignUpScreen(
             )
         },
         bottomBar = {
-            WhiteNoiseButton(
-                onClick = { isSigningUp = true },
-                enabled = !isSigningUp && !isPreparingPhoto,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(WhiteNoiseSpacing.PinnedActionInset)
-                    .semantics {
-                        if (isSigningUp) {
-                            contentDescription = signingUpDescription
-                            stateDescription = inProgressDescription
-                        }
-                    },
+                    .padding(WhiteNoiseSpacing.PinnedActionInset),
+                contentAlignment = Alignment.Center,
             ) {
-                if (isSigningUp) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text(stringResource(R.string.sign_up))
+                WhiteNoiseButton(
+                    onClick = { isSigningUp = true },
+                    enabled = !isSigningUp && !isPreparingPhoto,
+                    modifier = Modifier
+                        .widthIn(max = 520.dp)
+                        .fillMaxWidth()
+                        .semantics {
+                            if (isSigningUp) {
+                                contentDescription = signingUpDescription
+                                stateDescription = inProgressDescription
+                            }
+                        },
+                ) {
+                    if (isSigningUp) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(stringResource(R.string.sign_up))
+                    }
                 }
             }
         },
@@ -168,6 +177,8 @@ fun SignUpScreen(
         ) {
             Column(
                 modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .widthIn(max = 520.dp)
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(
@@ -249,13 +260,19 @@ fun SignUpScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
                         ) {
-                            CircularProgressIndicator(strokeWidth = 2.dp)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
                             Text(stringResource(R.string.preparing_photo))
                         }
                     }
                     photoError?.let { error ->
                         Text(
                             text = error,
+                            modifier = Modifier.semantics {
+                                liveRegion = LiveRegionMode.Polite
+                            },
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -266,31 +283,27 @@ fun SignUpScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
                 ) {
-                    OutlinedTextField(
+                    WhiteNoiseTextField(
                         state = name,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isSigningUp,
-                        labelPosition = TextFieldLabelPosition.Above(),
                         label = { Text(stringResource(R.string.name)) },
                         lineLimits = TextFieldLineLimits.SingleLine,
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Words,
                             imeAction = ImeAction.Next,
                         ),
-                        colors = whiteNoiseOutlinedTextFieldColors(),
                     )
-                    OutlinedTextField(
+                    WhiteNoiseTextField(
                         state = about,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isSigningUp,
-                        labelPosition = TextFieldLabelPosition.Above(),
                         label = { Text(stringResource(R.string.about)) },
                         placeholder = { Text(stringResource(R.string.about_prompt)) },
                         lineLimits = TextFieldLineLimits.MultiLine(
                             minHeightInLines = 3,
                             maxHeightInLines = 6,
                         ),
-                        colors = whiteNoiseOutlinedTextFieldColors(),
                     )
                 }
             }

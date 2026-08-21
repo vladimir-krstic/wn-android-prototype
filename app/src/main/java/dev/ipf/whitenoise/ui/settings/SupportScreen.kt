@@ -7,15 +7,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
+import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Profile
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @Composable
 fun SupportScreen(
@@ -27,42 +30,68 @@ fun SupportScreen(
     val hasExistingChat = profile.chats.any { it.id == "white-noise-support" }
     val canStart = hasExistingChat || profile.chatRelayUrls.isNotEmpty()
 
-    SettingsScaffold(title = "Chat with support", onBack = onBack) {
+    SettingsScaffold(
+        title = "Chat with support",
+        onBack = onBack,
+        bottomBar = {
+            SettingsBottomAction {
+                WhiteNoiseButton(
+                    onClick = onStart,
+                    enabled = canStart,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Start Chat") }
+            }
+        },
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                .padding(vertical = WhiteNoiseSpacing.Section),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
         ) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text("White Noise Support", style = MaterialTheme.typography.headlineSmall)
-                    Text("Questions, problems, and suggestions", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Ask how something works, report a problem, or share a suggestion.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = MaterialTheme.shapes.extraLarge,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_info),
+                    contentDescription = null,
+                    modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
+                )
+            }
+            Text(
+                "White Noise Support",
+                modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                "Questions, problems, and suggestions",
+                modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                "Ask how something works, report a problem, or share a suggestion.",
+                modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (!canStart) {
+                SettingsCallout(
+                    title = "Profile relays need attention",
+                    text = "Choose a connected Chat Messages relay before starting a support chat.",
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
+                )
+                SettingsGroup {
+                    SettingsLink(
+                        title = "Open Relays",
+                        subtitle = "Review connection status and Chat Messages roles.",
+                        onClick = onRelays,
                     )
                 }
-            }
-            if (!canStart) {
-                Text(
-                    "Profile relays need attention. Choose a connected Chat Messages relay before starting a support chat.",
-                    color = MaterialTheme.colorScheme.tertiary,
-                )
-                OutlinedButton(onClick = onRelays, modifier = Modifier.fillMaxWidth()) {
-                    Text("Open Relays")
-                }
-            }
-            Button(
-                onClick = onStart,
-                enabled = canStart,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Start Chat")
             }
         }
     }

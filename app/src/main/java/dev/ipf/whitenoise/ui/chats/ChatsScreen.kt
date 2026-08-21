@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.chats
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,20 +17,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,11 +43,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,20 +66,19 @@ import dev.ipf.whitenoise.model.ChatDeliveryState
 import dev.ipf.whitenoise.model.ChatProjection
 import dev.ipf.whitenoise.model.ChatScope
 import dev.ipf.whitenoise.model.MuteDuration
+import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.state.AppUiState
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatsScreen(
     uiState: AppUiState,
-    onSelectProfile: (String) -> Unit,
-    onAddProfile: () -> Unit,
     onNewMessage: () -> Unit,
     onOpenChat: (String) -> Unit,
     onMarkUnread: (String, Boolean) -> Unit,
-    onReadAll: () -> Unit,
     onTogglePin: (String) -> Unit,
     onMute: (String, MuteDuration?) -> Unit,
     onArchive: (String, Boolean) -> Unit,
@@ -80,85 +95,56 @@ fun ChatsScreen(
     val scope = ChatScope.valueOf(scopeName)
     var query by rememberSaveable { mutableStateOf("") }
     var isSearching by rememberSaveable { mutableStateOf(false) }
-    var isSwitcherOpen by remember { mutableStateOf(false) }
+    var filterMenuOpen by remember { mutableStateOf(false) }
     var actionChat by remember { mutableStateOf<Chat?>(null) }
     var muteChat by remember { mutableStateOf<Chat?>(null) }
     var leaveChat by remember { mutableStateOf<Chat?>(null) }
     var deleteChat by remember { mutableStateOf<Chat?>(null) }
     var soleAdminChat by remember { mutableStateOf<Chat?>(null) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val rows = remember(profile?.chats, scope, query) {
         ChatProjection.rows(profile?.chats.orEmpty(), scope, query)
     }
-    val hasNonArchivedUnread = profile?.chats.orEmpty().any { !it.isArchived && it.isUnread }
+
+    fun closeSearch() {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        isSearching = false
+        query = ""
+    }
+
+    BackHandler(enabled = isSearching, onBack = ::closeSearch)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            Column {
-                CenterAlignedTopAppBar(
-                    title = {
-                        if (isSearching) {
-                            TextField(
-                                value = query,
-                                onValueChange = { query = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text(stringResource(R.string.search_chats)) },
-                                singleLine = true,
-                            )
-                        } else {
-                            Text(stringResource(R.string.chats))
-                        }
-                    },
-                    navigationIcon = {
-                        profile?.let {
-                            IconButton(onClick = { isSwitcherOpen = true }) {
-                                ProfileAvatar(
-                                    name = it.name,
-                                    avatar = it.avatar,
-                                    modifier = Modifier.size(40.dp),
-                                    contentDescription = stringResource(R.string.switch_profile),
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        if (!isSearching) {
-                            IconButton(
-                                onClick = onSettings,
-                                modifier = Modifier.semantics { contentDescription = "Settings" },
-                            ) {
-                                Text("⚙", modifier = Modifier.clearAndSetSemantics { }, style = MaterialTheme.typography.titleLarge)
-                            }
-                        }
-                        IconButton(
-                            onClick = {
-                                isSearching = !isSearching
-                                if (!isSearching) query = ""
-                            },
-                            modifier = Modifier.semantics {
-                                contentDescription = if (isSearching) closeSearchDescription else searchChatsDescription
-                            },
-                        ) {
-                            Text(
-                                if (isSearching) "×" else "⌕",
-                                modifier = Modifier.clearAndSetSemantics { },
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                        }
-                        if (hasNonArchivedUnread && !isSearching) {
-                            TextButton(onClick = onReadAll) { Text(stringResource(R.string.read_all)) }
-                        }
-                    },
-                )
-                PrimaryScrollableTabRow(selectedTabIndex = scope.ordinal) {
-                    ChatScope.entries.forEach { candidate ->
-                        Tab(
-                            selected = candidate == scope,
-                            onClick = { scopeName = candidate.name },
-                            text = { Text(candidate.label) },
-                        )
-                    }
+            Crossfade(
+                targetState = isSearching,
+                label = "Chats search mode",
+            ) { searching ->
+                if (searching) {
+                    ChatsSearchTopBar(
+                        query = query,
+                        onQueryChange = { query = it },
+                        onClose = ::closeSearch,
+                        closeSearchDescription = closeSearchDescription,
+                    )
+                } else {
+                    ChatsTopBar(
+                        profile = profile,
+                        scope = scope,
+                        filterMenuOpen = filterMenuOpen,
+                        onFilterMenuOpenChange = { filterMenuOpen = it },
+                        onScopeChange = {
+                            scopeName = it.name
+                            filterMenuOpen = false
+                        },
+                        onSettings = onSettings,
+                        onSearch = { isSearching = true },
+                        searchChatsDescription = searchChatsDescription,
+                    )
                 }
             }
         },
@@ -173,12 +159,19 @@ fun ChatsScreen(
                         )
                     },
                     icon = {
-                        Text(
-                            if (profile?.chatRelayUrls.isNullOrEmpty()) "⚠" else "＋",
-                            modifier = Modifier.clearAndSetSemantics { },
-                            style = MaterialTheme.typography.titleLarge,
+                        Icon(
+                            painter = painterResource(
+                                if (profile?.chatRelayUrls.isNullOrEmpty()) {
+                                    R.drawable.ic_warning
+                                } else {
+                                    R.drawable.ic_add
+                                },
+                            ),
+                            contentDescription = null,
                         )
                     },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         },
@@ -197,29 +190,16 @@ fun ChatsScreen(
                     items(rows, key = Chat::id) { chat ->
                         ChatRow(
                             chat = chat,
-                            onOpen = { onOpenChat(chat.id) },
+                            onOpen = {
+                                closeSearch()
+                                onOpenChat(chat.id)
+                            },
                             onActions = { actionChat = chat },
                         )
                     }
                 }
             }
         }
-    }
-
-    if (isSwitcherOpen) {
-        ProfileSwitcherSheet(
-            profiles = uiState.signedInProfiles,
-            activeProfileId = uiState.activeProfileId,
-            onDismiss = { isSwitcherOpen = false },
-            onSelectProfile = {
-                onSelectProfile(it)
-                isSwitcherOpen = false
-            },
-            onAddProfile = {
-                isSwitcherOpen = false
-                onAddProfile()
-            },
-        )
     }
 
     actionChat?.let { chat ->
@@ -309,6 +289,186 @@ fun ChatsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatsTopBar(
+    profile: Profile?,
+    scope: ChatScope,
+    filterMenuOpen: Boolean,
+    onFilterMenuOpenChange: (Boolean) -> Unit,
+    onScopeChange: (ChatScope) -> Unit,
+    onSettings: () -> Unit,
+    onSearch: () -> Unit,
+    searchChatsDescription: String,
+) {
+    val filterDescription = stringResource(R.string.filter_chats)
+    val scopeTitle = if (scope == ChatScope.Chats) stringResource(R.string.chats) else scope.label
+    val selectedScopeDescription = stringResource(R.string.selected_chat_scope, scopeTitle)
+    val settingsDescription = profile?.let {
+        stringResource(R.string.open_settings_for, it.name)
+    }
+    TopAppBar(
+        title = {
+            Text(
+                text = scopeTitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.headlineMedium,
+            )
+        },
+        navigationIcon = {
+            profile?.let {
+                IconButton(
+                    onClick = onSettings,
+                    modifier = Modifier.semantics {
+                        settingsDescription?.let { description ->
+                            contentDescription = description
+                        }
+                    },
+                ) {
+                    ProfileAvatar(
+                        name = it.name,
+                        avatar = it.avatar,
+                        modifier = Modifier.size(40.dp),
+                        contentDescription = null,
+                    )
+                }
+            }
+        },
+        actions = {
+            Box {
+                if (scope == ChatScope.Chats) {
+                    IconButton(
+                        onClick = { onFilterMenuOpenChange(true) },
+                        modifier = Modifier.semantics {
+                            contentDescription = filterDescription
+                            stateDescription = selectedScopeDescription
+                        },
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_filter_list),
+                            contentDescription = null,
+                        )
+                    }
+                } else {
+                    FilledTonalIconButton(
+                        onClick = { onFilterMenuOpenChange(true) },
+                        modifier = Modifier.semantics {
+                            contentDescription = filterDescription
+                            stateDescription = selectedScopeDescription
+                        },
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_filter_list),
+                            contentDescription = null,
+                        )
+                    }
+                }
+                DropdownMenu(
+                    expanded = filterMenuOpen,
+                    onDismissRequest = { onFilterMenuOpenChange(false) },
+                ) {
+                    ChatScope.entries.forEach { candidate ->
+                        DropdownMenuItem(
+                            text = { Text(candidate.label) },
+                            onClick = { onScopeChange(candidate) },
+                            trailingIcon = {
+                                if (candidate == scope) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_check),
+                                        contentDescription = null,
+                                    )
+                                }
+                            },
+                            modifier = Modifier.semantics {
+                                selected = candidate == scope
+                            },
+                        )
+                    }
+                }
+            }
+            IconButton(onClick = onSearch) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_search),
+                    contentDescription = searchChatsDescription,
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatsSearchTopBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClose: () -> Unit,
+    closeSearchDescription: String,
+) {
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        keyboardController?.show()
+    }
+
+    TopAppBar(
+        title = {
+            TextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                placeholder = { Text(stringResource(R.string.search_chats)) },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_search),
+                        contentDescription = null,
+                    )
+                },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_close),
+                                contentDescription = stringResource(R.string.clear_search),
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                ),
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onClose) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_back),
+                    contentDescription = closeSearchDescription,
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surface,
+        ),
+    )
+}
+
 @Composable
 private fun ChatRow(
     chat: Chat,
@@ -377,14 +537,19 @@ private fun ChatRow(
                     IconButton(
                         onClick = onActions,
                         modifier = Modifier.semantics { contentDescription = actionsDescription },
-                    ) { Text("⋮", style = MaterialTheme.typography.titleLarge) }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_more_vert),
+                            contentDescription = null,
+                        )
+                    }
                 }
             }
         },
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onOpen)
-            .semantics(mergeDescendants = true) { },
+            .semantics { role = Role.Button },
     )
 }
 
@@ -417,11 +582,8 @@ private fun ChatEmptyState(
             },
         )
     }
-    Box(modifier = modifier.padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        WhiteNoiseEmptyState(title = title, detail = detail)
     }
 }
 

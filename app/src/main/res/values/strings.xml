@@ -11,6 +11,7 @@
     <string name="enter_private_key">Enter private key</string>
     <string name="private_key_help">It starts with nsec.</string>
     <string name="private_key_invalid">That private key isn’t valid. Check it and try again.</string>
+    <string name="invalid_input">Invalid input</string>
     <string name="paste">Paste</string>
     <string name="clear">Clear</string>
     <string name="scan_qr_code">Scan QR Code</string>
@@ -51,9 +52,13 @@
     <string name="current_profile">Current profile</string>
     <string name="search_chats">Search Chats</string>
     <string name="close_search">Close search</string>
+    <string name="clear_search">Clear search</string>
+    <string name="filter_chats">Filter Chats</string>
+    <string name="selected_chat_scope">Selected: %1$s</string>
+    <string name="open_settings_for">Open Settings for %1$s</string>
+    <string name="open_share_connect_for">Open Share &amp; Connect for %1$s</string>
     <string name="actions_for">Actions for %1$s</string>
     <string name="new_message">New Message</string>
-    <string name="read_all">Read All</string>
     <string name="mark_read">Mark as Read</string>
     <string name="mark_unread">Mark as Unread</string>
     <string name="pin">Pin</string>
@@ -102,6 +107,8 @@
     <string name="unfollow">Unfollow</string>
     <string name="block">Block</string>
     <string name="unblock">Unblock</string>
+    <string name="block_person_question">Block %1$s?</string>
+    <string name="block_person_detail">They won’t be able to message you. Your chat history will remain available.</string>
     <string name="groups_in_common">Groups in Common</string>
     <string name="no_groups_in_common">No groups in common</string>
     <string name="chat_relays_required_title">Chat Relays Required</string>
@@ -111,6 +118,7 @@
     <string name="remove_person">Remove %1$s</string>
     <string name="set_up_group">Set Up Group</string>
     <string name="group_name">Group Name</string>
+    <string name="group_photo">Group photo</string>
     <string name="group_description">Description (optional)</string>
     <string name="members">Members</string>
     <string name="create_group">Create Group</string>
@@ -154,7 +162,12 @@
         <item quantity="one">%1$d draft attachment</item>
         <item quantity="other">%1$d draft attachments</item>
     </plurals>
+    <plurals name="media_attachment_count">
+        <item quantity="one">%1$d media attachment</item>
+        <item quantity="other">%1$d media attachments</item>
+    </plurals>
     <string name="remove_link_preview">Remove Link Preview</string>
+    <string name="cancel_reply">Cancel Reply</string>
     <string name="expand_message">Expand Message</string>
     <string name="collapse_message">Collapse Message</string>
     <string name="record_voice_message">Record Voice Message</string>
@@ -168,11 +181,16 @@
     <string name="send_voice_and_text">Send Voice and Text Message</string>
     <string name="discard">Discard</string>
     <string name="preview_media">Preview</string>
-    <string name="include_media">Include media</string>
-    <string name="exclude_media">Exclude media</string>
+    <string name="media_included">Included</string>
+    <string name="media_excluded">Excluded</string>
     <string name="choose_contact">Choose Contact</string>
     <string name="choose_gif">Choose GIF</string>
     <string name="attachment_error">Couldn’t add that attachment. Try another item.</string>
+    <string name="preparing_attachment">Preparing attachment…</string>
+    <string name="transcript">Transcript</string>
+    <string name="cancel_media_changes">Cancel Media Changes</string>
+    <string name="media_item_position">%1$d of %2$d</string>
+    <string name="reading_aloud_progress">Reading aloud, %1$d%%</string>
     <string name="open_attachment">Open %1$s</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
@@ -184,6 +202,7 @@
     <string name="media_viewer">Media Viewer</string>
     <string name="open_video">Open Video</string>
     <string name="show_message_actions">Show Message Actions</string>
+    <string name="message_actions">Message Actions</string>
     <string name="reply">Reply</string>
     <string name="forward">Forward</string>
     <string name="copy">Copy</string>
@@ -192,9 +211,15 @@
     <string name="delete">Delete</string>
     <string name="retry_send">Retry Send</string>
     <string name="more_reactions">More Reactions</string>
+    <plurals name="reaction_count">
+        <item quantity="one">%1$s, %2$d reaction</item>
+        <item quantity="other">%1$s, %2$d reactions</item>
+    </plurals>
     <string name="search_emoji">Search Emoji</string>
+    <string name="no_emoji_found">No emoji found</string>
     <string name="configure_reactions">Configure Reactions</string>
     <string name="configure_reactions_guidance">Tap an emoji to replace it.</string>
+    <string name="reaction_slot_description">Reaction %1$d, %2$s. Double tap to replace.</string>
     <string name="reset">Reset</string>
     <string name="message_details">Message Details</string>
     <string name="sent">Sent</string>
@@ -210,6 +235,8 @@
     <string name="delete_for_me">Delete for Me</string>
     <string name="delete_for_everyone">Delete for Everyone</string>
     <string name="delete_for_me_explanation">Delete for Me removes the selected content from this device.</string>
+    <string name="forward_selection_limit">Select up to 5 chats.</string>
+    <string name="forward_selection_unavailable">Forwarding isn’t available when the selection contains a deleted message or more than 32 messages.</string>
     <plurals name="forward_to_chats">
         <item quantity="one">Forward to %1$d Chat</item>
         <item quantity="other">Forward to %1$d Chats</item>
@@ -222,6 +249,7 @@
     <string name="forward_selected_messages">Forward Selected Messages</string>
     <string name="close_selection">Close Selection</string>
     <string name="search_messages">Search Messages</string>
+    <string name="conversation_debug">Conversation Debug</string>
     <string name="messages">Messages</string>
     <string name="previous_match">Previous Match</string>
     <string name="next_match">Next Match</string>
@@ -265,7 +293,29 @@
     <string name="remove_final_relay_detail">Removing the final relay stops sending. History remains available.</string>
     <string name="restore_default_relays">Restore Default Relays</string>
     <string name="invalid_or_duplicate_relay">Enter a unique wss:// relay URL.</string>
-    <string name="no_shared_content">Nothing shared here yet.</string>
+    <string name="no_shared_content">Nothing shared here yet</string>
+    <string name="shared_content_empty_detail">Photos, links, and documents shared in this chat will appear here.</string>
+    <plurals name="shared_item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <plurals name="chat_relay_count">
+        <item quantity="one">%1$d chat relay</item>
+        <item quantity="other">%1$d chat relays</item>
+    </plurals>
+    <string name="profile_actions">Profile Actions</string>
+    <string name="mute_notifications">Mute notifications</string>
+    <string name="disappearing_messages_title">Disappearing messages</string>
+    <string name="cant_leave_group">Can’t leave group</string>
+    <string name="invitation_pending">Invitation pending</string>
+    <string name="couldnt_save_group">Couldn’t save the group. Try again.</string>
+    <string name="no_people_to_add">No people to add</string>
+    <string name="everyone_is_already_here">Everyone available is already in this group.</string>
+    <string name="no_chat_relays">No chat relays</string>
+    <string name="no_chat_relays_detail">Add a relay to send new messages. Your history remains available.</string>
+    <string name="defaults">Defaults</string>
+    <string name="restore_chat_relays_detail">Use the relay set captured when this chat was created.</string>
+    <string name="remove_named_relay">Remove %1$s</string>
+    <string name="remove_relay">Remove Relay</string>
     <string name="save">Save</string>
-    <string name="group_name_required">Enter a group name.</string>
 </resources>
