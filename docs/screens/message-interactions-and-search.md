@@ -4,8 +4,8 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 
 ## Source evidence
 
-- `reference/wn-ios-prototype-snapshot/docs/screens/message-actions.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/conversation-search.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/message-actions.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/conversation-search.md`
 - the message-action, forwarding, deletion, reaction, mention, and search cases
   in the pinned chat catalog and iOS tests
 

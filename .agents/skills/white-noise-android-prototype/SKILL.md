@@ -1,6 +1,6 @@
 ---
 name: white-noise-android-prototype
-description: Build, port, iterate, or review one agreed White Noise native Android prototype screen or bounded flow using Kotlin, Jetpack Compose, Material 3, AndroidX, local iOS parity evidence, and current official Android guidance. Use in wn-android-prototype for Android UI implementation, navigation, product copy, accessibility, motion, adaptive layout, system integrations, tests, emulator inspection, or feature-parity review.
+description: Build, port, iterate, or review one agreed White Noise native Android prototype screen or bounded flow using Kotlin, Jetpack Compose, Material 3, AndroidX, pinned upstream iOS parity evidence, and current official Android guidance. Use in wn-android-prototype for Android UI implementation, navigation, product copy, accessibility, motion, adaptive layout, system integrations, tests, emulator inspection, or feature-parity review.
 ---
 
 # White Noise Android Prototype
@@ -10,9 +10,11 @@ description: Build, port, iterate, or review one agreed White Noise native Andro
 2. Read `docs/product-language.md` and `docs/terminology.md` whenever work
    touches copy, labels, errors, permissions, destructive actions, privacy, or
    accessibility wording.
-3. Resolve parity evidence through `docs/port/source-map.md`. Read only the
-   relevant copied iOS brief, source, tests, and resources; do not port Apple
-   implementation structure.
+3. Resolve parity evidence through `docs/port/source-map.md`. Consult the
+   pinned upstream iOS baseline only when local Android records are
+   insufficient, and read only the relevant brief, source, tests, and
+   resources; do not port Apple implementation structure. Never treat newer
+   upstream changes as Android scope without explicit user approval.
 4. For material platform decisions or UI review, read
    `docs/references/native-ui.md`, route through
    `docs/references/android.md`, and open the relevant current official source.
@@ -33,7 +35,8 @@ description: Build, port, iterate, or review one agreed White Noise native Andro
 9. Create or update one concise brief in `docs/screens/` only after the user
    selects the screen. Include parity behavior, Android composition, Back
    behavior, system integrations, important states, adaptive behavior,
-   accessibility, official sources, snapshot paths, and acceptance criteria.
+   accessibility, official sources, pinned iOS evidence paths, and acceptance
+   criteria.
 10. Add fixed in-memory data and capability wrappers only when the selected
     flow needs them. Keep backend, networking, cryptography, authentication,
     and persistence out of scope unless the user expands it.

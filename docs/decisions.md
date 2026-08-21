@@ -32,7 +32,7 @@ screen or bounded flow is selected.
 ## WN-ANDROID-0003 — Self-contained pinned iOS evidence
 
 - Date: 2026-08-15
-- Status: Approved
+- Status: Superseded on 2026-08-21 by WN-ANDROID-0026
 
 The repository contains a read-only snapshot of the iOS docs, product source,
 tests, UI tests, Xcode project metadata, and reusable resources. It was taken
@@ -42,6 +42,10 @@ working-tree edits documented in `references/ios-prototype.md`.
 Future implementation uses the local snapshot rather than depending on a
 sibling checkout. Refreshing the snapshot is a separate explicit task because
 it can change parity requirements.
+
+This was the original port-bootstrap rule. After the scoped port reached its
+static gate and the captured working tree became exactly reproducible from an
+upstream commit, WN-ANDROID-0026 replaced the local-copy requirement.
 
 ## WN-ANDROID-0004 — Current official Android guidance is live authority
 
@@ -497,3 +501,23 @@ compact screen margin plus Material's 16 dp list-item content inset. This
 aligns headings with overview icons and icon-free detail-row text rather than
 with the outer container boundary. Restrained tonal groups, row order, typed
 navigation, and profile-owned state do not change.
+
+## WN-ANDROID-0026 — Completed port uses a pinned upstream iOS reference
+
+- Date: 2026-08-21
+- Status: Approved by explicit user direction
+
+The scoped Android port has reached its complete static implementation gate,
+so the copied iOS source tree is no longer retained in this repository. The
+former snapshot is exactly reproducible from the private `wn-ios-prototype`
+repository at commit `0bd7cbae56c92f07c7639be78b9bb62f8e5297cb`:
+its original base was commit `58785a4724f33e23135c4dd3f98f231fca6a809d`,
+and its eight captured working-tree edits are exactly the eight files committed
+by `0bd7cba`.
+
+Android briefs, decisions, tests, and the parity ledger remain the working
+authority. When they are insufficient, `docs/port/source-map.md` identifies
+the minimum upstream iOS evidence to inspect at the pinned commit. A newer iOS
+commit does not silently change Android scope; comparing or syncing later iOS
+work requires explicit user direction. The iOS repository remains neither a
+runtime nor a build-time Android dependency.

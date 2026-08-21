@@ -7,7 +7,8 @@ pixel-copying iOS and shipping an Android surface that only looks complete.
 
 - [ ] The user selected this screen or bounded flow.
 - [ ] An Android brief exists under `docs/screens/`.
-- [ ] The relevant copied iOS brief, source, tests, and assets were inspected.
+- [ ] When local Android records were insufficient, the relevant pinned iOS
+      brief, source, tests, and assets were inspected.
 - [ ] Product outcomes, exact copy, mutations, and important states are listed.
 - [ ] iOS-only presentation assumptions are identified separately.
 - [ ] Current official Android guidance was opened for material platform
@@ -63,4 +64,3 @@ pixel-copying iOS and shipping an Android surface that only looks complete.
 - [ ] `feature-inventory.md` records the exact status and evidence.
 - [ ] Remaining gaps and approved Android differences are explicit.
 - [ ] The user accepted the result before the item is marked **Accepted**.
-

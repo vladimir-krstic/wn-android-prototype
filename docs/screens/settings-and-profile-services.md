@@ -137,12 +137,12 @@ user-directed device polish pass.
 
 ## iOS parity evidence
 
-- `reference/wn-ios-prototype-snapshot/docs/screens/settings.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/conversation-support.md`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Settings/`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeSettingsState.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototypeTests/RelayAvailabilityTests.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototypeTests/SupportChatTests.swift`
+- `wn-ios-prototype@0bd7cba:docs/screens/settings.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/conversation-support.md`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Settings/`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeSettingsState.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototypeTests/RelayAvailabilityTests.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototypeTests/SupportChatTests.swift`
 
 ## Approved differences and custom exceptions
 

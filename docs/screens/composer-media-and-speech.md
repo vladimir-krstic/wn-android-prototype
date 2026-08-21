@@ -4,12 +4,12 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 
 ## Source evidence
 
-- `reference/wn-ios-prototype-snapshot/docs/screens/conversation-composer-states.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/conversation-shared.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/speech-messages.md`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Conversation/ConversationView.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Conversation/PrototypeComposerTextView.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Conversation/PrototypeComposerMediaViewer.swift`
+- `wn-ios-prototype@0bd7cba:docs/screens/conversation-composer-states.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/conversation-shared.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/speech-messages.md`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/ConversationView.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/PrototypeComposerTextView.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/PrototypeComposerMediaViewer.swift`
 - composer, attachment, media, and voice cases in `PrototypeChatModelTests.swift` and `ChatFlowsUITests.swift`
 
 ## Android-native adaptation

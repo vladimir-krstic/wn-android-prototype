@@ -17,8 +17,10 @@ Use this order when sources disagree:
 2. Approved local Android decisions in `docs/decisions.md`, shared UI metrics
    in `docs/ui-metrics.md`, product language in `docs/product-language.md`,
    terminology in `docs/terminology.md`, and the brief for the selected screen.
-3. Accepted White Noise product behavior and copy captured in
-   `reference/wn-ios-prototype-snapshot/` and summarized under `docs/port/`.
+3. Accepted White Noise product behavior and copy summarized under
+   `docs/port/`. When those local records are insufficient, consult the
+   read-only pinned iOS baseline through `docs/references/ios-prototype.md` and
+   `docs/port/source-map.md`.
 4. Current official Android design and developer documentation routed through
    `docs/references/android.md` and evaluated with
    `docs/references/native-ui.md`.
@@ -74,8 +76,10 @@ screen brief.
 - `docs/port/feature-inventory.md` is the parity ledger. Update its status only
   with implementation evidence; never mark a feature complete because a
   static screen resembles the source.
-- The snapshot is read-only evidence. Never import Swift or Apple framework
-  assumptions into production Android source.
+- The pinned upstream iOS baseline is read-only evidence. Never import Swift
+  or Apple framework assumptions into production Android source, and never
+  treat newer upstream changes as Android scope without explicit user
+  approval.
 - Product-surface copy must be production-ready. Never expose prototype,
   fixture, simulation, dummy-data, or implementation-boundary language outside
   developer-only surfaces.

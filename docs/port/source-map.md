@@ -1,16 +1,29 @@
 # iOS-to-Android source map
 
-All paths below are relative to the repository root and point into the pinned,
-read-only snapshot at `reference/wn-ios-prototype-snapshot/`.
+All iOS paths below are relative to the root of the private
+[`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)
+repository at the accepted, read-only parity baseline
+`0bd7cbae56c92f07c7639be78b9bb62f8e5297cb`. Screen briefs use the compact
+notation `wn-ios-prototype@0bd7cba:<path>` for the same source.
+
+When the sibling checkout is available, inspect one path without changing its
+working tree using:
+
+```bash
+git -C ../wn-ios-prototype show \
+  0bd7cbae56c92f07c7639be78b9bb62f8e5297cb:<path>
+```
+
+See `docs/references/ios-prototype.md` for provenance and drift rules.
 
 Use this map to select evidence, not to derive Android package names or port
 Swift types one-for-one.
 
 ## Product-wide evidence
 
-| Need | Snapshot paths |
+| Need | Pinned iOS paths |
 | --- | --- |
-| Product scope | `README.ios.md`, `docs/decisions.md` |
+| Product scope | `README.md`, `docs/decisions.md` |
 | Product voice and terms | `docs/product-language.md`, `docs/terminology.md` |
 | App/root routing | `WhiteNoisePrototype/App/WhiteNoisePrototypeApp.swift` |
 | Profile model | `WhiteNoisePrototype/App/PrototypeProfile.swift` |
@@ -58,4 +71,3 @@ For each flow:
 5. Write the Android brief before implementation.
 6. Choose Android components from current official guidance; never make Swift
    type names or Apple metrics the Android architecture.
-

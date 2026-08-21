@@ -126,14 +126,14 @@ inspection remains the explicit device-acceptance pass.
 
 ## iOS parity evidence
 
-- `reference/wn-ios-prototype-snapshot/docs/screens/settings.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/sign-out.md`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeSettingsState.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeChatDebug.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Settings/DeveloperSettingsViews.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Settings/SignOutSettingsView.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototypeTests/DeveloperToolsTests.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototypeTests/SignOutFlowTests.swift`
+- `wn-ios-prototype@0bd7cba:docs/screens/settings.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/sign-out.md`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeSettingsState.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatDebug.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Settings/DeveloperSettingsViews.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Settings/SignOutSettingsView.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototypeTests/DeveloperToolsTests.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototypeTests/SignOutFlowTests.swift`
 
 ## Approved differences and custom exceptions
 

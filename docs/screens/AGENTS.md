@@ -6,7 +6,6 @@
   does not become an accidental requirement.
 - Include exact copy, navigation and Back behavior, important states,
   accessibility, adaptive layout, system integrations, governing Android
-  links, snapshot evidence paths, and observable acceptance criteria.
+  links, pinned iOS evidence paths, and observable acceptance criteria.
 - Record only durable accepted decisions. Do not preserve abandoned spacing,
   color, or motion experiments.
-

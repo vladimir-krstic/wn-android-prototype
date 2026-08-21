@@ -4,9 +4,9 @@ Create one brief only after the user selects a screen or bounded flow, or when
 that flow becomes active in the approved autonomous batch sequence.
 
 Use `../templates/screen-brief.md`. Keep parity behavior and Android-native
-presentation separate, cite the relevant copied iOS evidence and current
-official Android sources, and define observable acceptance criteria before
-implementation.
+presentation separate, cite relevant pinned iOS evidence when local Android
+records are insufficient, cite current official Android sources, and define
+observable acceptance criteria before implementation.
 
 Current briefs:
 

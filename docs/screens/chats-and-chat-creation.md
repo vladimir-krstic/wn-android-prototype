@@ -5,14 +5,14 @@ statically verified on 2026-08-21; device visual acceptance pending
 
 ## Source evidence
 
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Chats/ChatsView.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Chats/NativeChatList.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Chats/ChatListItem.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Chats/ChatListFixtures.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Chats/NewChatView.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeChatModels.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeChatFixtures.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeChatOperations.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Chats/ChatsView.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Chats/NativeChatList.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Chats/ChatListItem.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Chats/ChatListFixtures.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Chats/NewChatView.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatModels.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatFixtures.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatOperations.swift`
 - The corresponding iOS briefs indexed by `docs/port/source-map.md`.
 
 ## Android-native adaptation

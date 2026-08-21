@@ -101,9 +101,9 @@ None.
 
 ## iOS parity evidence
 
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/WhiteNoisePrototypeApp.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype.xcodeproj/project.pbxproj`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototypeUITests/PerformanceUITests.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/WhiteNoisePrototypeApp.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype.xcodeproj/project.pbxproj`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototypeUITests/PerformanceUITests.swift`
 
 ## Approved differences and custom exceptions
 

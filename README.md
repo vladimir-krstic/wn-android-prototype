@@ -63,22 +63,21 @@ rings. Device execution and visual acceptance remain pending.
 - `docs/port/` — feature inventory, parity process, and source-to-destination
   map, including the autonomous batch sequence.
 - `docs/references/` — Android platform router, native-UI evaluation method,
-  iOS snapshot provenance, and resource guidance.
+  pinned iOS provenance, and resource guidance.
 - `docs/screens/` — Android screen briefs created only when a screen is
   selected.
-- `reference/wn-ios-prototype-snapshot/` — read-only local snapshot of the
-  iOS product docs, source, tests, and reusable resources.
 
-## Source snapshot
+## iOS parity reference
 
-The reference snapshot was captured from the sibling iOS working tree on
-2026-08-15 at commit `58785a4724f33e23135c4dd3f98f231fca6a809d`.
-It intentionally includes the current uncommitted edits listed in
-`docs/references/ios-prototype.md` because those files represented the newest
-available product behavior at capture time.
+The accepted iOS parity baseline is the private
+[`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)
+repository at commit `0bd7cbae56c92f07c7639be78b9bb62f8e5297cb`.
+`docs/references/ios-prototype.md` records its provenance and access rules;
+`docs/port/source-map.md` maps Android flows to relevant upstream paths.
 
-The snapshot is evidence, not an Android dependency. Production source must
-not reference it at runtime or build time.
+The iOS repository is read-only parity evidence, not an Android dependency.
+Production source must not reference it at runtime or build time, and newer
+iOS commits do not expand Android scope without explicit approval.
 
 ## Build and verification
 

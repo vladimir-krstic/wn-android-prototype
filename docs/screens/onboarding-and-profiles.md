@@ -170,14 +170,14 @@ failure. Android-only scanner failure detail is:
 
 ## iOS parity evidence
 
-- `reference/wn-ios-prototype-snapshot/docs/screens/welcome.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/login.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/qr-scanner.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/sign-up.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/verified-nostr-address.md`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/WhiteNoisePrototypeApp.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeProfile.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototypeTests/ProfileLifecycleTests.swift`
+- `wn-ios-prototype@0bd7cba:docs/screens/welcome.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/login.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/qr-scanner.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/sign-up.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/verified-nostr-address.md`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/WhiteNoisePrototypeApp.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeProfile.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototypeTests/ProfileLifecycleTests.swift`
 - onboarding SwiftUI source and bundled avatar resources routed through
   `docs/port/source-map.md`.
 

@@ -1,11 +1,12 @@
 # Product resource reference
 
-The reusable source material lives under:
+The reusable source material lives in the private `wn-ios-prototype`
+repository at the accepted commit recorded in `ios-prototype.md`, under:
 
-`reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Resources/`
+`WhiteNoisePrototype/Resources/`
 
-It is read-only evidence. Android production resources are introduced only
-when a selected flow uses them.
+It is read-only upstream evidence. Android production resources are
+introduced only when a selected flow uses them.
 
 ## Captured resource groups
 
@@ -22,15 +23,15 @@ when a selected flow uses them.
 | Video | `ChatTrailClip.mp4` | Deterministic conversation/video viewer fixture |
 | Documents | `ProjectBrief.pdf`, `ProjectNotes.pdf`, `TrailPlan.pdf`, `WeekendNotes.pdf` | Attachment rows, forwarding, and file-opening fixtures |
 
-The asset-catalog `Contents.json` files remain in the snapshot as provenance.
-They are not Android metadata.
+The asset-catalog `Contents.json` files remain in the pinned upstream commit as
+provenance. They are not Android metadata.
 
 ## Import rules
 
 - Copy only the files needed by the selected flow into the Android app. Never
-  reference the snapshot path from Gradle or production code.
-- Preserve the original reference unchanged. Derive optimized Android copies
-  in `app/src/main/res/` with clear lowercase resource names.
+  reference the iOS repository from Gradle or production code.
+- Preserve the pinned upstream source unchanged. Derive optimized Android
+  copies in `app/src/main/res/` with clear lowercase resource names.
 - Keep photographs in an appropriate raster format and validate decoded size,
   memory use, crop behavior, color space, and accessibility description.
 - Keep the White Noise mark as vector only if Android's vector pipeline renders
@@ -62,7 +63,7 @@ These are naming guidance, not an instruction to import everything:
 - `weekend_notes`
 
 Maintain a mapping in the selected brief whenever an Android resource name no
-longer matches the snapshot filename.
+longer matches the upstream filename.
 
 ## Imported for onboarding and profiles
 
@@ -84,9 +85,9 @@ Batch 4 additionally imports the pinned `ChatTrailClip.mp4` and four PDF
 fixtures as lowercase `res/raw` resources: `chat_trail_clip`, `project_brief`,
 `project_notes`, `trail_plan`, and `weekend_notes`. They are opened only after
 copying to an app cache file exposed by the non-exported FileProvider; the
-reference snapshot is never read at runtime.
-The original images and provenance remain unchanged in the pinned snapshot;
-the app performs no remote image loading. Device-selected images are
+upstream iOS repository is never read at runtime.
+The original images and provenance remain unchanged at the pinned upstream
+commit; the app performs no remote image loading. Device-selected images are
 EXIF-corrected, scaled so their largest dimension is at most 512 pixels, and
 JPEG-compressed before entering process-local state.
 

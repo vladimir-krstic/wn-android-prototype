@@ -5,16 +5,16 @@ Status: Visual-polish refresh implemented; static verification complete on
 
 ## Source evidence
 
-- `reference/wn-ios-prototype-snapshot/docs/screens/conversation-shared.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/conversation-fiatjaf.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/conversation-support.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/chat-invitation.md`
-- `reference/wn-ios-prototype-snapshot/docs/screens/disappearing-message-indicators.md`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeChatModels.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeChatFixtures.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/App/PrototypeChatOperations.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Conversation/ConversationView.swift`
-- `reference/wn-ios-prototype-snapshot/WhiteNoisePrototype/Screens/Conversation/PrototypeMessageBubble.swift`
+- `wn-ios-prototype@0bd7cba:docs/screens/conversation-shared.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/conversation-fiatjaf.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/conversation-support.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/chat-invitation.md`
+- `wn-ios-prototype@0bd7cba:docs/screens/disappearing-message-indicators.md`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatModels.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatFixtures.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatOperations.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/ConversationView.swift`
+- `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/PrototypeMessageBubble.swift`
 
 ## Android-native adaptation
 
