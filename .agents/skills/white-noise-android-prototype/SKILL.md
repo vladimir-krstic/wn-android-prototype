@@ -21,7 +21,9 @@ description: Build, port, iterate, or review one agreed White Noise native Andro
 6. Preserve the product outcome, accepted copy, deterministic behavior, and
    state coverage. Re-express presentation with Kotlin, Compose, Material 3,
    AndroidX, Material Symbols, system Back, Android pickers, Android sharing,
-   and Android permission behavior.
+   and Android permission behavior. Use standard Photo Picker and Files
+   contracts without app color overrides; leave these system-owned surfaces
+   under platform or OEM control.
 7. Keep the White Noise palette monochrome through semantic Material roles.
    Preserve Android feedback and state semantics; do not flatten error,
    warning, disabled, focused, pressed, or selected states into gray.

@@ -43,6 +43,10 @@ screen brief.
   Apple navigation bars, or iPhone-only gestures. Map intent to Android
   components, Material Symbols, system Back, predictive Back, Android
   Sharesheet, Android pickers, and Android permission behavior.
+- Launch Android Photo Picker and Files flows with their standard Activity
+  Result contracts and platform-default appearance. Do not pass app color
+  overrides or replace system-owned picker, camera, scanner, Sharesheet, or
+  settings surfaces merely to force White Noise styling.
 - Let standard Material and platform components own typography, touch-target
   size, padding, shape, state layers, focus, ripple, elevation, motion, and
   accessibility whenever a suitable component exists.

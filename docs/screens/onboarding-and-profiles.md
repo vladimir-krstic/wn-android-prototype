@@ -97,17 +97,28 @@ The temporary signed-in empty state uses:
 
 - Material 3 medium task buttons, outlined text fields, outlined secure text
   field, top app bars, dialogs, tabs, dropdown menu, lazy list/grid, progress
-  indicator, Snackbar, and modal bottom sheet.
+  indicator, Snackbar, and modal bottom sheet. Find Image on Web opens directly
+  as a near-full sheet capped at 94% of the available height, retaining visible
+  underlying context, rounded top corners, drag handle, and scrim. It uses a
+  center-aligned top app bar, close icon button, contained Done action, and
+  equal-width secondary Search/URL tabs. The full-window modal and scrim remain
+  unconstrained; the cap belongs to the measured sheet content so its motion,
+  system-bar treatment, and bottom coverage remain Material-owned. The sheet,
+  handle area, app bar, and tabs use one `surfaceContainerLow` background so
+  the task reads as one continuous modal surface.
 - Ordinary onboarding form labels use Material's `TextFieldLabelPosition.Above`
   rather than cutting into the outline. The slight neutral container surface is
   supplementary; the standard Material outline remains the field boundary.
-  Specialized search fields and message composers keep their native component
-  patterns rather than inheriting this form treatment.
+  The web-image Search Images and Image URL inputs use the same treatment
+  because they are explicit form inputs inside a bounded task. App-level search
+  fields and message composers keep their specialized native patterns.
 - Sign Up keeps its photo action attached to the avatar group with an 8 dp gap
   and uses a compact filled-tonal pill. The action remains visually contained
   without inflating it to the 56 dp task-button size.
 - `ActivityResultContracts.PickVisualMedia` for one image and
   `ActivityResultContracts.OpenDocument` for a file-owned image.
+- Photo Picker and Files retain their platform or OEM appearance without app
+  color overrides.
 - `play-services-code-scanner` 16.1.0 for a Google-owned, permissionless,
   QR-only scanner with auto zoom. No custom camera viewport or camera
   permission is present.

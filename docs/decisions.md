@@ -330,8 +330,10 @@ primary boundary and Material continues to own focus, error, disabled, and
 accessibility state styling.
 
 This rule applies to ordinary forms such as onboarding Name, About, and Private
-Key. Search bars and message composers remain specialized Android component
-patterns and do not inherit the form-field presentation.
+Key. The bounded web-image task also applies it to Search Images and Image URL
+because these are explicit form inputs rather than an app-level search mode.
+App-level search bars and message composers remain specialized Android
+component patterns and do not inherit the form-field presentation.
 
 ## WN-ANDROID-0019 — Shared Android grid and seamless launch-mark handoff
 
@@ -351,3 +353,37 @@ The initial Welcome mark uses the same centered visible geometry as Android's
 system splash: 149.5 × 115 dp within the platform's centered 288 dp icon
 canvas. Welcome actions are independently pinned to safe drawing insets so
 they never displace the mark during the splash-to-content handoff.
+
+## WN-ANDROID-0020 — System picker surfaces use their platform defaults
+
+- Date: 2026-08-20
+- Status: Approved by explicit user direction and implementation
+
+Android Photo Picker and Storage Access Framework launches use their standard
+Activity Result requests without app accent or color extras. Android and the
+device manufacturer own the complete picker appearance, including any dynamic
+system color. External camera, Google Code Scanner, Android Sharesheet, and
+system Settings follow the same system-owned rule. White Noise does not replace
+these surfaces with custom UI merely to force monochrome styling.
+
+## WN-ANDROID-0021 — Web-image selection is a near-full Android task sheet
+
+- Date: 2026-08-20
+- Status: Approved by explicit user direction and implementation
+
+Find Image on Web opens a Material modal bottom sheet immediately at its
+maximum state, capped at 94% of the available height. The visible underlying
+screen, rounded top corners, drag handle, and scrim preserve an obvious modal
+sheet boundary without forcing the task into Material's shorter partial anchor.
+The modal dialog and scrim retain their full-window defaults; only the sheet's
+intrinsic content height is bounded. Never apply a fractional height modifier
+to `ModalBottomSheet` itself, because that changes the draggable surface's
+measurement space and can leave uncovered content, incorrect system-bar color,
+and broken entrance geometry.
+A center-aligned top app bar owns the task title, a standard close icon button,
+and a contained primary Done action; the sheet no longer uses detached edge
+text actions. Search and URL are equal-width secondary tabs inside the task
+hierarchy. Both inputs use the approved outlined, label-above, lightly surfaced
+field treatment and the shared Android spacing tokens. The sheet, drag-handle
+area, top app bar, and tab row share `surfaceContainerLow`; component defaults
+must not create a brighter app-bar band inside this single modal surface.

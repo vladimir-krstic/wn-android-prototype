@@ -66,6 +66,7 @@ Status: Implemented; static verification complete on 2026-08-15
 - Selecting a person opens their profile. **Message** opens the existing direct chat for that person or creates exactly one new direct chat.
 - New Group supports searchable multi-selection, stable selection order, removable selections, and enables **Continue** after at least one selection.
 - Set Up Group accepts an optional photo through the same Photos, Files, Web, and removal model used by onboarding, requires a trimmed group name, accepts an optional description, and reviews selected members.
+- Photo Picker and Files use their default system-owned appearance.
 - Creating a group makes the active profile an administrator, selected people members, records **You created the group.**, copies available relay URLs, and opens the new conversation.
 - Back and cancel do not mutate profile or chat state.
 

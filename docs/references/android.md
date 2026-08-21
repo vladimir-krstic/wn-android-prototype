@@ -92,6 +92,10 @@ the semantics tree.
 - [Android Sharesheet](https://developer.android.com/training/sharing/send)
 - [Secure file sharing](https://developer.android.com/training/secure-file-sharing)
 
+Use standard Photo Picker and Storage Access Framework contracts without app
+color overrides. Android and the device manufacturer own these surfaces'
+colors and layout, along with camera, scanner, Sharesheet, and settings UI.
+
 Use the permissionless Google Code Scanner when the selected QR flow needs only
 a system-owned result and Google Play services is an accepted availability
 requirement. Use CameraX plus barcode analysis only when an approved custom

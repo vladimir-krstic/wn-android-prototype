@@ -21,6 +21,7 @@ Status: Implemented; static verification complete on 2026-08-15
 - Group admins receive explicit Edit Group, Add People, and role-aware member
   actions. Photo Picker, text fields, centered confirmation dialogs, and typed
   timeline events own every mutation. Ordinary members remain read-only.
+- Edit Group uses Photo Picker with its default platform or OEM appearance.
 - Chat Relays is an independent typed route. It normalizes/deduplicates `wss://`
   endpoints, confirms removal, permits an empty set, and restores the chat's
   captured defaults without changing profile or sibling chat relays.

@@ -82,6 +82,8 @@ private-key reveal state remain screen-owned and saveable where appropriate.
 
 - permissionless Google Code Scanner for QR input;
 - Android Photo Picker and Storage Access Framework for avatar input;
+- platform-default Photo Picker and Files appearances without app color
+  overrides;
 - Android Sharesheet and clipboard for explicit public/donation output;
 - Storage Access Framework document creation for deterministic key exports;
 - app-notification and device-security Settings intents;

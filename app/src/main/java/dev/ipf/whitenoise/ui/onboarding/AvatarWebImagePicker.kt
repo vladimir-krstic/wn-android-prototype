@@ -5,29 +5,37 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldLabelPosition
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -47,11 +57,17 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AvatarWebImageCatalog
 import dev.ipf.whitenoise.model.AvatarWebImageChoice
 import dev.ipf.whitenoise.ui.components.drawableResource
+import dev.ipf.whitenoise.ui.components.whiteNoiseOutlinedTextFieldColors
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 private enum class WebImageMode {
     Search,
     Url,
 }
+
+private const val NearFullSheetHeightFraction = 0.94f
+// BottomSheetDefaults.DragHandle currently measures 4 dp with 22 dp vertical padding per side.
+private val MaterialSheetDragHandleHeight = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,46 +77,67 @@ fun AvatarWebImagePicker(
     onUseImage: (AvatarWebImageChoice) -> Unit,
 ) {
     var mode by remember { mutableStateOf(WebImageMode.Search) }
-    var query by remember { mutableStateOf("") }
+    val query = rememberTextFieldState()
     var selectedChoice by remember(currentChoiceId) {
         mutableStateOf(currentChoiceId?.let(AvatarWebImageCatalog::choice))
     }
-    var imageUrl by remember(currentChoiceId) {
-        mutableStateOf(selectedChoice?.let(AvatarWebImageCatalog::displayUrl).orEmpty())
-    }
-    val urlChoice = AvatarWebImageCatalog.choiceMatchingUrl(imageUrl)
+    val imageUrl = rememberTextFieldState(
+        initialText = selectedChoice?.let(AvatarWebImageCatalog::displayUrl).orEmpty(),
+    )
+    val urlChoice = AvatarWebImageCatalog.choiceMatchingUrl(imageUrl.text.toString())
     val activeChoice = if (mode == WebImageMode.Search) selectedChoice else urlChoice
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+    val density = LocalDensity.current
+    val windowHeightPx = LocalWindowInfo.current.containerSize.height
+    val sheetContentHeight = with(density) {
+        (windowHeightPx.toDp() * NearFullSheetHeightFraction - MaterialSheetDragHandleHeight)
+            .coerceAtLeast(0.dp)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        contentWindowInsets = { WindowInsets.safeDrawing },
+        sheetState = sheetState,
+        containerColor = sheetContainerColor,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.94f),
+                .height(sheetContentHeight)
+                .navigationBarsPadding()
+                .imePadding(),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.close))
-                }
-                TextButton(
-                    onClick = {
-                        activeChoice?.let(onUseImage)
-                    },
-                    enabled = activeChoice != null,
-                ) {
-                    Text(stringResource(R.string.done))
-                }
-            }
+            CenterAlignedTopAppBar(
+                title = { Text(stringResource(R.string.find_web_image)) },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_close),
+                            contentDescription = stringResource(R.string.close),
+                        )
+                    }
+                },
+                actions = {
+                    Button(
+                        onClick = {
+                            activeChoice?.let(onUseImage)
+                        },
+                        enabled = activeChoice != null,
+                    ) {
+                        Text(stringResource(R.string.done))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = sheetContainerColor,
+                ),
+            )
 
-            PrimaryTabRow(selectedTabIndex = mode.ordinal) {
+            SecondaryTabRow(
+                selectedTabIndex = mode.ordinal,
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = sheetContainerColor,
+            ) {
                 Tab(
                     selected = mode == WebImageMode.Search,
                     onClick = { mode = WebImageMode.Search },
@@ -110,10 +147,11 @@ fun AvatarWebImagePicker(
                     selected = mode == WebImageMode.Url,
                     onClick = {
                         mode = WebImageMode.Url
-                        if (imageUrl.isEmpty()) {
-                            imageUrl = selectedChoice
+                        if (imageUrl.text.isEmpty()) {
+                            val selectedUrl = selectedChoice
                                 ?.let(AvatarWebImageCatalog::displayUrl)
                                 .orEmpty()
+                            imageUrl.edit { replace(0, length, selectedUrl) }
                         }
                     },
                     text = { Text(stringResource(R.string.url)) },
@@ -123,17 +161,16 @@ fun AvatarWebImagePicker(
             when (mode) {
                 WebImageMode.Search -> SearchWebImages(
                     query = query,
-                    onQueryChange = { query = it },
                     selectedChoice = selectedChoice,
                     onSelect = { choice ->
                         selectedChoice = choice
-                        imageUrl = AvatarWebImageCatalog.displayUrl(choice)
+                        val selectedUrl = AvatarWebImageCatalog.displayUrl(choice)
+                        imageUrl.edit { replace(0, length, selectedUrl) }
                     },
                 )
 
                 WebImageMode.Url -> UrlWebImage(
                     imageUrl = imageUrl,
-                    onUrlChange = { imageUrl = it },
                     choice = urlChoice,
                 )
             }
@@ -143,8 +180,7 @@ fun AvatarWebImagePicker(
 
 @Composable
 private fun SearchWebImages(
-    query: String,
-    onQueryChange: (String) -> Unit,
+    query: TextFieldState,
     selectedChoice: AvatarWebImageChoice?,
     onSelect: (AvatarWebImageChoice) -> Unit,
 ) {
@@ -153,23 +189,24 @@ private fun SearchWebImages(
             title = stringResource(R.string.search_privacy),
             detail = stringResource(R.string.search_privacy_detail),
         )
-        TextField(
-            value = query,
-            onValueChange = onQueryChange,
+        OutlinedTextField(
+            state = query,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
             label = { Text(stringResource(R.string.search_images)) },
-            singleLine = true,
+            labelPosition = TextFieldLabelPosition.Above(),
+            lineLimits = TextFieldLineLimits.SingleLine,
+            colors = whiteNoiseOutlinedTextFieldColors(),
         )
-        if (query.trim().isEmpty()) {
+        if (query.text.toString().trim().isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
                 ) {
                     Text(
                         text = stringResource(R.string.search_images),
@@ -189,7 +226,7 @@ private fun SearchWebImages(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 items(
-                    items = AvatarWebImageCatalog.results(query),
+                    items = AvatarWebImageCatalog.results(query.text.toString()),
                     key = AvatarWebImageChoice::id,
                 ) { choice ->
                     WebImageTile(
@@ -205,10 +242,10 @@ private fun SearchWebImages(
 
 @Composable
 private fun UrlWebImage(
-    imageUrl: String,
-    onUrlChange: (String) -> Unit,
+    imageUrl: TextFieldState,
     choice: AvatarWebImageChoice?,
 ) {
+    val imageUrlText = imageUrl.text.toString()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -218,18 +255,18 @@ private fun UrlWebImage(
             title = stringResource(R.string.image_privacy),
             detail = stringResource(R.string.image_privacy_detail),
         )
-        TextField(
-            value = imageUrl,
-            onValueChange = onUrlChange,
+        OutlinedTextField(
+            state = imageUrl,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
             label = { Text(stringResource(R.string.image_url)) },
+            labelPosition = TextFieldLabelPosition.Above(),
             placeholder = { Text(stringResource(R.string.image_url_prompt)) },
             supportingText = {
                 Text(
                     stringResource(
-                        if (imageUrl.isNotEmpty() && choice == null) {
+                        if (imageUrlText.isNotEmpty() && choice == null) {
                             R.string.image_url_invalid
                         } else {
                             R.string.image_url_helper
@@ -237,14 +274,18 @@ private fun UrlWebImage(
                     ),
                 )
             },
-            isError = imageUrl.isNotEmpty() && choice == null,
+            isError = imageUrlText.isNotEmpty() && choice == null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
+            colors = whiteNoiseOutlinedTextFieldColors(),
         )
         if (choice != null) {
             Text(
                 text = stringResource(R.string.preview),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(
+                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                    vertical = WhiteNoiseSpacing.Related,
+                ),
                 style = MaterialTheme.typography.titleMedium,
             )
             WebImageTile(
@@ -252,7 +293,7 @@ private fun UrlWebImage(
                 selected = false,
                 onSelect = null,
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
                     .fillMaxWidth(0.6f),
             )
         }
@@ -265,12 +306,15 @@ private fun PrivacyDisclosure(
     detail: String,
 ) {
     Surface(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.padding(
+            horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+            vertical = WhiteNoiseSpacing.FormField,
+        ),
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(title, style = MaterialTheme.typography.titleSmall)
@@ -281,7 +325,6 @@ private fun PrivacyDisclosure(
             )
         }
     }
-    HorizontalDivider()
 }
 
 @Composable

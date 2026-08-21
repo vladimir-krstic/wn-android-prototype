@@ -24,6 +24,8 @@ Status: Implemented; static verification complete on 2026-08-15
   files. Use `ActivityResultContracts.TakePicture` with an app `FileProvider`
   URI for the external camera app; White Noise requests no camera or storage
   permission.
+- Photo Picker, Files, and the external camera retain their default system or
+  OEM appearance without app color overrides.
 - Maintain one profile-owned ordered draft queue across navigation. Every item
   has a visible 48dp removal action. Sending clears text, attachments, link
   suppression, and voice-review state atomically.
