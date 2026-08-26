@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -21,11 +19,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +41,7 @@ import dev.ipf.whitenoise.model.ConversationDebugSnapshot
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
+import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @Composable
@@ -56,12 +52,9 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
-    onTelemetry: (Boolean) -> Boolean,
-    onAuditLogging: (Boolean) -> Boolean,
-    onClearAuditLogs: () -> Boolean,
+    onDiagnosticsImprovements: () -> Unit,
 ) {
     val tools = profile.developerTools
-    var clearLogsDialog by remember { mutableStateOf(false) }
     SettingsScaffold(title = "Developer Tools", onBack = onBack) {
         SettingsList {
             item {
@@ -102,56 +95,19 @@ fun DeveloperToolsScreen(
                         SettingsLink("Key Packages", "Exactly one current package", onKeyPackages)
                     }
                 }
-                item { SettingsSection("Telemetry") }
+                item { SettingsSection("Diagnostic logs") }
                 item {
                     SettingsGroup {
-                        SettingsSwitch(
-                            title = "Anonymous Telemetry",
-                            checked = tools.anonymousTelemetry,
-                            onCheckedChange = { onTelemetry(it) },
-                            subtitle = "Shares anonymous reliability and performance data. It doesn’t include messages or profile keys.",
-                        )
-                    }
-                }
-                item { SettingsSection("Audit logging") }
-                item {
-                    SettingsGroup {
-                        SettingsSwitch(
-                            title = "Audit Logging",
-                            checked = tools.auditLogging,
-                            onCheckedChange = { onAuditLogging(it) },
-                            subtitle = "Stores sanitized technical activity locally for troubleshooting.",
-                        )
-                    }
-                }
-                if (tools.auditLogging) {
-                    item {
-                        SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Related)) {
-                            tools.auditFiles.forEach { file ->
-                                ListItem(
-                                    headlineContent = {
-                                        Text(file.filename, fontFamily = FontFamily.Monospace)
-                                    },
-                                    supportingContent = {
-                                        Text("${fileSize(file.byteCount)} · ${file.createdLabel} · ${file.profileName}")
-                                    },
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                )
-                            }
-                            SettingsAction(
-                                title = "Clear Audit Logs",
-                                subtitle = if (tools.auditLogsContainData) {
-                                    "Remove recorded activity while keeping both files."
-                                } else {
-                                    "The audit log files are already empty."
-                                },
-                                onClick = { clearLogsDialog = true },
-                                enabled = tools.auditLogsContainData,
-                                destructive = true,
+                        SettingsLink("Diagnostics & Improvements", profile.diagnostics.summary, onDiagnosticsImprovements)
+                        profile.diagnostics.records.forEach { file ->
+                            ListItem(
+                                headlineContent = { Text(file.filename, fontFamily = FontFamily.Monospace) },
+                                supportingContent = { Text("${fileSize(file.byteCount)} · ${file.createdLabel} · ${file.profileName}") },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
                         }
-                        SettingsExplainer("Turning logging off hides the files but keeps them. Clearing removes their contents without deleting the files.")
                     }
+                    SettingsExplainer("Analytics and logging choices are independent of Developer Tools. Turning logging off keeps existing records.")
                 }
             }
             item { SettingsSection("About") }
@@ -162,20 +118,6 @@ fun DeveloperToolsScreen(
                 }
             }
         }
-    }
-    if (clearLogsDialog) {
-        AlertDialog(
-            onDismissRequest = { clearLogsDialog = false },
-            title = { Text("Clear all audit logs?") },
-            text = { Text("This removes all recorded activity from the audit log files. The files remain and Audit Logging stays on.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onClearAuditLogs()
-                    clearLogsDialog = false
-                }) { Text("Clear logs", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { clearLogsDialog = false }) { Text("Cancel") } },
-        )
     }
 }
 

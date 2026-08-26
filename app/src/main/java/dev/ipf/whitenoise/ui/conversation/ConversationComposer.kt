@@ -43,8 +43,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
@@ -55,7 +53,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -112,6 +111,8 @@ import dev.ipf.whitenoise.model.VoiceMessageFixture
 import dev.ipf.whitenoise.model.VoiceMessageFormat
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.drawableResource
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
@@ -378,15 +379,8 @@ fun FullConversationComposer(
 
     if (attachmentMenuOpen) {
         ModalBottomSheet(onDismissRequest = { attachmentMenuOpen = false }) {
-            Column(Modifier.fillMaxWidth().padding(bottom = WhiteNoiseSpacing.CompactScreenMargin)) {
-                Text(
-                    stringResource(R.string.add_attachment),
-                    modifier = Modifier.padding(
-                        horizontal = WhiteNoiseSpacing.Section,
-                        vertical = WhiteNoiseSpacing.Related,
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = WhiteNoiseSpacing.CompactScreenMargin)) {
+                WhiteNoiseSheetHeader(stringResource(R.string.add_attachment))
                 AttachmentAction(R.drawable.ic_camera, stringResource(R.string.camera)) {
                     attachmentMenuOpen = false
                     val directory = File(context.cacheDir, "camera").apply { mkdirs() }
@@ -890,21 +884,18 @@ private fun VoiceReviewSheet(
         },
     )
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        WhiteNoiseSheetHeader(stringResource(R.string.voice_message_review))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = WhiteNoiseSpacing.Section, vertical = WhiteNoiseSpacing.CompactScreenMargin),
+                .padding(horizontal = WhiteNoiseSpacing.Section).padding(bottom = WhiteNoiseSpacing.CompactScreenMargin),
             contentAlignment = Alignment.TopCenter,
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
             ) {
-                Text(
-                    stringResource(R.string.voice_message_review),
-                    style = MaterialTheme.typography.titleLarge,
-                )
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -964,26 +955,17 @@ private fun VoiceReviewSheet(
                                 )
                             }
                         }
-                        DropdownMenu(
+                        WhiteNoiseDropdownMenu(
                             expanded = formatMenuOpen,
                             onDismissRequest = { formatMenuOpen = false },
-                        ) {
-                            VoiceMessageFormat.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option.label) },
-                                    trailingIcon = if (option == format) ({
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_check),
-                                            contentDescription = null,
-                                        )
-                                    }) else null,
-                                    onClick = {
-                                        formatName = option.name
-                                        formatMenuOpen = false
-                                    },
+                            items = VoiceMessageFormat.entries.map { option ->
+                                WhiteNoiseMenuItem(
+                                    label = option.label,
+                                    selected = option == format,
+                                    onClick = { formatName = option.name },
                                 )
-                            }
-                        }
+                            },
+                        )
                     }
                     if (format != VoiceMessageFormat.Voice) {
                         TextField(
@@ -1034,14 +1016,7 @@ private fun ContactPickerSheet(
             contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
         ) {
             item {
-                Text(
-                    stringResource(R.string.choose_contact),
-                    Modifier.padding(
-                        horizontal = WhiteNoiseSpacing.Section,
-                        vertical = WhiteNoiseSpacing.Related,
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                WhiteNoiseSheetHeader(stringResource(R.string.choose_contact))
             }
             items(people.take(12), key = Person::id) { person ->
                 ListItem(
@@ -1076,14 +1051,7 @@ private fun GifPickerSheet(onDismiss: () -> Unit, onSelect: (AvatarAsset, String
             contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
         ) {
             item {
-                Text(
-                    stringResource(R.string.choose_gif),
-                    Modifier.padding(
-                        horizontal = WhiteNoiseSpacing.Section,
-                        vertical = WhiteNoiseSpacing.Related,
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                WhiteNoiseSheetHeader(stringResource(R.string.choose_gif))
             }
             items(gifs, key = { it.second }) { (asset, label) ->
                 ListItem(

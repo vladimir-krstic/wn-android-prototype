@@ -1,5 +1,13 @@
 # Onboarding and profile foundation
 
+2026-08-26 shared-sheet follow-up: `AvatarWebImagePicker` uses
+`WhiteNoiseModalBottomSheet` for the common surfaceContainerLow/inset owner.
+Its native Close/Done task app bar already matches that color and uses zero
+window insets; task height, mode buttons, privacy copy, grid spacing and image
+selection are unchanged. Profile switching uses the shared wrapping
+titleLarge header with trailing Close. The specialized camera sheet and all
+system-owned pickers retain their own presentation.
+
 ## Purpose
 
 Port and visually unify the first-launch and Add Profile paths: Welcome, Sign
@@ -13,8 +21,9 @@ Included:
 
 - initial and Add Profile variants of Welcome, Sign In, and Sign Up;
 - safe prototype private-key validation and two-second cancelable progress;
-- permissionless Google Code Scanner QR entry with wrong-content,
-  cancellation, and unavailable recovery;
+- app-owned CameraX and bundled on-device ML Kit Private Key QR entry with
+  just-in-time camera permission, wrong-content, cancellation, and unavailable
+  recovery;
 - Android Photo Picker, system document picker, deterministic bundled web
   image catalog, URL preview, removal, and bounded image preparation;
 - canonical Marmota, Pebble, Open Circuit, and showcase profile identities;
@@ -27,7 +36,8 @@ Not included:
 
 - the complete Chats list, Settings hub, editable Profile destination, account
   persistence, real authentication, key decoding, cryptography, networking,
-  remote image loading, custom camera UI, or a camera permission;
+  remote image loading or camera capture outside the selected Private Key QR
+  scanner;
 - final visual acceptance or emulator inspection.
 
 ## Parity contract
@@ -50,29 +60,54 @@ Not included:
 
 - Android uses full-screen Navigation Compose destinations for Welcome,
   Sign In, and Sign Up. This intentionally replaces iOS onboarding sheets:
-  system Back, predictive Back, IME resizing, and the scanner's Google-owned
-  surface are more idiomatic and less fragile on Android.
+  system Back, predictive Back, and IME resizing are more idiomatic and less
+  fragile on Android. Private Key scanning is instead an immediately expanded
+  near-full Material modal bottom sheet owned by Sign In. The underlying form
+  remains visible under the scrim, and swipe, system Back, or Close dismisses
+  the scanner without changing its in-memory draft.
 - Initial Welcome is the root and has no app bar. Add Profile Welcome has a
   small top app bar with Back and the title **Add Profile**.
-- The initial Welcome mark is centered in the full launch window at the exact
-  149.5 × 115 dp visible size used inside Android's centered splash-icon canvas.
-  Bottom actions respect safe drawing insets independently and never reposition
-  the mark as the splash is dismissed.
+- Welcome centers the mark between the top safe area's bottom edge and the
+  actual top edge of Sign In; Add Profile uses the bottom of its top app bar
+  as the upper boundary. The mark uses 50% of the safe width, capped at 260 dp,
+  with its original 598:460 aspect ratio and shrinks to fit short windows with
+  16 dp vertical breathing room. This user-approved proportion replaces the
+  former splash-matched size and full-window center. Android's system splash
+  remains platform-sized, while the native bottom actions keep their existing
+  dimensions, gap, and safe bottom placement.
+- Welcome respects system bars and display cutouts, but not IME insets: it has
+  no editor and must not move its actions or mark above the outgoing form's
+  keyboard. Sign In/Sign Up's app-bar Back clears text focus and requests
+  keyboard dismissal before popping; Navigation Compose retains its standard
+  transition and Android still owns keyboard-first system Back behavior.
 - Sign In and Sign Up use fully rounded 28 dp Material-based tonal fields with
   persistent labels above the container. `surfaceContainerHigh` owns the
   resting boundary; focus and error use 2 dp full-shape semantic rings while
   disabled fields use `surfaceContainerLow`. Labels, input, and supporting
-  text align to the same 16 dp directional content line. Both screens
-  use a top app bar with system Back, vertically scrolling content, and a
-  full-width bottom action above safe drawing and IME insets.
+  text align to the same 16 dp directional content line. Both screens use a
+  top app bar with system Back and vertically scrolling content. Sign In keeps
+  its full-width bottom action above safe drawing and IME insets. Sign Up puts
+  its full-width action after the form in the same IME-aware scroll surface;
+  its pinned app bar changes tone when content scrolls beneath it.
+- Sign In groups its three Private Key entry methods as one control cluster:
+  manual entry in the field, Paste/Clear in the field's trailing icon slot,
+  and a matching 56 dp tonal QR scanner icon button beside the field with an
+  8 dp related-control gap. The 40 dp visible trailing control stays inside
+  its 48 dp Material touch target and uses 4 dp horizontal optical padding,
+  making its state-layer circle concentric with the 56 dp field cap while
+  adding separation from the secure mask and cursor. The label and
+  supporting/error text remain owned by the field.
 - Authentication and profile forms remain centered and bounded to 520 dp at
   wider sizes instead of stretching across the available pane. Their pinned
-  actions use the same bound while remaining full width on compact phones.
+  or inline task actions use the same bound while remaining full width on
+  compact phones.
 - Full-width onboarding task actions use Material's medium 56 dp container
   height with 24 dp horizontal content padding. Compact-screen content and
-  pinned actions align to 16 dp horizontal margins; Welcome actions are
-  separated by 8 dp. Peer form fields use 16 dp, while the avatar/form and
-  other distinct sections use 24 dp.
+  actions align to 16 dp horizontal margins; Welcome actions are separated by
+  8 dp. Peer form fields use 16 dp, while the avatar/form, form/inline Sign Up
+  action, and other distinct sections use 24 dp. Sign Up uses a 120 dp avatar
+  and 16 dp scrolling-content top/bottom insets to preserve useful editing
+  space when the IME is visible.
 - Completion reaches the current Chats root. Its avatar opens Settings, where
   the active-profile header owns the Material profile switcher and **Add
   Profile** entry. Selecting a profile is immediate; **Add Profile** dismisses
@@ -88,23 +123,54 @@ failure. Android-only scanner failure detail is:
 - **QR scanning isn’t available on this device right now.**
 - **Try Again**
 
+User-approved Android loading copy is:
+
+- **Signing In…**
+- **Creating Profile…**
+
 ## Component and capability choices
 
 - Material 3 medium task buttons, fully rounded tonal text fields, fully
-  rounded tonal secure text field, top app bars, dialogs, tabs, dropdown menu, lazy list/grid, progress
+  rounded tonal secure text field, top app bars, dialogs, tonal mode buttons, dropdown menu, lazy list/grid, progress
   indicator, Snackbar, and modal bottom sheet. Find Image on Web opens directly
   as a near-full sheet capped at 94% of the available height, retaining visible
   underlying context, rounded top corners, drag handle, and scrim. It uses a
   center-aligned top app bar, close icon button, contained Done action, and
-  equal-width secondary Search/URL tabs. The full-window modal and scrim remain
-  unconstrained; the cap belongs to the measured sheet content so its motion,
+  equal-width Search/URL mode buttons. These use the Photo Picker's public
+  `FilledTonalButton` composition: the theme's 12 dp medium shape, primary
+  selected fill, neutral unselected fill, standard button content/target
+  metrics, an 8 dp gap, and 16 dp outer margins. They expose tab roles and
+  selected state without adding a second click target. This replaces secondary
+  underline tabs for this task only; Material tabs remain valid elsewhere.
+  Done stays a compact native filled button, with a total 16 dp directional
+  trailing inset rather than the app bar's icon-oriented 4 dp edge inset.
+  The title inherits native app-bar typography and ellipsizes on one line.
+  The full-window modal and scrim remain unconstrained; the cap belongs to the
+  measured sheet content so its motion,
   system-bar treatment, and bottom coverage remain Material-owned. The sheet,
-  handle area, app bar, and tabs use one `surfaceContainerLow` background so
-  the task reads as one continuous modal surface.
-- Sign In presents QR entry as a content-width, 56 dp medium filled-tonal
-  secondary action with a standard vector icon. Its height matches the private
-  key field while its width and tonal emphasis keep it subordinate to the
-  pinned primary Sign In action.
+  handle area, app bar, and mode row use one `surfaceContainerLow` background
+  so the task reads as one continuous modal surface. Material owns the sheet's
+  safe drawing and keyboard insets; the nested app bar does not add another
+  status-bar inset. The default handle, sheet shape, width cap, and gestures
+  remain unchanged.
+- Web Search uses one lazy grid with a full-span privacy/input header, so
+  controls can scroll out of the way in a short window or above the keyboard.
+  A 24 dp section gap separates the input and first image row. The three-column
+  square grid retains its 2 dp media gutters and no extra enclosing card.
+  URL input and preview share a vertical scroll surface with the same section
+  separation. Privacy copy and fields use 16 dp peer spacing/margins, while
+  the preview heading and image use an 8 dp related gap. Search has an explicit
+  Search IME action and labeled Clear search icon; switching modes preserves
+  query, URL, selection, and scroll position without keeping hidden input focus.
+  Picker-local input mode and selected image ID use saveable state. The local
+  restoration test does not establish full host-screen/process restoration.
+- Sign In uses the secure field's Material trailing-icon slot for a standard
+  Paste icon when empty and Clear icon after entry. A separate 56 × 56 dp
+  `FilledTonalIconButton` with the standard QR scanner symbol sits immediately
+  beside the field. The icon-only actions reduce form height while their
+  proximity communicates that manual entry, paste, and scanning produce the
+  same value; the tonal scanner remains subordinate to the pinned primary
+  Sign In action.
 - Ordinary onboarding form labels use Material's `TextFieldLabelPosition.Above`
   and align to the same 16 dp content line as input text or leading icon
   artwork. The stronger neutral tonal container is the resting boundary;
@@ -115,31 +181,61 @@ failure. Android-only scanner failure detail is:
 - Sign Up keeps its photo action attached to the avatar group with an 8 dp gap
   and uses a compact filled-tonal pill. The action remains visually contained
   without inflating it to the 56 dp task-button size.
+- Sign Up's primary action is the final item in the form scroll surface rather
+  than a persistent bottom bar. The scroll surface applies IME padding after
+  consuming Scaffold's safe-drawing padding, so the focused field and action
+  can be brought fully above the keyboard without a second fixed region.
+- While Sign In or Sign Up is processing, its primary task button blocks
+  duplicate activation but retains the semantic `primary`/`onPrimary` color
+  pair. A compact indeterminate indicator and stable visible progress label
+  replace the resting label without changing the button's 56 dp container.
+  Material's gray disabled treatment remains reserved for an action that is
+  genuinely unavailable.
 - `ActivityResultContracts.PickVisualMedia` for one image and
   `ActivityResultContracts.OpenDocument` for a file-owned image.
 - Photo Picker and Files retain their platform or OEM appearance without app
   color overrides.
-- `play-services-code-scanner` 16.1.0 for a Google-owned, permissionless,
-  QR-only scanner with auto zoom. No custom camera viewport or camera
-  permission is present.
+- CameraX 1.6.1 owns the back-camera preview, lifecycle, focus, zoom, and torch.
+  Sign In presents it inside a Material modal bottom sheet immediately at its
+  maximum state and caps the sheet content at 94% of the available height. The
+  camera fills the complete sheet and is clipped only by its rounded boundary.
+  A centered standard drag handle and transparent center-aligned top app bar
+  share the compact top region over the preview, with Close, title, and
+  flashlight; a restrained top scrim preserves contrast without detached
+  control capsules. The title inherits the app bar's Material typography
+  without a screen-local size override and uses single-line ellipsis when
+  space is constrained; compact header positioning remains unchanged.
+  Bundled ML Kit Barcode Scanning 17.3.0 analyzes QR codes fully on device
+  without model download. One 3 dp white target uses 24 dp rounded corners
+  instead of the former chamfers, Google colors, or double stroke.
+- `CAMERA` is requested only after **Scan QR Code** is selected. Denial keeps
+  the person in the scanner with **Allow Camera** recovery; permanent denial
+  offers **Open Settings**. Android's camera privacy indicator remains
+  system-owned. The separate Share & Connect flow retains Google Code Scanner.
 - Bundled deterministic web results are never fetched. Search and URL preserve
   the accepted production-facing privacy consequence while the prototype maps
   valid input to a local image.
 - Chosen images are decoded off the main thread, scaled to at most 512 pixels,
   and compressed before entering process-local state. Cancellation or failure
   preserves the previous valid avatar.
+  The initial size-only decode checks the stream and populated dimensions,
+  not its deliberately null bitmap result; valid images continue to the
+  sampled decode, EXIF orientation, resize, and compression stages.
 
 ## Accessibility, adaptation, and privacy
 
 - The White Noise mark is announced once as **White Noise**.
 - The secure field owns password semantics; the raw key is not added to custom
   semantics, labels, test output, or logs.
-- All icon-only or image-only actions have explicit labels. Avatar catalog
-  items expose their subject, selected state, and a visual check, so color is
-  not the only cue.
+- All icon-only or image-only actions have explicit labels. The secure field
+  action exposes **Paste private key** or **Clear private key** as its state
+  changes; the adjacent scanner exposes **Scan QR Code**. Avatar catalog items
+  expose their subject, selected state, and a visual check, so color is not the
+  only cue.
 - Fields retain persistent labels, IME actions, error semantics, and disabled
-  states. Loading buttons expose **Signing In** or **Signing Up** and
-  **In progress**.
+  states. Loading buttons expose **Signing In…** or **Creating Profile…** and
+  **In progress**; progress is communicated by text and state semantics as
+  well as motion.
 - Button and photo-preparation indicators use compact geometry within their
   existing layout. Photo-preparation failures are announced as a polite live
   update and remain visible in the semantic error role.
@@ -148,13 +244,18 @@ failure. Android-only scanner failure detail is:
   roles remain red and appear only for actual failures or destructive meaning.
 - Scroll containers, safe drawing/IME insets, bounded widths, font scaling,
   RTL, keyboard, mouse, touch, and minimum Material targets remain supported.
+- The scanner title remains visible text, icon-only close/torch actions have
+  state-specific labels, permission recovery is not color-only, and the raw
+  scanned Private Key is never exposed to semantics, logs, or copy.
 
 ## Governing sources
 
 - `docs/references/android.md`: Navigation Compose, Material 3, text input,
-  bottom sheets, Photo Picker, Activity Result APIs, Google Code Scanner,
-  insets, accessibility, and testing.
+  bottom sheets, Photo Picker, Activity Result APIs, CameraX, ML Kit barcode
+  scanning, permissions, insets, accessibility, and testing.
 - [Configure Compose text fields](https://developer.android.com/develop/ui/compose/text/user-input)
+- [Icon buttons in Compose](https://developer.android.com/develop/ui/compose/components/icon-button)
+- [Material Symbols](https://developers.google.com/fonts/docs/material_symbols)
 - [Authentication and onboarding](https://developer.android.com/design/ui/mobile/guides/patterns/onboarding)
 - [Progress indicators](https://developer.android.com/develop/ui/compose/components/progress)
 - [TextFieldLabelPosition](https://developer.android.com/reference/kotlin/androidx/compose/material3/TextFieldLabelPosition)
@@ -162,11 +263,23 @@ failure. Android-only scanner failure detail is:
 - [Android accessibility foundations](https://developer.android.com/design/ui/mobile/guides/foundations/accessibility)
 - [Android grids and units](https://developer.android.com/design/ui/mobile/guides/layout-and-content/grids-and-units)
 - [Android content composition](https://developer.android.com/design/ui/mobile/guides/layout-and-content/content-structure)
+- [Material 3 inset handling](https://developer.android.com/develop/ui/compose/system/material-insets)
+- [Window inset types](https://developer.android.com/develop/ui/compose/system/insets)
+- [Software keyboard control](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/SoftwareKeyboardController)
+- [BitmapFactory decode options](https://developer.android.com/reference/android/graphics/BitmapFactory.Options#inJustDecodeBounds)
 - [Android splash screens](https://developer.android.com/develop/ui/views/launch/splash-screen)
 - [Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker)
 - [Google Code Scanner](https://developers.google.com/ml-kit/vision/barcode-scanning/code-scanner)
+- [CameraX](https://developer.android.com/media/camera/camerax)
+- [CameraX ML Kit Analyzer](https://developer.android.com/media/camera/camerax/mlkitanalyzer)
+- [ML Kit barcode scanning](https://developers.google.com/ml-kit/vision/barcode-scanning/android)
+- [Request runtime permissions](https://developer.android.com/training/permissions/requesting)
 - [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets)
+- [Material app bars](https://developer.android.com/develop/ui/compose/components/app-bars)
 - [Material 3 Button defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonDefaults)
+- [Photo Picker navigation buttons (AOSP)](https://android.googlesource.com/platform/packages/providers/MediaProvider/+/refs/heads/main/photopicker/src/com/android/photopicker/features/navigationbar/NavigationBar.kt)
+- [Material tabs](https://developer.android.com/develop/ui/compose/components/tabs)
+- [Lazy grids, full-span items, and content spacing](https://developer.android.com/develop/ui/compose/lists)
 
 ## iOS parity evidence
 
@@ -183,22 +296,66 @@ failure. Android-only scanner failure detail is:
 
 ## Observable acceptance criteria
 
+- Successful initial Sign In, Sign Up, and Add Profile schedule the profile's
+  optional **Help Improve White Noise** sheet. It appears only after the Chats
+  entry reaches `RESUMED`, never over the outgoing keyboard/form transition.
+  Both switches start off for new profiles; actual dismissal records the
+  prompt as seen, while rotation does not. See
+  `diagnostics-and-improvements.md` for exact copy, ownership, and coverage.
+
 - Welcome contains only the mark, **Sign In**, and **Sign Up**; both actions
   are at least 56 dp high.
-- On initial launch, the splash and Welcome marks are both centered at
-  149.5 × 115 dp, so dismissal produces no logo resize or position cut.
+- On Welcome, the mark's center is halfway between the top safe area's bottom
+  edge (or Add Profile app bar) and Sign In's top edge. Its width is half the
+  safe content width on phones, capped at 260 dp on wider layouts. Short
+  windows shrink the logo without distorting it, overlapping actions, or
+  shrinking their touch targets; Android's system splash remains unchanged.
 - Back returns from Sign In/Sign Up to the correct initial or Add Profile
   Welcome without committing state.
-- Sign In and Sign Up form content and pinned actions do not exceed 520 dp on
+- Returning while a form editor is focused dismisses its keyboard without
+  lifting Welcome's action group or moving its logo during the transition.
+  Welcome's bounds remain the same under changing IME insets; system bars and
+  cutouts continue to be respected.
+- Sign In and Sign Up form content and task actions do not exceed 520 dp on
   expanded layouts, while staying full width within compact 16 dp margins.
-- QR entry is a labeled, tonal, at-least-48-dp action with a vector icon; it
-  remains available whenever Sign In is idle.
+- Sign Up's 120 dp avatar, Name, About, and primary action share one scroll
+  surface. With the IME visible, no field is permanently occluded by a pinned
+  app action; the top app bar exposes its Material scrolled tonal state.
+- QR entry is a semantically labeled 56 × 56 dp tonal icon button adjacent to
+  the Private Key field; it remains available whenever Sign In is idle.
+- Selecting QR entry opens an immediately expanded near-full Material sheet
+  over the still-visible Sign In screen. Its live preview fills the sheet with
+  no inner card or outer gutter; a Material drag handle and top app bar own the
+  controls, and one white rounded-corner target has no inner or branded-color
+  stroke.
+- Camera permission is requested only from the selected scanner task. Denial,
+  permanent denial, missing camera, Back/close/swipe dismissal, valid QR, and
+  wrong-content QR all have a visible deterministic exit or recovery path.
+- Paste/Clear occupies the field's Material trailing-icon slot, uses a standard
+  vector symbol, exposes an action-specific accessibility label, and preserves
+  deterministic empty/populated transitions. Its 40 dp visible state layer is
+  inset evenly from the 56 dp field cap while retaining a 48 dp touch target
+  and clear separation from the secure mask and cursor.
 - Empty/invalid/valid private-key states, Paste/Clear, loading, scanner result,
   wrong QR, cancellation, and unavailable recovery behave deterministically.
+- Sign In and Sign Up loading buttons retain their primary container and
+  contrasting content while rejecting duplicate activation; unavailable
+  non-loading buttons continue to use Material disabled colors.
 - Both initial onboarding paths reach Chats with exactly one active canonical
   profile.
 - Photo Picker, Files, web Search, web URL, selection, removal, loading, and
   failure states preserve the last valid draft and commit with Name/About.
+- Find Image on Web keeps a 16 dp trailing inset for Done, native 48 dp minimum
+  control targets, equal-width selected-state mode buttons with an 8 dp gap,
+  and 24 dp between input/supporting text and results/preview. Close and Done
+  stay reachable while Search/URL content scrolls at large font sizes and short
+  heights. The handle stays below the status/cutout safe area with the IME open;
+  no nested app-bar status padding is added. Selection, URL validation,
+  clear/search keyboard actions, and restoration have regression coverage.
+- Valid PNG and JPEG content URIs pass the bounds-only decode, prepare a
+  correctly oriented image with a longest edge of at most 512 pixels, and
+  replace the avatar. Invalid image data still follows the existing failure
+  path without clearing the previous avatar.
 - **Add Photo** and **Change Photo** are compact filled pills 8 dp below the
   avatar, and ordinary fields and containers have no pink or lavender cast.
 - Name, About, and Private Key are fully rounded tonal fields with persistent
@@ -211,3 +368,10 @@ failure. Android-only scanner failure detail is:
   the showcase profiles, reach Chats, and support immediate switching.
 - Profile, validator, catalog, navigation, and state-transition tests pass;
   the complete clean static batch gate passes with zero lint issues.
+
+2026-08-26 menu follow-up: Sign Up/Add Profile photo-source dropdowns use
+`WhiteNoiseDropdownMenu` and official icons with native Expressive metrics.
+Dismiss before opening Photos, Files or Web Image; preserve removal,
+preparation cancellation and the existing draft/error lifecycle. No picker
+appearance or onboarding behavior changes. See `app-menus.md` for the current
+pin and verification (including its understood dependency-update warning).

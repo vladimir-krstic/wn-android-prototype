@@ -27,11 +27,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.verticalScroll
+import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +78,8 @@ import dev.ipf.whitenoise.state.AppUiState
 import dev.ipf.whitenoise.ui.chats.ProfileSwitcherSheet
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSecureTextField
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
@@ -579,7 +579,7 @@ fun EditProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .whiteNoiseVerticalScroll(rememberScrollState())
                 .padding(
                     horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                     vertical = WhiteNoiseSpacing.Section,
@@ -593,26 +593,27 @@ fun EditProfileScreen(
                     onClick = { photoMenu = true },
                     enabled = !isPreparingPhoto,
                 ) { Text(if (avatar == ProfileAvatar.Monogram) "Add photo" else "Change photo") }
-                DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
-                    DropdownMenuItem(text = { Text("Choose photos") }, onClick = {
-                        photoMenu = false
-                        photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    })
-                    DropdownMenuItem(text = { Text("Choose files") }, onClick = {
-                        photoMenu = false
-                        files.launch(arrayOf("image/*"))
-                    })
-                    DropdownMenuItem(text = { Text("Find web image") }, onClick = {
-                        photoMenu = false
-                        webPicker = true
-                    })
-                    if (avatar != ProfileAvatar.Monogram) {
-                        DropdownMenuItem(text = { Text("Remove photo", color = MaterialTheme.colorScheme.error) }, onClick = {
-                            photoMenu = false
-                            avatar = ProfileAvatar.Monogram
-                        })
-                    }
-                }
+                WhiteNoiseDropdownMenu(
+                    expanded = photoMenu,
+                    onDismissRequest = { photoMenu = false },
+                    items = buildList {
+                        add(WhiteNoiseMenuItem("Choose photos", icon = R.drawable.ic_image, onClick = {
+                            photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }))
+                        add(WhiteNoiseMenuItem("Choose files", icon = R.drawable.ic_description, onClick = {
+                            files.launch(arrayOf("image/*"))
+                        }))
+                        add(WhiteNoiseMenuItem("Find web image", icon = R.drawable.ic_search, onClick = {
+                            webPicker = true
+                        }))
+                        if (avatar != ProfileAvatar.Monogram) {
+                            add(WhiteNoiseMenuItem(
+                                "Remove photo", icon = R.drawable.ic_delete, destructive = true,
+                                onClick = { avatar = ProfileAvatar.Monogram },
+                            ))
+                        }
+                    },
+                )
             }
             if (isPreparingPhoto) {
                 Row(

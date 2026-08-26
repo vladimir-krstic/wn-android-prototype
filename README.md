@@ -21,17 +21,24 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 - Namespace: `dev.ipf.whitenoise`
 - Minimum SDK: 23
 - Compile and target SDK: 37
-- Android Gradle Plugin: 9.3.1
+- Android Gradle Plugin: 9.3.2
 - Gradle: 9.7.1
 - Kotlin: 2.4.10 using AGP built-in Kotlin support
 - Compose BOM: 2026.08.00
-- Google Code Scanner: 16.1.0, with transitive network permissions removed
+- Material 3: 1.5.0-alpha25, a user-approved exception for official Expressive
+  menus; this version retains API 23 support (alpha26's ripple requires API 24)
+- CameraX: 1.6.1 for the app-owned Private Key scanner
+- Bundled ML Kit Barcode Scanning: 17.3.0 for offline QR analysis
+- Google Code Scanner: 16.1.0 for the existing Share & Connect system surface,
+  with transitive network permissions removed
 - AndroidX ExifInterface: 1.4.2
 - ZXing core: 3.5.4 for local QR encoding
 - One `app` module and one launcher activity
 
-The runtime is intentionally offline and deterministic. It declares no
-network, storage, camera, microphone, notification, or location permission.
+The runtime is intentionally offline and deterministic. It declares camera
+permission only for the user-selected Private Key QR scanner and requests it
+just in time. It declares no network, storage, microphone, notification, or
+location permission.
 
 Implementation status: Batches 0–9 are complete at the static verification
 gate. The app includes the complete accepted onboarding, profile, Chats,
@@ -47,6 +54,26 @@ lint issues, and both APKs. Ordinary form fields now share the approved 28 dp
 tonal treatment, 16 dp label/input/supporting alignment, and 2 dp focus/error
 rings. Device execution and visual acceptance remain pending.
 
+The 2026-08-26 Chats/privacy work uses scoped iOS `4c25393`: minimal Chats,
+shared scrolled headers, and profile-owned first-login privacy choices plus
+Diagnostics & Improvements settings. Its approved controls follow-up replaces
+swipes with native anchored long-press menus (Signal `441ba42` behavior only),
+restores an icon-only Material FAB, unifies status indicators, and standardizes
+ordinary sheet surfaces/headers and the shared Mute dialog. The static gate
+passes with 117 unit tests, 121 compiled instrumentation tests, zero lint
+issues, and both APKs. Consent and diagnostic records remain in memory;
+no telemetry, persistence, dependency upgrade or device execution was added.
+
+The subsequent app-wide menu migration replaces all six baseline dropdowns
+with Google's Expressive popup/group/item APIs through `WhiteNoiseDropdownMenu`.
+The explicit Material pin above preserves the minimum SDK and existing Compose
+BOM. The full static gate passes with 117 unit tests, 126 compiled
+instrumentation tests and both APKs. Lint has zero errors and one expected
+newer-version warning for that compatibility pin. No device execution was
+performed. `docs/screens/app-menus.md` records implementation evidence and the
+related audit: task-button typography/shape behavior and global motion still
+use baseline choices, so the app is not yet a complete Expressive migration.
+
 ## Repository map
 
 - `AGENTS.md` — project authority, platform boundaries, workflow, and
@@ -56,7 +83,7 @@ rings. Device execution and visual acceptance remain pending.
 - `docs/decisions.md` — durable Android project decisions.
 - `docs/handoff.md` — final architecture, system boundaries, known device
   backlog, and the ordered visual-polish sequence.
-- `docs/visual-polish.md` — approved quiet Material 3 Expressive system,
+- `docs/visual-polish.md` — approved quiet Material 3 Expressive direction,
   component migration, rollout batches, and visual acceptance gates.
 - `docs/product-language.md` and `docs/terminology.md` — product voice and
   canonical terms.

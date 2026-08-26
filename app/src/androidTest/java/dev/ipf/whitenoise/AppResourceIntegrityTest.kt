@@ -1,11 +1,14 @@
 package dev.ipf.whitenoise
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.ipf.whitenoise.model.AvatarAsset
 import dev.ipf.whitenoise.ui.components.drawableResource
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,5 +53,21 @@ class AppResourceIntegrityTest {
         ).forEach { resource ->
             context.resources.openRawResource(resource).use { assertTrue(it.read() != -1) }
         }
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun privateKeyScannerDeclaresCameraWithoutNetworkAccess() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val permissions = context.packageManager
+            .getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+            .requestedPermissions
+            ?.toSet()
+            .orEmpty()
+
+        assertTrue(Manifest.permission.CAMERA in permissions)
+        assertFalse(Manifest.permission.INTERNET in permissions)
+        assertFalse(Manifest.permission.ACCESS_NETWORK_STATE in permissions)
+        assertFalse(Manifest.permission.RECORD_AUDIO in permissions)
     }
 }

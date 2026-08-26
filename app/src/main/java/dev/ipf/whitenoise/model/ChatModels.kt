@@ -248,16 +248,7 @@ data class Chat(
         }
 
     val displayPreview: String
-        get() {
-            val content = if (hasDraft) {
-                draftText.ifBlank { draftAttachments.firstOrNull()?.label.orEmpty() }
-            } else {
-                visiblePreview
-            }
-            val author = previewAuthor.takeIf { membership == ChatMembership.Active && !hasDraft }
-            val prefixed = if (author == null || content.isEmpty()) content else "$author: $content"
-            return if (hasDraft && prefixed.isNotEmpty()) "Draft: $prefixed" else prefixed
-        }
+        get() = ChatListPresentation.from(this).searchableText
 
     fun isSoleAdmin(profileId: String): Boolean =
         isGroup &&
@@ -312,8 +303,8 @@ object ChatProjection {
     ): List<Chat> {
         val scoped = chats.filter { chat ->
             when (scope) {
-                ChatScope.Chats -> !chat.isArchived && !chat.hasEndedMembership
-                ChatScope.Unread -> !chat.isArchived && !chat.hasEndedMembership && chat.isUnread
+                ChatScope.Chats -> !chat.isArchived
+                ChatScope.Unread -> !chat.isArchived && chat.isUnread
                 ChatScope.Archived -> chat.isArchived
                 ChatScope.Left -> !chat.isArchived && chat.hasEndedMembership
             }

@@ -22,11 +22,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -85,7 +85,7 @@ fun SignOutSheet(
                 .fillMaxWidth()
                 .fillMaxHeight(0.94f),
         ) {
-            DestructiveSheetHeader(
+            WhiteNoiseSheetHeader(
                 title = "Sign Out",
                 onClose = onDismiss,
                 closeEnabled = progress == null,
@@ -99,7 +99,7 @@ fun SignOutSheet(
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Related)) {
+                    SettingsGroup {
                         ListItem(
                             headlineContent = { Text(profile.name) },
                             supportingContent = { Text(profile.shortPublicKey) },
@@ -190,7 +190,7 @@ fun EraseAppDataSheet(
                 .fillMaxWidth()
                 .fillMaxHeight(0.94f),
         ) {
-            DestructiveSheetHeader(
+            WhiteNoiseSheetHeader(
                 title = "Erase App Data",
                 onClose = onDismiss,
                 closeEnabled = !erasing,
@@ -207,7 +207,6 @@ fun EraseAppDataSheet(
                     SettingsCallout(
                         title = "This can’t be undone",
                         text = "Every profile and all local chats, media, drafts, keys, and settings will be removed from this device.",
-                        modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
                         leading = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_warning),
@@ -372,33 +371,6 @@ private fun RemoveProfileDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
-}
-
-@Composable
-private fun DestructiveSheetHeader(
-    title: String,
-    onClose: () -> Unit,
-    closeEnabled: Boolean,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = WhiteNoiseSpacing.CompactScreenMargin,
-                end = WhiteNoiseSpacing.Related,
-                bottom = WhiteNoiseSpacing.Related,
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(title, style = MaterialTheme.typography.headlineSmall)
-        IconButton(onClick = onClose, enabled = closeEnabled) {
-            Icon(
-                painter = painterResource(R.drawable.ic_close),
-                contentDescription = "Close",
-            )
-        }
-    }
 }
 
 @Composable

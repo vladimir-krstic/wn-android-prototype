@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -36,8 +38,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
+import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
+import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -97,20 +100,15 @@ internal fun MessageActionsSheet(
     val selectedReaction = message.reactions.firstOrNull { profile.id in it.personIds }?.emoji
     val actions = MessageActionPolicy.available(message, profile.id)
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        WhiteNoiseSheetHeader(stringResource(R.string.message_actions))
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 560.dp)
-                    .navigationBarsPadding()
                     .padding(bottom = WhiteNoiseSpacing.CompactScreenMargin),
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
-                Text(
-                    stringResource(R.string.message_actions),
-                    modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.Section),
-                    style = MaterialTheme.typography.titleLarge,
-                )
                 MessageContextPreview(profile, message)
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -149,7 +147,7 @@ internal fun MessageActionsSheet(
                     color = MaterialTheme.colorScheme.outlineVariant,
                 )
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                    modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 420.dp),
                 ) {
                     items(actions, key = { it.name }) { action ->
                         val destructive = action == MessageAction.Delete
@@ -261,7 +259,7 @@ internal fun EmojiPickerSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp).navigationBarsPadding(),
+                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp),
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
                 Row(
@@ -370,16 +368,16 @@ internal fun ConfigureReactionsSheet(
 ) {
     var draft by remember(current) { mutableStateOf(current) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        WhiteNoiseSheetHeader(stringResource(R.string.configure_reactions))
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 560.dp)
-                    .navigationBarsPadding()
-                    .padding(WhiteNoiseSpacing.Section),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = WhiteNoiseSpacing.Section).padding(bottom = WhiteNoiseSpacing.Section),
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
             ) {
-                Text(stringResource(R.string.configure_reactions), style = MaterialTheme.typography.titleLarge)
                 Text(
                     stringResource(R.string.configure_reactions_guidance),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -443,16 +441,9 @@ internal fun ForwardMessagesSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp).navigationBarsPadding(),
+                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp),
             ) {
-                Text(
-                    stringResource(R.string.forward),
-                    modifier = Modifier.padding(
-                        horizontal = WhiteNoiseSpacing.Section,
-                        vertical = WhiteNoiseSpacing.Related,
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                WhiteNoiseSheetHeader(stringResource(R.string.forward))
                 Text(
                     stringResource(R.string.forward_selection_limit),
                     modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.Section),
@@ -778,6 +769,7 @@ fun MessageDetailsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
+                scrollBehavior = dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll.current,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -795,7 +787,7 @@ fun MessageDetailsScreen(
         },
     ) { padding ->
         AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
-            LazyColumn(
+            dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn(
                 contentPadding = PaddingValues(WhiteNoiseSpacing.CompactScreenMargin),
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
             ) {

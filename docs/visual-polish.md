@@ -3,7 +3,14 @@
 Status: **Chats + Settings direction accepted; all app-owned rollout batches
 implemented at the static gate; device inspection remains pending**
 
-Last verified against current official guidance: **2026-08-21**
+Last verified against current official guidance: **2026-08-26**
+
+Expressive is the approved direction, not a claim that every component already
+uses the newest API family. The 2026-08-26 menu audit found baseline dropdowns,
+medium task-button containers with baseline label/pressed-shape behavior, and
+standard global motion. All six dropdown entry points now use official
+Expressive menu APIs; the button and theme findings are documented follow-up,
+not silently changed. See `screens/app-menus.md` and WN-ANDROID-0040.
 
 ## Implementation progress
 
@@ -24,8 +31,10 @@ Last verified against current official guidance: **2026-08-21**
   physical-device coverage by this implementation session.
 - Welcome, Sign In, Sign Up, Add Profile, and the avatar-source task now use
   that language: restrained task hierarchy, bounded form measure, a clear
-  tonal QR alternative, consistently pinned primary actions, compact progress,
-  shared empty-state composition, and vector selected-state treatment.
+  tonal QR alternative, task-appropriate pinned or inline primary actions,
+  compact progress, shared empty-state composition, and vector selected-state
+  treatment. Sign Up's inline action and IME-aware scroll surface reflect its
+  accepted Pixel 8a polish exception.
 - New Message, Person Profile, New Group, and Set Up Group now extend the same
   system through search-first people lists, native selection chips, tonal
   relationship grouping, bounded forms/actions, photo feedback, validation,
@@ -178,7 +187,8 @@ not raw values:
 | Window and ordinary list background | `surface` / `background` | Quiet base with generous open space |
 | Subtle grouped content | `surfaceContainerLow` | Settings groups, bounded supporting regions, form fill |
 | Standard contained region | `surfaceContainer` | Secondary grouped content where low is insufficient |
-| Menus and raised transient content | `surfaceContainerHigh` | Native menu/sheet/dialog hierarchy; shadow only when the component owns it |
+| Expressive menus and ordinary sheets | `surfaceContainerLow` | Native standard menu surface and approved shared sheet surface; component-owned shadow only |
+| Other raised transient content | Component default | Preserve each native dialog/tooltip's own hierarchy instead of forcing one surface role |
 | Strong selected or primary emphasis | `primaryContainer` + `onPrimaryContainer` | Selected filter action, strong active states, limited hero containment |
 | Primary task action | `primary` + `onPrimary` | One obvious task action per screen or task boundary |
 | Supporting content | `onSurfaceVariant` | Summaries, timestamps, metadata, helper text |
@@ -286,13 +296,14 @@ do not turn every numeric measurement into a global token.
 | `WhiteNoiseSpacing` | Retain | Keep relationship tokens; replace repeated screen-local relationship values gradually |
 | `AdaptiveContent` | Retain, then recompose where needed | Continue compact width bounds; adopt canonical panes only in Chats/conversation and Settings/detail batches |
 | `ProfileAvatar` | Retain and restyle | Standardize sizes, monogram typography, selected/state treatment, and semantics |
-| `WhiteNoiseButton` wrappers | Extend | Use Material's 56 dp medium height and matched padding for filled, tonal, and outlined task actions; keep contextual actions compact |
+| `WhiteNoiseButton` wrappers | Extend | Use Material's 56 dp medium height and matched padding for filled, tonal, and outlined task actions; primary loading actions retain semantic emphasis with contrasting progress and stable status text; keep contextual actions compact |
 | `WhiteNoiseTextField` / `WhiteNoiseSecureTextField` | Shared Material-based form controls | Use a 28 dp full-rounded `surfaceContainerHigh` rest surface, transparent resting border, 2 dp focus/error ring, and one 16 dp directional line for label, input/icon artwork, and supporting text |
 | `WhiteNoiseTopBar` | Recompose | Root, child, search, selection, and modal-task variants with Material icons and consistent hierarchy |
-| Chats scope tabs | Replace | App-bar filter icon + `DropdownMenu`; visible active-scope title and selection semantics |
+| Chats scope tabs | Replace | App-bar filter icon + shared Expressive menu; only non-default scopes show a title, with native selected-item semantics |
+| All app-owned dropdowns | Migrated 2026-08-26 | `WhiteNoiseDropdownMenu` composes actual Google popup/group/new item APIs for all six entry points; WN-ANDROID-0040 |
 | Chats persistent search field | Replace | App-bar search action entering a dedicated search mode |
 | Chats Settings glyph/Read All | Replace/remove from chrome | Avatar opens Settings; no persistent Read All action; use Material Symbols |
-| `ChatRow` | Recompose | Flat list row, clearer text/meta columns, stable unread badge, separate accessible overflow action |
+| `ChatRow` | Recompose | Flat list row, clearer text/meta columns, exclusive status, long-press anchored menu and TalkBack actions; no visible ellipsis or horizontal swipe |
 | Settings profile header | Recompose | Prominent active identity with Share & Connect and Switch Profile actions |
 | `SettingsSection` | Replace | Sentence-case section label and tonal grouping; no forced uppercase |
 | `SettingsLink` | Recompose | Material icon/chevron, native disabled semantics, optional value/summary, group-aware shape |
@@ -308,7 +319,7 @@ do not turn every numeric measurement into a global token.
 
 | State | Required treatment |
 | --- | --- |
-| Loading | Preserve surrounding layout; use component progress, useful status text, disabled duplicate submission, and accessible state description |
+| Loading | Preserve surrounding layout; use component progress, useful status text, blocked duplicate submission, and accessible state description. A processing primary task retains `primary`/`onPrimary`; gray disabled treatment means genuinely unavailable, not merely busy. |
 | Empty | One clear title, one supporting sentence, and at most one relevant recovery/creation action; no decorative empty card by default |
 | Search empty | Keep the query and active scope visible; distinguish no results from a scope with no content |
 | Error | Use semantic error role plus plain-language message and recovery; never show raw exception or rely on red alone |

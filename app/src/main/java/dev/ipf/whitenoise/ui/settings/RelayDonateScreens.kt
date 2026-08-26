@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
+import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -285,7 +286,7 @@ fun DonateScreen(onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .whiteNoiseVerticalScroll(rememberScrollState())
                 .padding(
                     horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                     vertical = WhiteNoiseSpacing.Section,

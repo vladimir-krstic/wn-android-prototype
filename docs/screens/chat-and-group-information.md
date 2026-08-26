@@ -60,7 +60,10 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 
 - Material top app bars and Scaffold own destination navigation and content
   structure; lists and lazy grids retain stable collection identity.
-- Modal bottom sheets own short duration choices, AlertDialog owns focused
+- Chats and Chat Info share `MuteDurationDialog`, a native AlertDialog with
+  immediate duration selection and safe Cancel/Back/outside dismissal. Timer
+  choices use the shared sheet surface/header with scrollable radio rows.
+  AlertDialog also owns focused
   destructive consequences, and native radio/checkbox controls expose current
   selection without glyph-only state.
 - Android Photo Picker remains permissionless and system-owned. AdaptiveContent

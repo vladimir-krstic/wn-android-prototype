@@ -511,11 +511,12 @@ class AppViewModelTest {
     @Test
     fun developerPreferencesAreProfileScopedAndMasterDisablePreservesArtifacts() {
         val viewModel = signedInMarmota()
-        val files = viewModel.uiState.activeProfile!!.developerTools.auditFiles
+        val profileId = viewModel.uiState.activeProfileId!!
         assertTrue(viewModel.setDeveloperToolsEnabled(true))
         assertTrue(viewModel.setDebugMode(true))
-        assertTrue(viewModel.setAnonymousTelemetry(true))
-        assertTrue(viewModel.setAuditLogging(true))
+        assertTrue(viewModel.setAnalyticsEnabled(profileId, true))
+        assertTrue(viewModel.setDiagnosticLoggingEnabled(profileId, true))
+        val diagnostics = viewModel.uiState.activeProfile!!.diagnostics
         viewModel.completeSignIn(OnboardingOrigin.AddProfile)
         assertFalse(viewModel.uiState.activeProfile!!.developerTools.isEnabled)
 
@@ -523,22 +524,15 @@ class AppViewModelTest {
         assertTrue(viewModel.setDeveloperToolsEnabled(false))
         val disabled = viewModel.uiState.activeProfile!!.developerTools
         assertFalse(disabled.debugMode)
-        assertFalse(disabled.anonymousTelemetry)
-        assertFalse(disabled.auditLogging)
-        assertEquals(files, disabled.auditFiles)
+        assertEquals(diagnostics, viewModel.uiState.activeProfile!!.diagnostics)
     }
 
     @Test
-    fun auditDiagnosticsAndKeyPackageMutationsRespectDeveloperGate() {
+    fun diagnosticConsoleAndKeyPackageMutationsRespectDeveloperGate() {
         val viewModel = signedInMarmota()
-        assertFalse(viewModel.clearAuditLogs())
         assertFalse(viewModel.publishKeyPackage())
         assertFalse(viewModel.runDiagnosticTest())
         assertTrue(viewModel.setDeveloperToolsEnabled(true))
-        assertTrue(viewModel.setAuditLogging(true))
-        assertTrue(viewModel.clearAuditLogs())
-        assertEquals(listOf(0, 0), viewModel.uiState.activeProfile!!.developerTools.auditFiles.map { it.byteCount })
-        assertTrue(viewModel.uiState.activeProfile!!.developerTools.auditLogging)
         assertTrue(viewModel.publishKeyPackage())
         assertEquals(dev.ipf.whitenoise.model.KeyPackage.PublishedFixture, viewModel.uiState.activeProfile!!.developerTools.keyPackage)
         assertTrue(viewModel.clearDiagnosticEvents())

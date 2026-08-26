@@ -16,6 +16,24 @@ git -C ../wn-ios-prototype show \
 
 See `docs/references/ios-prototype.md` for provenance and drift rules.
 
+## Scoped 2026-08-26 authorization
+
+The approved Chats polish and first-login privacy flow use read-only iOS commit
+`4c25393f0eb694fc5838d3a451e17db9a6abbcbe` as scoped evidence. The global
+`0bd7cba` baseline, Android conversation fixtures, and deterministic timestamps
+remain unchanged. Relevant delta paths:
+
+- `docs/screens/diagnostics-and-improvements.md`
+- `WhiteNoisePrototype/App/PrototypeDiagnosticsState.swift`
+- `WhiteNoisePrototype/App/WhiteNoisePrototypeApp.swift`
+- `WhiteNoisePrototype/Screens/Shared/DiagnosticsAndImprovementsViews.swift`
+- `WhiteNoisePrototype/Screens/Chats/ChatsView.swift`, `NativeChatList.swift`,
+  `ChatListRow.swift`, and `ChatListItem.swift`
+
+Android contracts are in `docs/screens/chats-and-chat-creation.md` and
+`docs/screens/diagnostics-and-improvements.md`. No other upstream drift is
+implicitly accepted.
+
 Use this map to select evidence, not to derive Android package names or port
 Swift types one-for-one.
 

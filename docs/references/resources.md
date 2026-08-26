@@ -1,5 +1,9 @@
 # Product resource reference
 
+For the current app-control glyph provenance and exact Google XML hashes, see
+[Material Symbol control assets](material-symbols.md). Product images below
+retain their separate pinned iOS provenance.
+
 The reusable source material lives in the private `wn-ios-prototype`
 repository at the accepted commit recorded in `ios-prototype.md`, under:
 

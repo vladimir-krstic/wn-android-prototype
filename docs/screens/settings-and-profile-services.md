@@ -1,5 +1,13 @@
 # Settings and profile services
 
+2026-08-26 shared-sheet follow-up: the Settings-owned profile switcher uses
+`WhiteNoiseModalBottomSheet` and `WhiteNoiseSheetHeader`: continuous
+surfaceContainerLow, no extra handle/title spacer, 24 dp text insets, 8 dp
+body gap and trailing native Close. Selected-profile tone is retained; the
+profile list gives flexible space to the Add Profile action at large fonts.
+Diagnostics and destructive-task sheets use the same shared presentation;
+their profile ownership and dismissal/confirmation behavior are unchanged.
+
 Status: Main Settings and consumer detail destinations visually refreshed and
 statically verified on 2026-08-21; developer/destructive visual batch and
 device acceptance pending
@@ -21,6 +29,11 @@ state; notification delivery, biometric authentication, real cryptography,
 relay networking, and payments remain excluded.
 
 ## Parity contract
+
+- Privacy & Security contains a typed **Diagnostics & Improvements** route
+  with an Off/Analytics/Logs/On summary. Its two native switches, retained-log
+  size, and confirmed clearing are profile-owned and independent of Developer
+  Tools. See `diagnostics-and-improvements.md` for the scoped `4c25393` contract.
 
 - Settings begins with the active profile and keeps Add/Switch Profile
   available in its profile header. Chats delegates profile management here.
@@ -107,8 +120,9 @@ private-key reveal state remain screen-owned and saveable where appropriate.
 - app-notification and device-security Settings intents;
 - secure-window protection for Recents previews and screenshots.
 
-No camera, storage, microphone, notification, network, location, or biometric
-permission is declared.
+These settings add no permission. The app's separately approved onboarding QR
+scanner declares camera permission; no storage, microphone, notification,
+network, location, or biometric permission is added here.
 
 ## Accessibility and adaptation
 
@@ -157,6 +171,11 @@ theme-colored surfaces because code legibility and scanner interoperability
 take priority over decorative theme matching.
 
 ## Observable acceptance criteria
+
+2026-08-26 menu follow-up: Profile photo-source choices now use the shared
+official Expressive menu. Existing labels, source contracts, removal and
+draft/save behavior are retained; the system-owned Photos/Files surfaces are
+not restyled. See `app-menus.md` for the exact API/pin and regression evidence.
 
 - Every ordinary Settings destination is reachable and returns with Back.
 - Profile edits and preferences affect only the active profile.

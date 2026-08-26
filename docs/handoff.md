@@ -36,7 +36,8 @@ store.
 | Capability | Android-native boundary | App permission |
 | --- | --- | --- |
 | Back and destination state | Navigation Compose and system/predictive Back | None |
-| QR scan | Google Code Scanner system UI | None |
+| Private-key QR scan | Near-full Material sheet with CameraX and bundled on-device ML Kit | Camera, requested just in time |
+| Share & Connect QR scan | Google Code Scanner system UI | None |
 | QR generation | Local ZXing matrix rendered in Compose | None |
 | Photos and videos | Android Photo Picker | None |
 | Documents | Storage Access Framework | None |
@@ -46,7 +47,8 @@ store.
 | Notification/security controls | Explicit Android settings intents | None |
 | Recents privacy | Activity `FLAG_SECURE` derived from active profile | None |
 
-The merged application intentionally declares no network, camera, storage,
+The merged application declares camera permission only for the selected
+Private Key QR scanner. It intentionally declares no network, storage,
 microphone, notification, or location permission. There is no backend,
 transport, durable persistence, real authentication, cryptography, payment,
 telemetry upload, microphone capture, or speech recognition.
@@ -77,10 +79,11 @@ The first implementation batch established the shared theme and primitives,
 then applied them to the paired Chats and Settings roots. The user accepted
 that cleaner direction on 2026-08-21. A second bounded batch applies the same
 system to Welcome, Sign In, Sign Up, Add Profile, and avatar-source states,
-with bounded forms, tonal alternate input, consistent pinned actions, compact
-progress, and shared empty/selected treatment. Static coverage validates these
-presentations without changing their state or navigation contracts. Emulator
-or physical-device inspection remains pending.
+with bounded forms, tonal alternate input, task-appropriate pinned or inline
+actions, compact progress, and shared empty/selected treatment. Sign Up's
+Pixel 8a polish pass moves completion into the IME-aware form scroll surface.
+Static coverage validates these presentations without changing their state or
+navigation contracts. Full flow device acceptance remains pending.
 
 A third bounded batch extends that system through New Message, Person Profile,
 New Group selection, and Set Up Group. Persistent people search remains visible
@@ -174,6 +177,27 @@ they align with leading icons on the overview and row text on icon-free detail
 lists instead of sitting on the outer tonal-container edge.
 
 ## Known polish and device backlog
+
+Latest approved batch (2026-08-26): Chats uses a title-free default scope,
+icon-only native New Message/recovery FAB, aligned 40/52 dp avatars, exclusive
+status indicators and all non-archived membership states. Native long-press
+DropdownMenus replace swipes and the chat-actions sheet, using Signal
+`441ba42` as interaction evidence only. Read/archive changes have field-level
+Undo; TalkBack exposes the same eligible commands. Ordinary headers use pinned
+Material behavior tied to actual scroll; Chats' bottom inset is content
+padding. New profile-owned DiagnosticsState supplies the first-login
+content-height sheet and Privacy & Security → Diagnostics & Improvements.
+Prompt timing waits for RESUMED Chats; actual dismissal, not rotation,
+records seen state. Developer Tools does not own or disable consent. Ordinary
+sheets now share surfaceContainerLow, transparent ordinary rows, a wrapping
+titleLarge/24 dp header and 8 dp body gap with no extra handle spacer. Both
+mute entry points use the shared immediate-choice Material dialog.
+
+Scoped iOS evidence is `4c25393`, without changing the global baseline or
+conversation fixture timestamps/content. Static gate: 117 unit tests, 121
+compiled UI tests, no lint issues, both APKs. No device execution or screenshots
+were performed for this batch. Briefs, metrics, source map and decisions
+0035–0039 record the implementation; 0038 retires the old swipe exception.
 
 - Run the packaged instrumentation suite on the chosen reference device/API.
 - Inspect compact/expanded, landscape, gesture/three-button navigation, IME,

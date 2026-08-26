@@ -5,9 +5,11 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.ProfileFixtures
+import dev.ipf.whitenoise.model.MuteDuration
 import dev.ipf.whitenoise.model.SharedContentCategory
 import dev.ipf.whitenoise.ui.conversation.AddGroupMembersScreen
 import dev.ipf.whitenoise.ui.conversation.ChatInfoScreen
@@ -24,6 +26,22 @@ import org.junit.runner.RunWith
 class ChatInfoScreenTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
+
+    @Test fun muteUsesTheSameImmediateSelectionDialogAsChats() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "maya-chen" }.copy(muteDuration = null)
+        var chosen: MuteDuration? = null
+        composeRule.setContent { WhiteNoiseTheme {
+            ChatInfoScreen(profile, chat, {}, {}, {}, {}, {}, {}, {}, {}, { chosen = it }, {}, {}, { true })
+        } }
+        composeRule.onNodeWithContentDescription("Mute").performClick()
+        composeRule.onNodeWithTag("mute.duration.dialog").assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.runOnIdle { org.junit.Assert.assertNull(chosen) }
+        composeRule.onNodeWithContentDescription("Mute").performClick()
+        composeRule.onNodeWithText("1 Week").performClick()
+        composeRule.runOnIdle { org.junit.Assert.assertEquals(MuteDuration.OneWeek, chosen) }
+    }
 
     @Test
     fun directInfoShowsIdentityQuickActionsAndSharedCategories() {

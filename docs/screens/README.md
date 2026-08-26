@@ -11,7 +11,9 @@ observable acceptance criteria before implementation.
 Current briefs:
 
 - `app-foundation.md`
+- `app-menus.md`
 - `onboarding-and-profiles.md`
+- `diagnostics-and-improvements.md`
 - `chats-and-chat-creation.md`
 - `shared-conversation-core.md`
 - `composer-media-and-speech.md`

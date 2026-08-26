@@ -80,6 +80,9 @@ sealed interface AppRoute {
     data object PrivacySecurity : AppRoute
 
     @Serializable
+    data object DiagnosticsImprovements : AppRoute
+
+    @Serializable
     data object DataUsage : AppRoute
 
     @Serializable

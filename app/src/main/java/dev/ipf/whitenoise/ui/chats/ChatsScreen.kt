@@ -2,32 +2,34 @@ package dev.ipf.whitenoise.ui.chats
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -35,10 +37,12 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,30 +51,41 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
-import dev.ipf.whitenoise.model.ChatDeliveryState
+import dev.ipf.whitenoise.model.ChatListAction
+import dev.ipf.whitenoise.model.ChatListActionPolicy
+import dev.ipf.whitenoise.model.ChatListUndo
 import dev.ipf.whitenoise.model.ChatProjection
 import dev.ipf.whitenoise.model.ChatScope
 import dev.ipf.whitenoise.model.MuteDuration
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.state.AppUiState
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
+import dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll
+import dev.ipf.whitenoise.ui.components.MuteDurationDialog
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
+import dev.ipf.whitenoise.ui.components.WhiteNoiseContentMaxWidth
+import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
+import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +102,7 @@ fun ChatsScreen(
     modifier: Modifier = Modifier,
     onSettings: () -> Unit = {},
     onProfileRelays: () -> Unit = {},
+    onUndo: (ChatListUndo) -> Unit = {},
 ) {
     val profile = uiState.activeProfile
     val searchChatsDescription = stringResource(R.string.search_chats)
@@ -96,15 +112,63 @@ fun ChatsScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var filterMenuOpen by remember { mutableStateOf(false) }
-    var actionChat by remember { mutableStateOf<Chat?>(null) }
-    var muteChat by remember { mutableStateOf<Chat?>(null) }
-    var leaveChat by remember { mutableStateOf<Chat?>(null) }
-    var deleteChat by remember { mutableStateOf<Chat?>(null) }
-    var soleAdminChat by remember { mutableStateOf<Chat?>(null) }
+    var muteChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
+    var leaveChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
+    var deleteChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
+    var soleAdminChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val rows = remember(profile?.chats, scope, query) {
         ChatProjection.rows(profile?.chats.orEmpty(), scope, query)
+    }
+
+    val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val resources = LocalResources.current
+    val layoutDirection = LocalLayoutDirection.current
+    var undoJob by remember { mutableStateOf<Job?>(null) }
+    var menuTarget by remember(profile?.id, scope, query, isSearching) { mutableStateOf<ChatMenuTarget?>(null) }
+    LaunchedEffect(rows.map { it.id }) {
+        if (rows.none { it.id == menuTarget?.chatId }) menuTarget = null
+    }
+    DisposableEffect(profile?.id) {
+        onDispose { undoJob?.cancel(); snackbarHostState.currentSnackbarData?.dismiss() }
+    }
+
+    fun performAction(target: ChatMenuTarget, action: ChatListAction) {
+        menuTarget = null
+        if (target.profileId != profile?.id) return
+        val chat = profile.chats.firstOrNull { it.id == target.chatId } ?: return
+        if (action !in ChatListActionPolicy.all(chat)) return
+        val undo = ChatListUndo.capture(profile.id, chat, action)
+        when (action) {
+            ChatListAction.Read -> onMarkUnread(chat.id, false)
+            ChatListAction.Unread -> onMarkUnread(chat.id, true)
+            ChatListAction.Pin, ChatListAction.Unpin -> onTogglePin(chat.id)
+            ChatListAction.Mute -> muteChat = chat
+            ChatListAction.Unmute -> onMute(chat.id, null)
+            ChatListAction.Archive -> onArchive(chat.id, true)
+            ChatListAction.Unarchive -> onArchive(chat.id, false)
+            ChatListAction.Leave -> if (chat.isSoleAdmin(profile.id)) soleAdminChat = chat else leaveChat = chat
+            ChatListAction.Delete -> deleteChat = chat
+        }
+        undoJob?.cancel()
+        snackbarHostState.currentSnackbarData?.dismiss()
+        if (action in setOf(ChatListAction.Read, ChatListAction.Unread, ChatListAction.Archive, ChatListAction.Unarchive)) {
+            undoJob = coroutineScope.launch {
+                val message = when (action) {
+                    ChatListAction.Read -> R.string.chat_marked_read
+                    ChatListAction.Unread -> R.string.chat_marked_unread
+                    ChatListAction.Archive -> R.string.chat_archived
+                    else -> R.string.chat_unarchived
+                }
+                if (snackbarHostState.showSnackbar(resources.getString(message), resources.getString(R.string.undo)) == SnackbarResult.ActionPerformed) {
+                    menuTarget = null
+                    onUndo(undo)
+                }
+            }
+        }
     }
 
     fun closeSearch() {
@@ -115,126 +179,104 @@ fun ChatsScreen(
     }
 
     BackHandler(enabled = isSearching, onBack = ::closeSearch)
+    BackHandler(enabled = menuTarget != null) { menuTarget = null }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().imePadding(),
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            Crossfade(
-                targetState = isSearching,
-                label = "Chats search mode",
-            ) { searching ->
-                if (searching) {
-                    ChatsSearchTopBar(
-                        query = query,
-                        onQueryChange = { query = it },
-                        onClose = ::closeSearch,
-                        closeSearchDescription = closeSearchDescription,
-                    )
-                } else {
-                    ChatsTopBar(
-                        profile = profile,
-                        scope = scope,
-                        filterMenuOpen = filterMenuOpen,
-                        onFilterMenuOpenChange = { filterMenuOpen = it },
-                        onScopeChange = {
-                            scopeName = it.name
-                            filterMenuOpen = false
-                        },
-                        onSettings = onSettings,
-                        onSearch = { isSearching = true },
-                        searchChatsDescription = searchChatsDescription,
-                    )
+            AdaptiveContent(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
+                Crossfade(
+                    targetState = isSearching,
+                    label = "Chats search mode",
+                ) { searching ->
+                    if (searching) {
+                        ChatsSearchTopBar(
+                            query = query,
+                            onQueryChange = { query = it },
+                            onClose = ::closeSearch,
+                            closeSearchDescription = closeSearchDescription,
+                        )
+                    } else {
+                        ChatsTopBar(
+                            profile = profile,
+                            scope = scope,
+                            filterMenuOpen = filterMenuOpen,
+                            onFilterMenuOpenChange = { menuTarget = null; filterMenuOpen = it },
+                            onScopeChange = {
+                                scopeName = it.name
+                                filterMenuOpen = false
+                            },
+                            onSettings = { menuTarget = null; onSettings() },
+                            onSearch = { isSearching = true },
+                            searchChatsDescription = searchChatsDescription,
+                        )
+                    }
                 }
             }
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (scope == ChatScope.Chats) {
-                ExtendedFloatingActionButton(
-                    onClick = if (profile?.chatRelayUrls.isNullOrEmpty()) onProfileRelays else onNewMessage,
-                    text = {
-                        Text(
-                            if (profile?.chatRelayUrls.isNullOrEmpty()) "Check Relays"
-                            else stringResource(R.string.new_message),
-                        )
-                    },
-                    icon = {
+            if (!isSearching) {
+                // Scaffold owns safe-area/16 dp FAB placement and Snackbar clearance.
+                // On wider windows only add the same centered-pane inset as the list.
+                BoxWithConstraints {
+                    val paneInset = ((maxWidth - WhiteNoiseContentMaxWidth) / 2).coerceAtLeast(0.dp)
+                    val canCreate = !profile?.chatRelayUrls.isNullOrEmpty()
+                    FloatingActionButton(
+                        onClick = { menuTarget = null; if (canCreate) onNewMessage() else onProfileRelays() },
+                        modifier = Modifier.padding(end = paneInset).testTag("chats.newMessage"),
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ) {
                         Icon(
-                            painter = painterResource(
-                                if (profile?.chatRelayUrls.isNullOrEmpty()) {
-                                    R.drawable.ic_warning
-                                } else {
-                                    R.drawable.ic_add
-                                },
-                            ),
-                            contentDescription = null,
+                            painterResource(if (canCreate) R.drawable.ic_edit else R.drawable.ic_warning),
+                            contentDescription = if (canCreate) stringResource(R.string.new_message) else "Check Relays",
+                            modifier = Modifier.size(24.dp),
                         )
-                    },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                )
+                    }
+                }
             }
         },
     ) { contentPadding ->
         AdaptiveContent(
-            modifier = Modifier.fillMaxSize().padding(contentPadding),
-        ) {
-            if (rows.isEmpty()) {
-                ChatEmptyState(
-                    scope = scope,
-                    isSearchEmpty = query.isNotBlank(),
-                    modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
+                .padding(
+                    top = contentPadding.calculateTopPadding(),
+                    start = contentPadding.calculateStartPadding(layoutDirection),
+                    end = contentPadding.calculateEndPadding(layoutDirection),
                 )
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(rows, key = Chat::id) { chat ->
-                        ChatRow(
-                            chat = chat,
-                            onOpen = {
-                                closeSearch()
-                                onOpenChat(chat.id)
-                            },
-                            onActions = { actionChat = chat },
-                        )
+                .consumeWindowInsets(contentPadding),
+        ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().testTag("chats.list"),
+                contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() +
+                    if (isSearching) WhiteNoiseSpacing.CompactScreenMargin
+                    else 56.dp + WhiteNoiseSpacing.CompactScreenMargin * 2),
+            ) {
+                if (rows.isEmpty()) {
+                    item {
+                        ChatEmptyState(scope, query.isNotBlank(), Modifier.fillParentMaxSize())
                     }
+                }
+                items(rows, key = Chat::id) { chat ->
+                    val target = ChatMenuTarget(profile?.id.orEmpty(), chat.id)
+                    ChatContextMenuRow(
+                        chat = chat,
+                        expanded = menuTarget == target,
+                        onOpen = { menuTarget = null; closeSearch(); onOpenChat(chat.id) },
+                        onShowMenu = { filterMenuOpen = false; menuTarget = target },
+                        onDismissMenu = { if (menuTarget == target) menuTarget = null },
+                        onAction = { performAction(target, it) },
+                    )
                 }
             }
         }
     }
 
-    actionChat?.let { chat ->
-        ChatActionsSheet(
-            chat = chat,
-            onDismiss = { actionChat = null },
-            onMarkUnread = {
-                onMarkUnread(chat.id, !chat.isUnread)
-                actionChat = null
-            },
-            onTogglePin = {
-                onTogglePin(chat.id)
-                actionChat = null
-            },
-            onMute = {
-                actionChat = null
-                if (chat.muteDuration == null) muteChat = chat else onMute(chat.id, null)
-            },
-            onArchive = {
-                onArchive(chat.id, !chat.isArchived)
-                actionChat = null
-            },
-            onLeave = {
-                actionChat = null
-                if (chat.isSoleAdmin(profile?.id.orEmpty())) soleAdminChat = chat else leaveChat = chat
-            },
-            onDelete = {
-                actionChat = null
-                deleteChat = chat
-            },
-        )
-    }
-
     muteChat?.let { chat ->
-        MuteDurationSheet(
+        MuteDurationDialog(
             onDismiss = { muteChat = null },
             onSelect = {
                 onMute(chat.id, it)
@@ -310,17 +352,17 @@ private fun ChatsTopBar(
     TopAppBar(
         title = {
             Text(
-                text = scopeTitle,
+                text = if (scope == ChatScope.Chats) "" else scopeTitle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
             )
         },
         navigationIcon = {
             profile?.let {
                 IconButton(
                     onClick = onSettings,
-                    modifier = Modifier.semantics {
+                    modifier = Modifier.padding(start = WhiteNoiseSpacing.Related).semantics {
                         settingsDescription?.let { description ->
                             contentDescription = description
                         }
@@ -329,7 +371,7 @@ private fun ChatsTopBar(
                     ProfileAvatar(
                         name = it.name,
                         avatar = it.avatar,
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(40.dp).testTag("chats.profileAvatar"),
                         contentDescription = null,
                     )
                 }
@@ -343,6 +385,7 @@ private fun ChatsTopBar(
                         modifier = Modifier.semantics {
                             contentDescription = filterDescription
                             stateDescription = selectedScopeDescription
+                            selected = false
                         },
                     ) {
                         Icon(
@@ -351,11 +394,12 @@ private fun ChatsTopBar(
                         )
                     }
                 } else {
-                    FilledTonalIconButton(
+                    FilledIconButton(
                         onClick = { onFilterMenuOpenChange(true) },
                         modifier = Modifier.semantics {
                             contentDescription = filterDescription
                             stateDescription = selectedScopeDescription
+                            selected = true
                         },
                     ) {
                         Icon(
@@ -364,36 +408,24 @@ private fun ChatsTopBar(
                         )
                     }
                 }
-                DropdownMenu(
+                WhiteNoiseDropdownMenu(
                     expanded = filterMenuOpen,
                     onDismissRequest = { onFilterMenuOpenChange(false) },
-                ) {
-                    ChatScope.entries.forEach { candidate ->
-                        DropdownMenuItem(
-                            text = { Text(candidate.label) },
+                    modifier = Modifier.testTag("chats.filterMenu"),
+                    items = ChatScope.entries.map { candidate ->
+                        WhiteNoiseMenuItem(
+                            label = candidate.label,
                             onClick = { onScopeChange(candidate) },
-                            trailingIcon = {
-                                if (candidate == scope) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_check),
-                                        contentDescription = null,
-                                    )
-                                }
-                            },
-                            modifier = Modifier.semantics {
-                                selected = candidate == scope
-                            },
+                            selected = candidate == scope,
                         )
-                    }
-                }
-            }
-            IconButton(onClick = onSearch) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_search),
-                    contentDescription = searchChatsDescription,
+                    },
                 )
             }
+            IconButton(onClick = onSearch) {
+                Icon(painterResource(R.drawable.ic_search), contentDescription = searchChatsDescription)
+            }
         },
+        scrollBehavior = LocalWhiteNoiseHeaderScroll.current,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
             scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -462,94 +494,11 @@ private fun ChatsSearchTopBar(
                 )
             }
         },
+        scrollBehavior = LocalWhiteNoiseHeaderScroll.current,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
-    )
-}
-
-@Composable
-private fun ChatRow(
-    chat: Chat,
-    onOpen: () -> Unit,
-    onActions: () -> Unit,
-) {
-    val actionsDescription = stringResource(R.string.actions_for, chat.title)
-    val unreadLabel = when {
-        chat.unreadCount > 99 -> stringResource(R.string.unread_count_capped)
-        chat.unreadCount > 0 -> pluralStringResource(
-            R.plurals.unread_count,
-            chat.unreadCount,
-            chat.unreadCount,
-        )
-        else -> stringResource(R.string.manually_unread)
-    }
-    ListItem(
-        headlineContent = {
-            Text(
-                text = chat.title,
-                fontWeight = if (chat.isUnread) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        supportingContent = {
-            Column {
-                Text(
-                    text = chat.displayPreview,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val indicators = buildList {
-                    if (chat.isPinned) add(stringResource(R.string.pinned))
-                    if (chat.muteDuration != null) add(stringResource(R.string.muted))
-                    if (chat.disappearingDuration != dev.ipf.whitenoise.model.DisappearingDuration.Off) {
-                        add(stringResource(R.string.disappearing_messages, chat.disappearingDuration.label))
-                    }
-                    if (chat.deliveryState == ChatDeliveryState.Failed) add(stringResource(R.string.failed_to_send))
-                }
-                if (indicators.isNotEmpty()) {
-                    Text(
-                        text = indicators.joinToString(" · "),
-                        color = if (chat.deliveryState == ChatDeliveryState.Failed) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-        },
-        leadingContent = {
-            ProfileAvatar(chat.title, chat.avatar, Modifier.size(52.dp), contentDescription = null)
-        },
-        trailingContent = {
-            Column(horizontalAlignment = Alignment.End) {
-                Text(chat.timestamp, style = MaterialTheme.typography.labelSmall)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (chat.isUnread) {
-                        Badge(modifier = Modifier.semantics { contentDescription = unreadLabel }) {
-                            if (chat.unreadCount > 0) Text(if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString())
-                        }
-                    }
-                    IconButton(
-                        onClick = onActions,
-                        modifier = Modifier.semantics { contentDescription = actionsDescription },
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_more_vert),
-                            contentDescription = null,
-                        )
-                    }
-                }
-            }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpen)
-            .semantics { role = Role.Button },
     )
 }
 
@@ -584,57 +533,5 @@ private fun ChatEmptyState(
     }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         WhiteNoiseEmptyState(title = title, detail = detail)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ChatActionsSheet(
-    chat: Chat,
-    onDismiss: () -> Unit,
-    onMarkUnread: () -> Unit,
-    onTogglePin: () -> Unit,
-    onMute: () -> Unit,
-    onArchive: () -> Unit,
-    onLeave: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            Text(chat.title, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.titleLarge)
-            ActionRow(if (chat.isUnread) stringResource(R.string.mark_read) else stringResource(R.string.mark_unread), onMarkUnread)
-            if (!chat.isArchived && !chat.hasEndedMembership) {
-                ActionRow(if (chat.isPinned) stringResource(R.string.unpin) else stringResource(R.string.pin), onTogglePin)
-            }
-            ActionRow(if (chat.muteDuration == null) stringResource(R.string.mute) else stringResource(R.string.unmute), onMute)
-            ActionRow(if (chat.isArchived) stringResource(R.string.unarchive) else stringResource(R.string.archive), onArchive)
-            if (chat.isGroup && chat.membership == dev.ipf.whitenoise.model.ChatMembership.Active) {
-                ActionRow(stringResource(R.string.leave_group), onLeave, destructive = true)
-            }
-            if (chat.hasEndedMembership) {
-                ActionRow(stringResource(R.string.delete_chat), onDelete, destructive = true)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionRow(label: String, onClick: () -> Unit, destructive: Boolean = false) {
-    ListItem(
-        headlineContent = {
-            Text(label, color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-        },
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MuteDurationSheet(onDismiss: () -> Unit, onSelect: (MuteDuration) -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            Text(stringResource(R.string.mute_for), modifier = Modifier.padding(24.dp), style = MaterialTheme.typography.titleLarge)
-            MuteDuration.entries.forEach { duration -> ActionRow(duration.label, { onSelect(duration) }) }
-        }
     }
 }

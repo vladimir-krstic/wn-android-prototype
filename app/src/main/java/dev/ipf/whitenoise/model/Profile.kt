@@ -79,7 +79,8 @@ data class Profile(
     val chatRelayUrls: List<String> = emptyList(),
     val quickReactions: List<String> = ReactionCatalog.defaults,
     val settings: ProfileSettings = ProfileSettings(),
-    val developerTools: DeveloperToolsState = DeveloperToolsState.fixtures(id, name),
+    val developerTools: DeveloperToolsState = DeveloperToolsState(),
+    val diagnostics: DiagnosticsState = DiagnosticsState(),
 ) {
     val initial: String
         get() = name.trim().firstOrNull()?.uppercase() ?: "?"
@@ -97,8 +98,8 @@ data class Profile(
             name = from.name,
             about = from.about,
             avatar = from.avatar,
-            developerTools = developerTools.copy(
-                auditFiles = developerTools.auditFiles.map { it.copy(profileName = from.name) },
+            diagnostics = diagnostics.copy(
+                records = diagnostics.records.map { it.copy(profileName = from.name) },
             ),
         )
     }

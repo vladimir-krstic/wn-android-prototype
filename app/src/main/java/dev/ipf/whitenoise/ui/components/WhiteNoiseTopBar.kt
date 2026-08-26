@@ -7,7 +7,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -18,9 +20,12 @@ import dev.ipf.whitenoise.R
 fun WhiteNoiseTopBar(
     title: String,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
     titleStyle: TextStyle = MaterialTheme.typography.titleLarge,
+    scrollBehavior: TopAppBarScrollBehavior? = LocalWhiteNoiseHeaderScroll.current,
 ) {
     TopAppBar(
+        modifier = modifier,
         title = { Text(title, style = titleStyle) },
         navigationIcon = {
             IconButton(onClick = onBack) {
@@ -34,5 +39,6 @@ fun WhiteNoiseTopBar(
             containerColor = MaterialTheme.colorScheme.surface,
             scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
+        scrollBehavior = scrollBehavior,
     )
 }

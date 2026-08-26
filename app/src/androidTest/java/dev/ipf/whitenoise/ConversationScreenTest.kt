@@ -1,6 +1,11 @@
 package dev.ipf.whitenoise
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -106,6 +111,13 @@ class ConversationScreenTest {
         composeRule.onNodeWithText("Message Format").assertIsDisplayed()
         composeRule.onNodeWithText("Both").assertIsDisplayed()
         composeRule.onNodeWithText("Send Voice and Text Message").assertIsDisplayed()
+        composeRule.onNodeWithText("Message Format").performClick()
+        val radioItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        composeRule.onNode(hasText("Both").and(radioItem)).assertIsSelected()
+        composeRule.onNode(hasText("Text").and(radioItem)).performClick()
+        composeRule.onNodeWithText("Send Text Message").assertIsDisplayed()
+        composeRule.onNodeWithText("Message Format").performClick()
+        composeRule.onNode(hasText("Text").and(radioItem)).assertIsSelected().performClick()
     }
 
     @Test

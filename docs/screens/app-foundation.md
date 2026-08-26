@@ -39,6 +39,10 @@ application state and native navigation intent.
 - A typed Navigation Compose graph owns destinations.
 - Welcome replaced the temporary foundation destination in Batch 1 and remains
   the start destination.
+- An unhandled tap on app-owned background content clears text focus at the
+  application shell, allowing the focused Compose text editor to dismiss the
+  IME. Descendant controls and scroll gestures consume their own pointer input
+  first and keep their normal behavior.
 - System Back and predictive Back remain owned by Android Navigation; the app
   does not intercept Back on the root placeholder.
 - No deep links or exported product activities are added.
@@ -93,11 +97,22 @@ None.
 
 ## Governing Android sources
 
+The 2026-08-26 shared-sheet refinement is WN-ANDROID-0039:
+`WhiteNoiseModalBottomSheet` owns the continuous `surfaceContainerLow` and
+one safeDrawing/IME layer; `WhiteNoiseSheetHeader` owns wrapping titleLarge,
+24 dp text margins, 8 dp body gap and optional trailing native Close. Material
+owns all handle/shape/width/motion/dismissal metrics. Ordinary rows remain
+transparent; intentional tonal/selected content is preserved. Task app bars
+do not reapply status-bar padding. Specialized camera/media/system surfaces
+are excluded. `MaterialSheetTest` compiles surface/header/dismissal regressions.
+
 - `docs/references/android.md`: Compose, Material 3, Navigation Compose,
   edge-to-edge, adaptive apps, accessibility, testing, Compose BOM, and build
   tooling routes.
 - `docs/references/native-ui.md`: standard-component and adaptation checks.
 - [Android splash screens](https://developer.android.com/develop/ui/views/launch/splash-screen)
+- [Compose focus](https://developer.android.com/develop/ui/compose/touch-input/focus)
+- [Compose gesture dispatch and consumption](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures)
 
 ## iOS parity evidence
 
@@ -118,5 +133,8 @@ None. Batch 0 is an Android-native foundation rather than a visible iOS port.
 - The system splash packages the exact Welcome mark rather than the launcher
   differentiator mark and adapts its polarity in light and dark themes.
 - Edge-to-edge is enabled and content applies the appropriate safe insets.
+- Focusing an app-owned text field and tapping unhandled background content
+  clears focus without preventing child controls or scrolling from handling
+  their gestures.
 - No third-party runtime dependency, network permission, storage permission,
   or speculative feature architecture is present.

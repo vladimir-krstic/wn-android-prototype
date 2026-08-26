@@ -165,6 +165,7 @@ fun PrivacySecurityScreen(
     onBack: () -> Unit,
     onChange: (ProfileSettings) -> Unit,
     onEraseAppData: (String) -> Unit,
+    onDiagnosticsImprovements: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
@@ -204,6 +205,12 @@ fun PrivacySecurityScreen(
                 }
             }
             item { SettingsExplainer("Security preferences are stored separately for each profile.") }
+            item { SettingsSection("Diagnostics") }
+            item {
+                SettingsGroup {
+                    SettingsLink("Diagnostics & Improvements", profile.diagnostics.summary, onDiagnosticsImprovements)
+                }
+            }
             item { SettingsSection("Device data") }
             item {
                 SettingsGroup {

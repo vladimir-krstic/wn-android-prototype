@@ -33,7 +33,7 @@ class DeveloperDestructiveScreenTest {
     fun lockedDeveloperToolsShowsWarningAndMasterGate() {
         composeRule.setContent {
             WhiteNoiseTheme {
-                DeveloperToolsScreen(ProfileFixtures.marmota, {}, { true }, { true }, {}, {}, { true }, { true }, { true })
+                DeveloperToolsScreen(ProfileFixtures.marmota, {}, { true }, { true }, {}, {}, {})
             }
         }
         composeRule.onNodeWithText("For development and testing only").assertIsDisplayed()
@@ -45,17 +45,16 @@ class DeveloperDestructiveScreenTest {
         val profile = ProfileFixtures.marmota.copy(
             developerTools = ProfileFixtures.marmota.developerTools.copy(
                 isEnabled = true,
-                auditLogging = true,
             ),
         )
         composeRule.setContent {
             WhiteNoiseTheme {
-                DeveloperToolsScreen(profile, {}, { true }, { true }, {}, {}, { true }, { true }, { true })
+                DeveloperToolsScreen(profile, {}, { true }, { true }, {}, {}, {})
             }
         }
         composeRule.onNodeWithText("Debug Mode").assertIsDisplayed()
         composeRule.onNodeWithText("Diagnostics").assertIsDisplayed()
-        composeRule.onNodeWithText("Anonymous Telemetry").assertIsDisplayed()
+        composeRule.onNodeWithText("Diagnostics & Improvements").assertIsDisplayed()
     }
 
     @Test

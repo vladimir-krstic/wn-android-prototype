@@ -81,6 +81,19 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 
 ## Acceptance gates
 
+2026-08-26 menu follow-up: voice review's format dropdown uses the shared
+Expressive menu with native radio-item selection/checks. Voice/Text/Both
+eligibility, draft/transcript content and send behavior are unchanged.
+`ConversationScreenTest` now covers selected Both → Text and the corresponding
+send label. See `app-menus.md` for the full gate and compatibility exception.
+
+2026-08-26 shared-sheet refinement: attachment, contact, GIF and voice-review
+sheets use `WhiteNoiseModalBottomSheet` and `WhiteNoiseSheetHeader`. The base is
+continuous surfaceContainerLow, ordinary rows are transparent, and the header
+starts directly after the native handle with 24 dp title margins/8 dp body
+gap. Attachment and review content scroll when constrained. Intentional media
+preview tones, draft behavior and all platform-owned pickers remain unchanged.
+
 - Unit tests cover draft persistence/clearing, order/removal, link detection
   and suppression, one-to-seven media layout derivation, attachment preview
   derivation, voice format results, and per-profile isolation.

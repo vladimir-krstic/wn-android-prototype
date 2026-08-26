@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package dev.ipf.whitenoise.ui.chats
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,7 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
+import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -27,11 +29,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.verticalScroll
+import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +39,7 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -78,6 +78,8 @@ import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
@@ -235,7 +237,7 @@ fun PersonProfileScreen(
                     .align(Alignment.TopCenter)
                     .widthIn(max = 520.dp)
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .whiteNoiseVerticalScroll(rememberScrollState())
                     .padding(
                         horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                         vertical = WhiteNoiseSpacing.Section,
@@ -629,7 +631,7 @@ fun GroupSetupScreen(
                     .align(Alignment.TopCenter)
                     .widthIn(max = 520.dp)
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .whiteNoiseVerticalScroll(rememberScrollState())
                     .padding(
                         horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                         vertical = WhiteNoiseSpacing.Section,
@@ -661,51 +663,53 @@ fun GroupSetupScreen(
                                 ),
                             )
                         }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.choose_photos)) },
-                                onClick = {
-                                    menuOpen = false
-                                    photoPicker.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly,
+                        WhiteNoiseDropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false },
+                            items = buildList {
+                                add(
+                                    WhiteNoiseMenuItem(
+                                        label = stringResource(R.string.choose_photos),
+                                        icon = R.drawable.ic_image,
+                                        onClick = {
+                                            photoPicker.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                            )
+                                        },
+                                    ),
+                                )
+                                add(
+                                    WhiteNoiseMenuItem(
+                                        label = stringResource(R.string.choose_files),
+                                        icon = R.drawable.ic_description,
+                                        onClick = { filePicker.launch(arrayOf("image/*")) },
+                                    ),
+                                )
+                                add(
+                                    WhiteNoiseMenuItem(
+                                        label = stringResource(R.string.find_web_image),
+                                        icon = R.drawable.ic_search,
+                                        onClick = { webPickerOpen = true },
+                                    ),
+                                )
+                                if (avatar != ProfileAvatar.Monogram) {
+                                    add(
+                                        WhiteNoiseMenuItem(
+                                            label = stringResource(R.string.remove_photo),
+                                            icon = R.drawable.ic_delete,
+                                            destructive = true,
+                                            onClick = {
+                                                processingJob?.cancel()
+                                                isPreparingPhoto = false
+                                                avatar = ProfileAvatar.Monogram
+                                                webChoiceId = null
+                                                photoError = false
+                                            },
                                         ),
                                     )
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.choose_files)) },
-                                onClick = {
-                                    menuOpen = false
-                                    filePicker.launch(arrayOf("image/*"))
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.find_web_image)) },
-                                onClick = {
-                                    menuOpen = false
-                                    webPickerOpen = true
-                                },
-                            )
-                            if (avatar != ProfileAvatar.Monogram) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(R.string.remove_photo),
-                                            color = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    onClick = {
-                                        processingJob?.cancel()
-                                        isPreparingPhoto = false
-                                        avatar = ProfileAvatar.Monogram
-                                        webChoiceId = null
-                                        photoError = false
-                                        menuOpen = false
-                                    },
-                                )
-                            }
-                        }
+                                }
+                            },
+                        )
                     }
                     if (isPreparingPhoto) {
                         Row(

@@ -9,6 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+internal val WhiteNoiseContentMaxWidth = 680.dp
+
 @Composable
 fun AdaptiveContent(
     modifier: Modifier = Modifier,
@@ -20,8 +22,8 @@ fun AdaptiveContent(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 680.dp),
+                .widthIn(max = WhiteNoiseContentMaxWidth)
+                .fillMaxWidth(),
             content = content,
         )
     }

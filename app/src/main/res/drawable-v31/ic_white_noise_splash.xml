@@ -6,7 +6,7 @@
     android:viewportWidth="288"
     android:viewportHeight="288"
     tools:ignore="VectorRaster">
-    <!-- 598 × 460 at 0.25 = 149.5 × 115 dp, centered to match Welcome exactly. -->
+    <!-- 598 × 460 at 0.25 = 149.5 × 115 dp, centered inside Android's splash safe area. -->
     <group
         android:scaleX="0.25"
         android:scaleY="0.25"

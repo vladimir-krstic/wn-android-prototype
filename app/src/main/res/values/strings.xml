@@ -1,5 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="undo">Undo</string>
+    <string name="chat_marked_read">Chat marked as read</string>
+    <string name="chat_marked_unread">Chat marked as unread</string>
+    <string name="chat_archived">Chat archived</string>
+    <string name="chat_unarchived">Chat unarchived</string>
+    <string name="help_improve_white_noise">Help Improve White Noise</string>
+    <string name="diagnostics_improvements">Diagnostics &amp; Improvements</string>
+    <string name="diagnostics_intro">Help us make messaging without a central point of control more reliable. Anonymous analytics and diagnostic logs are optional and can be changed in Settings.</string>
+    <string name="share_anonymous_analytics">Share Anonymous Analytics</string>
+    <string name="share_diagnostic_logs">Share Diagnostic Logs</string>
+    <string name="diagnostics_privacy">Analytics never include messages, media, contacts, profile details, or keys. Diagnostic logs obscure identifiers and are securely sent to White Noise for troubleshooting.</string>
+    <string name="analytics_detail">Shares anonymous reliability, performance, and feature-use data to help improve White Noise. Messages, media, contacts, profile details, and keys are never included.</string>
+    <string name="diagnostic_logging_detail">Sends sanitized technical activity to White Noise to help troubleshoot problems. Message content is excluded and identifiers are obscured.</string>
+    <string name="stored_diagnostic_logs">Stored Diagnostic Logs</string>
+    <string name="clear_diagnostic_logs">Clear Diagnostic Logs</string>
+    <string name="clear_diagnostic_logs_title">Clear diagnostic logs?</string>
+    <string name="clear_diagnostic_logs_detail">This permanently removes all recorded diagnostic activity from this device. Your logging preference won’t change.</string>
+    <string name="clear_logs">Clear Logs</string>
+    <string name="diagnostic_logs_retained">Turning logging off keeps existing logs until you clear them.</string>
     <string name="app_name">White Noise</string>
     <string name="sign_in">Sign In</string>
     <string name="sign_up">Sign Up</string>
@@ -12,11 +31,17 @@
     <string name="private_key_help">It starts with nsec.</string>
     <string name="private_key_invalid">That private key isn’t valid. Check it and try again.</string>
     <string name="invalid_input">Invalid input</string>
-    <string name="paste">Paste</string>
-    <string name="clear">Clear</string>
+    <string name="paste_private_key">Paste private key</string>
+    <string name="clear_private_key">Clear private key</string>
     <string name="scan_qr_code">Scan QR Code</string>
-    <string name="signing_in">Signing In</string>
-    <string name="signing_up">Signing Up</string>
+    <string name="camera_access_needed">Camera Access Needed</string>
+    <string name="camera_permission_detail">Allow camera access to scan a Private Key QR code.</string>
+    <string name="allow_camera">Allow Camera</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="turn_flashlight_on">Turn flashlight on</string>
+    <string name="turn_flashlight_off">Turn flashlight off</string>
+    <string name="signing_in">Signing In…</string>
+    <string name="creating_profile">Creating Profile…</string>
     <string name="wn_in_progress">In progress</string>
     <string name="wrong_qr_title">Can’t Use This QR Code</string>
     <string name="wrong_qr_detail">This QR code doesn’t contain a private key.</string>
@@ -304,7 +329,6 @@
         <item quantity="other">%1$d chat relays</item>
     </plurals>
     <string name="profile_actions">Profile Actions</string>
-    <string name="mute_notifications">Mute notifications</string>
     <string name="disappearing_messages_title">Disappearing messages</string>
     <string name="cant_leave_group">Can’t leave group</string>
     <string name="invitation_pending">Invitation pending</string>

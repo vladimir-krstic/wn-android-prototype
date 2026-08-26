@@ -23,9 +23,11 @@ object AvatarImageProcessor {
         uri: Uri,
     ): ByteArray? = withContext(Dispatchers.IO) {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        contentResolver.openInputStream(uri)?.use { input ->
+        val boundsInput = contentResolver.openInputStream(uri) ?: return@withContext null
+        boundsInput.use { input ->
+            // Bounds-only decoding returns null even for a valid image; inspect the dimensions.
             BitmapFactory.decodeStream(input, null, bounds)
-        } ?: return@withContext null
+        }
 
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
         var sampleSize = 1

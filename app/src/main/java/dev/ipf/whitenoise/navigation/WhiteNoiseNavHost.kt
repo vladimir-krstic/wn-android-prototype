@@ -1,7 +1,17 @@
 package dev.ipf.whitenoise.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,6 +33,7 @@ import dev.ipf.whitenoise.ui.conversation.SharedContentScreen
 import dev.ipf.whitenoise.ui.conversation.EditGroupScreen
 import dev.ipf.whitenoise.ui.conversation.AddGroupMembersScreen
 import dev.ipf.whitenoise.ui.conversation.ChatRelaysScreen
+import dev.ipf.whitenoise.ui.onboarding.PrivateKeyQrScannerSheet
 import dev.ipf.whitenoise.ui.onboarding.SignInScreen
 import dev.ipf.whitenoise.ui.onboarding.SignUpScreen
 import dev.ipf.whitenoise.ui.onboarding.WelcomeScreen
@@ -43,6 +54,8 @@ import dev.ipf.whitenoise.ui.settings.DeveloperToolsScreen
 import dev.ipf.whitenoise.ui.settings.DiagnosticsScreen
 import dev.ipf.whitenoise.ui.settings.KeyPackagesScreen
 import dev.ipf.whitenoise.ui.settings.ManageProfilesScreen
+import dev.ipf.whitenoise.ui.settings.DiagnosticsImprovementsScreen
+import dev.ipf.whitenoise.ui.settings.DiagnosticsPromptHost
 
 @Composable
 fun WhiteNoiseNavHost(
@@ -51,8 +64,21 @@ fun WhiteNoiseNavHost(
     modifier: Modifier = Modifier,
 ) {
     val uiState = appViewModel.uiState
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val signInPrivateKey = remember { TextFieldState() }
+    var scannedPrivateKey by remember { mutableStateOf<String?>(null) }
+    var scannerUnavailable by remember { mutableStateOf(false) }
+
+    fun returnFromOnboardingForm() {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        navController.popBackStack()
+    }
 
     fun showSignedInRoot() {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
         navController.navigate(AppRoute.SignedIn) {
             popUpTo(navController.graph.id) { inclusive = true }
             launchSingleTop = true
@@ -87,33 +113,64 @@ fun WhiteNoiseNavHost(
             val route = entry.toRoute<AppRoute.Welcome>()
             WelcomeScreen(
                 origin = route.origin,
-                onSignIn = { navController.navigate(AppRoute.SignIn(route.origin)) },
+                onSignIn = {
+                    signInPrivateKey.edit { replace(0, length, "") }
+                    scannedPrivateKey = null
+                    scannerUnavailable = false
+                    navController.navigate(AppRoute.SignIn(route.origin))
+                },
                 onSignUp = { navController.navigate(AppRoute.SignUp(route.origin)) },
                 onBack = { navController.popBackStack() },
             )
         }
         composable<AppRoute.SignIn> { entry ->
             val route = entry.toRoute<AppRoute.SignIn>()
+            var scannerOpen by rememberSaveable { mutableStateOf(false) }
             SignInScreen(
-                onBack = { navController.popBackStack() },
+                onBack = ::returnFromOnboardingForm,
+                onScan = { scannerOpen = true },
+                privateKey = signInPrivateKey,
+                scannedPrivateKey = scannedPrivateKey,
+                scannerUnavailable = scannerUnavailable,
+                onScannedPrivateKeyConsumed = {
+                    scannedPrivateKey = null
+                },
+                onScannerUnavailableConsumed = {
+                    scannerUnavailable = false
+                },
                 onSignIn = {
                     appViewModel.completeSignIn(route.origin)
                     showSignedInRoot()
                 },
             )
+
+            if (scannerOpen) {
+                PrivateKeyQrScannerSheet(
+                    onDismiss = { scannerOpen = false },
+                    onCodeScanned = { payload ->
+                        scannerOpen = false
+                        scannedPrivateKey = payload
+                    },
+                    onUnavailable = {
+                        scannerOpen = false
+                        scannerUnavailable = true
+                    },
+                )
+            }
         }
         composable<AppRoute.SignUp> { entry ->
             val route = entry.toRoute<AppRoute.SignUp>()
             SignUpScreen(
                 initialName = if (route.origin == OnboardingOrigin.Initial) "Marmota" else "Pebble",
-                onBack = { navController.popBackStack() },
+                onBack = ::returnFromOnboardingForm,
                 onSignUp = { name, about, avatar ->
                     appViewModel.completeSignUp(route.origin, name, about, avatar)
                     showSignedInRoot()
                 },
             )
         }
-        composable<AppRoute.SignedIn> {
+        composable<AppRoute.SignedIn> { entry ->
+            val lifecycleState by entry.lifecycle.currentStateFlow.collectAsState()
             ChatsScreen(
                 uiState = uiState,
                 onNewMessage = { navController.navigate(AppRoute.NewChat) },
@@ -126,6 +183,14 @@ fun WhiteNoiseNavHost(
                 onDelete = { appViewModel.deleteEndedChat(it) },
                 onSettings = { navController.navigate(AppRoute.Settings()) },
                 onProfileRelays = { navController.navigate(AppRoute.ProfileRelays) },
+                onUndo = appViewModel::undoChatListAction,
+            )
+            DiagnosticsPromptHost(
+                uiState = uiState,
+                chatsResumed = lifecycleState == Lifecycle.State.RESUMED,
+                onAnalytics = { id, enabled -> appViewModel.setAnalyticsEnabled(id, enabled) },
+                onLogging = { id, enabled -> appViewModel.setDiagnosticLoggingEnabled(id, enabled) },
+                onDismiss = appViewModel::dismissDiagnosticsPrompt,
             )
         }
         composable<AppRoute.Settings> { entry ->
@@ -186,6 +251,7 @@ fun WhiteNoiseNavHost(
                     allProfileIds = uiState.profiles.map { it.id },
                     onBack = { navController.popBackStack() },
                     onChange = appViewModel::updateProfileSettings,
+                    onDiagnosticsImprovements = { navController.navigate(AppRoute.DiagnosticsImprovements) },
                     onEraseAppData = { confirmation ->
                         if (appViewModel.eraseAppData(confirmation)) finishProfileExit(ProfileExitDestination.Welcome)
                     },
@@ -195,6 +261,17 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.DataUsage> {
             uiState.activeProfile?.let { profile ->
                 DataUsageScreen(profile, onBack = { navController.popBackStack() }, onChange = appViewModel::updateProfileSettings)
+            }
+        }
+        composable<AppRoute.DiagnosticsImprovements> {
+            uiState.activeProfile?.let { profile ->
+                DiagnosticsImprovementsScreen(
+                    profile,
+                    onBack = { navController.popBackStack() },
+                    onAnalytics = { appViewModel.setAnalyticsEnabled(profile.id, it) },
+                    onLogging = { appViewModel.setDiagnosticLoggingEnabled(profile.id, it) },
+                    onClear = { appViewModel.clearDiagnosticRecords(profile.id) },
+                )
             }
         }
         composable<AppRoute.ProfileRelays> {
@@ -261,9 +338,7 @@ fun WhiteNoiseNavHost(
                     onDebugMode = appViewModel::setDebugMode,
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics()) },
                     onKeyPackages = { navController.navigate(AppRoute.KeyPackages) },
-                    onTelemetry = appViewModel::setAnonymousTelemetry,
-                    onAuditLogging = appViewModel::setAuditLogging,
-                    onClearAuditLogs = appViewModel::clearAuditLogs,
+                    onDiagnosticsImprovements = { navController.navigate(AppRoute.DiagnosticsImprovements) },
                 )
             }
         }

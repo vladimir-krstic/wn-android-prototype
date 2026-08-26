@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package dev.ipf.whitenoise.ui.conversation
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -21,17 +23,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
+import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import dev.ipf.whitenoise.ui.components.trackWhiteNoiseHeader
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.verticalScroll
+import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,9 +48,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
+import dev.ipf.whitenoise.ui.components.MuteDurationDialog
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
+import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -334,51 +341,40 @@ fun ChatInfoScreen(
     }
 
     if (muteSheet) {
-        ModalBottomSheet(onDismissRequest = { muteSheet = false }) {
-            SheetTitle(stringResource(R.string.mute_notifications))
-            MuteDuration.entries.forEach { duration ->
-                ListItem(
-                    headlineContent = { Text(duration.label) },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(role = Role.Button) {
-                            onMute(duration)
-                            muteSheet = false
-                        },
-                )
-            }
-            Box(Modifier.navigationBarsPadding().padding(bottom = WhiteNoiseSpacing.Related))
-        }
+        MuteDurationDialog(
+            onDismiss = { muteSheet = false },
+            onSelect = { onMute(it); muteSheet = false },
+        )
     }
     if (disappearingSheet) {
         ModalBottomSheet(onDismissRequest = { disappearingSheet = false }) {
-            SheetTitle(stringResource(R.string.disappearing_messages_title))
-            DisappearingDuration.entries.forEach { duration ->
-                val selected = duration == chat.disappearingDuration
-                ListItem(
-                    headlineContent = { Text(duration.label) },
-                    trailingContent = {
-                        RadioButton(
-                            selected = selected,
-                            onClick = null,
-                            modifier = Modifier.clearAndSetSemantics { },
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .toggleable(
-                            value = selected,
-                            role = Role.RadioButton,
-                            onValueChange = {
-                                onDisappearing(duration)
-                                disappearingSheet = false
-                            },
-                        ),
-                )
+            WhiteNoiseSheetHeader(stringResource(R.string.disappearing_messages_title))
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = WhiteNoiseSpacing.Related)) {
+                DisappearingDuration.entries.forEach { duration ->
+                    val selected = duration == chat.disappearingDuration
+                    ListItem(
+                        headlineContent = { Text(duration.label) },
+                        trailingContent = {
+                            RadioButton(
+                                selected = selected,
+                                onClick = null,
+                                modifier = Modifier.clearAndSetSemantics { },
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = selected,
+                                role = Role.RadioButton,
+                                onValueChange = {
+                                    onDisappearing(duration)
+                                    disappearingSheet = false
+                                },
+                            ),
+                    )
+                }
             }
-            Box(Modifier.navigationBarsPadding().padding(bottom = WhiteNoiseSpacing.Related))
         }
     }
     if (leaveConfirmation) {
@@ -633,19 +629,6 @@ private fun InfoActionRow(
 }
 
 @Composable
-private fun SheetTitle(title: String) {
-    Text(
-        text = title,
-        modifier = Modifier.padding(
-            start = WhiteNoiseSpacing.Section,
-            end = WhiteNoiseSpacing.Section,
-            bottom = WhiteNoiseSpacing.Related,
-        ),
-        style = MaterialTheme.typography.titleLarge,
-    )
-}
-
-@Composable
 fun SharedContentScreen(
     profile: Profile,
     chat: Chat,
@@ -675,9 +658,11 @@ fun SharedContentScreen(
                     )
                 }
                 category == SharedContentCategory.Media -> {
+                    val gridState = rememberLazyGridState()
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
-                        modifier = Modifier.fillMaxSize(),
+                        state = gridState,
+                        modifier = Modifier.fillMaxSize().trackWhiteNoiseHeader(gridState),
                         contentPadding = PaddingValues(4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -816,7 +801,7 @@ fun EditGroupScreen(
                     .align(Alignment.TopCenter)
                     .widthIn(max = 520.dp)
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .whiteNoiseVerticalScroll(rememberScrollState())
                     .padding(
                         horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                         vertical = WhiteNoiseSpacing.Section,

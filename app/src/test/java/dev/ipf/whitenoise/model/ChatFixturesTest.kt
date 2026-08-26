@@ -38,7 +38,7 @@ class ChatFixturesTest {
 
     @Test
     fun scopesDeriveFromAuthoritativeMembershipAndArchiveState() {
-        assertEquals(67, ChatProjection.rows(chats, ChatScope.Chats).size)
+        assertEquals(72, ChatProjection.rows(chats, ChatScope.Chats).size)
         assertEquals(5, ChatProjection.rows(chats, ChatScope.Archived).size)
         assertEquals(5, ChatProjection.rows(chats, ChatScope.Left).size)
         assertTrue(ChatProjection.rows(chats, ChatScope.Unread).all(Chat::isUnread))

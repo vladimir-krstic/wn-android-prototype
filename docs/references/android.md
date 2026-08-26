@@ -1,6 +1,6 @@
 # Official Android reference index
 
-Last reviewed: 2026-08-21.
+Last reviewed: 2026-08-26.
 
 Use this file as a router. Open only the sources relevant to the selected
 screen, confirm that the guidance is still current, and record material links
@@ -49,11 +49,26 @@ authority; this index does not freeze library versions.
 - [Add predictive Back support](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture)
 - [App bars](https://developer.android.com/develop/ui/compose/components/app-bars)
 - [Icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button)
+- [Floating action buttons](https://developer.android.com/develop/ui/compose/components/fab)
+- [Badges](https://developer.android.com/develop/ui/compose/components/badges)
+- [Material icon XML guidance](https://developer.android.com/develop/ui/compose/graphics/images/material)
 - [Bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets)
 - [Dialogs](https://developer.android.com/develop/ui/compose/components/dialog)
 - [Menus](https://developer.android.com/develop/ui/compose/components/menu)
+- [Current Material menu design](https://m3.material.io/components/menus/overview)
+- [Current Material menu specifications](https://m3.material.io/components/menus/specs)
+- [Material 3 releases and API graduation](https://developer.android.com/jetpack/androidx/releases/compose-material3)
+- [Menu defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/MenuDefaults)
 - [Search bar](https://developer.android.com/develop/ui/compose/components/search-bar)
 - [Snackbar](https://developer.android.com/develop/ui/compose/components/snackbar)
+
+For the user-approved app-wide menu migration, use the actual new popup/group/
+item family, not the baseline `DropdownMenu` illustrated in some Compose
+guides. WN-ANDROID-0040 pins `material3:1.5.0-alpha25`: its Material/ripple AARs
+retain API 23 support, while alpha26's ripple requires API 24. The design and
+public API status are distinct from artifact release status. The exact
+published source and compatibility evidence are linked in
+`docs/screens/app-menus.md`; do not infer APIs from AndroidX main instead.
 
 ## Lists, input, gestures, and state
 
@@ -102,6 +117,7 @@ the semantics tree.
 ## Photos, camera, files, and sharing
 
 - [Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker)
+- [Photo Picker navigation-button implementation (AOSP)](https://android.googlesource.com/platform/packages/providers/MediaProvider/+/refs/heads/main/photopicker/src/com/android/photopicker/features/navigationbar/NavigationBar.kt)
 - [Storage Access Framework](https://developer.android.com/guide/topics/providers/document-provider)
 - [Activity Result APIs](https://developer.android.com/training/basics/intents/result)
 - [CameraX overview](https://developer.android.com/media/camera/camerax)
@@ -182,6 +198,11 @@ Batch 1 additionally verified Google Code Scanner 16.1.0 and AndroidX
 ExifInterface 1.4.2. The scanner's transitive `INTERNET` and
 `ACCESS_NETWORK_STATE` manifest entries are deliberately removed to preserve
 the offline prototype boundary.
+
+The Sign In device-polish pass additionally verified stable CameraX 1.6.1 and
+bundled ML Kit Barcode Scanning 17.3.0 for its user-approved app-owned scanner.
+The bundled detector is immediately available and operates on device; only
+the just-in-time `CAMERA` permission is added.
 
 Batch 7 additionally verified ZXing core 3.5.4 for local, standards-compliant
 QR generation. It is an encoder-only JVM dependency here and adds no Android

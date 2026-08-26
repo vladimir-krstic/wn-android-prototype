@@ -78,6 +78,15 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 
 ## Acceptance gates
 
+2026-08-26 shared-sheet refinement: message actions, emoji selection, reaction
+configuration and forwarding use `WhiteNoiseModalBottomSheet`; titled sheets
+use `WhiteNoiseSheetHeader`. No repeated navigation-bar padding remains inside
+these modals. The reaction configuration scrolls at large font sizes; message
+actions reserve constrained space for their scrollable action list. Ordinary
+rows stay transparent; preview, selection and completion groups retain their
+intentional tones. Message actions still use a sheet; only Chats row commands
+move to an anchored menu. Selection bars and media screens are unchanged.
+
 - Unit tests cover action availability, reaction replacement/removal, quick
   configuration, search order/content, reply, forwarding bounds/order,
   deletion scopes, and per-profile isolation.

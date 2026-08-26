@@ -47,12 +47,17 @@ data class AppUiState(
     val profiles: List<Profile> = emptyList(),
     val activeProfileId: String? = null,
     val signedInProfileIds: Set<String> = emptySet(),
+    val pendingDiagnosticsProfileId: String? = null,
 ) {
     val activeProfile: Profile?
         get() = profiles.firstOrNull { it.id == activeProfileId }
 
     val signedInProfiles: List<Profile>
         get() = profiles.filter { it.id in signedInProfileIds }
+
+    fun diagnosticsPromptProfile(chatsResumed: Boolean): Profile? = activeProfile?.takeIf {
+        chatsResumed && it.id == pendingDiagnosticsProfileId && !it.diagnostics.hasSeenPrompt
+    }
 }
 
 class AppViewModel : ViewModel() {
@@ -87,7 +92,7 @@ class AppViewModel : ViewModel() {
     fun selectProfile(profileId: String) {
         if (profileId !in uiState.signedInProfileIds) return
         if (uiState.profiles.none { it.id == profileId }) return
-        uiState = uiState.copy(activeProfileId = profileId)
+        uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
     }
 
     fun updateActiveProfileDetails(
@@ -103,8 +108,8 @@ class AppViewModel : ViewModel() {
                 name = trimmedName,
                 about = about.trim(),
                 avatar = avatar,
-                developerTools = profile.developerTools.copy(
-                    auditFiles = profile.developerTools.auditFiles.map { it.copy(profileName = trimmedName) },
+                diagnostics = profile.diagnostics.copy(
+                    records = profile.diagnostics.records.map { it.copy(profileName = trimmedName) },
                 ),
             )
             changed = updated != profile
@@ -242,20 +247,35 @@ class AppViewModel : ViewModel() {
         if (!tools.isEnabled) tools else tools.copy(debugMode = enabled)
     }
 
-    fun setAnonymousTelemetry(enabled: Boolean): Boolean = updateDeveloperTools { tools ->
-        if (!tools.isEnabled) tools else tools.copy(anonymousTelemetry = enabled)
+    fun setAnalyticsEnabled(profileId: String, enabled: Boolean): Boolean = updateDiagnostics(profileId) {
+        it.diagnostics.copy(analyticsEnabled = enabled)
     }
 
-    fun setAuditLogging(enabled: Boolean): Boolean = updateDeveloperTools { tools ->
-        if (!tools.isEnabled) tools else tools.copy(auditLogging = enabled)
+    fun setDiagnosticLoggingEnabled(profileId: String, enabled: Boolean): Boolean = updateDiagnostics(profileId) {
+        it.diagnostics.withLogging(enabled, it.id, it.name)
     }
 
-    fun clearAuditLogs(): Boolean = updateDeveloperTools { tools ->
-        if (!tools.isEnabled || !tools.auditLogging || !tools.auditLogsContainData) {
-            tools
-        } else {
-            tools.copy(auditFiles = tools.auditFiles.map { it.copy(byteCount = 0) })
-        }
+    fun clearDiagnosticRecords(profileId: String): Boolean = updateDiagnostics(profileId) {
+        it.diagnostics.clearRecords()
+    }
+
+    fun dismissDiagnosticsPrompt(profileId: String) {
+        if (uiState.pendingDiagnosticsProfileId != profileId) return
+        updateDiagnostics(profileId) { it.diagnostics.copy(hasSeenPrompt = true) }
+        uiState = uiState.copy(pendingDiagnosticsProfileId = null)
+    }
+
+    private fun updateDiagnostics(profileId: String, transform: (Profile) -> dev.ipf.whitenoise.model.DiagnosticsState): Boolean {
+        if (profileId !in uiState.signedInProfileIds) return false
+        var changed = false
+        uiState = uiState.copy(profiles = uiState.profiles.map { profile ->
+            if (profile.id != profileId) profile else {
+                val diagnostics = transform(profile)
+                changed = diagnostics != profile.diagnostics
+                profile.copy(diagnostics = diagnostics)
+            }
+        })
+        return changed
     }
 
     fun publishKeyPackage(): Boolean = updateDeveloperTools { tools ->
@@ -336,10 +356,15 @@ class AppViewModel : ViewModel() {
     fun markChatUnread(chatId: String, unread: Boolean) {
         mutateChat(chatId) { chat ->
             chat.copy(
-                unreadCount = if (unread) chat.unreadCount else 0,
+                unreadCount = 0,
                 isMarkedUnread = unread,
             )
         }
+    }
+
+    fun undoChatListAction(undo: dev.ipf.whitenoise.model.ChatListUndo) {
+        if (uiState.activeProfileId != undo.profileId) return
+        mutateChat(undo.chatId, undo::restore)
     }
 
     fun markAllChatsRead() {
@@ -1091,6 +1116,9 @@ class AppViewModel : ViewModel() {
             profiles = profiles,
             activeProfileId = profile.id,
             signedInProfileIds = uiState.signedInProfileIds + profile.id,
+            pendingDiagnosticsProfileId = profile.id.takeUnless {
+                profiles.first { candidate -> candidate.id == profile.id }.diagnostics.hasSeenPrompt
+            },
         )
     }
 

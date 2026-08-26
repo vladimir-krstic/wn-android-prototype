@@ -13,11 +13,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -49,29 +49,10 @@ fun ProfileSwitcherSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.switch_profile),
-                    modifier = Modifier.padding(start = 16.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_close),
-                        contentDescription = stringResource(R.string.close),
-                    )
-                }
-            }
-            LazyColumn(modifier = Modifier.heightIn(max = 520.dp)) {
+            WhiteNoiseSheetHeader(stringResource(R.string.switch_profile), onClose = onDismiss)
+            LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 520.dp)) {
                 items(orderedProfiles, key = Profile::id) { profile ->
                     val unreadCount = profile.chats
                         .filter { !it.isArchived && !it.hasEndedMembership }

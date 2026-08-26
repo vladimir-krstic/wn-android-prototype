@@ -8,25 +8,27 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -39,28 +41,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
-import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
+import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
+import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     initialName: String,
@@ -71,8 +75,6 @@ fun SignUpScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val photoErrorText = stringResource(R.string.photo_error)
-    val signingUpDescription = stringResource(R.string.signing_up)
-    val inProgressDescription = stringResource(R.string.wn_in_progress)
     val name = rememberSaveable(initialName, saver = TextFieldState.Saver) {
         TextFieldState(initialText = initialName)
     }
@@ -127,63 +129,49 @@ fun SignUpScreen(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            WhiteNoiseTopBar(
-                title = stringResource(R.string.sign_up),
-                onBack = onBack,
-            )
-        },
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(WhiteNoiseSpacing.PinnedActionInset),
-                contentAlignment = Alignment.Center,
-            ) {
-                WhiteNoiseButton(
-                    onClick = { isSigningUp = true },
-                    enabled = !isSigningUp && !isPreparingPhoto,
-                    modifier = Modifier
-                        .widthIn(max = 520.dp)
-                        .fillMaxWidth()
-                        .semantics {
-                            if (isSigningUp) {
-                                contentDescription = signingUpDescription
-                                stateDescription = inProgressDescription
-                            }
-                        },
-                ) {
-                    if (isSigningUp) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp,
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.sign_up),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_arrow_back),
+                            contentDescription = stringResource(R.string.back),
                         )
-                    } else {
-                        Text(stringResource(R.string.sign_up))
                     }
-                }
-            }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+                scrollBehavior = dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll.current,
+            )
         },
     ) { contentPadding ->
         AdaptiveContent(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding),
+                .padding(contentPadding)
+                .consumeWindowInsets(contentPadding),
         ) {
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .widthIn(max = 520.dp)
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .whiteNoiseVerticalScroll(rememberScrollState())
                     .padding(
                         horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                        vertical = WhiteNoiseSpacing.Section,
+                        vertical = WhiteNoiseSpacing.CompactScreenMargin,
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Section),
@@ -208,52 +196,53 @@ fun SignUpScreen(
                                 ),
                             )
                         }
-                        DropdownMenu(
+                        WhiteNoiseDropdownMenu(
                             expanded = isPhotoMenuOpen,
                             onDismissRequest = { isPhotoMenuOpen = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.choose_photos)) },
-                                onClick = {
-                                    isPhotoMenuOpen = false
-                                    photoPicker.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                                    )
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.choose_files)) },
-                                onClick = {
-                                    isPhotoMenuOpen = false
-                                    filePicker.launch(arrayOf("image/*"))
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.find_web_image)) },
-                                onClick = {
-                                    isPhotoMenuOpen = false
-                                    isWebPickerOpen = true
-                                },
-                            )
-                            if (avatar != null) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = stringResource(R.string.remove_photo),
-                                            color = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    onClick = {
-                                        preparationJob?.cancel()
-                                        isPreparingPhoto = false
-                                        avatar = null
-                                        webChoiceId = null
-                                        photoError = null
-                                        isPhotoMenuOpen = false
-                                    },
+                            items = buildList {
+                                add(
+                                    WhiteNoiseMenuItem(
+                                        label = stringResource(R.string.choose_photos),
+                                        icon = R.drawable.ic_image,
+                                        onClick = {
+                                            photoPicker.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                            )
+                                        },
+                                    ),
                                 )
-                            }
-                        }
+                                add(
+                                    WhiteNoiseMenuItem(
+                                        label = stringResource(R.string.choose_files),
+                                        icon = R.drawable.ic_description,
+                                        onClick = { filePicker.launch(arrayOf("image/*")) },
+                                    ),
+                                )
+                                add(
+                                    WhiteNoiseMenuItem(
+                                        label = stringResource(R.string.find_web_image),
+                                        icon = R.drawable.ic_search,
+                                        onClick = { isWebPickerOpen = true },
+                                    ),
+                                )
+                                if (avatar != null) {
+                                    add(
+                                        WhiteNoiseMenuItem(
+                                            label = stringResource(R.string.remove_photo),
+                                            icon = R.drawable.ic_delete,
+                                            destructive = true,
+                                            onClick = {
+                                                preparationJob?.cancel()
+                                                isPreparingPhoto = false
+                                                avatar = null
+                                                webChoiceId = null
+                                                photoError = null
+                                            },
+                                        ),
+                                    )
+                                }
+                            },
+                        )
                     }
                     if (isPreparingPhoto) {
                         Row(
@@ -305,6 +294,16 @@ fun SignUpScreen(
                             maxHeightInLines = 6,
                         ),
                     )
+                }
+
+                WhiteNoiseButton(
+                    onClick = { isSigningUp = true },
+                    enabled = !isPreparingPhoto,
+                    loading = isSigningUp,
+                    loadingLabel = stringResource(R.string.creating_profile),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.sign_up))
                 }
             }
         }

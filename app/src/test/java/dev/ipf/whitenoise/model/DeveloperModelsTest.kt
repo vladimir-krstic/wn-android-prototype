@@ -9,15 +9,10 @@ import org.junit.Test
 
 class DeveloperModelsTest {
     @Test
-    fun developerFixturesStartLockedWithSanitizedArtifacts() {
+    fun developerFixturesStartLockedWithoutOwningConsent() {
         val tools = ProfileFixtures.marmota.developerTools
         assertFalse(tools.isEnabled)
         assertFalse(tools.debugMode)
-        assertFalse(tools.anonymousTelemetry)
-        assertFalse(tools.auditLogging)
-        assertEquals(2, tools.auditFiles.size)
-        assertEquals(32_000, tools.auditFiles.sumOf(AuditFile::byteCount))
-        assertTrue(tools.auditFiles.none { '/' in it.filename || '\\' in it.filename })
     }
 
     @Test
@@ -25,15 +20,10 @@ class DeveloperModelsTest {
         val enabled = ProfileFixtures.marmota.developerTools.copy(
             isEnabled = true,
             debugMode = true,
-            anonymousTelemetry = true,
-            auditLogging = true,
         )
         val disabled = enabled.withEnabled(false)
         assertFalse(disabled.isEnabled)
         assertFalse(disabled.debugMode)
-        assertFalse(disabled.anonymousTelemetry)
-        assertFalse(disabled.auditLogging)
-        assertEquals(enabled.auditFiles, disabled.auditFiles)
         assertEquals(enabled.keyPackage, disabled.keyPackage)
     }
 

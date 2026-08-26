@@ -1,13 +1,5 @@
 package dev.ipf.whitenoise.model
 
-data class AuditFile(
-    val id: String,
-    val filename: String,
-    val byteCount: Int,
-    val createdLabel: String,
-    val profileName: String,
-)
-
 data class KeyPackage(
     val id: String,
     val published: String,
@@ -27,17 +19,11 @@ data class DiagnosticEvent(
 data class DeveloperToolsState(
     val isEnabled: Boolean = false,
     val debugMode: Boolean = false,
-    val anonymousTelemetry: Boolean = false,
-    val auditLogging: Boolean = false,
-    val auditFiles: List<AuditFile> = emptyList(),
     val keyPackage: KeyPackage = KeyPackage.Fixture,
     val diagnosticEvents: List<DiagnosticEvent> = defaultDiagnosticEvents,
 ) {
     val isConversationDebugEnabled: Boolean
         get() = isEnabled && debugMode
-
-    val auditLogsContainData: Boolean
-        get() = auditFiles.any { it.byteCount > 0 }
 
     fun withEnabled(enabled: Boolean): DeveloperToolsState = if (enabled) {
         copy(isEnabled = true)
@@ -45,8 +31,6 @@ data class DeveloperToolsState(
         copy(
             isEnabled = false,
             debugMode = false,
-            anonymousTelemetry = false,
-            auditLogging = false,
         )
     }
 
@@ -55,25 +39,6 @@ data class DeveloperToolsState(
             DiagnosticEvent("runtime", "18:42:10  runtime started"),
             DiagnosticEvent("relay", "18:42:11  relay connected"),
             DiagnosticEvent("projection", "18:42:12  profile projection ready"),
-        )
-
-        fun fixtures(profileId: String, profileName: String): DeveloperToolsState = DeveloperToolsState(
-            auditFiles = listOf(
-                AuditFile(
-                    id = "audit-$profileId-01",
-                    filename = "audit-$profileId-20260806-01.jsonl",
-                    byteCount = 24_000,
-                    createdLabel = "Aug 6, 2026, 6:47 PM",
-                    profileName = profileName,
-                ),
-                AuditFile(
-                    id = "audit-$profileId-02",
-                    filename = "audit-$profileId-20260805-01.jsonl",
-                    byteCount = 8_000,
-                    createdLabel = "Aug 5, 2026, 5:47 PM",
-                    profileName = profileName,
-                ),
-            ),
         )
     }
 }

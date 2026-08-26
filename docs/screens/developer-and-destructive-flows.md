@@ -12,7 +12,7 @@ different tasks with consequences enforced by the state model.
 ## Scope and non-goals
 
 This batch includes the per-profile Developer Tools gate, Debug Mode,
-Diagnostics, Anonymous Telemetry, Audit Logging/files, Key Packages,
+Diagnostics, retained diagnostic-record inspection, Key Packages,
 conversation debug snapshots, Sign Out with optional active-profile wipe,
 removal of another stored profile, and Erase App Data. No event is streamed,
 uploaded, persisted, or read from Android logs. No account, server data,
@@ -20,17 +20,19 @@ cryptographic material, operating-system app data, or real file is deleted.
 
 ## Parity contract
 
-- Developer Tools starts off per profile. Disabling it also turns off Debug
-  Mode, telemetry, and audit logging, while preserving audit-file metadata,
-  current key package, and diagnostic events.
+- Developer Tools starts off per profile. Disabling it turns off Debug Mode
+  while preserving current key package and diagnostic events. The approved
+  2026-08-26 `4c25393` delta moves consent and retained logs to
+  `Profile.diagnostics`; Developer Tools never changes or gates those choices.
 - Debug Mode is independent of telemetry/logging and adds a conversation-debug
   app-bar action only to Fiatjaf and White Noise Support.
 - Diagnostics is one persistent console with Events, visible Live state,
   deterministic sanitized events, Test, Clear Events, and optional copied
   conversation summary. Empty state remains in the same console container.
-- Audit Logging shows two sanitized inline records without filesystem paths.
-  Turning it off hides but preserves them. Confirmed Clear Audit Logs changes
-  every size to zero while preserving records and enabled state.
+- Developer Tools can inspect retained diagnostic records without filesystem
+  paths even while logging is off. Its Diagnostics & Improvements link opens
+  the consumer settings route, which owns preferences and confirmed clearing.
+  Turning logging off keeps records; clearing zeros sizes and keeps preferences.
 - Key Packages displays exactly one package. Publishing replaces it with the
   deterministic just-published package.
 - Conversation Debug derives lifecycle, member/admin counts, role, epoch,
@@ -62,7 +64,7 @@ returns to Welcome. Erase always returns to Welcome.
 The warning is **For development and testing only** / **These tools can expose
 technical information and change how the app behaves.** Technical labels are
 **Developer Tools**, **Debug Mode**, **Diagnostics**, **Key Packages**,
-**Anonymous Telemetry**, **Audit Logging**, **Clear Audit Logs**, **Events**,
+**Diagnostics & Improvements**, **Diagnostic logs**, **Events**,
 and **Live**. Destructive tasks are **Sign Out**, **Wipe Data From This
 Device**, **Remove Profile**, and **Erase App Data**. The erase warning is
 **This can’t be undone** and helper is **Enter the three words exactly to
@@ -78,20 +80,25 @@ monospaced supporting text and explicit copy rows. Key publication is the one
 pinned task on its destination.
 
 Full-height `ModalBottomSheet` surfaces contain the multi-field Sign Out and
-Erase confirmation tasks. They use a standard close action, scrollable task
+Erase confirmation tasks. The 2026-08-26 shared refinement uses continuous
+surfaceContainerLow and `WhiteNoiseSheetHeader` with titleLarge, wrapping
+titles, 24 dp margins, 8 dp body gap and a trailing native Close. No extra top
+spacer follows the Material handle. They retain a scrollable task
 body, label-above tonal fields with content-line alignment and explicit
 focus/error rings, and one pinned semantic-error action;
 dismissal stays disabled during progress. A focused `AlertDialog` owns the
-smaller Remove Profile and Clear Audit Logs confirmations. The generated erase
+smaller Remove Profile confirmation. Clear Diagnostic Logs now belongs to the
+consumer privacy destination. The generated erase
 phrase is selectable, and Manage Profiles groups only inactive identities
 without adding an action to the active profile.
 
 ## Behavior and state
 
-All developer fields and artifacts are immutable values under the active
-`Profile`. View-model mutations reject child changes while the gate is off,
-reject audit clearing unless logging is visible and nonempty, and replace
-rather than append key packages. Conversation snapshots derive from current
+All developer fields are immutable values under the active `Profile`.
+View-model mutations reject debug/console/key-package changes while the gate
+is off, and replace rather than append key packages. Consent/log clearing
+uses a separate profile-owned state and does not require Developer Tools or
+enabled logging. Conversation snapshots derive from current
 chat membership/role/relay state on every read. Exit mutations atomically
 update `profiles`, `signedInProfileIds`, and `activeProfileId`; no screen owns a
 shadow copy of those consequences.
@@ -148,10 +155,11 @@ communicate the state without distraction.
 
 - Profile switching immediately changes the developer gate, child preferences,
   artifacts, and debug-action availability.
-- Disabling tools preserves files/package/events but stops all child features.
+- Disabling tools preserves consent/records/package/events and stops debug
+  features; it does not disable analytics or logging choices.
 - Clearing diagnostics leaves a visible No Events console; Test adds one
   deterministic event.
-- Clearing audit content leaves two zero-byte rows and logging enabled.
+- Clearing diagnostic content leaves zero-byte records and logging unchanged.
 - Exactly one key package exists before and after publish.
 - Debug summaries contain no message, public/private key, profile, or derived
   group-identifier value.

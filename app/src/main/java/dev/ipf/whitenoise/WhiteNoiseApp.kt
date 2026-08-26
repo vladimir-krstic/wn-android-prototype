@@ -4,8 +4,18 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -32,10 +42,38 @@ fun WhiteNoiseApp(
     }
     WhiteNoiseTheme(appearance = appViewModel.uiState.activeProfile?.settings?.appearance
         ?: dev.ipf.whitenoise.model.AppearancePreference.System) {
-        WhiteNoiseNavHost(
-            navController = navController,
-            appViewModel = appViewModel,
+        val focusManager = LocalFocusManager.current
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clearFocusOnBackgroundTap(focusManager),
+        ) {
+            WhiteNoiseNavHost(
+                navController = navController,
+                appViewModel = appViewModel,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * Clears text focus only after descendants leave a complete tap unconsumed.
+ *
+ * Material controls and scroll gestures consume their input first. Waiting on the final pointer
+ * pass keeps this app-shell behavior passive and prevents it from competing with those controls.
+ */
+private fun Modifier.clearFocusOnBackgroundTap(
+    focusManager: FocusManager,
+): Modifier = pointerInput(focusManager) {
+    awaitEachGesture {
+        awaitFirstDown(
+            requireUnconsumed = true,
+            pass = PointerEventPass.Final,
         )
+        if (waitForUpOrCancellation(pass = PointerEventPass.Final) != null) {
+            focusManager.clearFocus()
+        }
     }
 }
 

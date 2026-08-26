@@ -1,10 +1,15 @@
 package dev.ipf.whitenoise
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -48,7 +53,7 @@ class ChatsScreenTest {
         }
 
         composeRule.onNodeWithText("Direct - Text & Delivery").assertIsDisplayed()
-        composeRule.onNodeWithText("New Message").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("New Message").assertIsDisplayed()
         composeRule.onNodeWithText("Read All").assertIsNotDisplayed()
     }
 
@@ -78,8 +83,13 @@ class ChatsScreenTest {
         composeRule.runOnIdle { check(settingsOpened) }
 
         composeRule.onNodeWithContentDescription("Filter Chats").performClick()
+        composeRule.onNode(hasText("Chats").and(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)))
+            .assertIsSelected()
         composeRule.onNodeWithText("Unread").performClick()
         composeRule.onNodeWithText("Unread").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Filter Chats").performClick()
+        composeRule.onNode(hasText("Unread").and(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)))
+            .assertIsSelected().performClick()
 
         composeRule.onNodeWithContentDescription("Search Chats").performClick()
         composeRule.onNode(hasSetTextAction()).performTextInput("not a fixture")
@@ -182,6 +192,9 @@ class ChatsScreenTest {
         composeRule.onNodeWithText("Choose from Photos").assertIsDisplayed()
         composeRule.onNodeWithText("Choose from Files").assertIsDisplayed()
         composeRule.onNodeWithText("Find Image on Web").assertIsDisplayed()
+        composeRule.onNodeWithText("Find Image on Web").performClick()
+        composeRule.onNodeWithText("Choose from Photos").assertDoesNotExist()
+        composeRule.onNodeWithText("Search privacy").assertIsDisplayed()
     }
 
     @Test
