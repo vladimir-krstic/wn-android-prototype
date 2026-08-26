@@ -23,10 +23,6 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.WhiteNoise.Splash">
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="barcode_ui" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true">

@@ -50,6 +50,22 @@ active pane.
 
 ## Settings overview
 
+- The Settings root uses `surfaceContainerLow` for its neutral canvas and
+  `surfaceContainerLowest` for white-equivalent cards. The pinned app bar uses
+  the canvas tone at rest and `surfaceContainer` under scroll. The hierarchy
+  remains semantic in dark mode rather than substituting literal colors.
+- One rounded profile card contains the 56 dp active-profile row and a native
+  one-line profile-management `ListItem`, separated by a two-dp
+  `surfaceContainerLow` surface gap. With no alternate it uses the official
+  `person_add` symbol and reads Add Profile. With alternates it reads Switch
+  Profile, previews one 32 dp avatar or at most three overlapping 32 dp avatars
+  plus a true 32 dp circular `+N` remainder slot, and expands in place. It is
+  not an outlined or contained button.
+- Expanded inactive profiles use native two-line rows with 48 dp avatars,
+  shortened keys and aggregate monochrome `primary`/`onPrimary` unread badges
+  capped at `99+`. Add Profile is the final row. The same surface gap separates
+  every row in the expanded group. Back collapses the card before navigating
+  away.
 - Main Settings destinations use Material's native one-line `ListItem`
   measurement rather than a custom fixed row height. In the current component
   this yields the standard 56 dp minimum while remaining free to grow for font
@@ -57,16 +73,30 @@ active pane.
 - Each destination uses one 24 dp leading Material Symbol and the standard
   trailing disclosure slot. The icon is a noninteractive signifier inside the
   row, not a separate touch target.
-- A heading above a tonal settings group starts 32 dp from the screen edge:
+- Root destination and Help groups place a two-dp `surfaceContainerLow` gap
+  between adjacent transparent `ListItem`s. The gap spans the card width and
+  mirrors the page canvas, so a group reads as one white-equivalent surface
+  with visible separation rather than a stack of individually outlined
+  controls.
+- The consolidated seven-destination root group and the Help destination group
+  have no visible headings. Wherever a Settings section label remains on a
+  detail screen, it starts 32 dp from the screen edge:
   the 16 dp compact margin plus the list item's 16 dp internal content inset.
   This aligns the heading with leading icons on the overview and with row text
   on icon-free detail lists; it does not align to the outer container edge.
 - Do not add supporting text when the headline already names the destination.
-  Keep it only for an actionable unavailable reason. A short current value may
-  sit in the trailing slot with an 8 dp gap before the disclosure chevron.
+  Keep it only for an actionable unavailable reason. The Appearance choice is
+  intentionally absent from the root and remains visible/selectable inside
+  Appearance.
 - Material continues to own list-item content padding, typography, state
   layer, minimum target size, and adaptation. Directional disclosure and exit
   symbols mirror in right-to-left layouts.
+- The retained modal profile switcher uses native 48 dp two-line rows. The
+  active row receives
+  the selected container and 24 dp check; inactive unread badges use the same
+  monochrome `primary`/`onPrimary` roles as Chats, expand with text, and cap at
+  `99+`. Its full-width Add Profile action remains below the list rather than
+  scrolling with it.
 
 ## Welcome mark and system splash
 
@@ -92,6 +122,42 @@ Android's system splash remains independently platform-sized: the visible
 canvas. Welcome no longer matches that size or position. This user-approved
 layout supersedes the splash-matching requirement in WN-ANDROID-0019; do not
 enlarge or reposition the system splash to imitate the Welcome composition.
+
+## Share & Connect
+
+- The route uses a center-aligned **Share & Connect** app-bar title. Back and
+  Share keep native 48 dp icon targets; no segmented control or button group is
+  present because the page has one stable identity state and one scanner task.
+- The identity composition is proportional within the adaptive pane rather than
+  tied to one device screenshot. The avatar uses 32% of the pane width clamped
+  to 104–152 dp. The QR technical surface uses 81% clamped to 248–376 dp,
+  retains its square aspect, omits ZXing's internal quiet-zone modules on this
+  screen only, and has exactly 12 dp of app-owned white padding around the
+  encoded matrix. The caption begins 1 dp below that technical surface. The
+  public-key target-to-QR relationship gap is 16 dp. At compact width the
+  content uses the shared 16 dp margin; the entire composition scrolls for
+  large text and short windows.
+- The QR technical surface uses the theme's 16 dp `large` corner shape rather
+  than the 28 dp `extraLarge` container shape. The smaller radius keeps the
+  white frame soft without visually rounding the QR matrix itself.
+- Name, optional verified address and public key remain one identity cluster.
+  The verified address uses the official 20 dp filled rounded `verified` seal.
+  Name and address use their native line metrics without an added gap; the
+  public-key target begins 4 dp below the address. The copy capsule is visibly
+  32 dp high at default text scale, using 25 dp horizontal and 8 dp vertical
+  content padding around `bodySmall` text and a 16 dp copy/check icon. It is
+  centered inside a transparent 48 dp semantic target. The target owns input,
+  while its shared interaction source renders the bounded state layer only in
+  the visible capsule's clipped shape.
+  The QR is the only literal white/black surface so it stays theme-independent
+  and reliably scannable.
+- A full-content-width standard primary **Scan QR Code** button is pinned to the
+  bottom of the active pane with the shared 16 dp action inset plus the device
+  navigation safe area. It keeps the shared 56 dp task height and official
+  24 dp scanner icon. It opens the
+  shared 94% near-full scanner sheet with its existing handle/header, rounded
+  target, permission, torch, system Back and swipe-dismiss metrics. Dismissal
+  returns to the stable identity page.
 
 ## Web-image task sheet
 
@@ -194,8 +260,10 @@ enlarge or reposition the system splash to imitate the Welcome composition.
 
 ## Ordinary Material sheets
 
-- `WhiteNoiseModalBottomSheet` uses one continuous `surfaceContainerLow`:
-  #F3F3F3 in light mode, #171717 in dark. Ordinary `ListItem` containers are
+- `WhiteNoiseModalBottomSheet` uses one continuous `surfaceContainer`:
+  #EFEFEF in light mode, #1E1E1E in dark. This one-step-stronger neutral makes
+  the modal surface visibly gray over its scrim while staying in the same
+  semantic Material hierarchy as the Settings canvas. Ordinary `ListItem` containers are
   transparent; intentional selected/tonal groups, fields and errors remain.
 - Material owns width, top corners, handle, motion, drag and dismissal. Its
   native 32×4 dp handle and 22 dp vertical padding already form a 48 dp slot.
@@ -209,6 +277,13 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   scrollable duration rows and Cancel. Ordinary short choices no longer need
   a large separate mute sheet. Specialized camera/media and system UI are
   excluded from these surface/header rules.
+- The first-login diagnostics prompt keeps the header's directional 24 dp
+  content line for its intro, switch labels/trailing controls and privacy copy.
+  Each 56 dp switch target has an 8 dp transparent outer inset, clips its
+  native Material state layer to `MaterialTheme.shapes.large`, and uses 16 dp
+  internal horizontal padding. The combined 8 + 16 dp geometry preserves the
+  shared 24 dp grid while preventing pressed feedback from becoming an
+  edge-to-edge rectangular band.
 
 ## Governing Android sources
 

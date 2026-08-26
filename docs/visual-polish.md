@@ -187,7 +187,8 @@ not raw values:
 | Window and ordinary list background | `surface` / `background` | Quiet base with generous open space |
 | Subtle grouped content | `surfaceContainerLow` | Settings groups, bounded supporting regions, form fill |
 | Standard contained region | `surfaceContainer` | Secondary grouped content where low is insufficient |
-| Expressive menus and ordinary sheets | `surfaceContainerLow` | Native standard menu surface and approved shared sheet surface; component-owned shadow only |
+| Expressive menus | `surfaceContainerLow` | Native standard menu surface; component-owned shadow only |
+| Ordinary app-owned sheets | `surfaceContainer` | Visibly neutral shared modal surface; Material-owned shape, handle and shadow |
 | Other raised transient content | Component default | Preserve each native dialog/tooltip's own hierarchy instead of forcing one surface role |
 | Strong selected or primary emphasis | `primaryContainer` + `onPrimaryContainer` | Selected filter action, strong active states, limited hero containment |
 | Primary task action | `primary` + `onPrimary` | One obvious task action per screen or task boundary |

@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import android.view.View
+import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -96,6 +97,43 @@ internal fun PrivateKeyQrScannerSheet(
     onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    QrScannerSheet(
+        onDismiss = onDismiss,
+        onCodeScanned = onCodeScanned,
+        onUnavailable = onUnavailable,
+        titleRes = R.string.scan_qr_code,
+        permissionDetailRes = R.string.camera_permission_detail,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun ProfileQrScannerSheet(
+    onDismiss: () -> Unit,
+    onCodeScanned: (String) -> Unit,
+    onUnavailable: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    QrScannerSheet(
+        onDismiss = onDismiss,
+        onCodeScanned = onCodeScanned,
+        onUnavailable = onUnavailable,
+        titleRes = R.string.scan_profile_code,
+        permissionDetailRes = R.string.profile_camera_permission_detail,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QrScannerSheet(
+    onDismiss: () -> Unit,
+    onCodeScanned: (String) -> Unit,
+    onUnavailable: () -> Unit,
+    @StringRes titleRes: Int,
+    @StringRes permissionDetailRes: Int,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -159,10 +197,13 @@ internal fun PrivateKeyQrScannerSheet(
                     onDismiss = onDismiss,
                     onCodeScanned = onCodeScanned,
                     onUnavailable = onUnavailable,
+                    titleRes = titleRes,
                 )
             } else {
                 PermissionScannerContent(
                     onDismiss = onDismiss,
+                    titleRes = titleRes,
+                    permissionDetailRes = permissionDetailRes,
                     isRequestPending = !permissionRequestFinished,
                     openSettings = permissionRequestFinished &&
                         activity?.let {
@@ -193,6 +234,7 @@ private fun CameraScannerContent(
     onDismiss: () -> Unit,
     onCodeScanned: (String) -> Unit,
     onUnavailable: () -> Unit,
+    @StringRes titleRes: Int,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -276,6 +318,7 @@ private fun CameraScannerContent(
 
         ScannerHeader(
             onDismiss = onDismiss,
+            titleRes = titleRes,
             hasFlashUnit = hasFlashUnit,
             torchEnabled = torchEnabled,
             onToggleTorch = {
@@ -297,6 +340,8 @@ private fun CameraScannerContent(
 @Composable
 private fun PermissionScannerContent(
     onDismiss: () -> Unit,
+    @StringRes titleRes: Int,
+    @StringRes permissionDetailRes: Int,
     isRequestPending: Boolean,
     openSettings: Boolean,
     onRequestPermission: () -> Unit,
@@ -331,7 +376,7 @@ private fun PermissionScannerContent(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        text = stringResource(R.string.camera_permission_detail),
+                        text = stringResource(permissionDetailRes),
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                     )
@@ -354,6 +399,7 @@ private fun PermissionScannerContent(
 
         ScannerHeader(
             onDismiss = onDismiss,
+            titleRes = titleRes,
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }
@@ -363,6 +409,7 @@ private fun PermissionScannerContent(
 @Composable
 private fun ScannerHeader(
     onDismiss: () -> Unit,
+    @StringRes titleRes: Int,
     modifier: Modifier = Modifier,
     hasFlashUnit: Boolean = false,
     torchEnabled: Boolean = false,
@@ -393,7 +440,7 @@ private fun ScannerHeader(
                 .padding(top = 16.dp),
             title = {
                 Text(
-                    text = stringResource(R.string.scan_qr_code),
+                    text = stringResource(titleRes),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

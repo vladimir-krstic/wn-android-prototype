@@ -105,4 +105,14 @@ class ProfileSettingsTest {
         val bitmap = BinaryBitmap(HybridBinarizer(RGBLuminanceSource(width, height, pixels)))
         assertEquals(value, QRCodeReader().decode(bitmap).text)
     }
+
+    @Test
+    fun shareProfileCodeCanUseOnlyItsExternalFrame() {
+        val value = ProfileFixtures.marmota.publicKey
+        val defaultMatrix = qrMatrix(value)
+        val tightlyFramedMatrix = qrMatrix(value, marginModules = 0)
+
+        assertEquals(defaultMatrix.width - 4, tightlyFramedMatrix.width)
+        assertEquals(defaultMatrix.height - 4, tightlyFramedMatrix.height)
+    }
 }

@@ -29,9 +29,13 @@ remain unchanged. Relevant delta paths:
 - `WhiteNoisePrototype/Screens/Shared/DiagnosticsAndImprovementsViews.swift`
 - `WhiteNoisePrototype/Screens/Chats/ChatsView.swift`, `NativeChatList.swift`,
   `ChatListRow.swift`, and `ChatListItem.swift`
+- `WhiteNoisePrototype/Screens/Settings/SettingsView.swift` and
+  `WhiteNoisePrototypeTests/ProfileLifecycleTests.swift` for the explicitly
+  approved Settings-hub/profile-switching follow-up
 
-Android contracts are in `docs/screens/chats-and-chat-creation.md` and
-`docs/screens/diagnostics-and-improvements.md`. No other upstream drift is
+Android contracts are in `docs/screens/chats-and-chat-creation.md`,
+`docs/screens/diagnostics-and-improvements.md`, and
+`docs/screens/settings-and-profile-services.md`. No other upstream drift is
 implicitly accepted.
 
 Use this map to select evidence, not to derive Android package names or port
@@ -69,7 +73,7 @@ Swift types one-for-one.
 | Conversation search | `docs/screens/conversation-search.md` | `Screens/Conversation/ConversationView.swift` | Search model/UI tests |
 | Chat and Group Info | `docs/screens/chat-info.md`, `group-info.md`, `person-profile.md` | `Screens/Conversation/ChatInfoView.swift`; `Screens/Chats/NewChatView.swift` for shared profile/group surfaces | Membership, role, relay, metadata, media-index, and leave tests |
 | Settings hub | `docs/screens/settings.md` | `Screens/Settings/SettingsView.swift` | `PrototypeSettingsState.swift`, `ProfileLifecycleTests.swift` |
-| Share & Connect | Settings brief section plus verified-address brief | `Screens/Settings/ShareAndConnectView.swift`, `Screens/Shared/ShareableCodeViews.swift`, `QRCodeImageGenerator.swift`, `Screens/Settings/ProfileCodeScannerView.swift` | Profile/QR assets and lifecycle tests |
+| Share & Connect | Settings brief section plus verified-address brief | `Screens/Settings/ShareAndConnectView.swift`, `Screens/Shared/ShareableCodeViews.swift`, `QRCodeImageGenerator.swift`, `Screens/Settings/ProfileCodeScannerView.swift` | Android `ShareConnectScreen.kt`, shared `PrivateKeyQrScannerScreen.kt`, `SettingsScreenTest`; iOS Profile/QR assets and lifecycle tests |
 | Profile and keys | Settings brief sections | `Screens/Settings/ProfileSettingsView.swift`, `ProfileKeysSettingsView.swift` | `ProfileLifecycleTests.swift`, `AvatarImageTests.swift` |
 | Preferences | Settings brief: Notifications, Appearance, Data Usage | `Screens/Settings/PreferenceSettingsViews.swift` | `PrototypeSettingsState.swift` |
 | Privacy and relays | Settings brief: Privacy & Security, Relays | `Screens/Settings/PrivacyAndRelaySettingsViews.swift`, `Components/RelayWarningLink.swift` | `WhiteNoisePrototypeTests/RelayAvailabilityTests.swift` |

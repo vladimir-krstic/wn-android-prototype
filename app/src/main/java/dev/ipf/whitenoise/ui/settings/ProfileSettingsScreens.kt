@@ -3,25 +3,29 @@ package dev.ipf.whitenoise.ui.settings
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import androidx.annotation.DrawableRes
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,7 +35,10 @@ import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -45,10 +52,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -61,9 +70,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
@@ -104,122 +110,150 @@ fun SettingsScreen(
     onRelays: () -> Unit,
     onSupport: () -> Unit,
     onDonate: () -> Unit,
-    onManageProfiles: () -> Unit,
     onDeveloperTools: () -> Unit,
     onSignOut: (Boolean) -> Unit,
     initiallyShowSwitcher: Boolean = false,
 ) {
     val profile = uiState.activeProfile ?: return
     val canEditProfile = ProfileSettingsPolicy.canPublishProfile(profile.settings)
+    val management = profileManagementPresentation(
+        profiles = uiState.signedInProfiles,
+        activeProfileId = uiState.activeProfileId,
+    )
+    val alternateProfiles = profileSwitcherPresentation(
+        profiles = uiState.signedInProfiles,
+        activeProfileId = uiState.activeProfileId,
+    ).filterNot { it.isActive }
+    var profileCardExpanded by rememberSaveable(profile.id) { mutableStateOf(false) }
     var switcherOpen by remember(initiallyShowSwitcher) { mutableStateOf(initiallyShowSwitcher) }
     var signOutOpen by remember { mutableStateOf(false) }
+    BackHandler(
+        enabled = profileCardExpanded && management != ProfileManagementPresentation.Add,
+    ) {
+        profileCardExpanded = false
+    }
     SettingsScaffold(
         title = "Settings",
         onBack = onBack,
         prominentTitle = true,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        topBarContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        topBarScrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         SettingsList {
             item {
                 SettingsProfileHeader(
                     profile = profile,
-                    profileCount = uiState.signedInProfiles.size,
+                    management = management,
+                    alternateProfiles = alternateProfiles,
+                    expanded = profileCardExpanded && management != ProfileManagementPresentation.Add,
                     onShareConnect = onShareConnect,
                     onProfileManagement = {
-                        if (uiState.signedInProfiles.size > 1) {
-                            switcherOpen = true
-                        } else {
+                        if (management == ProfileManagementPresentation.Add) {
                             onAddProfile()
+                        } else {
+                            profileCardExpanded = !profileCardExpanded
                         }
+                    },
+                    onSelectProfile = {
+                        profileCardExpanded = false
+                        onSelectProfile(it)
+                    },
+                    onAddProfile = {
+                        profileCardExpanded = false
+                        onAddProfile()
                     },
                 )
             }
-            item { SettingsSection("Profile") }
             item {
-                SettingsGroup {
+                SettingsGroup(
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ) {
                     SettingsHubLink(
                         title = "Profile",
-                        icon = R.drawable.ic_settings_profile,
+                        icon = R.drawable.ic_settings_account_circle,
                         iconTag = "profile",
                         onClick = onEditProfile,
                         subtitle = if (canEditProfile) null else "Choose a connected Profile relay to edit",
                         enabled = canEditProfile,
                     )
+                    SettingsDivider(Modifier.testTag("settings.destinations.divider.0"))
                     SettingsHubLink(
                         title = "Profile Keys",
                         icon = R.drawable.ic_settings_key,
                         iconTag = "profile_keys",
                         onClick = onProfileKeys,
                     )
-                    SettingsHubLink(
-                        title = "Manage Profiles",
-                        icon = R.drawable.ic_settings_manage_accounts,
-                        iconTag = "manage_profiles",
-                        onClick = onManageProfiles,
-                    )
-                }
-            }
-            item { SettingsSection("Preferences") }
-            item {
-                SettingsGroup {
+                    SettingsDivider()
                     SettingsHubLink(
                         title = "Notifications",
                         icon = R.drawable.ic_settings_notifications,
                         iconTag = "notifications",
                         onClick = onNotifications,
                     )
+                    SettingsDivider()
                     SettingsHubLink(
                         title = "Appearance",
-                        icon = R.drawable.ic_settings_palette,
+                        icon = R.drawable.ic_settings_contrast,
                         iconTag = "appearance",
                         onClick = onAppearance,
-                        value = profile.settings.appearance.label,
                     )
+                    SettingsDivider()
                     SettingsHubLink(
                         title = "Privacy & Security",
-                        icon = R.drawable.ic_settings_shield,
+                        icon = R.drawable.ic_settings_front_hand,
                         iconTag = "privacy_security",
                         onClick = onPrivacy,
                     )
+                    SettingsDivider()
                     SettingsHubLink(
                         title = "Data Usage",
-                        icon = R.drawable.ic_settings_data_usage,
+                        icon = R.drawable.ic_settings_hard_drive,
                         iconTag = "data_usage",
                         onClick = onDataUsage,
                     )
+                    SettingsDivider()
                     SettingsHubLink(
                         title = "Relays",
-                        icon = R.drawable.ic_settings_hub,
+                        icon = R.drawable.ic_settings_cell_tower,
                         iconTag = "relays",
                         onClick = onRelays,
                     )
                 }
             }
-            item { SettingsSection("Help") }
             item {
-                SettingsGroup {
+                SettingsGroup(
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ) {
                     SettingsHubLink(
                         title = "Chat with support",
-                        icon = R.drawable.ic_settings_chat,
+                        icon = R.drawable.ic_settings_chat_bubble_outline,
                         iconTag = "support",
                         onClick = onSupport,
                     )
+                    SettingsDivider(Modifier.testTag("settings.help.divider.0"))
                     SettingsHubLink(
                         title = "Donate",
-                        icon = R.drawable.ic_settings_favorite,
+                        icon = R.drawable.ic_settings_favorite_border,
                         iconTag = "donate",
                         onClick = onDonate,
                     )
+                    SettingsDivider()
                     SettingsHubLink(
                         title = "Developer Tools",
-                        icon = R.drawable.ic_settings_developer_mode,
+                        icon = R.drawable.ic_settings_handyman,
                         iconTag = "developer_tools",
                         onClick = onDeveloperTools,
                     )
                 }
             }
-            item { SettingsSection("Session") }
             item {
-                SettingsGroup {
+                SettingsGroup(
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ) {
                     SettingsHubLink(
                         title = "Sign Out",
                         icon = R.drawable.ic_settings_logout,
@@ -229,7 +263,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            item { SettingsExplainer("White Noise for Android · Version 0.1") }
+            item { SettingsVersionFooter("0.1") }
         }
     }
     if (switcherOpen) {
@@ -295,219 +329,290 @@ private fun SettingsHubLink(
 @Composable
 private fun SettingsProfileHeader(
     profile: Profile,
-    profileCount: Int,
+    management: ProfileManagementPresentation,
+    alternateProfiles: List<ProfileSwitcherPresentation>,
+    expanded: Boolean,
     onShareConnect: () -> Unit,
     onProfileManagement: () -> Unit,
+    onSelectProfile: (String) -> Unit,
+    onAddProfile: () -> Unit,
 ) {
     val shareDescription = stringResource(R.string.open_share_connect_for, profile.name)
-    Surface(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                vertical = WhiteNoiseSpacing.Related,
-            ),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+            .padding(vertical = WhiteNoiseSpacing.Related)
+            .testTag("settings.profile_group"),
     ) {
-        Column(modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin)) {
-            Row(
+        SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = profile.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                },
+                supportingContent = {
+                    Text(
+                        text = profile.shortPublicKey,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                leadingContent = {
+                    ProfileAvatar(
+                        name = profile.name,
+                        avatar = profile.avatar,
+                        modifier = Modifier.size(56.dp),
+                        contentDescription = null,
+                    )
+                },
+                trailingContent = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_settings_qr_code_2),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.ic_chevron_right),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onShareConnect)
-                    .padding(vertical = WhiteNoiseSpacing.Related)
+                    .testTag("settings.active_profile")
                     .semantics(mergeDescendants = true) {
                         contentDescription = shareDescription
                         role = Role.Button
                     },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+            )
+            SettingsDivider(Modifier.testTag("settings.profile.divider"))
+            ProfileManagementRow(
+                presentation = management,
+                expanded = expanded,
+                onClick = onProfileManagement,
+            )
+            AnimatedVisibility(
+                visible = expanded && management != ProfileManagementPresentation.Add,
             ) {
-                ProfileAvatar(
-                    name = profile.name,
-                    avatar = profile.avatar,
-                    modifier = Modifier.size(72.dp),
-                    contentDescription = null,
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = profile.name,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    Text(
-                        text = profile.nostrAddress.ifBlank { profile.shortPublicKey },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = "Share & Connect",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.labelLarge,
+                Column {
+                    SettingsDivider()
+                    alternateProfiles.forEachIndexed { index, alternate ->
+                        InlineAlternateProfileRow(
+                            presentation = alternate,
+                            onClick = { onSelectProfile(alternate.profile.id) },
+                        )
+                        if (index < alternateProfiles.lastIndex) {
+                            SettingsDivider()
+                        }
+                    }
+                    SettingsDivider()
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.add_profile)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings_person_add),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onAddProfile)
+                            .testTag("settings.profile.add_profile")
+                            .semantics { role = Role.Button },
                     )
                 }
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            WhiteNoiseOutlinedButton(
-                onClick = onProfileManagement,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (profileCount > 1) "Switch Profile" else "Add Profile")
             }
         }
     }
 }
 
 @Composable
-fun ShareConnectScreen(profile: Profile, onBack: () -> Unit) {
-    val context = LocalContext.current
-    var foundProfile by remember { mutableStateOf<Profile?>(null) }
-    var scannerError by remember { mutableStateOf<String?>(null) }
-    val scanner = remember(context) {
-        val options = GmsBarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .allowManualInput()
-            .enableAutoZoom()
-            .build()
-        GmsBarcodeScanning.getClient(context, options)
-    }
-    fun startScan() {
-        scannerError = null
-        scanner.startScan()
-            .addOnSuccessListener { foundProfile = demoFoundProfile() }
-            .addOnFailureListener { scannerError = "Scanner unavailable. Choose the profile below instead." }
-    }
-    SettingsScaffold(title = "Share & Connect", onBack = onBack) {
-        SettingsList {
-            item {
-                Column(
+private fun ProfileManagementRow(
+    presentation: ProfileManagementPresentation,
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    val isAdd = presentation == ProfileManagementPresentation.Add
+    ListItem(
+        headlineContent = {
+            Text(
+                text = if (isAdd) {
+                    stringResource(R.string.add_profile)
+                } else {
+                    stringResource(R.string.switch_profile)
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingContent = {
+            if (isAdd) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_settings_person_add),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+            } else {
+                when (presentation) {
+                    ProfileManagementPresentation.Add -> Unit
+                    is ProfileManagementPresentation.SingleAlternate -> ProfileAvatar(
+                        name = presentation.profile.name,
+                        avatar = presentation.profile.avatar,
+                        modifier = Modifier.size(32.dp),
+                        contentDescription = null,
+                    )
+                    is ProfileManagementPresentation.MultipleAlternates -> ProfilePreviewStack(
+                        profiles = presentation.previewProfiles,
+                        remainingCount = presentation.remainingCount,
+                    )
+                }
+            }
+        },
+        trailingContent = if (isAdd) {
+            null
+        } else {
+            {
+                Icon(
+                    painter = painterResource(R.drawable.ic_expand_more),
+                    contentDescription = null,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                            vertical = WhiteNoiseSpacing.Section,
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                        .size(24.dp)
+                        .rotate(if (expanded) 180f else 0f),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .testTag("settings.profile_management")
+            .semantics { role = Role.Button },
+    )
+}
+
+@Composable
+private fun InlineAlternateProfileRow(
+    presentation: ProfileSwitcherPresentation,
+    onClick: () -> Unit,
+) {
+    val profile = presentation.profile
+    val unreadDescription = if (presentation.unreadCount > 99) {
+        stringResource(R.string.unread_count_capped)
+    } else {
+        pluralStringResource(
+            R.plurals.unread_count,
+            presentation.unreadCount,
+            presentation.unreadCount,
+        )
+    }
+    ListItem(
+        headlineContent = {
+            Text(
+                text = profile.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = profile.shortPublicKey,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        leadingContent = {
+            ProfileAvatar(
+                name = profile.name,
+                avatar = profile.avatar,
+                modifier = Modifier.size(48.dp),
+                contentDescription = null,
+            )
+        },
+        trailingContent = {
+            if (presentation.unreadCount > 0) {
+                Badge(
+                    modifier = Modifier.semantics {
+                        contentDescription = unreadDescription
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ) {
-                    Text("Share your profile", style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        "Let someone scan this code, or share your profile through Android.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Surface(
-                        modifier = Modifier
-                            .padding(vertical = WhiteNoiseSpacing.Related)
-                            .widthIn(max = 260.dp)
-                            .fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        color = Color.White,
-                    ) {
-                        ProfileCode(
-                            value = profile.publicKey,
-                            modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
-                        )
-                    }
-                    Text(profile.name, style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        profile.nostrAddress.ifBlank { profile.shortPublicKey },
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(if (presentation.unreadCount > 99) "99+" else presentation.unreadCount.toString())
                 }
             }
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    WhiteNoiseButton(
-                        onClick = {
-                            val send = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "Connect with ${profile.name} on White Noise:\n${profile.publicKey}")
-                            }
-                            context.startActivity(Intent.createChooser(send, "Share profile"))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Share with Android") }
-                    WhiteNoiseOutlinedButton(
-                        onClick = { copyToClipboard(context, "Public key", profile.publicKey) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Copy public key") }
-                }
-            }
-            item { SettingsSection("Connect with someone") }
-            item {
-                SettingsGroup {
-                    SettingsAction(
-                        title = "Scan profile code",
-                        subtitle = "Use Android’s system-delivered code scanner.",
-                        onClick = ::startScan,
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_qr_code),
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                    SettingsAction(
-                        title = "Open Quill",
-                        subtitle = "View a profile connection result.",
-                        onClick = { foundProfile = demoFoundProfile() },
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_person),
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                }
-            }
-            scannerError?.let { message ->
-                item { SettingsCallout(text = message, title = "Couldn’t open scanner", isError = true) }
-            }
-            item {
-                SettingsExplainer(
-                    "The system scanner does not request camera permission from White Noise.",
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .testTag("settings.profile.alternate.${profile.id}")
+            .semantics { role = Role.Button },
+    )
+}
+
+@Composable
+private fun ProfilePreviewStack(
+    profiles: List<Profile>,
+    remainingCount: Int,
+) {
+    val avatarSpacing = 22.dp
+    val visibleSlotCount = profiles.size + if (remainingCount > 0) 1 else 0
+    Box(
+        modifier = Modifier
+            .width(32.dp + avatarSpacing * (visibleSlotCount - 1).coerceAtLeast(0))
+            .height(32.dp),
+    ) {
+        profiles.forEachIndexed { index, alternate ->
+            Surface(
+                modifier = Modifier.offset(x = avatarSpacing * index),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                ProfileAvatar(
+                    name = alternate.name,
+                    avatar = alternate.avatar,
+                    modifier = Modifier.size(32.dp),
+                    contentDescription = null,
                 )
             }
         }
-    }
-    foundProfile?.let { found ->
-        AlertDialog(
-            onDismissRequest = { foundProfile = null },
-            title = { Text("Profile found") },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    ProfileAvatar(found.name, found.avatar, Modifier.size(72.dp), contentDescription = null)
-                    Spacer(Modifier.height(12.dp))
-                    Text(found.name, style = MaterialTheme.typography.titleMedium)
-                    Text(found.nostrAddress)
-                    Text(found.shortPublicKey, style = MaterialTheme.typography.bodySmall)
+        if (remainingCount > 0) {
+            Surface(
+                modifier = Modifier
+                    .offset(x = avatarSpacing * profiles.size)
+                    .size(32.dp)
+                    .testTag("settings.profile.preview_remaining"),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "+$remainingCount",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
-            },
-            confirmButton = { TextButton(onClick = { foundProfile = null }) { Text("Done") } },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        foundProfile = null
-                        startScan()
-                    },
-                ) { Text("Scan Another") }
-            },
-        )
+            }
+        }
     }
 }
 
@@ -841,8 +946,9 @@ internal fun ProfileCode(
     value: String,
     modifier: Modifier = Modifier,
     contentDescription: String = "Profile QR code",
+    marginModules: Int = 2,
 ) {
-    val matrix = remember(value) { qrMatrix(value) }
+    val matrix = remember(value, marginModules) { qrMatrix(value, marginModules) }
     Canvas(
         modifier = modifier
             .aspectRatio(1f)
@@ -860,26 +966,15 @@ internal fun ProfileCode(
     }
 }
 
-internal fun qrMatrix(value: String): BitMatrix = QRCodeWriter().encode(
+internal fun qrMatrix(value: String, marginModules: Int = 2): BitMatrix = QRCodeWriter().encode(
     value,
     BarcodeFormat.QR_CODE,
     0,
     0,
-    mapOf(EncodeHintType.MARGIN to 2),
+    mapOf(EncodeHintType.MARGIN to marginModules),
 )
 
 internal fun copyToClipboard(context: Context, label: String, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
-}
-
-private fun demoFoundProfile(): Profile {
-    val choice = AvatarWebImageCatalog.choices.first()
-    return Profile(
-        id = "open-quill-found",
-        name = "Open Quill",
-        publicKey = "npub1q2v9n6t4r7c3x8m5k2w9p6s4y7h3d8f5j2a9e6u4z7n1m2d9",
-        nostrAddress = "open-quill@whitenoise.example",
-        avatar = ProfileAvatar.WebImage(choice.asset, choice.id),
-    )
 }

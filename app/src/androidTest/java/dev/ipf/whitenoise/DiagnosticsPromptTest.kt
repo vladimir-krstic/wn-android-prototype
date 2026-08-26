@@ -69,7 +69,7 @@ class DiagnosticsPromptTest {
         }
         rule.onNodeWithText("Sign Up").performClick()
         rule.onNode(hasSetTextAction().and(hasText("Marmota"))).performClick().assertIsFocused()
-        rule.onNode(hasClickAction().and(hasText("Sign Up"))).performScrollTo().performClick()
+        rule.onNode(hasClickAction().and(hasText("Sign Up"))).performClick()
         rule.waitUntil(timeoutMillis = 10_000) { vm.uiState.activeProfile != null }
         rule.waitUntil(timeoutMillis = 5_000) {
             rule.onAllNodesWithText("Help Improve White Noise").fetchSemanticsNodes().isNotEmpty()
@@ -107,6 +107,40 @@ class DiagnosticsPromptTest {
         rule.onNodeWithContentDescription("Close").performClick()
         rule.waitUntil { vm.uiState.activeProfile!!.diagnostics.hasSeenPrompt }
         rule.onNodeWithTag("diagnostics.prompt").assertDoesNotExist()
+    }
+
+    @Test fun promptSwitchRowsUseInsetRoundedStateLayersAndKeepCopyAlignment() {
+        val vm = AppViewModel().apply { completeSignIn(OnboardingOrigin.Initial) }
+        rule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(1f)) {
+                WhiteNoiseTheme {
+                    DiagnosticsPromptHost(
+                        vm.uiState,
+                        true,
+                        { id, enabled -> vm.setAnalyticsEnabled(id, enabled) },
+                        { id, enabled -> vm.setDiagnosticLoggingEnabled(id, enabled) },
+                        vm::dismissDiagnosticsPrompt,
+                    )
+                }
+            }
+        }
+
+        val content = rule.onNodeWithTag("diagnostics.prompt.content").fetchSemanticsNode().boundsInRoot
+        val analyticsRow = rule.onNodeWithTag("diagnostics.prompt.analytics.row").fetchSemanticsNode().boundsInRoot
+        val loggingRow = rule.onNodeWithTag("diagnostics.prompt.logging.row").fetchSemanticsNode().boundsInRoot
+        val intro = rule.onNodeWithTag("diagnostics.prompt.intro", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val analyticsLabel = rule.onNodeWithTag("diagnostics.prompt.analytics.label", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val analyticsSwitch = rule.onNodeWithTag("diagnostics.prompt.analytics.switch", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val privacy = rule.onNodeWithTag("diagnostics.prompt.privacy", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+        assertEquals(content.left + 8f, analyticsRow.left, 1f)
+        assertEquals(content.right - 8f, analyticsRow.right, 1f)
+        assertEquals(content.left + 8f, loggingRow.left, 1f)
+        assertEquals(content.right - 8f, loggingRow.right, 1f)
+        assertEquals(content.left + 24f, intro.left, 1f)
+        assertEquals(intro.left, analyticsLabel.left, 1f)
+        assertEquals(intro.left, privacy.left, 1f)
+        assertEquals(content.right - 24f, analyticsSwitch.right, 1f)
     }
 
     @Test fun backDismissalRecordsAnOffChoiceForOnlyThePresentedProfile() {

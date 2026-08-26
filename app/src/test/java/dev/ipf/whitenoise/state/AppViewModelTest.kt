@@ -47,6 +47,40 @@ class AppViewModelTest {
                 profile.id in viewModel.uiState.signedInProfileIds
             },
         )
+        assertEquals(
+            setOf(
+                ProfileFixtures.MARMOTA_ID,
+                ProfileFixtures.PEBBLE_ID,
+                "open-quill",
+                "cipher-wheel",
+                "free-signal",
+                "public-voice",
+                "liberty-relay",
+            ),
+            viewModel.uiState.signedInProfiles.mapTo(mutableSetOf()) { it.id },
+        )
+    }
+
+    @Test
+    fun addedSignInUsesOpenCircuitInsteadOfPebbleInTheSevenProfileSet() {
+        val viewModel = AppViewModel()
+        viewModel.completeSignIn(OnboardingOrigin.Initial)
+
+        viewModel.completeSignIn(OnboardingOrigin.AddProfile)
+
+        assertEquals("open-circuit", viewModel.uiState.activeProfileId)
+        assertEquals(
+            setOf(
+                ProfileFixtures.MARMOTA_ID,
+                "open-circuit",
+                "open-quill",
+                "cipher-wheel",
+                "free-signal",
+                "public-voice",
+                "liberty-relay",
+            ),
+            viewModel.uiState.signedInProfiles.mapTo(mutableSetOf()) { it.id },
+        )
     }
 
     @Test

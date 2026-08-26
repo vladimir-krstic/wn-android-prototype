@@ -146,7 +146,7 @@ internal fun AvatarWebImagePickerContent(
     )
     val urlChoice = AvatarWebImageCatalog.choiceMatchingUrl(imageUrl.text.toString())
     val activeChoice = if (mode == WebImageMode.Search) selectedChoice else urlChoice
-    val sheetContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+    val sheetContainerColor = MaterialTheme.colorScheme.surfaceContainer
     val searchGridState = rememberLazyGridState()
     val urlScrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current

@@ -66,12 +66,15 @@ The detailed switch descriptions are preserved in `analytics_detail` and
 ## Android composition
 
 A content-height Material `ModalBottomSheet` with its default handle, shape,
-width, safe/IME insets, and native dismissal. The shared surfaceContainerLow
+width, safe/IME insets, and native dismissal. The shared surfaceContainer
 sheet uses `WhiteNoiseSheetHeader` (titleLarge, 24 dp margins, trailing native
 Close, no extra top spacer, 8 dp body gap). That compact header stays
-above a scrollable body. Existing tonal `SettingsGroup` and merged
-`SettingsSwitch` rows provide touch targets, state, focus, and ripple; Material
-typography and the shared 16/24/32 dp composition rhythm own spacing. The
+above a scrollable body. The prompt's intro, two merged 56 dp switch rows and
+privacy copy share the exact 24 dp directional content line. Each switch row
+uses an 8 dp transparent outer inset, the theme's large shape for clipping its
+native state layer, and 16 dp inner padding around the label and native
+`Switch`; it does not nest a list-item inset. Material typography, focus,
+ripple and the shared 8/16/24/32 dp composition rhythm own spacing. The
 permanent destination uses the shared pinned header and actual scrolling list.
 
 ## Behavior and state
@@ -91,6 +94,8 @@ standard Material/AndroidX lifecycle and Back handling.
 ## Accessibility and adaptation
 
 Native switch roles expose Off/On, and the entire labeled row toggles once.
+Its pressed/focused state is the native Material state layer, clipped to the
+rounded inset row rather than painted as a full-width rectangular highlight.
 Copy scrolls at 200% font scale/short heights; there is no fixed iOS detent.
 Directional insets, native 48 dp minimum controls, and monochrome semantic
 light/dark roles apply. The Close/title row is separate from the scrolling
@@ -126,7 +131,8 @@ iPhone-specific device label. No custom-drawn control or telemetry integration.
   profile isolation, dismissal/retention, developer independence, clearing,
   summaries, and wipe.
 - `DiagnosticsPromptTest`: resumed-only presentation, native switch changes,
-  saved-state recreation, Close/Back/scrim/swipe, a new profile prompt, and confirmed
+  exact prompt content alignment and inset state-layer geometry, saved-state recreation,
+  Close/Back/scrim/swipe, a new profile prompt, and confirmed
   clearing with large dark RTL content.
 - `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`.
 - Device execution, actual keyboard/rotation/predictive-Back gestures,

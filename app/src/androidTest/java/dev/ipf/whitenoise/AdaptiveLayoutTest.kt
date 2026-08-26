@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
@@ -148,7 +149,6 @@ class AdaptiveLayoutTest {
                         onRelays = {},
                         onSupport = {},
                         onDonate = {},
-                        onManageProfiles = {},
                         onDeveloperTools = {},
                         onSignOut = {},
                     )
@@ -157,7 +157,7 @@ class AdaptiveLayoutTest {
         }
 
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
-        composeRule.onNodeWithText("Share & Connect").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Open Share & Connect for Marmota").assertIsDisplayed()
         composeRule.onNodeWithText("Profile Keys").performScrollTo().assertIsDisplayed()
     }
 
@@ -240,6 +240,7 @@ class AdaptiveLayoutTest {
         }
 
         composeRule.onNodeWithText("Add Photo").assertIsDisplayed()
+        composeRule.onNodeWithTag("onboarding.sign_up.action").assertIsDisplayed()
         composeRule.onNodeWithText("About").performScrollTo().assertIsDisplayed()
     }
 

@@ -27,18 +27,16 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 - Compose BOM: 2026.08.00
 - Material 3: 1.5.0-alpha25, a user-approved exception for official Expressive
   menus; this version retains API 23 support (alpha26's ripple requires API 24)
-- CameraX: 1.6.1 for the app-owned Private Key scanner
+- CameraX: 1.6.1 for the app-owned Private Key and Share &amp; Connect scanners
 - Bundled ML Kit Barcode Scanning: 17.3.0 for offline QR analysis
-- Google Code Scanner: 16.1.0 for the existing Share & Connect system surface,
-  with transitive network permissions removed
 - AndroidX ExifInterface: 1.4.2
 - ZXing core: 3.5.4 for local QR encoding
 - One `app` module and one launcher activity
 
 The runtime is intentionally offline and deterministic. It declares camera
-permission only for the user-selected Private Key QR scanner and requests it
-just in time. It declares no network, storage, microphone, notification, or
-location permission.
+permission only for the user-selected Private Key or Share &amp; Connect QR
+scanner and requests it just in time. It declares no network, storage,
+microphone, notification, or location permission.
 
 Implementation status: Batches 0–9 are complete at the static verification
 gate. The app includes the complete accepted onboarding, profile, Chats,

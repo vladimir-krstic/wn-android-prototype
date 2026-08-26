@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -155,6 +157,29 @@ fun SignUpScreen(
                 scrollBehavior = dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll.current,
             )
         },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(WhiteNoiseSpacing.PinnedActionInset),
+                contentAlignment = Alignment.Center,
+            ) {
+                WhiteNoiseButton(
+                    onClick = { isSigningUp = true },
+                    enabled = !isPreparingPhoto,
+                    loading = isSigningUp,
+                    loadingLabel = stringResource(R.string.creating_profile),
+                    modifier = Modifier
+                        .widthIn(max = 520.dp)
+                        .fillMaxWidth()
+                        .testTag("onboarding.sign_up.action"),
+                ) {
+                    Text(stringResource(R.string.sign_up))
+                }
+            }
+        },
     ) { contentPadding ->
         AdaptiveContent(
             modifier = Modifier
@@ -167,7 +192,6 @@ fun SignUpScreen(
                     .align(Alignment.TopCenter)
                     .widthIn(max = 520.dp)
                     .fillMaxSize()
-                    .imePadding()
                     .whiteNoiseVerticalScroll(rememberScrollState())
                     .padding(
                         horizontal = WhiteNoiseSpacing.CompactScreenMargin,
@@ -296,15 +320,6 @@ fun SignUpScreen(
                     )
                 }
 
-                WhiteNoiseButton(
-                    onClick = { isSigningUp = true },
-                    enabled = !isPreparingPhoto,
-                    loading = isSigningUp,
-                    loadingLabel = stringResource(R.string.creating_profile),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.sign_up))
-                }
             }
         }
     }

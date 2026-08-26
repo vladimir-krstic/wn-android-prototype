@@ -28,7 +28,7 @@ acceptance remains pending.
   during search, and preserve Check Relays recovery. Scrolling content, not the
   viewport, reserves clearance for the FAB and navigation area.
 - Both mute entry points use a shared immediate-selection Material dialog.
-- All ordinary app sheets share `surfaceContainerLow`, transparent ordinary
+- All ordinary app sheets share `surfaceContainer`, transparent ordinary
   rows, and a `titleLarge` header with 24 dp text margins and 8 dp body gap.
   Material owns the handle slot; no extra top spacer or duplicate insets.
   Task app bars, intentional tonal groups, and specialized media stay intact.

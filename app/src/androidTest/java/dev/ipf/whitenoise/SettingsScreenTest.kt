@@ -3,6 +3,8 @@ package dev.ipf.whitenoise
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -10,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.ProfileFixtures
@@ -35,16 +38,18 @@ class SettingsScreenTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun settingsHubShowsProfilePreferencesAndSupportHierarchy() {
+    fun settingsHubConsolidatesProfilePreferencesAndSupportHierarchy() {
         val profile = ProfileFixtures.marmota
+        var openedShareConnect = false
+        var openedAddProfile = false
         composeRule.setContent {
             WhiteNoiseTheme {
                 SettingsScreen(
                     uiState = AppUiState(listOf(profile), profile.id, setOf(profile.id)),
                     onBack = {},
                     onSelectProfile = {},
-                    onAddProfile = {},
-                    onShareConnect = {},
+                    onAddProfile = { openedAddProfile = true },
+                    onShareConnect = { openedShareConnect = true },
                     onEditProfile = {},
                     onProfileKeys = {},
                     onNotifications = {},
@@ -54,20 +59,22 @@ class SettingsScreenTest {
                     onRelays = {},
                     onSupport = {},
                     onDonate = {},
-                    onManageProfiles = {},
                     onDeveloperTools = {},
                     onSignOut = {},
                 )
             }
         }
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
-        composeRule.onNodeWithText("Share & Connect").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings.active_profile").performClick()
+        composeRule.runOnIdle { check(openedShareConnect) }
+        composeRule.onNodeWithTag("settings.profile.divider").assertIsDisplayed()
         composeRule.onNodeWithText("Add Profile").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings.profile_management").performClick()
+        composeRule.runOnIdle { check(openedAddProfile) }
         composeRule.onNodeWithText("Profile Keys").assertIsDisplayed()
         listOf(
             "profile" to null,
             "profile_keys" to "View, copy, and export your keys",
-            "manage_profiles" to "Remove another stored profile",
             "notifications" to "Local and native push preferences",
             "appearance" to null,
             "privacy_security" to "Device protection and auto-lock",
@@ -85,10 +92,20 @@ class SettingsScreenTest {
             removedDescription?.let {
                 composeRule.onNodeWithText(it).assertIsNotDisplayed()
             }
-            if (iconTag == "appearance") {
-                composeRule.onNodeWithText("System default").assertIsDisplayed()
-            }
         }
+        composeRule.onNodeWithText("Preferences").assertDoesNotExist()
+        composeRule.onNodeWithText("Help").assertDoesNotExist()
+        composeRule.onNodeWithText("Manage Profiles").assertDoesNotExist()
+        composeRule.onNodeWithText("System default").assertDoesNotExist()
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(
+            hasTestTag("settings.destinations.divider.0"),
+        )
+        composeRule.onNodeWithTag("settings.destinations.divider.0").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(
+            hasTestTag("settings.version_footer"),
+        )
+        composeRule.onNodeWithText("Version 0.1").assertIsDisplayed()
+        composeRule.onNodeWithText("White Noise for Android", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -116,27 +133,168 @@ class SettingsScreenTest {
                     onRelays = {},
                     onSupport = {},
                     onDonate = {},
-                    onManageProfiles = {},
                     onDeveloperTools = {},
                     onSignOut = {},
                 )
             }
         }
 
-        composeRule.onNodeWithText("Switch Profile").performClick()
-        composeRule.onNodeWithText("Add Profile").assertIsDisplayed()
-        composeRule.onNodeWithText("Pebble").performClick()
+        composeRule.onNodeWithTag("settings.profile_management").performClick()
+        composeRule.onNodeWithTag("settings.profile.add_profile").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings.profile.alternate.${ProfileFixtures.PEBBLE_ID}").performClick()
         composeRule.runOnIdle { check(selectedProfileId == ProfileFixtures.PEBBLE_ID) }
     }
 
     @Test
-    fun shareConnectShowsNativeScannerAndAndroidShareActions() {
+    fun dismissingProfileSwitcherLeavesSelectionUntouched() {
+        val profiles = listOf(ProfileFixtures.marmota, ProfileFixtures.pebble)
+        var selectedProfileId: String? = null
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                SettingsScreen(
+                    uiState = AppUiState(
+                        profiles = profiles,
+                        activeProfileId = ProfileFixtures.MARMOTA_ID,
+                        signedInProfileIds = profiles.mapTo(mutableSetOf()) { it.id },
+                    ),
+                    onBack = {},
+                    onSelectProfile = { selectedProfileId = it },
+                    onAddProfile = {},
+                    onShareConnect = {},
+                    onEditProfile = {},
+                    onProfileKeys = {},
+                    onNotifications = {},
+                    onAppearance = {},
+                    onPrivacy = {},
+                    onDataUsage = {},
+                    onRelays = {},
+                    onSupport = {},
+                    onDonate = {},
+                    onDeveloperTools = {},
+                    onSignOut = {},
+                    initiallyShowSwitcher = true,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Current profile").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Close").performClick()
+        composeRule.onNodeWithTag("profile_switcher.add_profile").assertDoesNotExist()
+        composeRule.runOnIdle { check(selectedProfileId == null) }
+    }
+
+    @Test
+    fun backCollapsesInlineProfilesBeforeLeavingSettings() {
+        val profiles = listOf(ProfileFixtures.marmota, ProfileFixtures.pebble)
+        var navigatedBack = false
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                SettingsScreen(
+                    uiState = AppUiState(
+                        profiles = profiles,
+                        activeProfileId = ProfileFixtures.MARMOTA_ID,
+                        signedInProfileIds = profiles.mapTo(mutableSetOf()) { it.id },
+                    ),
+                    onBack = { navigatedBack = true },
+                    onSelectProfile = {},
+                    onAddProfile = {},
+                    onShareConnect = {},
+                    onEditProfile = {},
+                    onProfileKeys = {},
+                    onNotifications = {},
+                    onAppearance = {},
+                    onPrivacy = {},
+                    onDataUsage = {},
+                    onRelays = {},
+                    onSupport = {},
+                    onDonate = {},
+                    onDeveloperTools = {},
+                    onSignOut = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("settings.profile_management").performClick()
+        composeRule.onNodeWithTag("settings.profile.alternate.${ProfileFixtures.PEBBLE_ID}")
+            .assertIsDisplayed()
+        composeRule.runOnUiThread {
+            composeRule.activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.onNodeWithTag("settings.profile.alternate.${ProfileFixtures.PEBBLE_ID}")
+            .assertDoesNotExist()
+        composeRule.runOnIdle { check(!navigatedBack) }
+    }
+
+    @Test
+    fun settingsShowsStackedSwitcherPreviewAndCapsInactiveUnread() {
+        val highUnread = ProfileFixtures.pebble.copy(
+            chats = listOf(
+                ProfileFixtures.marmota.chats.first().copy(unreadCount = 120),
+            ),
+        )
+        val profiles = listOf(
+            ProfileFixtures.marmota,
+            highUnread,
+            *ProfileFixtures.showcaseProfiles.toTypedArray(),
+        )
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                SettingsScreen(
+                    uiState = AppUiState(
+                        profiles = profiles,
+                        activeProfileId = ProfileFixtures.MARMOTA_ID,
+                        signedInProfileIds = profiles.mapTo(mutableSetOf()) { it.id },
+                    ),
+                    onBack = {},
+                    onSelectProfile = {},
+                    onAddProfile = {},
+                    onShareConnect = {},
+                    onEditProfile = {},
+                    onProfileKeys = {},
+                    onNotifications = {},
+                    onAppearance = {},
+                    onPrivacy = {},
+                    onDataUsage = {},
+                    onRelays = {},
+                    onSupport = {},
+                    onDonate = {},
+                    onDeveloperTools = {},
+                    onSignOut = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Switch Profile").assertIsDisplayed()
+        composeRule.onNodeWithTag(
+            "settings.profile.preview_remaining",
+            useUnmergedTree = true,
+        )
+            .assertWidthIsEqualTo(32.dp)
+            .assertHeightIsEqualTo(32.dp)
+        composeRule.onNodeWithText("Switch Profile").performClick()
+        composeRule.onNodeWithText("99+").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings.profile.add_profile").assertIsDisplayed()
+    }
+
+    @Test
+    fun shareConnectUsesOneStableIdentityPageWithExplicitScannerAction() {
         composeRule.setContent {
             WhiteNoiseTheme { ShareConnectScreen(ProfileFixtures.marmota, onBack = {}) }
         }
-        composeRule.onNodeWithText("Scan profile code").assertIsDisplayed()
-        composeRule.onNodeWithText("Share with Android").assertIsDisplayed()
+        composeRule.onNodeWithText("Share & Connect").assertIsDisplayed()
+        composeRule.onNodeWithTag("share_connect.mode").assertDoesNotExist()
+        composeRule.onNodeWithTag("share_connect.share").assertIsDisplayed()
+        composeRule.onNodeWithText("Marmota").assertIsDisplayed()
+        composeRule.onNodeWithText("Scan to connect.").assertIsDisplayed()
+        composeRule.onNodeWithText("Scan QR Code").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Verified").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Profile QR code").assertIsDisplayed()
+        composeRule.onNodeWithTag("share_connect.copy_public_key.visual")
+            .assertHeightIsEqualTo(32.dp)
+        composeRule.onNodeWithTag("share_connect.copy_public_key")
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("share_connect.copy_public_key").performClick()
+        composeRule.onNodeWithContentDescription("Copied").assertIsDisplayed()
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -20,6 +21,7 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
@@ -53,6 +56,9 @@ internal fun SettingsScaffold(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     prominentTitle: Boolean = false,
+    containerColor: Color = MaterialTheme.colorScheme.background,
+    topBarContainerColor: Color = MaterialTheme.colorScheme.surface,
+    topBarScrolledContainerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     bottomBar: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -68,9 +74,12 @@ internal fun SettingsScaffold(
                 } else {
                     MaterialTheme.typography.titleLarge
                 },
+                containerColor = topBarContainerColor,
+                scrolledContainerColor = topBarScrolledContainerColor,
             )
         },
         bottomBar = bottomBar,
+        containerColor = containerColor,
     ) { padding ->
         AdaptiveContent(modifier = Modifier.fillMaxSize().padding(padding)) { content() }
     }
@@ -115,6 +124,7 @@ internal fun SettingsSection(title: String) {
 @Composable
 internal fun SettingsGroup(
     modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -122,8 +132,17 @@ internal fun SettingsGroup(
             .fillMaxWidth()
             .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
             .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+            .background(containerColor),
         content = content,
+    )
+}
+
+@Composable
+internal fun SettingsDivider(modifier: Modifier = Modifier) {
+    HorizontalDivider(
+        modifier = modifier.fillMaxWidth(),
+        thickness = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     )
 }
 
@@ -384,5 +403,23 @@ internal fun SettingsList(content: androidx.compose.foundation.lazy.LazyListScop
 internal fun SettingsExplainer(text: String) {
     Column(modifier = Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin)) {
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+internal fun SettingsVersionFooter(versionName: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(WhiteNoiseSpacing.CompactScreenMargin)
+            .testTag("settings.version_footer"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "Version $versionName",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+        )
     }
 }

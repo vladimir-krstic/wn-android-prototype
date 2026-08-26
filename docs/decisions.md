@@ -981,3 +981,414 @@ Sources: [Material menus](https://m3.material.io/components/menus/overview),
 [specifications](https://m3.material.io/components/menus/specs),
 [release notes](https://developer.android.com/jetpack/androidx/releases/compose-material3),
 [exact alpha25 source](https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3-android/1.5.0-alpha25/material3-android-1.5.0-alpha25-sources.jar).
+
+## WN-ANDROID-0041 — Settings consolidates profile management at the root
+
+- Date: 2026-08-26
+- Status: Approved by explicit user direction and implementation
+
+The Settings root begins with one compact `surfaceContainerLow` profile group.
+Its active row uses a 56 dp avatar, name, shortened public key, official
+`qr_code_2` symbol and disclosure, and opens the existing Share & Connect
+destination. A pure profile-management projection drives the second row:
+Add Profile with `person_add`, one named alternate, or Switch Profile with at
+most three overlapping 32 dp alternate avatars and a remainder badge. Alternate
+rows open the switcher and never silently change the active profile.
+
+Profile, Profile Keys, Notifications, Appearance, Privacy & Security, Data
+Usage and Relays form one unheaded destination group. Help remains separate;
+Sign Out remains isolated and semantic error-colored; the Android version
+footer remains. Remove Manage Profiles from the root API and presentation but
+retain its typed route and implementation for compatibility. Appearance no
+longer exposes a redundant root summary; System default remains selectable in
+the Appearance screen. This supersedes WN-ANDROID-0022's former Settings
+hierarchy and WN-ANDROID-0025's Appearance trailing-value rule only for this
+root surface.
+
+The shared Material modal profile switcher keeps active-first order followed
+by deterministic stored order. Native two-line rows use 48 dp avatars; the
+active row owns selected tone and a check, while inactive rows may show
+aggregate non-archived active-membership unread counts capped at `99+`. The
+active check suppresses its unread badge without mutating unread state. A
+full-width Add Profile task is pinned below the scrollable list. Selection
+applies immediately and closes; Back, scrim or swipe dismissal changes
+nothing. Profile-owned chats, settings, diagnostics, relays, drafts and unread
+state remain untouched.
+
+Official Google-hosted rounded Material Symbol XML supplies the Settings
+artwork; no icon or runtime dependency is added. Scoped iOS commit `4c25393`
+is authorized only for the current Settings organization and profile lifecycle
+evidence. Android `ListItem`, selected containers, modal sheet behavior,
+insets, targets, type growth, RTL and dismissal remain native.
+
+Evidence: `ProfileManagementPresentation.kt`, `ProfileSettingsScreens.kt`,
+`ProfileSwitcherSheet.kt`, `ProfileManagementPresentationTest`,
+`SettingsScreenTest`, and the exact Add Profile fixture-set assertions in
+`AppViewModelTest`.
+Sources: [Android settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+[badges](https://developer.android.com/develop/ui/compose/components/badges),
+[official icon guidance](https://developer.android.com/develop/ui/compose/graphics/images/material).
+
+## WN-ANDROID-0042 — Profile switching is a separate root control
+
+- Date: 2026-08-26
+- Status: Approved by explicit user direction and implementation
+
+The Settings root no longer renders Add Profile or an alternate identity as a
+second row joined to the active-profile card. The active identity remains a
+compact tonal Share & Connect row. A separate one-line tonal **Switch Profile**
+control follows with an 8 dp gap, a trailing 32 dp profile preview and tonal
+expand affordance. It always opens the existing Material profile sheet; Add
+Profile remains the pinned action inside that sheet, including when only the
+active profile exists. This follows the hierarchy of Google's collapsed
+account switcher without reproducing a system account surface or inline
+expansion.
+
+The former internal divider is removed. The Help destinations remain a
+separate tonal group but no longer carry a visible Help heading, matching the
+root's unheaded group organization. This supersedes only WN-ANDROID-0041's
+joined adaptive second-row presentation and labeled Help-group wording. Pure
+Add/single/multiple projection remains authoritative for trailing previews and
+switcher tests.
+
+## WN-ANDROID-0043 — Settings uses an inline Material profile card
+
+- Date: 2026-08-26
+- Status: Approved by explicit user direction and implementation
+
+The Settings root uses `surfaceContainerLow` as its neutral page canvas and
+`surfaceContainerLowest` for its white-equivalent cards. Its pinned app bar
+matches the canvas at rest and changes to `surfaceContainer` when content
+passes underneath. This follows Material's semantic surface hierarchy in both
+themes instead of hard-coding white and gray.
+
+The active 56 dp Share & Connect identity and its profile-management control
+now share one rounded card without an internal divider. With no alternate
+profile, the outlined control reads **Add Profile** and starts the existing Add
+Profile flow directly. With alternates, it reads **Switch Profile** and expands
+the same card. The expanded region shows inactive profiles in deterministic
+stored order with 48 dp avatars, shortened keys and aggregate unread badges,
+followed by Add Profile. Selecting an alternate applies immediately and
+collapses the card; Back collapses it before leaving Settings. No manage-device,
+account-info, or removal commands are added.
+
+The existing Material modal switcher remains available to the typed Settings
+entry used by other app surfaces. Its active-first ordering, selected check,
+unread behavior, Add Profile action and safe dismissal remain unchanged. This
+supersedes WN-ANDROID-0042's separate Switch Profile group and root-to-sheet
+behavior while preserving WN-ANDROID-0041's profile projection and ownership
+rules.
+
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Material 3 in Compose](https://developer.android.com/develop/ui/compose/designsystems/material3),
+[Material cards](https://developer.android.com/develop/ui/compose/components/card).
+
+## WN-ANDROID-0044 — Settings groups use separated native rows
+
+- Date: 2026-08-26
+- Status: Approved by explicit user direction and implementation
+
+The active Share & Connect identity and profile-management control remain in
+one white-equivalent Settings card, but the management control is now a native
+transparent `ListItem`, not an outlined button. A sole profile shows the
+official `person_add` symbol and **Add Profile**. Alternate profiles show their
+existing 32 dp stacked preview, **Switch Profile**, and the disclosure used to
+expand deterministic inline rows. A one-dp `surfaceContainerLow` divider
+separates the active identity, management row, expanded profiles, and final Add
+Profile row. Existing callbacks, unread projection, stored order, Back-first
+collapse, modal switcher compatibility, and profile ownership are unchanged.
+
+The same canvas-tone divider separates adjacent rows in the consolidated
+destination and Help cards. Cards remain `surfaceContainerLowest` over the
+`surfaceContainerLow` Settings canvas, so the separator reads as a subtle
+surface gap in light and dark themes without hard-coded colors. Material
+`ListItem` continues to own typography, targets, state layers, growth, and RTL.
+This supersedes only WN-ANDROID-0043's outlined/no-divider presentation.
+
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Material 3 in Compose](https://developer.android.com/develop/ui/compose/designsystems/material3),
+[Material lists](https://developer.android.com/develop/ui/compose/lists).
+
+## WN-ANDROID-0045 — Settings row gaps and profile badges use explicit geometry
+
+- Date: 2026-08-26
+- Status: Approved by explicit user direction and implementation
+
+Settings keeps native Material `ListItem` measurement and content padding, but
+uses a two-dp `surfaceContainerLow` inter-row gap in white-equivalent Settings
+cards. Material's default divider is intentionally thinner; the wider neutral
+gap is the accepted match for the supplied Google Messages reference and does
+not change touch targets or text/icon alignment. This supersedes only the
+one-dp separator metric in WN-ANDROID-0044.
+
+The stacked-profile remainder is rendered as a real 32 dp circular surface at
+the same overlap step as its avatar peers, rather than stretching a `Badge`
+into an avatar-shaped placeholder. Inactive profile unread counts use the
+app's monochrome `primary`/`onPrimary` badge roles in both the inline expansion
+and retained modal switcher; selected checks still take precedence.
+
+Ordinary app-owned sheets continue to use the already-approved shared
+`surfaceContainerLow` sheet wrapper from WN-ANDROID-0039. Material owns sheet
+shape, handle, motion and dismissal; specialized camera/media and system-owned
+surfaces remain outside that rule.
+
+Sources: [Material horizontal divider](https://developer.android.com/reference/kotlin/androidx/compose/material3/HorizontalDivider.composable),
+[Material list item](https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItem.composable),
+[Material modal bottom sheet](https://developer.android.com/reference/kotlin/androidx/compose/material3/ModalBottomSheet.composable).
+
+## WN-ANDROID-0046 — Ordinary sheets use a visibly neutral modal surface
+
+- Date: 2026-08-26
+- Status: Approved by explicit user direction and implementation
+
+All ordinary app-owned modal sheets continue through the single
+`WhiteNoiseModalBottomSheet` boundary, but its container advances from
+`surfaceContainerLow` to `surfaceContainer` (#EFEFEF light, #1E1E1E dark).
+This keeps the sheet in the monochrome Material surface hierarchy while making
+the gray modal plane legible over its scrim. The audit found every ordinary
+profile, diagnostics, composer, message-action, timer, destructive-task and
+web-image sheet already uses this wrapper. The direct CameraX scanner sheet is
+the intentional specialized camera exception; system-owned pickers, scanner,
+Sharesheet and settings surfaces remain untouched. This supersedes only the
+surface role in WN-ANDROID-0039 and WN-ANDROID-0045, not their handle, shape,
+header, inset, motion or dismissal rules.
+
+The first-login diagnostics sheet no longer nests Settings-card and ListItem
+horizontal insets. Its intro, two full-width 56 dp switch rows and privacy copy
+share the header's 24 dp directional content line; the native switches remain
+trailing and the complete row retains Switch semantics and ripple. The
+Settings root footer is centered and reads only **Version 0.1**.
+
+Evidence: `WhiteNoiseSheets.kt`, `DiagnosticsImprovementsScreen.kt`,
+`SettingsComponents.kt`, `ProfileSettingsScreens.kt`, `MaterialSheetTest`,
+`DiagnosticsPromptTest`, and `SettingsScreenTest`.
+Sources: [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+[Material switches](https://developer.android.com/develop/ui/compose/components/switch).
+
+## WN-ANDROID-0047 — Diagnostics prompt switches use inset rounded state layers
+
+- Date: 2026-08-26
+- Status: Approved by explicit user direction and implementation
+
+The first-login diagnostics sheet retains Material's pressed/focused state
+feedback and whole-row Switch semantics, but the interactive row no longer
+paints an edge-to-edge rectangular band. Each switch row now has an 8 dp
+transparent outer inset, clips the native state layer to
+`MaterialTheme.shapes.large`, keeps a 56 dp minimum target, and uses 16 dp
+internal horizontal padding. The resulting 8 + 16 dp geometry preserves the
+24 dp alignment shared by the sheet title, explanatory copy, switch labels and
+trailing controls while giving the press state visible side clearance and
+rounded corners. The native `Switch` remains the visual control and exposes no
+duplicate semantics inside the merged toggle target.
+
+This supersedes only WN-ANDROID-0046's full-width rectangular prompt-row
+geometry; the approved modal surface, copy, lifecycle, consent ownership and
+immediate preference behavior are unchanged.
+
+Sources: [Handle user interactions](https://developer.android.com/develop/ui/compose/touch-input/user-interactions/handling-interactions),
+[Material switches](https://developer.android.com/develop/ui/compose/components/switch).
+
+## WN-ANDROID-0048 — Share & Connect uses Material peer modes and the shared scanner
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Share & Connect preserves the iOS product organization without copying its
+presentation. A center-aligned Material app bar contains a native
+`SingleChoiceSegmentedButtonRow` for the mutually exclusive **Share** and
+**Connect** modes, with native Back and a Share-only app-bar action. Share uses
+an adaptive, scrollable identity composition: avatar at 32% of pane width
+clamped to 104–152 dp, name and optional verified address, a 48 dp copyable
+public-key capsule with temporary copied state, and a black-on-white QR surface
+at 81% clamped to 248–376 dp. Android Sharesheet remains the only outbound
+target chooser.
+
+Connect reuses the approved near-full CameraX 1.6.1 and bundled on-device ML
+Kit 17.3.0 scanner sheet from WN-ANDROID-0032 with profile-specific title,
+permission copy and validation. It retains the existing rounded target, torch,
+just-in-time camera permission, swipe/Back dismissal and unavailable recovery.
+The former Google Code Scanner dependency and Share & Connect integration are
+removed because no selected flow uses them. A valid fixture profile code
+reaches deterministic Profile Found; invalid input never mutates profile state.
+
+This supersedes the Share & Connect Google Code Scanner exception in
+WN-ANDROID-0031 and the old Settings brief, while leaving the specialized
+camera-sheet geometry in WN-ANDROID-0032 unchanged.
+
+Evidence: `ShareConnectScreen.kt`, `PrivateKeyQrScannerScreen.kt`,
+`SettingsScreenTest`, `settings-and-profile-services.md`, and
+`feature-inventory.md`.
+Sources: [Material segmented buttons](https://developer.android.com/develop/ui/compose/components/segmented-button),
+[Material app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
+[CameraX preview](https://developer.android.com/media/camera/camerax/preview),
+[ML Kit barcode scanning](https://developers.google.com/ml-kit/vision/barcode-scanning/android),
+and [Android Sharesheet](https://developer.android.com/training/sharing/send).
+
+## WN-ANDROID-0049 — Share & Connect is one stable identity page
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Share & Connect no longer presents Share and Connect as persistent modes. The
+route uses a center-aligned **Share & Connect** app-bar title with native Back
+and Android Sharesheet actions, followed by one adaptive identity composition.
+The verified address uses Google's official filled rounded `verified` symbol at
+20 dp. The public-key capsule is visibly 40 dp high with 12 dp horizontal
+padding and an 18 dp copy/check symbol while a clipped 48 dp outer target owns
+touch and semantics.
+
+One standard filled-tonal **Scan QR Code** action follows the QR caption and
+opens the scanner approved in WN-ANDROID-0032. Back, swipe or scrim dismissal
+returns to the stable identity page instead of exposing an empty scanner mode.
+Invalid and unavailable results explain recovery inline; valid fixture input
+still reaches deterministic Profile Found. Android Sharesheet, scanner state,
+permission scope and profile state are otherwise unchanged.
+
+This supersedes WN-ANDROID-0048's segmented peer-mode presentation only. A
+Material button group is intentionally not used because there is one scanner
+task rather than a set of sibling actions. It would also require Material
+1.5.0-alpha26, while WN-ANDROID-0040 pins alpha25 to preserve API 23 without a
+dependency or minimum-SDK change.
+
+Evidence: `ShareConnectScreen.kt`, `ic_verified_filled.xml`,
+`SettingsScreenTest`, `settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Sources: [Material buttons](https://developer.android.com/develop/ui/compose/components/button),
+[Material button groups](https://m3.material.io/components/button-groups/overview),
+[Material app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
+[Material Symbols](https://developer.android.com/develop/ui/compose/graphics/images/material),
+[CameraX preview](https://developer.android.com/media/camera/camerax/preview),
+and [Android Sharesheet](https://developer.android.com/training/sharing/send).
+
+## WN-ANDROID-0050 — Share & Connect uses compact identity details and a primary scanner task
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The public-key capsule is visibly 36 dp high with 10 dp horizontal padding and
+a 16 dp copy/check symbol while its clipped 48 dp outer target continues to own
+touch and semantics. The address follows the name without an added layout gap,
+and the public-key target starts 4 dp below the address. These tighter values
+change visual density without reducing accessibility targets.
+
+The QR matrix retains its prior rendered size. App-owned white padding around
+it decreases from 8 dp to 4 dp per edge, so the surrounding white surface is
+8 dp smaller in each dimension. **Scan QR Code** now uses the shared 56 dp
+primary Material `Button` across the content width, reflecting its role as the
+single principal task on the screen.
+
+This supersedes only WN-ANDROID-0049's public-key, QR-frame, identity-gap, and
+filled-tonal scanner-action geometry. The stable page structure, Android
+Sharesheet, scanner behavior, permission scope, and deterministic state are
+unchanged.
+
+Evidence: `ShareConnectScreen.kt`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Source: [Material buttons](https://developer.android.com/develop/ui/compose/components/button).
+
+## WN-ANDROID-0051 — Share QR framing is optically minimal
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Share & Connect keeps the rendered QR matrix at its existing size while
+reducing app-owned white frame padding from 4 dp to 2 dp per edge. The outer
+technical surface therefore shrinks by another 4 dp in each dimension. Its
+**Scan to connect.** caption begins 1 dp below the white surface.
+
+These are explicit optical exceptions to the shared 4/8 dp rhythm for the
+QR's noninteractive technical frame and its caption relationship. QR quiet
+modules encoded by ZXing remain present, and button geometry, scanner behavior,
+semantics, state, and adaptive bounds are unchanged.
+
+Evidence: `ShareConnectScreen.kt`, `settings-and-profile-services.md`,
+`ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0052 — Share QR owns its full visible frame and pins the scanner task
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The Share & Connect QR now disables ZXing's two-module encoder margin for this
+screen only and retains the app's literal 2 dp white `Surface` padding. This
+corrects WN-ANDROID-0051, where only the Compose frame changed while the
+encoded matrix still contained a visibly larger white quiet zone. Other QR
+presentations retain the default two-module encoder margin.
+
+The public-key target-to-QR gap decreases from 32 dp to 16 dp. The full-width
+primary **Scan QR Code** action moves from the scrolling identity composition
+to the scaffold bottom slot, with the shared 16 dp action inset and navigation
+safe-area padding. Scanner behavior, permissions, results, QR content, and the
+Profile Found state are unchanged.
+
+Evidence: `ShareConnectScreen.kt`, `ProfileSettingsScreens.kt`,
+`ProfileSettingsTest`, `settings-and-profile-services.md`, `ui-metrics.md`,
+and `feature-inventory.md`.
+Source: [Material inset handling](https://developer.android.com/develop/ui/compose/system/material-insets).
+
+## WN-ANDROID-0053 — Share QR frame balances separation and matrix prominence
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Device inspection showed that WN-ANDROID-0052's literal 2 dp frame was too
+tight once the hidden encoder margin was correctly removed. Share & Connect
+therefore keeps its marginless encoded matrix but increases the app-owned white
+frame to 6 dp per edge. The rendered QR matrix keeps the same dimensions; only
+the outer technical surface grows by 8 dp in each dimension.
+
+The technical surface changes from the theme's 28 dp `extraLarge` shape to its
+16 dp `large` shape. This keeps the frame recognizably rounded without making
+the square QR appear heavily clipped. Caption spacing, the 16 dp public-key
+relationship gap, pinned scanner action, and scanner behavior remain unchanged.
+
+Evidence: `ShareConnectScreen.kt`, `settings-and-profile-services.md`,
+`ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0054 — Compact public-key feedback and pinned authentication actions
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The Share & Connect public-key capsule now derives its default 24 dp visual
+height from `bodySmall`/16 dp icon content plus 4 dp vertical padding. A
+transparent 48 dp outer target still owns semantics and input. Both layers use
+one `MutableInteractionSource`, but the Material ripple is drawn only inside
+the visible capsule after its circular clip. This removes the prior mismatch
+where the pressed state expanded to the full touch target. The capsule remains
+content-sized at larger font scales rather than forcing a fixed 24 dp height.
+
+Sign In retains its existing pinned action and Sign Up now uses the same
+bounded Scaffold bottom slot. The slot applies the shared 16 dp outer inset,
+navigation-bar padding, and IME padding; Sign Up's scrolling body consumes the
+Scaffold content padding without adding a second IME inset. This supersedes
+WN-ANDROID-0027's inline Sign Up action following renewed device direction.
+
+Evidence: `ShareConnectScreen.kt`, `SignInScreen.kt`, `SignUpScreen.kt`,
+`SettingsScreenTest`, `AdaptiveLayoutTest`, `DiagnosticsPromptTest`,
+`onboarding-and-profiles.md`, `settings-and-profile-services.md`,
+`ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0055 — Share identity framing restores balanced breathing room
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The Share & Connect QR keeps the same marginless rendered matrix and 16 dp
+corner shape, while its app-owned white frame doubles from 6 dp to 12 dp per
+edge. Only the technical surface grows; QR content, scan reliability,
+semantics, caption gap and pinned scanner action remain unchanged.
+
+The public-key capsule grows from its 24 dp default visual height to 32 dp by
+increasing vertical content padding from 4 dp to 8 dp. Horizontal content
+padding increases from 10 dp to 25 dp per side, adding exactly 30 dp to the
+capsule's default visual width. Its transparent 48 dp semantic target, shared
+interaction source, pill-clipped state layer, text/icon scale and temporary
+copy confirmation remain unchanged.
+
+This supersedes only WN-ANDROID-0053's QR frame metric and WN-ANDROID-0054's
+public-key capsule padding. Evidence: `ShareConnectScreen.kt`,
+`SettingsScreenTest`, `settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.

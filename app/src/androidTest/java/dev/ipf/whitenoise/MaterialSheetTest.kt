@@ -47,7 +47,7 @@ class MaterialSheetTest {
         rule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
                 WhiteNoiseTheme(if (dark.value) AppearancePreference.Dark else AppearancePreference.Light) {
-                    expected = MaterialTheme.colorScheme.surfaceContainerLow
+                    expected = MaterialTheme.colorScheme.surfaceContainer
                     WhiteNoiseModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                         WhiteNoiseSheetHeader("Sheet title")
                         ListItem(

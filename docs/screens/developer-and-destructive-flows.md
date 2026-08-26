@@ -81,7 +81,7 @@ pinned task on its destination.
 
 Full-height `ModalBottomSheet` surfaces contain the multi-field Sign Out and
 Erase confirmation tasks. The 2026-08-26 shared refinement uses continuous
-surfaceContainerLow and `WhiteNoiseSheetHeader` with titleLarge, wrapping
+surfaceContainer and `WhiteNoiseSheetHeader` with titleLarge, wrapping
 titles, 24 dp margins, 8 dp body gap and a trailing native Close. No extra top
 spacer follows the Material handle. They retain a scrollable task
 body, label-above tonal fields with content-line alignment and explicit

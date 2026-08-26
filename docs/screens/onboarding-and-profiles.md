@@ -1,7 +1,7 @@
 # Onboarding and profile foundation
 
 2026-08-26 shared-sheet follow-up: `AvatarWebImagePicker` uses
-`WhiteNoiseModalBottomSheet` for the common surfaceContainerLow/inset owner.
+`WhiteNoiseModalBottomSheet` for the common surfaceContainer/inset owner.
 Its native Close/Done task app bar already matches that color and uses zero
 window insets; task height, mode buttons, privacy copy, grid spacing and image
 selection are unchanged. Profile switching uses the shared wrapping
@@ -85,10 +85,11 @@ Not included:
   resting boundary; focus and error use 2 dp full-shape semantic rings while
   disabled fields use `surfaceContainerLow`. Labels, input, and supporting
   text align to the same 16 dp directional content line. Both screens use a
-  top app bar with system Back and vertically scrolling content. Sign In keeps
-  its full-width bottom action above safe drawing and IME insets. Sign Up puts
-  its full-width action after the form in the same IME-aware scroll surface;
-  its pinned app bar changes tone when content scrolls beneath it.
+  top app bar with system Back and vertically scrolling content. Sign In and
+  Sign Up keep their full-width primary actions in the Scaffold bottom slot,
+  above navigation-safe and IME insets. Sign Up's form remains independently
+  scrollable behind that reserved action region; its pinned app bar changes
+  tone when content scrolls beneath it.
 - Sign In groups its three Private Key entry methods as one control cluster:
   manual entry in the field, Paste/Clear in the field's trailing icon slot,
   and a matching 56 dp tonal QR scanner icon button beside the field with an
@@ -99,15 +100,15 @@ Not included:
   supporting/error text remain owned by the field.
 - Authentication and profile forms remain centered and bounded to 520 dp at
   wider sizes instead of stretching across the available pane. Their pinned
-  or inline task actions use the same bound while remaining full width on
-  compact phones.
+  task actions use the same bound while remaining full width on compact
+  phones.
 - Full-width onboarding task actions use Material's medium 56 dp container
   height with 24 dp horizontal content padding. Compact-screen content and
   actions align to 16 dp horizontal margins; Welcome actions are separated by
-  8 dp. Peer form fields use 16 dp, while the avatar/form, form/inline Sign Up
-  action, and other distinct sections use 24 dp. Sign Up uses a 120 dp avatar
-  and 16 dp scrolling-content top/bottom insets to preserve useful editing
-  space when the IME is visible.
+  8 dp. Peer form fields use 16 dp, while the avatar/form and other distinct
+  sections use 24 dp. Sign Up uses a 120 dp avatar and 16 dp
+  scrolling-content top/bottom insets; Scaffold's measured bottom slot keeps
+  the final field reachable above the action and keyboard.
 - Completion reaches the current Chats root. Its avatar opens Settings, where
   the active-profile header owns the Material profile switcher and **Add
   Profile** entry. Selecting a profile is immediate; **Add Profile** dismisses
@@ -148,7 +149,7 @@ User-approved Android loading copy is:
   The full-window modal and scrim remain unconstrained; the cap belongs to the
   measured sheet content so its motion,
   system-bar treatment, and bottom coverage remain Material-owned. The sheet,
-  handle area, app bar, and mode row use one `surfaceContainerLow` background
+  handle area, app bar, and mode row use one `surfaceContainer` background
   so the task reads as one continuous modal surface. Material owns the sheet's
   safe drawing and keyboard insets; the nested app bar does not add another
   status-bar inset. The default handle, sheet shape, width cap, and gestures
@@ -181,10 +182,11 @@ User-approved Android loading copy is:
 - Sign Up keeps its photo action attached to the avatar group with an 8 dp gap
   and uses a compact filled-tonal pill. The action remains visually contained
   without inflating it to the 56 dp task-button size.
-- Sign Up's primary action is the final item in the form scroll surface rather
-  than a persistent bottom bar. The scroll surface applies IME padding after
-  consuming Scaffold's safe-drawing padding, so the focused field and action
-  can be brought fully above the keyboard without a second fixed region.
+- Sign Up's primary action uses the same persistent, bounded bottom slot as
+  Sign In. Navigation-bar and IME padding are applied once to that slot; the
+  form consumes Scaffold's measured content padding rather than adding a
+  second IME inset. This keeps the action anchored and the focused field
+  scrollable above it.
 - While Sign In or Sign Up is processing, its primary task button blocks
   duplicate activation but retains the semantic `primary`/`onPrimary` color
   pair. A compact indeterminate indicator and stable visible progress label
@@ -211,7 +213,9 @@ User-approved Android loading copy is:
 - `CAMERA` is requested only after **Scan QR Code** is selected. Denial keeps
   the person in the scanner with **Allow Camera** recovery; permanent denial
   offers **Open Settings**. Android's camera privacy indicator remains
-  system-owned. The separate Share & Connect flow retains Google Code Scanner.
+  system-owned. The later Share & Connect polish reuses this same approved
+  app-owned scanner with profile-specific title, permission copy and result
+  validation; it does not duplicate the camera implementation.
 - Bundled deterministic web results are never fetched. Search and URL preserve
   the accepted production-facing privacy consequence while the prototype maps
   valid input to a local image.
@@ -269,7 +273,6 @@ User-approved Android loading copy is:
 - [BitmapFactory decode options](https://developer.android.com/reference/android/graphics/BitmapFactory.Options#inJustDecodeBounds)
 - [Android splash screens](https://developer.android.com/develop/ui/views/launch/splash-screen)
 - [Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker)
-- [Google Code Scanner](https://developers.google.com/ml-kit/vision/barcode-scanning/code-scanner)
 - [CameraX](https://developer.android.com/media/camera/camerax)
 - [CameraX ML Kit Analyzer](https://developer.android.com/media/camera/camerax/mlkitanalyzer)
 - [ML Kit barcode scanning](https://developers.google.com/ml-kit/vision/barcode-scanning/android)
@@ -318,9 +321,10 @@ User-approved Android loading copy is:
   cutouts continue to be respected.
 - Sign In and Sign Up form content and task actions do not exceed 520 dp on
   expanded layouts, while staying full width within compact 16 dp margins.
-- Sign Up's 120 dp avatar, Name, About, and primary action share one scroll
-  surface. With the IME visible, no field is permanently occluded by a pinned
-  app action; the top app bar exposes its Material scrolled tonal state.
+- Sign Up's 120 dp avatar, Name, and About share one scroll surface beneath a
+  separate pinned primary action. With the IME visible, no field is
+  permanently occluded; the action remains above the keyboard and the top app
+  bar exposes its Material scrolled tonal state.
 - QR entry is a semantically labeled 56 × 56 dp tonal icon button adjacent to
   the Private Key field; it remains available whenever Sign In is idle.
 - Selecting QR entry opens an immediately expanded near-full Material sheet

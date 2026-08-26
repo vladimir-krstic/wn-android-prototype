@@ -97,8 +97,9 @@ None.
 
 ## Governing Android sources
 
-The 2026-08-26 shared-sheet refinement is WN-ANDROID-0039:
-`WhiteNoiseModalBottomSheet` owns the continuous `surfaceContainerLow` and
+The 2026-08-26 shared-sheet refinement is WN-ANDROID-0039 as updated by
+WN-ANDROID-0046: `WhiteNoiseModalBottomSheet` owns the continuous
+`surfaceContainer` and
 one safeDrawing/IME layer; `WhiteNoiseSheetHeader` owns wrapping titleLarge,
 24 dp text margins, 8 dp body gap and optional trailing native Close. Material
 owns all handle/shape/width/motion/dismissal metrics. Ordinary rows remain

@@ -210,7 +210,6 @@ fun WhiteNoiseNavHost(
                 onRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 onSupport = { navController.navigate(AppRoute.Support) },
                 onDonate = { navController.navigate(AppRoute.Donate) },
-                onManageProfiles = { navController.navigate(AppRoute.ManageProfiles) },
                 onDeveloperTools = { navController.navigate(AppRoute.DeveloperTools) },
                 onSignOut = { wipeData ->
                     appViewModel.signOutActiveProfile(wipeData)?.let(::finishProfileExit)

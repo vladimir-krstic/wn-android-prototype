@@ -194,13 +194,15 @@ upgrade rather than treating it as a permanently current recommendation.
 Gradle 9.7.1 is the official 9.7 patch release recommended on 2026-08-21 and
 passed the complete project gate without changing the Android plugin baseline.
 
-Batch 1 additionally verified Google Code Scanner 16.1.0 and AndroidX
-ExifInterface 1.4.2. The scanner's transitive `INTERNET` and
-`ACCESS_NETWORK_STATE` manifest entries are deliberately removed to preserve
-the offline prototype boundary.
+Batch 1 originally verified Google Code Scanner 16.1.0 and AndroidX
+ExifInterface 1.4.2. WN-ANDROID-0048 removed the scanner dependency after the
+last system-scanner flow moved to the already bundled CameraX/ML Kit scanner;
+the manifest continues to reject transitive `INTERNET` and
+`ACCESS_NETWORK_STATE` entries to preserve the offline prototype boundary.
 
 The Sign In device-polish pass additionally verified stable CameraX 1.6.1 and
-bundled ML Kit Barcode Scanning 17.3.0 for its user-approved app-owned scanner.
+bundled ML Kit Barcode Scanning 17.3.0 for the user-approved app-owned scanner,
+now shared with Share & Connect profile scanning.
 The bundled detector is immediately available and operates on device; only
 the just-in-time `CAMERA` permission is added.
 

@@ -2,15 +2,19 @@ package dev.ipf.whitenoise.ui.settings
 
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -20,10 +24,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.state.AppUiState
@@ -60,22 +70,91 @@ private fun DiagnosticsPromptSheet(profile: Profile, onAnalytics: (Boolean) -> U
                 stringResource(R.string.help_improve_white_noise),
                 onClose = { scope.launch { sheetState.hide(); onDismiss() } },
             )
-            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(bottom = WhiteNoiseSpacing.Section)) {
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = WhiteNoiseSpacing.Section)
+                    .testTag("diagnostics.prompt.content"),
+            ) {
                 Text(
                     stringResource(R.string.diagnostics_intro),
-                    Modifier.padding(horizontal = WhiteNoiseSpacing.Section).padding(bottom = WhiteNoiseSpacing.Section),
+                    Modifier
+                        .padding(
+                            start = WhiteNoiseSpacing.Section,
+                            end = WhiteNoiseSpacing.Section,
+                            bottom = WhiteNoiseSpacing.Section,
+                        )
+                        .testTag("diagnostics.prompt.intro"),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                DiagnosticsSwitches(profile, onAnalytics, onLogging, showDetails = false)
+                DiagnosticsPromptSwitch(
+                    title = stringResource(R.string.share_anonymous_analytics),
+                    checked = profile.diagnostics.analyticsEnabled,
+                    onCheckedChange = onAnalytics,
+                    tag = "analytics",
+                )
+                DiagnosticsPromptSwitch(
+                    title = stringResource(R.string.share_diagnostic_logs),
+                    checked = profile.diagnostics.loggingEnabled,
+                    onCheckedChange = onLogging,
+                    tag = "logging",
+                )
                 Text(
                     stringResource(R.string.diagnostics_privacy),
-                    Modifier.padding(horizontal = WhiteNoiseSpacing.SettingsSectionInset, vertical = WhiteNoiseSpacing.Related),
+                    Modifier
+                        .padding(
+                            start = WhiteNoiseSpacing.Section,
+                            top = WhiteNoiseSpacing.Related,
+                            end = WhiteNoiseSpacing.Section,
+                        )
+                        .testTag("diagnostics.prompt.privacy"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DiagnosticsPromptSwitch(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    tag: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = WhiteNoiseSpacing.Related)
+            .clip(MaterialTheme.shapes.large)
+            .heightIn(min = 56.dp)
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .semantics(mergeDescendants = true) { }
+            .testTag("diagnostics.prompt.$tag.row")
+            .padding(horizontal = WhiteNoiseSpacing.FormField),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier
+                .weight(1f)
+                .testTag("diagnostics.prompt.$tag.label"),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            modifier = Modifier
+                .clearAndSetSemantics { }
+                .testTag("diagnostics.prompt.$tag.switch"),
+        )
     }
 }
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Badge
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -34,6 +36,7 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.settings.profileSwitcherPresentation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +47,7 @@ fun ProfileSwitcherSheet(
     onSelectProfile: (String) -> Unit,
     onAddProfile: () -> Unit,
 ) {
-    val orderedProfiles = profiles.sortedBy { if (it.id == activeProfileId) 0 else 1 }
+    val presentedProfiles = profileSwitcherPresentation(profiles, activeProfileId)
     val currentProfileDescription = stringResource(R.string.current_profile)
 
     ModalBottomSheet(
@@ -53,23 +56,30 @@ fun ProfileSwitcherSheet(
         Column(modifier = Modifier.fillMaxWidth()) {
             WhiteNoiseSheetHeader(stringResource(R.string.switch_profile), onClose = onDismiss)
             LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 520.dp)) {
-                items(orderedProfiles, key = Profile::id) { profile ->
-                    val unreadCount = profile.chats
-                        .filter { !it.isArchived && !it.hasEndedMembership }
-                        .sumOf { chat -> chat.unreadCount.coerceAtLeast(if (chat.isMarkedUnread) 1 else 0) }
-                    val unreadDescription = pluralStringResource(
-                        R.plurals.unread_count,
-                        unreadCount,
-                        unreadCount,
-                    )
+                items(presentedProfiles, key = { it.profile.id }) { item ->
+                    val profile = item.profile
+                    val unreadDescription = if (item.unreadCount > 99) {
+                        stringResource(R.string.unread_count_capped)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.unread_count,
+                            item.unreadCount,
+                            item.unreadCount,
+                        )
+                    }
                     ListItem(
-                        headlineContent = { Text(profile.name) },
+                        headlineContent = {
+                            Text(
+                                text = profile.name,
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        },
                         supportingContent = { Text(profile.shortPublicKey) },
                         leadingContent = {
                             ProfileAvatar(
                                 name = profile.name,
                                 avatar = profile.avatar,
-                                modifier = Modifier.size(56.dp),
+                                modifier = Modifier.size(48.dp),
                                 contentDescription = null,
                             )
                         },
@@ -78,14 +88,18 @@ fun ProfileSwitcherSheet(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                if (unreadCount > 0) {
+                                if (!item.isActive && item.unreadCount > 0) {
                                     Badge(
                                         modifier = Modifier.semantics {
                                             contentDescription = unreadDescription
                                         },
-                                    ) { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ) {
+                                        Text(if (item.unreadCount > 99) "99+" else item.unreadCount.toString())
+                                    }
                                 }
-                                if (profile.id == activeProfileId) {
+                                if (item.isActive) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_check),
                                         contentDescription = null,
@@ -97,24 +111,34 @@ fun ProfileSwitcherSheet(
                             }
                         },
                         colors = ListItemDefaults.colors(
-                            containerColor = if (profile.id == activeProfileId) {
-                                MaterialTheme.colorScheme.primaryContainer
+                            containerColor = if (item.isActive) {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
                             } else {
                                 Color.Transparent
                             },
                         ),
                         modifier = Modifier
                             .clickable { onSelectProfile(profile.id) }
+                            .testTag("profile_switcher.profile.${profile.id}")
                             .semantics(mergeDescendants = true) {
-                                selected = profile.id == activeProfileId
+                                selected = item.isActive
                             },
                     )
                 }
             }
             WhiteNoiseButton(
                 onClick = onAddProfile,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .testTag("profile_switcher.add_profile"),
             ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_settings_person_add),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.add_profile))
             }
         }

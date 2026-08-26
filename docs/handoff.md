@@ -37,7 +37,7 @@ store.
 | --- | --- | --- |
 | Back and destination state | Navigation Compose and system/predictive Back | None |
 | Private-key QR scan | Near-full Material sheet with CameraX and bundled on-device ML Kit | Camera, requested just in time |
-| Share & Connect QR scan | Google Code Scanner system UI | None |
+| Share & Connect QR scan | Shared near-full CameraX/ML Kit Material scanner sheet | Camera, requested just in time |
 | QR generation | Local ZXing matrix rendered in Compose | None |
 | Photos and videos | Android Photo Picker | None |
 | Documents | Storage Access Framework | None |
@@ -48,7 +48,7 @@ store.
 | Recents privacy | Activity `FLAG_SECURE` derived from active profile | None |
 
 The merged application declares camera permission only for the selected
-Private Key QR scanner. It intentionally declares no network, storage,
+Private Key or Share & Connect QR scanner. It intentionally declares no network, storage,
 microphone, notification, or location permission. There is no backend,
 transport, durable persistence, real authentication, cryptography, payment,
 telemetry upload, microphone capture, or speech recognition.

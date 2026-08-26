@@ -39,7 +39,7 @@ fun WhiteNoiseModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier.testTag("sheet.surface"),
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
         contentWindowInsets = contentWindowInsets,
         content = content,
