@@ -57,7 +57,7 @@ class AppResourceIntegrityTest {
 
     @Suppress("DEPRECATION")
     @Test
-    fun privateKeyScannerDeclaresCameraWithoutNetworkAccess() {
+    fun selectedPlatformCapabilitiesAreDeclaredWithoutNetworkAccess() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val permissions = context.packageManager
             .getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
@@ -66,6 +66,7 @@ class AppResourceIntegrityTest {
             .orEmpty()
 
         assertTrue(Manifest.permission.CAMERA in permissions)
+        assertTrue(Manifest.permission.POST_NOTIFICATIONS in permissions)
         assertFalse(Manifest.permission.INTERNET in permissions)
         assertFalse(Manifest.permission.ACCESS_NETWORK_STATE in permissions)
         assertFalse(Manifest.permission.RECORD_AUDIO in permissions)

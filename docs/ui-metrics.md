@@ -33,6 +33,12 @@ active pane.
   multiline fields keep the fixed 28 dp radius rather than scaling it with
   their height. Disabled fields use `surfaceContainerLow` and Material disabled
   content colors.
+- Settings detail pages and ordinary app-owned dialogs or sheets use
+  `surfaceContainerLow` as their neutral canvas. Their grouped controls and
+  shared text fields use `surfaceContainerLowest`, producing the same
+  gray-canvas/white-component hierarchy as the Settings root without literal
+  light-theme colors. System-owned surfaces and specialized camera/media
+  presentations retain their platform or feature-specific treatment.
 - The field content inset is 16 dp. Above-field labels and supporting/error
   text align to that same directional start line; Material's 24 dp leading
   icon artwork also begins on it inside the standard 48 dp slot. Keep the
@@ -144,13 +150,21 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   The verified address uses the official 20 dp filled rounded `verified` seal.
   Name and address use their native line metrics without an added gap; the
   public-key target begins 4 dp below the address. The copy capsule is visibly
-  32 dp high at default text scale, using 25 dp horizontal and 8 dp vertical
-  content padding around `bodySmall` text and a 16 dp copy/check icon. It is
-  centered inside a transparent 48 dp semantic target. The target owns input,
-  while its shared interaction source renders the bounded state layer only in
-  the visible capsule's clipped shape.
+  240 dp wide and 32 dp high at default text scale, using 16 dp horizontal and
+  8 dp vertical content padding around `bodySmall` text and a 16 dp copy/check
+  icon. The full public key fills the remaining width and receives native
+  middle ellipsis inside the capsule, rather than rendering a pre-shortened
+  fixture string. It is centered inside a transparent 48 dp semantic target.
+  The target owns input, while its shared interaction source renders the
+  bounded state layer only in the visible capsule's clipped shape.
   The QR is the only literal white/black surface so it stays theme-independent
   and reliably scannable.
+- The Profile route uses the shared 16 dp compact-screen margin. In read mode
+  its tonal fields remain enabled-looking and selectable but use the native
+  read-only state; the verified seal occupies the address field's native
+  trailing-icon slot. Edit mode keeps the same geometry; its
+  only persistent task action is the shared 56 dp Save button on a zero-tonal-
+  elevation `surface` bottom slot, so no footer band appears against the page.
 - A full-content-width standard primary **Scan QR Code** button is pinned to the
   bottom of the active pane with the shared 16 dp action inset plus the device
   navigation safe area. It keeps the shared 56 dp task height and official
@@ -284,6 +298,75 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   internal horizontal padding. The combined 8 + 16 dp geometry preserves the
   shared 24 dp grid while preventing pressed feedback from becoming an
   edge-to-edge rectangular band.
+
+## Notifications
+
+- The detail page retains the Settings `surfaceContainerLow` canvas and
+  `surfaceContainerLowest` groups. Local notifications and its dependent
+  Native push switch remain whole-row Material switch targets in one group,
+  separated by the accepted two-dp canvas-tone gap.
+- Preview is an inline accessible radio group on the existing Notifications
+  subscreen, not another dialog. Sender and message, Sender only and New
+  message only use native `SettingsChoice` measurement, transparent resting
+  and selected containers, radio state, and two-dp inter-row gaps. The radio
+  control alone communicates selection rather than a full-width gray block.
+- A final noninteractive native list row shows the deterministic preview for
+  the selected choice. Concise helper copy sits outside the group. When Local
+  notifications is off, Native push, every preview choice and the example use
+  Material disabled semantics/colors while explaining the dependency.
+- Notification access is an app-wide platform gate above the profile-owned
+  groups. Before Android 13+ has recorded a choice, one grouped action requests
+  the native `POST_NOTIFICATIONS` prompt. When access is blocked, the same slot
+  becomes a grouped **Notifications are off** disclosure into app-specific
+  Android notification settings. Granted access removes the gate; there is no
+  permanent Android section.
+- Permission loss visually turns Local notifications off and disables its
+  row. Native push, every Preview choice and its example follow the resulting
+  dependency chain. Returning from the system prompt or Settings refreshes the
+  gate without adding notification delivery, channels, push, or persistence.
+
+## Appearance and language
+
+- Appearance retains the standard Settings detail canvas and begins with the
+  shared section-heading rhythm for Theme. Its three native radio rows use
+  transparent resting and selected containers plus the shared two-dp
+  canvas-tone separators; radio state alone communicates selection.
+- The theme explanation uses the shared Settings explainer inset immediately
+  below the group. Language follows as one white-equivalent disclosure group,
+  showing the active preference as a trailing value instead of repeating all
+  language controls on Appearance.
+- Language is a separate typed route. Its white-equivalent choice group begins
+  one shared section interval below the app bar, then uses native radio-row
+  measurement and two-dp separators for all eight accepted choices. No
+  screen-local iOS checkmark alignment, card metric, or navigation control is
+  introduced.
+
+## Profile Keys
+
+- The route uses the Settings hierarchy: `surfaceContainerLow` canvas,
+  `surfaceContainerLowest` grouped surfaces, 16 dp compact/24 dp expanded
+  screen margins, and 24 dp between key sections.
+- Public/private values use monospaced one-line text in a weighted 64 dp key
+  row. The complete stored value is composed with middle ellipsis at the
+  measured action boundary rather than shortened before layout. A hidden
+  private key clips its repeated mask glyphs at that boundary and never adds
+  an ellipsis that could be mistaken for part of the masked value. Official
+  24 dp copy and visibility artwork keeps 48 dp controls; 16 dp start and
+  visual end edges come from 16 dp start plus a 4 dp row end inset around the
+  centered action artwork. Private-value accessibility remains state-only.
+- Supporting copy starts on the shared 32 dp group-content line and sits 8 dp
+  below its related group. Export rows share a tonal group with the standard
+  subtle divider inset; there are no screen-width export buttons.
+- Material `AlertDialog` owns dialog width, shape, spacing, actions, Back,
+  outside dismissal, focus, IME movement, and large-text adaptation. Ordinary
+  dialog inputs do not opt out of the app-wide form language: the encrypted-
+  export form uses `WhiteNoiseSecureTextField` with the shared 28 dp rounded
+  white-equivalent container, attached labels, and an 8 dp field rhythm on the
+  neutral dialog canvas. Both fields fill and align to Material's dialog text
+  slot. Low/Fair/Strong feedback uses the pinned iOS thresholds and a
+  three-step Material progress indicator. Material still owns secure editing,
+  focus, IME behavior, state animation, and error semantics; no local dialog
+  dimensions or iOS sheet metrics are introduced.
 
 ## Governing Android sources
 

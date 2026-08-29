@@ -3,46 +3,90 @@ package dev.ipf.whitenoise.ui.settings
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
-import androidx.annotation.RequiresApi
-import androidx.core.net.toUri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.AutoLockDuration
+import dev.ipf.whitenoise.model.LanguagePreference
 import dev.ipf.whitenoise.model.MediaDownloadPolicy
 import dev.ipf.whitenoise.model.NotificationPreviewMode
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileSettings
 import dev.ipf.whitenoise.model.SentMediaQuality
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @Composable
 fun NotificationsScreen(
     profile: Profile,
     onBack: () -> Unit,
     onChange: (ProfileSettings) -> Unit,
+    permissionStatusOverride: NotificationPermissionStatus? = null,
 ) {
-    val context = LocalContext.current
-    var previewPicker by remember { mutableStateOf(false) }
+    val permissionAccess = rememberNotificationPermissionAccess()
+    val permissionStatus = permissionStatusOverride ?: permissionAccess.status
+    val notificationsAllowed = permissionStatus == NotificationPermissionStatus.Allowed
     val settings = profile.settings
+    val localNotificationsEnabled = notificationsAllowed && settings.localNotifications
     SettingsScaffold(title = "Notifications", onBack = onBack) {
         SettingsList {
+            if (!notificationsAllowed) {
+                item {
+                    SettingsGroup(
+                        modifier = Modifier.testTag("notifications.permission.group"),
+                    ) {
+                        when (permissionStatus) {
+                            NotificationPermissionStatus.NotRequested -> SettingsAction(
+                                title = "Allow notifications",
+                                subtitle = "Get notified about new messages and use these options.",
+                                onClick = permissionAccess.requestPermission,
+                                leading = {
+                                    NotificationPermissionIcon(R.drawable.ic_settings_notifications)
+                                },
+                            )
+                            NotificationPermissionStatus.Blocked -> SettingsLink(
+                                title = "Notifications are off",
+                                subtitle = "Turn them on in Android Settings to use these options.",
+                                onClick = permissionAccess.openSettings,
+                                leading = {
+                                    NotificationPermissionIcon(R.drawable.ic_notifications_off)
+                                },
+                            )
+                            NotificationPermissionStatus.Allowed -> Unit
+                        }
+                    }
+                }
+            }
             item { SettingsSection("Delivery") }
             item {
                 SettingsGroup {
                     SettingsSwitch(
                         title = "Local notifications",
-                        checked = settings.localNotifications,
+                        checked = localNotificationsEnabled,
+                        enabled = notificationsAllowed,
                         onCheckedChange = {
                             onChange(
                                 settings.copy(
@@ -51,109 +95,188 @@ fun NotificationsScreen(
                                 ),
                             )
                         },
-                        subtitle = "Show notifications created on this device.",
+                        subtitle = "Create message notifications on this device. Without native push, delivery may wait until White Noise is active.",
                     )
+                    SettingsDivider(Modifier.testTag("notifications.delivery.divider"))
                     SettingsSwitch(
                         title = "Native push",
-                        checked = settings.nativePushNotifications,
-                        enabled = settings.localNotifications,
+                        checked = localNotificationsEnabled && settings.nativePushNotifications,
+                        enabled = localNotificationsEnabled,
                         onCheckedChange = { onChange(settings.copy(nativePushNotifications = it)) },
-                        subtitle = if (settings.localNotifications) {
-                            "Use native push delivery for new messages."
-                        } else {
-                            "Turn on local notifications first."
+                        subtitle = when {
+                            !notificationsAllowed -> "Allow notifications first."
+                            !settings.localNotifications -> "Turn on local notifications first."
+                            else -> "Use a generic wake-up signal to check for new messages in the background. Message details stay on this device."
                         },
                     )
                 }
             }
             item { SettingsSection("Preview") }
             item {
-                SettingsGroup {
-                    SettingsLink(
-                        "Message preview",
-                        if (settings.localNotifications) settings.notificationPreviewMode.label else "Local notifications are off",
-                        onClick = { previewPicker = true },
-                        enabled = settings.localNotifications,
+                SettingsGroup(
+                    modifier = Modifier.testTag("notifications.preview.group"),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectableGroup(),
+                    ) {
+                        NotificationPreviewMode.entries.forEachIndexed { index, mode ->
+                            if (index > 0) {
+                                SettingsDivider()
+                            }
+                            SettingsChoice(
+                                title = mode.label,
+                                selected = settings.notificationPreviewMode == mode,
+                                enabled = localNotificationsEnabled,
+                                highlightSelected = false,
+                                onClick = {
+                                    onChange(settings.copy(notificationPreviewMode = mode))
+                                },
+                            )
+                        }
+                    }
+                    SettingsDivider()
+                    NotificationPreviewExample(
+                        example = settings.notificationPreviewMode.example,
+                        enabled = localNotificationsEnabled,
                     )
                 }
             }
-            item { SettingsSection("Android") }
             item {
-                SettingsGroup {
-                    SettingsAction(
-                        title = "Open Android notification settings",
-                        subtitle = "Control app-level permission, channels, sound, and visibility.",
-                        onClick = { context.startActivity(notificationSettingsIntent(context)) },
-                    )
-                }
+                SettingsExplainer(
+                    when {
+                        !notificationsAllowed -> "Allow notifications to change message previews."
+                        !settings.localNotifications -> "Turn on local notifications to change message previews."
+                        else -> "Choose how much message information appears in notifications."
+                    },
+                )
             }
         }
     }
-    if (previewPicker) {
-        ChoiceDialog(
-            title = "Message preview",
-            values = NotificationPreviewMode.entries,
-            selected = settings.notificationPreviewMode,
-            label = NotificationPreviewMode::label,
-            onDismiss = { previewPicker = false },
-            onSelect = {
-                onChange(settings.copy(notificationPreviewMode = it))
-                previewPicker = false
-            },
-        )
-    }
 }
 
-private fun notificationSettingsIntent(context: Context): Intent =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        notificationSettingsIntentApi26(context)
-    } else {
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri())
-    }
+@Composable
+private fun NotificationPermissionIcon(drawable: Int) {
+    Icon(
+        painter = painterResource(drawable),
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
 
-@RequiresApi(Build.VERSION_CODES.O)
-private fun notificationSettingsIntentApi26(context: Context): Intent =
-    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-    }
+@Composable
+private fun NotificationPreviewExample(
+    example: String,
+    enabled: Boolean,
+) {
+    val contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+        alpha = if (enabled) 1f else 0.38f,
+    )
+    ListItem(
+        headlineContent = { Text(example, color = contentColor) },
+        leadingContent = {
+            Icon(
+                painter = painterResource(R.drawable.ic_settings_notifications),
+                contentDescription = null,
+                tint = contentColor,
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("notifications.preview.example"),
+    )
+}
 
 @Composable
 fun AppearanceScreen(
     profile: Profile,
     onBack: () -> Unit,
     onChange: (ProfileSettings) -> Unit,
+    onLanguage: () -> Unit,
 ) {
     val settings = profile.settings
     SettingsScaffold(title = "Appearance", onBack = onBack) {
         SettingsList {
             item { SettingsSection("Theme") }
             item {
-                SettingsGroup {
-                    AppearancePreference.entries.forEach { preference ->
-                        SettingsChoice(
-                            title = preference.label,
-                            selected = settings.appearance == preference,
-                            onClick = { onChange(settings.copy(appearance = preference)) },
-                        )
+                SettingsGroup(
+                    modifier = Modifier.testTag("appearance.theme.group"),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectableGroup(),
+                    ) {
+                        AppearancePreference.entries.forEachIndexed { index, preference ->
+                            if (index > 0) {
+                                SettingsDivider()
+                            }
+                            SettingsChoice(
+                                title = preference.label,
+                                selected = settings.appearance == preference,
+                                highlightSelected = false,
+                                onClick = { onChange(settings.copy(appearance = preference)) },
+                            )
+                        }
                     }
                 }
             }
-            item { SettingsSection("Language") }
             item {
-                SettingsGroup {
-                    SettingsChoice(
-                        title = "System default (English)",
-                        selected = settings.language == "System default (English)",
-                        onClick = { onChange(settings.copy(language = "System default (English)")) },
-                    )
-                    SettingsChoice(
-                        title = "English",
-                        selected = settings.language == "English",
-                        onClick = { onChange(settings.copy(language = "English")) },
+                SettingsExplainer(
+                    "System default follows your device appearance. Light and Dark keep the selected appearance.",
+                )
+            }
+            item {
+                SettingsGroup(
+                    modifier = Modifier.testTag("appearance.language.group"),
+                ) {
+                    SettingsLink(
+                        title = "Language",
+                        value = settings.language.label,
+                        onClick = onLanguage,
                     )
                 }
             }
-            item { SettingsExplainer("English is currently available. Theme changes apply immediately to the active profile.") }
+        }
+    }
+}
+
+@Composable
+fun LanguageScreen(
+    profile: Profile,
+    onBack: () -> Unit,
+    onChange: (ProfileSettings) -> Unit,
+) {
+    val settings = profile.settings
+    SettingsScaffold(title = "Language", onBack = onBack) {
+        SettingsList {
+            item {
+                SettingsGroup(
+                    modifier = Modifier
+                        .padding(top = WhiteNoiseSpacing.Section)
+                        .testTag("language.choices.group"),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectableGroup(),
+                    ) {
+                        LanguagePreference.entries.forEachIndexed { index, preference ->
+                            if (index > 0) {
+                                SettingsDivider()
+                            }
+                            SettingsChoice(
+                                title = preference.label,
+                                selected = settings.language == preference,
+                                highlightSelected = false,
+                                onClick = { onChange(settings.copy(language = preference)) },
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -166,27 +289,35 @@ fun PrivacySecurityScreen(
     onChange: (ProfileSettings) -> Unit,
     onEraseAppData: (String) -> Unit,
     onDiagnosticsImprovements: () -> Unit = {},
+    deviceSecureOverride: Boolean? = null,
 ) {
     val context = LocalContext.current
     val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-    val secure = keyguard.isDeviceSecure
+    val secure = deviceSecureOverride ?: keyguard.isDeviceSecure
     var autoLockPicker by remember { mutableStateOf(false) }
     var eraseOpen by remember { mutableStateOf(false) }
     val settings = profile.settings
+    val authenticationEnabled = secure && settings.requireDeviceAuthentication
+    LaunchedEffect(authenticationEnabled) {
+        if (!authenticationEnabled) autoLockPicker = false
+    }
     SettingsScaffold(title = "Privacy & Security", onBack = onBack) {
         SettingsList {
             item { SettingsSection("Device protection") }
             item {
-                SettingsGroup {
+                SettingsGroup(
+                    modifier = Modifier.testTag("privacy.device_protection.group"),
+                ) {
                     SettingsSwitch(
                         title = "Hide Screen in Recents",
                         checked = settings.hideScreenInRecents,
                         onCheckedChange = { onChange(settings.copy(hideScreenInRecents = it)) },
-                        subtitle = "Protect previews and screenshots with Android’s secure window.",
+                        subtitle = "Hide conversations and profile details in Recents.",
                     )
+                    SettingsDivider(Modifier.testTag("privacy.device_protection.divider.recents"))
                     SettingsSwitch(
                         title = "Require device authentication",
-                        checked = settings.requireDeviceAuthentication,
+                        checked = authenticationEnabled,
                         enabled = secure,
                         onCheckedChange = { onChange(settings.copy(requireDeviceAuthentication = it)) },
                         subtitle = if (secure) {
@@ -196,31 +327,53 @@ fun PrivacySecurityScreen(
                         },
                     )
                     if (!secure) {
+                        SettingsDivider(Modifier.testTag("privacy.device_protection.divider.security_settings"))
                         SettingsAction(
                             title = "Open Android security settings",
                             onClick = { context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
                         )
                     }
-                    SettingsLink("Auto-lock", settings.autoLockDuration.label, onClick = { autoLockPicker = true })
+                    if (authenticationEnabled) {
+                        SettingsDivider(Modifier.testTag("privacy.device_protection.divider.auto_lock"))
+                        SettingsLink(
+                            title = "Auto-lock",
+                            value = settings.autoLockDuration.label,
+                            onClick = { autoLockPicker = true },
+                        )
+                    }
                 }
             }
-            item { SettingsExplainer("Security preferences are stored separately for each profile.") }
             item { SettingsSection("Diagnostics") }
             item {
-                SettingsGroup {
-                    SettingsLink("Diagnostics & Improvements", profile.diagnostics.summary, onDiagnosticsImprovements)
+                SettingsGroup(
+                    modifier = Modifier.testTag("privacy.diagnostics.group"),
+                ) {
+                    SettingsLink(
+                        title = "Diagnostics & Improvements",
+                        value = profile.diagnostics.summary,
+                        onClick = onDiagnosticsImprovements,
+                    )
                 }
+            }
+            item {
+                SettingsExplainer("Control optional analytics and diagnostic logs for this profile.")
             }
             item { SettingsSection("Device data") }
             item {
-                SettingsGroup {
+                SettingsGroup(
+                    modifier = Modifier.testTag("privacy.erase.group"),
+                ) {
                     SettingsAction(
                         title = "Erase App Data",
-                        subtitle = "Signs out every profile and permanently removes all White Noise data from this device.",
                         onClick = { eraseOpen = true },
                         destructive = true,
                     )
                 }
+            }
+            item {
+                SettingsExplainer(
+                    "Signs out every profile and permanently removes all White Noise data from this device.",
+                )
             }
         }
     }
@@ -350,11 +503,22 @@ private fun <T> ChoiceDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column {
-                values.forEach { value ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                    .selectableGroup()
+                    .testTag("choice_dialog.options"),
+            ) {
+                values.forEachIndexed { index, value ->
+                    if (index > 0) {
+                        SettingsDivider()
+                    }
                     SettingsChoice(
                         title = label(value),
                         selected = value == selected,
+                        highlightSelected = false,
                         onClick = { onSelect(value) },
                     )
                 }

@@ -1,5 +1,68 @@
 # Settings and profile services
 
+2026-08-29 Appearance follow-up: Appearance keeps the immediate profile-owned
+System default/Light/Dark choice as one accessible Material radio group with
+two-dp canvas-tone separators and no full-row selected fill. Concise theme
+behavior sits immediately below that group. Language is no longer a second
+dense inline picker: one disclosure row opens a typed **Language** destination
+with System default, English, German, Spanish, French, Italian, Portuguese and
+Serbian as immediately applied radio choices. The presentation follows Android
+settings and radio semantics while preserving the pinned iOS product choices.
+Because this prototype has no translated resources and preferences remain
+profile-owned, selection stays deterministic and does not invoke Android's
+app-wide locale API.
+
+2026-08-29 Notifications permission follow-up: Android's real app-level
+notification capability now gates this otherwise deterministic prototype.
+Before the Android 13+ request, one contextual **Allow notifications** action
+launches the system-owned runtime prompt. A denial or a system-level block
+replaces it with **Notifications are off** and an app-specific Android Settings
+handoff; returning to the app refreshes availability. Granted access removes
+the permission group entirely. Android 12 and earlier derive availability from
+the system notification toggle. The permanent Android section is removed,
+while notification creation, delivery, channels, push and persistence remain
+out of scope.
+
+2026-08-29 Notifications presentation follow-up: Delivery keeps two whole-row Material
+switches in one white-equivalent group with the accepted two-dp canvas-tone
+separator and product-meaningful device/wake-up explanations. Preview is no
+longer hidden behind the generic choice dialog: the Notifications detail page
+shows all three native radio rows inline, separated by the same group rhythm,
+followed by the deterministic example and concise helper. Selection applies
+immediately; Android notification access owns Local notifications availability,
+and Local notifications then owns Native push and Preview availability.
+
+2026-08-27 Profile Keys field/dialog follow-up: key-value rows now render the
+complete stored value into a weighted text slot and apply middle ellipsis only
+at the measured trailing-action boundary. A hidden private key clips its mask
+glyphs without drawing an ellipsis. Copy/visibility artwork sits on the
+standard 16 dp visual edge while retaining native 48 dp action targets. The
+encrypted export task uses the shared 28 dp rounded secure-field component
+with attached labels, compact field rhythm, visible mismatch feedback and
+standard Material alert actions.
+
+2026-08-27 Profile Keys follow-up: the route now uses the Settings canvas and
+three compact white-equivalent Material groups for Public key, Private key and
+Export. Public/private values keep their copy, reveal and accessibility
+boundaries without a repeated warning card, a separate Show row, oversized
+task buttons, or implementation-oriented document-picker footer. The private
+value remains absent from accessibility even while visibly revealed. Encrypted
+export uses one focused Material password dialog with two fields and immediate
+mismatch feedback; raw export uses the explicit **Keep Your Private Key Safe**
+consequence dialog. Android's system document creator remains the final save
+surface, and a failed write produces a concise recoverable error dialog.
+
+2026-08-27 Profile follow-up: Profile now opens in a native read mode. Name,
+Verified Nostr Address and About retain their Material field geometry but are
+read-only, selectable and full-contrast until the app-bar **Edit** action is
+selected. The official filled
+verified seal sits inside the address field and replaces the repeated
+verification helper line. Photo sources are editing-only. Edit mode exposes
+one validated **Save** task above navigation/IME insets; its zero-elevation
+surface matches the white-equivalent page instead of creating a gray footer.
+Save returns to read mode on Profile. System Back cancels and restores an
+active draft before a subsequent Back leaves the route.
+
 2026-08-27 Share & Connect follow-up: the route is now one stable Material page
 instead of a mode switch. Its centered app-bar title is **Share & Connect**;
 native Back and Share actions keep their standard targets. The page shows the
@@ -61,7 +124,11 @@ relay networking, and payments remain excluded.
 - Privacy & Security contains a typed **Diagnostics & Improvements** route
   with an Off/Analytics/Logs/On summary. Its two native switches, retained-log
   size, and confirmed clearing are profile-owned and independent of Developer
-  Tools. See `diagnostics-and-improvements.md` for the scoped `4c25393` contract.
+  Tools. Auto-lock is visible only while Android device authentication is
+  effective; an unsecured device offers a direct Android security-settings
+  recovery action. Erase App Data keeps one consequence outside its entry and
+  opens the exact-phrase Material sheet. See `privacy-and-security.md` and
+  `diagnostics-and-improvements.md` for the accepted contracts.
 
 - Settings begins with one compact active-profile card. The active row opens
   Share & Connect. Its Add Profile action is direct when no alternate exists;
@@ -73,14 +140,31 @@ relay networking, and payments remain excluded.
   confirmation, uses Android Sharesheet, and exposes one explicit Scan QR Code
   action. The action reuses the approved app-owned CameraX/ML Kit scanner before
   showing the deterministic Profile Found state.
-- Profile edits name, About, verified `name@domain` address, and avatar through
-  Photo Picker, Storage Access Framework, or the pinned web-image fixtures.
-- Profile Keys visually hides/reveals and copies the deterministic private-key
-  value, but never exposes it to accessibility semantics. Encrypted export is
-  primary; raw export requires an explicit consequence confirmation. Both use
+- Profile reads name, About, and the verified `name@domain` address in
+  full-contrast read-only tonal fields. App-bar Edit makes those fields
+  editable and exposes editing-only avatar
+  sources through Photo Picker, Storage Access Framework, or the pinned
+  web-image fixtures; one Save action applies the draft and returns to read
+  mode.
+- Profile Keys presents public, private, and export actions as three compact
+  grouped lists. It visually hides/reveals and copies the deterministic
+  private-key value, but never exposes it to accessibility semantics.
+  Key values fill the measured row and use middle ellipsis before their
+  standard trailing action. Encrypted export uses a focused two-field native
+  Material secure-input dialog; raw export
+  requires an explicit consequence confirmation. Both continue through
   Android's document creator and do not claim real cryptography.
-- Notification, appearance, privacy, download, and quality choices belong to
-  the active profile and update immediately. Appearance drives the app theme.
+- Notification, appearance, language, privacy, download, and quality choices
+  belong to the active profile and update immediately. Appearance drives the
+  app theme. Its Theme choices stay inline; a single Language disclosure opens
+  the dedicated radio-list destination and Back returns to Appearance.
+  Notifications presents Local notifications and its dependent Native push
+  switch as separated native rows. Its three dependent preview choices remain
+  visible on the detail page as one accessible radio group with a deterministic
+  example. Android's app-wide notification permission appears only as a
+  contextual first-request or blocked-recovery group; it disables all
+  profile-owned notification options until granted and refreshes after the
+  system prompt or Settings return.
 - Seven deterministic profile relay records expose connected, reconnecting,
   disconnected, read-only, custom, and unassigned states plus Profile, Inbox,
   and Chat Messages roles. Only connected Chat Messages relays are
@@ -99,7 +183,8 @@ switcher selects immediately while Back, scrim, and swipe dismissal makes no
 change. Every ordinary row uses a
 typed Navigation Compose destination. System Back returns one level; dialogs,
 menus, and the profile switcher dismiss before navigation. Successful profile
-save returns to Settings. Support exits into the unique conversation.
+save returns to Profile read mode; Back then returns to Settings. Support exits
+into the unique conversation.
 The app-owned scanner and system-owned picker, Sharesheet, document creator,
 notification settings, and device-security settings return to the originating
 route.
@@ -107,17 +192,27 @@ route.
 ## Exact product copy
 
 Primary route titles are **Settings**, **Share & Connect**, **Profile**,
-**Profile Keys**, **Notifications**, **Appearance**, **Privacy & Security**,
-**Data Usage**, **Relays**, **Chat with support**, and **Donate**. Share &
+**Profile Keys**, **Notifications**, **Appearance**, **Language**,
+**Privacy & Security**, **Data Usage**, **Relays**, **Chat with support**, and
+**Donate**. Share &
 Connect exposes the explicit task label **Scan QR Code**. Relay roles are
 **Profile**, **Inbox**, and **Chat Messages**. Unavailable states explain the
 affected publishing, invitation, or new-chat function and route recovery.
+Profile-key export dialogs use **Encrypted Private Key** and **Keep Your
+Private Key Safe**; a failed document write uses **Couldn't Save File**.
 
 ## Android composition
 
 Material 3 top app bars, lazy settings lists, `ListItem`, switches, selectable
 radio rows, tabs, buttons, menus, and `AlertDialog` provide native hierarchy
-and behavior. Share & Connect uses a center-aligned title with native Back and
+and behavior. Settings details and ordinary app-owned dialogs/sheets use a
+`surfaceContainerLow` canvas with `surfaceContainerLowest` grouped elements
+and fields. Ordinary app-owned text and secure inputs, including inputs in
+dialogs, use the shared 28 dp rounded tonal field component; Material still
+owns editing, selection, focus, IME behavior, error semantics, and dialog
+layout. The encrypted-export fields fill and align to Material's dialog text
+slot and expose pinned-iOS-equivalent Low/Fair/Strong strength feedback. Share
+& Connect uses a center-aligned title with native Back and
 Share icon actions at their standard 48 dp targets. Its stable adaptive content
 stays scrollable, preserves a bounded measure and uses semantic surface roles
 while the QR alone remains literal black on white, with 12 dp of app-owned frame
@@ -125,7 +220,10 @@ padding, no additional encoder margin on this screen, the theme's less-rounded
 16 dp `large` corners, a 16 dp gap from the public-key target, and a 1 dp gap to
 its caption. An official filled rounded
 `verified` symbol provides the optional address seal. The public-key capsule is
-visibly 32 dp high at default text scale while its outer target remains 48 dp.
+visibly 240 dp wide and 32 dp high at default text scale while its outer target
+remains 48 dp. It lays out the full public key in the available interior and
+applies middle ellipsis there, so the wider surface reveals more of the key
+with balanced 16 dp directional padding.
 The target and capsule share interaction state, but the bounded ripple is
 clipped to the visible pill rather than painting the larger hit region. Scan QR Code
 uses the shared primary task button across the content width in a pinned,
@@ -149,6 +247,20 @@ surface gaps between transparent native list rows, matching the page canvas
 without introducing separate cards or button outlines inside a group. The
 stacked preview's `+N` remainder is a true 32 dp circular slot, and inactive
 profile unread badges use the same monochrome semantic colors as Chats.
+Profile Keys uses the same neutral canvas and white-equivalent grouped
+surfaces. Public and private values use one-line monospaced presentation;
+official copy, visibility, lock and download controls keep native 48 dp touch
+targets. Supporting copy aligns to the shared 32 dp group-content line with an
+8 dp relationship gap below its group. Export choices are ordinary list rows,
+not oversized page buttons. Password entry and raw-export confirmation use
+focused Material alert dialogs rather than a nested sheet toolbar or a custom
+stack of full-width controls.
+Appearance uses one transparent-resting Material radio group for Theme, a
+short explanation outside that white-equivalent group, and one unheaded
+Language disclosure group. Language is a typed child route with a top-spaced
+white-equivalent group containing all eight accepted choices, native radio
+semantics and the shared two-dp row separators. The active radio, rather than a
+square selected background or iOS checkmark, communicates selection.
 Photo Picker, `OpenDocument`, `CreateDocument`, Android Sharesheet, CameraX,
 bundled on-device ML Kit barcode analysis, notification/security settings
 intents, clipboard, and `FLAG_SECURE` own device integrations. ZXing core 3.5.4
@@ -199,11 +311,12 @@ user-directed device polish pass.
 - [Material app bars](https://developer.android.com/develop/ui/compose/components/app-bars) and [Material insets](https://developer.android.com/develop/ui/compose/system/material-insets) — centered task control, navigation/action placement, scroll tone and single inset ownership.
 - [Material buttons](https://developer.android.com/develop/ui/compose/components/button) — explicit primary scanner task with native state, target and motion.
 - [Material Symbols](https://developer.android.com/develop/ui/compose/graphics/images/material) — official filled verification and scanner artwork.
+- [Material dialogs](https://developer.android.com/develop/ui/compose/components/dialog) — focused password entry, consequence confirmation, and document-write recovery.
 - [Android settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings) — grouped hierarchy, subordinate screens, dependency explanation, and adaptive measure.
 - [Switches](https://developer.android.com/develop/ui/compose/components/switch) and [radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button) — native boolean and mutually exclusive state semantics.
 - [Tabs](https://developer.android.com/develop/ui/compose/components/tabs) — the two peer donation methods.
-- [Text input](https://developer.android.com/develop/ui/compose/text/user-input) — state-based, label-above profile, password, and relay fields.
-- [Accessibility in Compose](https://developer.android.com/develop/ui/compose/accessibility) — merged row semantics, disabled state, QR purpose, and private-key exclusion.
+- [Text input](https://developer.android.com/develop/ui/compose/text/user-input) and [BasicTextField API](https://developer.android.com/reference/kotlin/androidx/compose/foundation/text/BasicTextField.composable) — state-based, label-above profile, password, relay fields, and selectable read-only Profile values.
+- [Accessibility in Compose](https://developer.android.com/develop/ui/compose/accessibility) — merged row semantics, read-only Profile state, QR purpose, and private-key exclusion.
 - [Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker) and [Storage Access Framework](https://developer.android.com/guide/topics/providers/document-provider) — user-selected input/output without broad storage permission.
 - [CameraX preview](https://developer.android.com/media/camera/camerax/preview) and [ML Kit barcode scanning](https://developers.google.com/ml-kit/vision/barcode-scanning/android) — shared app-owned live preview and on-device profile-code analysis.
 - [Android Sharesheet](https://developer.android.com/training/sharing/send) — public profile sharing.
@@ -221,6 +334,8 @@ user-directed device polish pass.
 - Scoped current Settings evidence:
   `wn-ios-prototype@4c25393:WhiteNoisePrototype/Screens/Settings/SettingsView.swift`
   and `WhiteNoisePrototypeTests/ProfileLifecycleTests.swift`
+- Scoped Profile Keys evidence:
+  `wn-ios-prototype@4c25393:WhiteNoisePrototype/Screens/Settings/ProfileKeysSettingsView.swift`
 
 ## Approved differences and custom exceptions
 
@@ -248,6 +363,11 @@ not restyled. See `app-menus.md` for the exact API/pin and regression evidence.
 
 - Every ordinary Settings destination is reachable and returns with Back.
 - Profile edits and preferences affect only the active profile.
+- Profile defaults to read mode with full-contrast, selectable read-only fields
+  and one low-emphasis app-bar Text button for Edit. Verified state is conveyed
+  once inside the address field. Edit mode
+  shows photo sources and one Save task; saving stays on Profile, while Back
+  during editing restores the stored draft before leaving.
 - Theme changes are immediate; secure-window privacy follows its toggle.
 - Generated public and donation codes decode to their exact fixture value.
 - Share & Connect opens as one stable identity page, exposes Android Sharesheet,
@@ -282,3 +402,9 @@ not restyled. See `app-menus.md` for the exact API/pin and regression evidence.
   appropriate. Static Compose coverage verifies profile/donation QR purpose,
   private-key privacy, notification dependencies, relay defaults, support
   recovery, and large-text RTL reachability.
+- Profile Keys has exactly three compact public/private/export groups, keeps
+  helper text outside those groups, exposes no redundant warning card or
+  giant export buttons, and never publishes the private value through
+  accessibility. Encrypted export requires matching password fields in one
+  focused dialog; raw export names its consequence before Android's document
+  creator opens; document-write failure gives a recoverable error dialog.

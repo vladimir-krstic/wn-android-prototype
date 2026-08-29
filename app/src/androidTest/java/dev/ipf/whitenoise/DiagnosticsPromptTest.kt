@@ -182,6 +182,8 @@ class DiagnosticsPromptTest {
         }
         rule.onNodeWithText("Share Anonymous Analytics").performScrollTo().assertIsOff()
         rule.onNodeWithText("Share Diagnostic Logs").performScrollTo().assertIsOff()
+        rule.onNodeWithTag("diagnostics.choices.divider").assertIsDisplayed()
+        rule.onNodeWithTag("diagnostics.stored.divider").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("Clear Diagnostic Logs").performScrollTo().performClick()
         rule.onNodeWithText("Clear diagnostic logs?").assertIsDisplayed()
         rule.onNodeWithText("Cancel").performClick()
@@ -189,5 +191,21 @@ class DiagnosticsPromptTest {
         rule.onNodeWithText("Clear Diagnostic Logs").performClick()
         rule.onNodeWithText("Clear Logs").performClick()
         rule.runOnIdle { assertEquals(0L, vm.uiState.activeProfile!!.diagnostics.storedBytes); assertFalse(vm.uiState.activeProfile!!.diagnostics.loggingEnabled) }
+    }
+
+    @Test fun diagnosticsOmitsStoredLogsUntilTheProfileHasCreatedRecords() {
+        val profile = dev.ipf.whitenoise.model.ProfileFixtures.marmota.copy(
+            diagnostics = dev.ipf.whitenoise.model.DiagnosticsState(),
+        )
+        rule.setContent {
+            WhiteNoiseTheme {
+                DiagnosticsImprovementsScreen(profile, {}, {}, {}, {})
+            }
+        }
+
+        rule.onNodeWithTag("diagnostics.choices.group").assertIsDisplayed()
+        rule.onNodeWithText("Stored Diagnostic Logs").assertDoesNotExist()
+        rule.onNodeWithText("Clear Diagnostic Logs").assertDoesNotExist()
+        rule.onNodeWithText("Diagnostics", substring = false).assertDoesNotExist()
     }
 }

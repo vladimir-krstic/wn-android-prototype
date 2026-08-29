@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,18 +33,22 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
-import androidx.compose.material3.AlertDialog
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +81,7 @@ import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AvatarWebImageCatalog
+import dev.ipf.whitenoise.model.ExportPasswordStrength
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.ProfileKeyFixtures
@@ -92,6 +98,7 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.onboarding.AvatarWebImagePicker
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -638,6 +645,7 @@ fun EditProfileScreen(
     val aboutValue = about.text.toString()
     val addressValue = address.text.toString()
     var avatar by remember(profile.id) { mutableStateOf(profile.avatar) }
+    var isEditing by rememberSaveable(profile.id) { mutableStateOf(false) }
     var photoMenu by remember { mutableStateOf(false) }
     var webPicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -658,26 +666,70 @@ fun EditProfileScreen(
     val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { it?.let(::prepare) }
     val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(::prepare) }
 
+    fun resetDraft() {
+        name.edit { replace(0, length, profile.name) }
+        about.edit { replace(0, length, profile.about) }
+        address.edit { replace(0, length, profile.nostrAddress) }
+        avatar = profile.avatar
+        photoMenu = false
+        webPicker = false
+        error = null
+    }
+
+    fun stopEditing() {
+        resetDraft()
+        isEditing = false
+    }
+
+    fun handleBack() {
+        if (isEditing) stopEditing() else onBack()
+    }
+
+    BackHandler(enabled = isEditing) { stopEditing() }
+
     SettingsScaffold(
         title = "Profile",
-        onBack = onBack,
-        bottomBar = {
-            SettingsBottomAction {
-                WhiteNoiseButton(
+        onBack = ::handleBack,
+        topBarActions = {
+            if (!isEditing) {
+                TextButton(
                     onClick = {
-                        val detailsSaved = onSave(nameValue, aboutValue, avatar)
-                        val addressSaved = addressValue == profile.nostrAddress || onSaveAddress(addressValue)
-                        if (detailsSaved || addressSaved) {
-                            onBack()
-                        } else {
-                            error = "Enter a name and a valid address."
-                        }
+                        resetDraft()
+                        isEditing = true
                     },
-                    enabled = nameValue.isNotBlank() &&
-                        ProfileSettingsPolicy.isValidNostrAddress(addressValue) &&
-                        !isPreparingPhoto,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Save") }
+                ) {
+                    Text("Edit")
+                }
+            }
+        },
+        bottomBar = {
+            if (isEditing) {
+                SettingsBottomAction(tonalElevation = 0.dp) {
+                    WhiteNoiseButton(
+                        onClick = {
+                            val normalizedName = nameValue.trim()
+                            val normalizedAbout = aboutValue.trim()
+                            val normalizedAddress = addressValue.trim()
+                            val detailsChanged = normalizedName != profile.name ||
+                                normalizedAbout != profile.about ||
+                                avatar != profile.avatar
+                            val addressChanged = normalizedAddress != profile.nostrAddress
+                            val detailsSaved = !detailsChanged ||
+                                onSave(normalizedName, normalizedAbout, avatar)
+                            val addressSaved = !addressChanged || onSaveAddress(normalizedAddress)
+                            if (detailsSaved && addressSaved) {
+                                error = null
+                                isEditing = false
+                            } else {
+                                error = "Enter a name and a valid address."
+                            }
+                        },
+                        enabled = nameValue.isNotBlank() &&
+                            ProfileSettingsPolicy.isValidNostrAddress(addressValue) &&
+                            !isPreparingPhoto,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Save") }
+                }
             }
         },
     ) {
@@ -693,34 +745,36 @@ fun EditProfileScreen(
             verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
         ) {
             ProfileAvatar(nameValue, avatar, Modifier.size(120.dp))
-            Box {
-                FilledTonalButton(
-                    onClick = { photoMenu = true },
-                    enabled = !isPreparingPhoto,
-                ) { Text(if (avatar == ProfileAvatar.Monogram) "Add photo" else "Change photo") }
-                WhiteNoiseDropdownMenu(
-                    expanded = photoMenu,
-                    onDismissRequest = { photoMenu = false },
-                    items = buildList {
-                        add(WhiteNoiseMenuItem("Choose photos", icon = R.drawable.ic_image, onClick = {
-                            photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }))
-                        add(WhiteNoiseMenuItem("Choose files", icon = R.drawable.ic_description, onClick = {
-                            files.launch(arrayOf("image/*"))
-                        }))
-                        add(WhiteNoiseMenuItem("Find web image", icon = R.drawable.ic_search, onClick = {
-                            webPicker = true
-                        }))
-                        if (avatar != ProfileAvatar.Monogram) {
-                            add(WhiteNoiseMenuItem(
-                                "Remove photo", icon = R.drawable.ic_delete, destructive = true,
-                                onClick = { avatar = ProfileAvatar.Monogram },
-                            ))
-                        }
-                    },
-                )
+            if (isEditing) {
+                Box {
+                    FilledTonalButton(
+                        onClick = { photoMenu = true },
+                        enabled = !isPreparingPhoto,
+                    ) { Text(if (avatar == ProfileAvatar.Monogram) "Add photo" else "Change photo") }
+                    WhiteNoiseDropdownMenu(
+                        expanded = photoMenu,
+                        onDismissRequest = { photoMenu = false },
+                        items = buildList {
+                            add(WhiteNoiseMenuItem("Choose photos", icon = R.drawable.ic_image, onClick = {
+                                photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }))
+                            add(WhiteNoiseMenuItem("Choose files", icon = R.drawable.ic_description, onClick = {
+                                files.launch(arrayOf("image/*"))
+                            }))
+                            add(WhiteNoiseMenuItem("Find web image", icon = R.drawable.ic_search, onClick = {
+                                webPicker = true
+                            }))
+                            if (avatar != ProfileAvatar.Monogram) {
+                                add(WhiteNoiseMenuItem(
+                                    "Remove photo", icon = R.drawable.ic_delete, destructive = true,
+                                    onClick = { avatar = ProfileAvatar.Monogram },
+                                ))
+                            }
+                        },
+                    )
+                }
             }
-            if (isPreparingPhoto) {
+            if (isEditing && isPreparingPhoto) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
                     verticalAlignment = Alignment.CenterVertically,
@@ -731,7 +785,11 @@ fun EditProfileScreen(
             }
             WhiteNoiseTextField(
                 state = name,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("profile.name_field"),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                readOnly = !isEditing,
                 label = { Text("Name") },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions(
@@ -741,34 +799,46 @@ fun EditProfileScreen(
             )
             WhiteNoiseTextField(
                 state = address,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("profile.address_field"),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                readOnly = !isEditing,
                 label = { Text("Verified Nostr Address") },
+                trailingIcon = if (
+                    profile.isNostrAddressVerified && addressValue == profile.nostrAddress
+                ) {
+                    {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_verified_filled),
+                            contentDescription = "Verified",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                } else {
+                    null
+                },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next,
                 ),
             )
-            Text(
-                if (profile.isNostrAddressVerified && addressValue == profile.nostrAddress) {
-                    "Verified address"
-                } else {
-                    "Save a valid name@domain address to verify it."
-                },
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
             WhiteNoiseTextField(
                 state = about,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("profile.about_field"),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                readOnly = !isEditing,
                 label = { Text("About") },
+                placeholder = { Text("A little about you") },
                 lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6),
             )
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
     }
-    if (webPicker) {
+    if (webPicker && isEditing) {
         AvatarWebImagePicker(
             currentChoiceId = (avatar as? ProfileAvatar.WebImage)?.choiceId,
             onDismiss = { webPicker = false },
@@ -780,6 +850,7 @@ fun EditProfileScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
     val context = LocalContext.current
@@ -787,93 +858,175 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
     var exportContent by remember { mutableStateOf("") }
     var passwordDialog by remember { mutableStateOf(false) }
     var rawExportDialog by remember { mutableStateOf(false) }
+    var saveErrorDialog by remember { mutableStateOf(false) }
+    var copiedKey by remember { mutableStateOf<CopiedProfileKey?>(null) }
     val password = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
     val confirmation = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
     val passwordValue = password.text.toString()
     val confirmationValue = confirmation.text.toString()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-        uri?.let { context.contentResolver.openOutputStream(it)?.bufferedWriter()?.use { writer -> writer.write(exportContent) } }
+        if (uri != null) {
+            val result = runCatching {
+                checkNotNull(context.contentResolver.openOutputStream(uri))
+                    .bufferedWriter()
+                    .use { writer -> writer.write(exportContent) }
+            }
+            saveErrorDialog = result.isFailure
+        }
+        exportContent = ""
     }
-    SettingsScaffold(title = "Profile Keys", onBack = onBack) {
+
+    fun clearExportPassword() {
+        password.edit { replace(0, length, "") }
+        confirmation.edit { replace(0, length, "") }
+    }
+
+    LaunchedEffect(copiedKey) {
+        if (copiedKey != null) {
+            delay(2_000)
+            copiedKey = null
+        }
+    }
+
+    SettingsScaffold(
+        title = "Profile Keys",
+        onBack = onBack,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        topBarContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        topBarScrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
         SettingsList {
             item { SettingsSection("Public key") }
             item {
-                SettingsGroup {
-                    KeyValue(profile.publicKey, profile.publicKey)
-                    SettingsAction(
-                        title = "Copy public key",
-                        subtitle = "Share this key so people can find and connect with you.",
-                        onClick = { copyToClipboard(context, "Public key", profile.publicKey) },
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_content_copy),
-                                contentDescription = null,
-                            )
+                SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                    ProfileKeyValueRow(
+                        value = profile.publicKey,
+                        valueModifier = Modifier.testTag("profile_keys.public_key_value"),
+                        trailingAction = {
+                            IconButton(
+                                onClick = {
+                                    copyToClipboard(context, "Public key", profile.publicKey)
+                                    copiedKey = CopiedProfileKey.Public
+                                },
+                            ) {
+                                val copied = copiedKey == CopiedProfileKey.Public
+                                Icon(
+                                    painter = painterResource(
+                                        if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
+                                    ),
+                                    contentDescription = if (copied) "Public key copied" else "Copy public key",
+                                )
+                            }
                         },
                     )
                 }
+            }
+            item {
+                ProfileKeySupportingText("Share this key so people can find and connect with you.")
             }
             item { SettingsSection("Private key") }
             item {
-                SettingsCallout(
-                    title = "Keep this private",
-                    text = "Anyone with this key can use your profile, and White Noise can’t recover it.",
-                )
-            }
-            item {
-                SettingsGroup(
-                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
-                ) {
-                    KeyValue(
-                        value = if (showPrivate) ProfileKeyFixtures.PRIVATE_KEY else "••••••••••••••••••••••••••••••••",
-                        accessibilityText = if (showPrivate) {
-                            "Private key revealed. Use the copy action to retrieve it."
+                SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                    ProfileKeyValueRow(
+                        value = if (showPrivate) {
+                            ProfileKeyFixtures.PRIVATE_KEY
                         } else {
-                            "Private key hidden"
+                            "••••••••••••••••••••••••••••••••"
+                        },
+                        overflow = if (showPrivate) {
+                            TextOverflow.MiddleEllipsis
+                        } else {
+                            TextOverflow.Clip
+                        },
+                        valueModifier = Modifier
+                            .testTag("profile_keys.private_key_value")
+                            .clearAndSetSemantics {
+                                contentDescription = if (showPrivate) {
+                                    "Private key revealed. Use the copy action to retrieve it."
+                                } else {
+                                    "Private key hidden"
+                                }
+                            },
+                        trailingAction = {
+                            IconButton(onClick = { showPrivate = !showPrivate }) {
+                                Icon(
+                                    painter = painterResource(
+                                        if (showPrivate) {
+                                            R.drawable.ic_visibility_off
+                                        } else {
+                                            R.drawable.ic_visibility
+                                        },
+                                    ),
+                                    contentDescription = if (showPrivate) {
+                                        "Hide private key"
+                                    } else {
+                                        "Show private key"
+                                    },
+                                )
+                            }
                         },
                     )
+                    SettingsDivider()
                     SettingsAction(
-                        title = if (showPrivate) "Hide private key" else "Show private key",
-                        onClick = { showPrivate = !showPrivate },
-                    )
-                    SettingsAction(
-                        title = "Copy private key",
-                        onClick = { copyToClipboard(context, "Private key", ProfileKeyFixtures.PRIVATE_KEY) },
+                        title = "Copy Private Key",
+                        onClick = {
+                            copyToClipboard(context, "Private key", ProfileKeyFixtures.PRIVATE_KEY)
+                            copiedKey = CopiedProfileKey.Private
+                        },
                         leading = {
+                            val copied = copiedKey == CopiedProfileKey.Private
                             Icon(
-                                painter = painterResource(R.drawable.ic_content_copy),
+                                painter = painterResource(
+                                    if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
+                                ),
                                 contentDescription = null,
                             )
                         },
                     )
                 }
             }
+            item {
+                ProfileKeySupportingText(
+                    "Keep this key private. Anyone with it can use your profile, and White Noise can’t recover it.",
+                )
+            }
             item { SettingsSection("Export") }
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    WhiteNoiseButton(
+                SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                    SettingsAction(
+                        title = "Export Encrypted Private Key",
                         onClick = { passwordDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Export Encrypted Private Key") }
-                    WhiteNoiseOutlinedButton(
+                        leading = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_lock),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "Export Private Key",
                         onClick = { rawExportDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Export Private Key") }
+                        leading = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_download),
+                                contentDescription = null,
+                            )
+                        },
+                    )
                 }
             }
-            item { SettingsExplainer("Exports use Android’s document picker. Keep exported key files private.") }
         }
     }
     if (rawExportDialog) {
         AlertDialog(
             onDismissRequest = { rawExportDialog = false },
-            title = { Text("Export unencrypted private key?") },
-            text = { Text("This file gives complete access to your profile. Store it somewhere private and never share it.") },
+            title = { Text("Keep Your Private Key Safe") },
+            text = {
+                Text(
+                    "Store this file somewhere secure. The encrypted export or a trusted password manager is safer.",
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -881,30 +1034,69 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
                         rawExportDialog = false
                         export.launch("${profile.id}-white-noise-key.txt")
                     },
-                ) { Text("Export Unencrypted") }
+                ) {
+                    Text(
+                        text = "Export Private Key",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             },
             dismissButton = { TextButton(onClick = { rawExportDialog = false }) { Text("Cancel") } },
         )
     }
     if (passwordDialog) {
         AlertDialog(
-            onDismissRequest = { passwordDialog = false },
-            title = { Text("Protect export") },
+            onDismissRequest = {
+                passwordDialog = false
+                clearExportPassword()
+            },
+            title = { Text("Encrypted Private Key") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     WhiteNoiseSecureTextField(
                         state = password,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("profile_keys.export_password"),
                         label = { Text("Password") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next,
+                        ),
                     )
                     WhiteNoiseSecureTextField(
                         state = confirmation,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("profile_keys.export_confirmation"),
                         label = { Text("Confirm password") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done,
+                        ),
+                        isError = confirmationValue.isNotEmpty() && passwordValue != confirmationValue,
                     )
-                    Text("Use at least 8 characters.", style = MaterialTheme.typography.bodySmall)
+                    val passwordsMismatch = confirmationValue.isNotEmpty() &&
+                        passwordValue != confirmationValue
+                    Text(
+                        text = if (passwordsMismatch) {
+                            "Passwords don’t match."
+                        } else {
+                            "Use a long, unique password. You’ll need it to open the encrypted file."
+                        },
+                        color = if (passwordsMismatch) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    ProfileSettingsPolicy.exportPasswordStrength(passwordValue)?.let {
+                        ExportPasswordStrengthIndicator(it)
+                    }
                 }
             },
             confirmButton = {
@@ -913,33 +1105,106 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
                     onClick = {
                         exportContent = ProfileKeyFixtures.encryptedExport(profile, passwordValue)
                         passwordDialog = false
+                        clearExportPassword()
                         export.launch("${profile.id}-white-noise-key.wnkey.txt")
                     },
                 ) { Text("Export") }
             },
-            dismissButton = { TextButton(onClick = { passwordDialog = false }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        passwordDialog = false
+                        clearExportPassword()
+                    },
+                ) { Text("Cancel") }
+            },
+        )
+    }
+    if (saveErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { saveErrorDialog = false },
+            title = { Text("Couldn’t Save File") },
+            text = { Text("Choose another location and try again.") },
+            confirmButton = {
+                TextButton(onClick = { saveErrorDialog = false }) { Text("OK") }
+            },
         )
     }
 }
 
 @Composable
-private fun KeyValue(value: String, accessibilityText: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.padding(WhiteNoiseSpacing.Related),
+private fun ExportPasswordStrengthIndicator(strength: ExportPasswordStrength) {
+    val color = when (strength) {
+        ExportPasswordStrength.Low -> MaterialTheme.colorScheme.error
+        ExportPasswordStrength.Fair -> MaterialTheme.colorScheme.onSurfaceVariant
+        ExportPasswordStrength.Strong -> MaterialTheme.colorScheme.primary
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("profile_keys.password_strength"),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = value,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clearAndSetSemantics { contentDescription = accessibilityText }
-                .padding(WhiteNoiseSpacing.FormField),
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodyMedium,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text("Strength", style = MaterialTheme.typography.labelLarge)
+            Text(strength.label, color = color, style = MaterialTheme.typography.labelLarge)
+        }
+        LinearProgressIndicator(
+            progress = { strength.completedSteps / 3f },
+            modifier = Modifier.fillMaxWidth(),
+            color = color,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            drawStopIndicator = {},
         )
     }
 }
+
+@Composable
+private fun ProfileKeyValueRow(
+    value: String,
+    trailingAction: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    valueModifier: Modifier = Modifier,
+    overflow: TextOverflow = TextOverflow.MiddleEllipsis,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = value,
+            modifier = valueModifier.weight(1f),
+            maxLines = 1,
+            overflow = overflow,
+            fontFamily = FontFamily.Monospace,
+        )
+        trailingAction()
+    }
+}
+
+@Composable
+private fun ProfileKeySupportingText(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = WhiteNoiseSpacing.SettingsSectionInset,
+                end = WhiteNoiseSpacing.SettingsSectionInset,
+                top = WhiteNoiseSpacing.Related,
+            ),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
+
+private enum class CopiedProfileKey { Public, Private }
 
 @Composable
 internal fun ProfileCode(

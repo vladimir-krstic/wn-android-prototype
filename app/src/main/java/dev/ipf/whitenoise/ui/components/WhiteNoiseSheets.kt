@@ -15,6 +15,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -35,15 +36,20 @@ fun WhiteNoiseModalBottomSheet(
     contentWindowInsets: @Composable () -> WindowInsets = { WindowInsets.safeDrawing },
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        modifier = modifier.testTag("sheet.surface"),
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        contentWindowInsets = contentWindowInsets,
-        content = content,
-    )
+    val scheme = MaterialTheme.colorScheme
+    CompositionLocalProvider(
+        LocalWhiteNoiseTextFieldContainerColor provides scheme.surfaceContainerLowest,
+    ) {
+        ModalBottomSheet(
+            onDismissRequest = onDismissRequest,
+            modifier = modifier.testTag("sheet.surface"),
+            sheetState = sheetState,
+            containerColor = scheme.surfaceContainerLow,
+            contentColor = scheme.onSurface,
+            contentWindowInsets = contentWindowInsets,
+            content = content,
+        )
+    }
 }
 
 /** Begins immediately after Material's drag-handle slot. No repeated status-bar or top padding. */

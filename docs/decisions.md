@@ -1392,3 +1392,336 @@ This supersedes only WN-ANDROID-0053's QR frame metric and WN-ANDROID-0054's
 public-key capsule padding. Evidence: `ShareConnectScreen.kt`,
 `SettingsScreenTest`, `settings-and-profile-services.md`, `ui-metrics.md`, and
 `feature-inventory.md`.
+
+## WN-ANDROID-0056 — Share public key uses the widened capsule interior
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The Share & Connect public-key capsule now has a 240 dp visual width, 40 dp
+wider than the reviewed compact presentation, while retaining its 32 dp
+default visual height, 25 dp directional content padding, 16 dp copy/check
+icon and transparent 48 dp semantic target. The text slot fills the remaining
+interior width and receives the profile's full public key; Compose applies
+middle ellipsis inside that slot rather than displaying the model's already
+shortened fixture value. The added width therefore reveals more useful key
+content instead of becoming empty padding.
+
+The pill-clipped shared state layer, copy confirmation, QR geometry, pinned
+scanner task and adaptive bounds are unchanged. This supersedes only
+WN-ANDROID-0055's intrinsic-width public-key presentation. Evidence:
+`ShareConnectScreen.kt`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0057 — Profile separates reading from editing
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The Share & Connect public-key capsule retains its reviewed 240 × 32 dp visual
+size, full-key middle ellipsis, 16 dp icon and transparent 48 dp target, but its
+directional content padding is reduced from 25 dp to the shared 16 dp content
+inset. The state layer remains clipped to the visible pill.
+
+Profile now opens in a read mode with its name, verified address and About
+fields disabled. The app-bar Edit action enters editing; avatar-source controls
+appear only there, and a single validated bottom Save applies the draft and
+returns to Profile read mode. System Back first cancels editing and restores
+the stored values. The filled official verified symbol occupies the address
+field's trailing-icon slot, replacing the redundant `Verified address` helper.
+The route and pinned action both use `surface` with zero tonal elevation, so
+the Save area does not paint a gray footer across the otherwise white page.
+
+This is the Material translation of the read/edit contract in pinned iOS
+`ProfileSettingsView.swift` at `0bd7cba`, while Android's top app bar owns the
+Edit action and system Back owns cancellation. It follows current official
+Android app-bar, text-input and button guidance. This supersedes only
+WN-ANDROID-0056's 25 dp public-key inset and the earlier always-editable Profile
+presentation. Evidence: `WhiteNoiseTopBar.kt`, `SettingsComponents.kt`,
+`ProfileSettingsScreens.kt`, `ShareConnectScreen.kt`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0058 — Profile read mode preserves normal field contrast
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Profile's resting Name, Verified Nostr Address and About fields now use the
+native read-only state rather than the disabled state. They remain visually
+enabled, focusable, selectable and copyable, but user input cannot modify them
+until Edit is selected. This follows Compose's documented distinction:
+`enabled = false` removes editing, focus and selection, while
+`readOnly = true` blocks modification but retains focus and copying.
+
+The app-bar **Edit** action remains a standard Material `TextButton`: it is a
+secondary, low-emphasis transition into editing rather than the screen's
+commit action. The editing-only **Save** task remains the filled high-emphasis
+button. This supersedes only WN-ANDROID-0057's disabled read-field treatment;
+the read/edit lifecycle, verification badge, avatar controls, Save behavior
+and Back cancellation are unchanged. Evidence: `ProfileSettingsScreens.kt`,
+`SettingsScreenTest`, `settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0059 — Profile-key export uses compact groups and focused dialogs
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Profile Keys now uses the Settings neutral canvas with three compact
+white-equivalent groups for public key, private key, and export actions.
+Supporting explanations sit outside their related groups. The prior redundant
+private-key warning card, separate show row, oversized export buttons, and
+implementation-boundary footer are removed. Official Material copy,
+visibility, lock, and download symbols retain native touch targets; the
+private value remains excluded from accessibility semantics whether visually
+hidden or shown.
+
+Encrypted export is a focused Material alert dialog with Password and Confirm
+Password fields, native Cancel/Export actions, IME traversal, mismatch state,
+and the accepted short helper. Raw export uses a separate consequence dialog
+with the accepted iOS product wording and a semantic destructive action.
+Either successful confirmation opens Android's system document creator;
+write failure returns a recoverable alert rather than silently dismissing.
+Sensitive dialog state is cleared on every exit. This is the Android Material
+translation of pinned iOS `ProfileKeysSettingsView.swift` at `4c25393`; it
+does not reproduce iOS sheet chrome or add real encryption/persistence.
+
+Evidence: `ProfileSettingsScreens.kt`, `SettingsScreenTest`, official Material
+Symbol XML, `settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0060 — Key values measure before truncation and encrypted export uses native secure fields
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Profile Keys passes the complete public/private value to a weighted monospaced
+slot and applies middle ellipsis only after the native 48 dp trailing action
+has been measured. This replaces fixture-level pre-shortening, makes compact
+screens use all available width, and preserves recognizable key prefixes and
+suffixes. The custom row keeps a 64 dp minimum height and places official 24 dp
+copy/visibility artwork on a 16 dp visual end edge without shrinking its touch
+target.
+
+Encrypted export remains a focused Material alert, but its two password inputs
+now use Material `SecureTextField` controls with attached labels instead of the
+screen-level above-label field wrapper. The dialog retains native width,
+shape, actions, focus, IME behavior, dismissal, password clearing and mismatch
+feedback. No custom dialog dimensions or copied iOS modal chrome are added.
+
+Evidence: `ProfileSettingsScreens.kt`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0061 — Dialog inputs retain the shared rounded field language
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The encrypted-export dialog now uses the same `WhiteNoiseSecureTextField`
+component as ordinary secure input elsewhere in the app. Its 28 dp rounded
+tonal container, 16 dp content line, transparent resting border, and 2 dp
+focus/error ring remain the app-wide rules from WN-ANDROID-0023 and
+WN-ANDROID-0024 even when the field appears inside a Material `AlertDialog`.
+Material continues to own secure state-based editing, label/supporting
+typography, cursor and selection, focus, IME behavior, state animation, dialog
+geometry, actions, and dismissal. This supersedes only WN-ANDROID-0060's use
+of the default `SecureTextField` container; the measured key row and dialog
+task boundary remain unchanged.
+
+When the private key is hidden, its repeated mask glyphs use clipped overflow
+rather than text ellipsis. No literal ellipsis is shown after the mask, no
+secret-length claim is made, and the accessibility surface remains the
+state-only **Private key hidden** description. Revealed and public keys retain
+measured middle ellipsis so their recognizable prefix and suffix stay visible.
+
+Evidence: `WhiteNoiseTextFields.kt`, `ProfileSettingsScreens.kt`,
+`SettingsScreenTest`, `settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0062 — Nested dialog fields keep visible tonal separation
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+The encrypted-export dialog keeps the shared 28 dp rounded secure-field
+component, but its enabled field containers use the stronger semantic
+`surfaceContainerHighest` role. A Material alert already uses a high tonal
+surface; repeating that same role on the inputs made their boundaries flatten
+into the dialog and read as white. The nested role restores a visibly gray
+input surface without hardcoded colors, custom geometry, or changes to focus,
+error, IME, selection, and accessibility behavior. Ordinary page fields remain
+`surfaceContainerHigh`.
+
+Evidence: `WhiteNoiseTextFields.kt`, `ProfileSettingsScreens.kt`,
+`settings-and-profile-services.md`, and `ui-metrics.md`.
+
+## WN-ANDROID-0063 — Settings and app-owned task surfaces share a nested tonal hierarchy
+
+- Date: 2026-08-27
+- Status: Approved by explicit user direction and implementation
+
+Settings detail scaffolds and ordinary app-owned alert/dialog/sheet surfaces
+use the semantic `surfaceContainerLow` role as their neutral canvas. Settings
+groups and shared text or secure fields nested in those surfaces use
+`surfaceContainerLowest`, producing the same gray-canvas/white-component
+hierarchy as the Settings root in both light and dark themes. A scoped
+composition local applies the field role without changing onboarding fields,
+system-owned pickers and settings, or specialized camera/media surfaces.
+Material continues to own dialog width, shape, actions, state layers, focus,
+IME behavior, motion, and dismissal.
+
+The encrypted private-key export dialog fills Material's text-content slot so
+both rounded fields align with the dialog copy. It also projects the pinned iOS
+password-strength rules as Low, Fair, or Strong with a three-step Material
+progress indicator. Android retains its existing eight-character export
+minimum and matching-password requirement. This decision supersedes
+WN-ANDROID-0062's inverted high-tonal dialog field treatment and the earlier
+white Profile-detail canvas treatment.
+
+Evidence: `WhiteNoiseDialogs.kt`, `WhiteNoiseSheets.kt`,
+`WhiteNoiseTextFields.kt`, `SettingsComponents.kt`,
+`ProfileSettingsScreens.kt`, `ProfileSettingsTest`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0064 — Notification previews stay visible on their detail screen
+
+- Date: 2026-08-29
+- Status: Approved by explicit user direction and implementation
+
+Notifications retains its native Android detail destination instead of copying
+iOS navigation chrome. Local notifications and its dependent Native push switch
+remain whole-row Material switch targets in one white-equivalent group, now
+separated by the accepted two-dp Settings canvas gap. Their supporting copy
+preserves the product outcomes: local creation, possible foreground delay,
+generic background wake-up and on-device message details.
+
+The existing Notifications destination is already the focused child screen for
+this preference, so its three preview choices move out of the generic
+`ChoiceDialog` and into one inline `selectableGroup`. Native radio rows apply
+immediately, use two-dp separators and rely on radio state rather than the old
+square edge-to-edge selected fill. A final noninteractive row previews the
+selected deterministic notification. Local notifications continues to disable
+Native push and Preview together, with a visible reason.
+
+Android notification permission presentation is superseded by
+WN-ANDROID-0065. No notification service, persistence, networking or delivery
+behavior is added here. This applies the WN-ANDROID-0045
+row-gap and WN-ANDROID-0063 nested-surface decisions to Notifications without
+changing other choice dialogs.
+
+Evidence: `ProfileSettings.kt`, `PreferenceScreens.kt`,
+`SettingsComponents.kt`, `ProfileSettingsTest`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Compose radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button),
+and [Compose switches](https://developer.android.com/develop/ui/compose/components/switch).
+
+## WN-ANDROID-0065 — Notification access is contextual system-owned gating
+
+- Date: 2026-08-29
+- Status: Approved by explicit user direction and implementation
+
+The prototype declares Android's app-level `POST_NOTIFICATIONS` permission but
+does not create or deliver a notification. On Android 13 and newer, the
+Notifications detail page projects the real platform state as **Not requested**,
+**Allowed**, or **Blocked**. Not requested exposes one contextual
+**Allow notifications** action that launches the system-owned runtime prompt.
+Blocked exposes **Notifications are off** and the app-specific Android
+notification Settings handoff. Allowed removes this platform group entirely.
+Android 12 and earlier use system notification availability and can only need
+the blocked recovery state.
+
+The screen refreshes permission availability after the runtime result and on
+every resumed return from Android Settings. App-wide access gates the
+profile-owned Local notifications switch; that switch continues to gate Native
+push and Preview. Stored profile preferences are not cleared when system access
+is lost, so they become effective again when access returns. The old permanent
+Android section is removed. A saveable in-screen denial marker complements
+Android's permission-rationale signal during the prototype session; no new
+product persistence is introduced.
+
+Evidence: `AndroidManifest.xml`, `NotificationPermission.kt`,
+`PreferenceScreens.kt`, `NotificationPermissionTest`, `SettingsScreenTest`,
+`AppResourceIntegrityTest`, `settings-and-profile-services.md`,
+`ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Notification runtime permission](https://developer.android.com/develop/ui/compose/notifications/notification-permission),
+[Request runtime permissions](https://developer.android.com/training/permissions/requesting),
+and [app notification Settings](https://developer.android.com/reference/android/provider/Settings#ACTION_APP_NOTIFICATION_SETTINGS).
+
+## WN-ANDROID-0066 — Appearance separates theme choice from language navigation
+
+- Date: 2026-08-29
+- Status: Approved by explicit user direction and implementation
+
+Appearance preserves the pinned iOS product choices without copying its
+checkmark rows or navigation chrome. System default, Light and Dark remain one
+immediate profile-owned Material radio group. The rows use the accepted two-dp
+canvas-tone separation and transparent selected container so the radio itself
+communicates selection. Focused helper copy explains the persistent theme
+behavior outside the group.
+
+Language is one disclosure row on Appearance and a typed child destination,
+not a second dense inline group or generic dialog. The child screen exposes
+System default, English, German, Spanish, French, Italian, Portuguese and
+Serbian in pinned order as an accessible Material `selectableGroup`, with
+immediate profile-owned selection and normal system Back behavior.
+
+Android 13's official per-app language preference is app-wide, synchronized
+with system Settings and intended for actual localized resources. This
+prototype has no translated resource sets and explicitly keeps ordinary
+preferences isolated by profile, so the deterministic language choice does
+not call `LocaleManager`/`AppCompatDelegate`, configure a locale list, or claim
+that product copy has been translated. A real app-wide locale handoff remains
+future scope for the localized product.
+
+Evidence: `ProfileSettings.kt`, `PreferenceScreens.kt`, `AppRoute.kt`,
+`WhiteNoiseNavHost.kt`, `ProfileSettingsTest`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Sources: [Per-app language preferences](https://developer.android.com/guide/topics/resources/app-languages),
+[Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+and [Compose radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button).
+
+## WN-ANDROID-0067 — Privacy controls reveal only actionable dependent state
+
+- Date: 2026-08-29
+- Status: Approved by explicit user direction and implementation
+
+Privacy & Security keeps the iOS product outcomes while using Android-owned
+presentation. Device-protection controls remain one white-equivalent Material
+group on the Settings canvas with two-dp separators. **Hide Screen in Recents**
+uses Android terminology and describes the visible privacy outcome. The secure
+device state gates **Require device authentication**; an unavailable device
+retains one Android security-settings recovery action. **Auto-lock** is hidden
+until authentication is effective, then opens an immediate native radio dialog
+whose white-equivalent selectable group has separators and no rectangular
+selected fill.
+
+Diagnostics keeps one summarized route and focused explanation. Its permanent
+destination removes the redundant Diagnostics heading, separates the two
+native switch rows, and shows Stored Diagnostic Logs only after records exist.
+Clearing records retains its Material alert and does not alter consent.
+
+Erase App Data is one destructive row with its consequence outside the action.
+The existing Material modal bottom sheet remains Android-native and gains a
+semantic error callout plus a pinned action area continuous with the gray modal
+canvas; its exact generated-phrase gate, shared white rounded field, progress,
+safe/IME handling and wipe behavior are unchanged. Its state starts Expanded
+and enables only Hidden and Expanded anchors, preventing the destructive form
+from settling at an ambiguous partial height while retaining swipe dismissal
+and Back.
+
+Evidence: `PreferenceScreens.kt`, `DiagnosticsImprovementsScreen.kt`,
+`DestructiveScreens.kt`, `SettingsScreenTest`, `DiagnosticsPromptTest`,
+`DeveloperDestructiveScreenTest`, `privacy-and-security.md`, and
+`feature-inventory.md`.
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Compose radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button),
+[Compose dialogs](https://developer.android.com/develop/ui/compose/components/dialog),
+[Compose bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+and [secure sensitive activities](https://developer.android.com/security/fraud-prevention/activities).

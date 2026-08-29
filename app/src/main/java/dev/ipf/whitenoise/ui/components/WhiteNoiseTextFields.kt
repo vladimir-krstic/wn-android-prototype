@@ -26,6 +26,7 @@ import androidx.compose.material3.TextFieldLabelScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -49,6 +50,15 @@ object WhiteNoiseTextFieldDefaults {
 }
 
 /**
+ * Scoped rest-surface override for fields hosted by another Material surface.
+ *
+ * Ordinary screens retain the app's tonal field surface. App-owned sheets and dialogs provide
+ * their white-equivalent nested surface here so every field keeps the same geometry and state
+ * treatment without individual call sites hard-coding colors.
+ */
+val LocalWhiteNoiseTextFieldContainerColor = staticCompositionLocalOf { Color.Unspecified }
+
+/**
  * White Noise's ordinary form field.
  *
  * Material still owns text editing, cursor/selection, icon slots, label/supporting typography,
@@ -60,6 +70,7 @@ object WhiteNoiseTextFieldDefaults {
 fun WhiteNoiseTextField(
     state: TextFieldState,
     modifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     enabled: Boolean = true,
     readOnly: Boolean = false,
     textStyle: TextStyle = LocalTextStyle.current,
@@ -77,7 +88,7 @@ fun WhiteNoiseTextField(
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val colors = whiteNoiseTextFieldColors()
+    val colors = whiteNoiseTextFieldColors(containerColor)
     val focused = interactionSource.collectIsFocusedAsState().value
     val resolvedTextColor = textStyle.color.takeOrElse {
         colors.whiteNoiseTextColor(enabled = enabled, isError = isError, focused = focused)
@@ -137,6 +148,7 @@ fun WhiteNoiseTextField(
 fun WhiteNoiseSecureTextField(
     state: TextFieldState,
     modifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     enabled: Boolean = true,
     textStyle: TextStyle = LocalTextStyle.current,
     label: @Composable (TextFieldLabelScope.() -> Unit)? = null,
@@ -152,7 +164,7 @@ fun WhiteNoiseSecureTextField(
     onKeyboardAction: KeyboardActionHandler? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val colors = whiteNoiseTextFieldColors()
+    val colors = whiteNoiseTextFieldColors(containerColor)
     val focused = interactionSource.collectIsFocusedAsState().value
     val resolvedTextColor = textStyle.color.takeOrElse {
         colors.whiteNoiseTextColor(enabled = enabled, isError = isError, focused = focused)
@@ -205,13 +217,17 @@ fun WhiteNoiseSecureTextField(
 }
 
 @Composable
-private fun whiteNoiseTextFieldColors(): TextFieldColors {
+private fun whiteNoiseTextFieldColors(containerColor: Color): TextFieldColors {
     val scheme = MaterialTheme.colorScheme
+    val inheritedContainerColor = LocalWhiteNoiseTextFieldContainerColor.current
+    val resolvedContainerColor = containerColor.takeOrElse {
+        inheritedContainerColor.takeOrElse { scheme.surfaceContainerHigh }
+    }
     return OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = scheme.surfaceContainerHigh,
-        unfocusedContainerColor = scheme.surfaceContainerHigh,
+        focusedContainerColor = resolvedContainerColor,
+        unfocusedContainerColor = resolvedContainerColor,
         disabledContainerColor = scheme.surfaceContainerLow,
-        errorContainerColor = scheme.surfaceContainerHigh,
+        errorContainerColor = resolvedContainerColor,
         focusedBorderColor = scheme.primary,
         unfocusedBorderColor = Color.Transparent,
         disabledBorderColor = Color.Transparent,

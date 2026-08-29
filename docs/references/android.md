@@ -1,6 +1,6 @@
 # Official Android reference index
 
-Last reviewed: 2026-08-26.
+Last reviewed: 2026-08-29.
 
 Use this file as a router. Open only the sources relevant to the selected
 screen, confirm that the guidance is still current, and record material links
@@ -39,6 +39,7 @@ authority; this index does not freeze library versions.
 - [Keyboard/IME animation with insets](https://developer.android.com/develop/ui/compose/system/ime-keyboard)
 - [Splash screens](https://developer.android.com/develop/ui/views/launch/splash-screen)
 - [Support different languages and cultures](https://developer.android.com/training/basics/supporting-devices/languages)
+- [Per-app language preferences](https://developer.android.com/guide/topics/resources/app-languages)
 - [Support right-to-left layouts](https://developer.android.com/training/basics/supporting-devices/languages#SupportRTL)
 
 ## Navigation and presentation
@@ -203,8 +204,11 @@ the manifest continues to reject transitive `INTERNET` and
 The Sign In device-polish pass additionally verified stable CameraX 1.6.1 and
 bundled ML Kit Barcode Scanning 17.3.0 for the user-approved app-owned scanner,
 now shared with Share & Connect profile scanning.
-The bundled detector is immediately available and operates on device; only
-the just-in-time `CAMERA` permission is added.
+The bundled detector is immediately available and operates on device; its
+just-in-time `CAMERA` permission remains scoped to scanner entry. The selected
+Notifications prototype additionally declares `POST_NOTIFICATIONS` so Android
+13+ can own the real first-request and blocked-recovery gate while notification
+creation and delivery remain absent.
 
 Batch 7 additionally verified ZXing core 3.5.4 for local, standards-compliant
 QR generation. It is an encoder-only JVM dependency here and adds no Android

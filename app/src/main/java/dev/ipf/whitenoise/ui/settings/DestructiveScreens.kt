@@ -16,7 +16,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,10 +25,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -172,6 +175,10 @@ fun EraseAppDataSheet(
     onDismiss: () -> Unit,
     onErase: (String) -> Unit,
 ) {
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Expanded,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
     val phrase = remember(profileIds) { WipeConfirmationPhrase.make(profileIds) }
     val confirmation = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
     val confirmationValue = confirmation.text.toString()
@@ -183,6 +190,7 @@ fun EraseAppDataSheet(
     }
     ModalBottomSheet(
         onDismissRequest = { if (!erasing) onDismiss() },
+        sheetState = sheetState,
         contentWindowInsets = { WindowInsets.safeDrawing },
     ) {
         Column(
@@ -205,8 +213,10 @@ fun EraseAppDataSheet(
                         .verticalScroll(rememberScrollState()),
                 ) {
                     SettingsCallout(
+                        modifier = Modifier.testTag("erase.warning"),
                         title = "This can’t be undone",
                         text = "Every profile and all local chats, media, drafts, keys, and settings will be removed from this device.",
+                        isError = true,
                         leading = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_warning),
@@ -215,7 +225,9 @@ fun EraseAppDataSheet(
                         },
                     )
                     SettingsSection("Type these words to confirm")
-                    SettingsGroup {
+                    SettingsGroup(
+                        modifier = Modifier.testTag("erase.phrase"),
+                    ) {
                         SelectionContainer {
                             Text(
                                 text = phrase,
@@ -234,13 +246,17 @@ fun EraseAppDataSheet(
                             .padding(
                                 horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                                 vertical = WhiteNoiseSpacing.FormField,
-                            ),
+                            )
+                            .testTag("erase.confirmation"),
                         label = { Text("Confirmation phrase") },
                         lineLimits = TextFieldLineLimits.SingleLine,
                         supportingText = { Text("Enter the three words exactly to continue.") },
                     )
                 }
-                SettingsBottomAction {
+                SettingsBottomAction(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 0.dp,
+                ) {
                     DestructiveButton(
                         label = "Erase",
                         onClick = { erasing = true },

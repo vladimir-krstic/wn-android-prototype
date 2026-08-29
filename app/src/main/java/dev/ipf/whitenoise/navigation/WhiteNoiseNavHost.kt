@@ -38,6 +38,7 @@ import dev.ipf.whitenoise.ui.onboarding.SignInScreen
 import dev.ipf.whitenoise.ui.onboarding.SignUpScreen
 import dev.ipf.whitenoise.ui.onboarding.WelcomeScreen
 import dev.ipf.whitenoise.ui.settings.AppearanceScreen
+import dev.ipf.whitenoise.ui.settings.LanguageScreen
 import dev.ipf.whitenoise.ui.settings.DataUsageScreen
 import dev.ipf.whitenoise.ui.settings.DonateScreen
 import dev.ipf.whitenoise.ui.settings.EditProfileScreen
@@ -240,7 +241,21 @@ fun WhiteNoiseNavHost(
         }
         composable<AppRoute.Appearance> {
             uiState.activeProfile?.let { profile ->
-                AppearanceScreen(profile, onBack = { navController.popBackStack() }, onChange = appViewModel::updateProfileSettings)
+                AppearanceScreen(
+                    profile = profile,
+                    onBack = { navController.popBackStack() },
+                    onChange = appViewModel::updateProfileSettings,
+                    onLanguage = { navController.navigate(AppRoute.Language) },
+                )
+            }
+        }
+        composable<AppRoute.Language> {
+            uiState.activeProfile?.let { profile ->
+                LanguageScreen(
+                    profile = profile,
+                    onBack = { navController.popBackStack() },
+                    onChange = appViewModel::updateProfileSettings,
+                )
             }
         }
         composable<AppRoute.PrivacySecurity> {

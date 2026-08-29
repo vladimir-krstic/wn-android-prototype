@@ -13,6 +13,26 @@ import org.junit.Test
 
 class ProfileSettingsTest {
     @Test
+    fun appearanceAndLanguageDefaultsMatchTheAcceptedProfilePreferences() {
+        val settings = ProfileSettings()
+        assertEquals(AppearancePreference.System, settings.appearance)
+        assertEquals(LanguagePreference.System, settings.language)
+        assertEquals(
+            listOf(
+                "System default",
+                "English",
+                "German",
+                "Spanish",
+                "French",
+                "Italian",
+                "Portuguese",
+                "Serbian",
+            ),
+            LanguagePreference.entries.map(LanguagePreference::label),
+        )
+    }
+
+    @Test
     fun relayFixturesCoverSevenStableStatesAndThreeRoles() {
         assertEquals(7, ProfileRelayFixtures.defaults.size)
         assertEquals(RelayConnectionStatus.Connected, ProfileRelayFixtures.defaults.first().status)
@@ -60,6 +80,43 @@ class ProfileSettingsTest {
         assertTrue(ProfileSettingsPolicy.isValidExportPassword("eight888", "eight888"))
         assertFalse(ProfileSettingsPolicy.isValidExportPassword("short", "short"))
         assertFalse(ProfileSettingsPolicy.isValidExportPassword("password", "different"))
+    }
+
+    @Test
+    fun exportPasswordStrengthMatchesPinnedIosThresholds() {
+        assertNull(ProfileSettingsPolicy.exportPasswordStrength(""))
+        assertEquals(
+            ExportPasswordStrength.Low,
+            ProfileSettingsPolicy.exportPasswordStrength("abcdefghijk"),
+        )
+        assertEquals(
+            ExportPasswordStrength.Fair,
+            ProfileSettingsPolicy.exportPasswordStrength("abcdefghijkl"),
+        )
+        assertEquals(
+            ExportPasswordStrength.Fair,
+            ProfileSettingsPolicy.exportPasswordStrength("abcdefghijklmnop"),
+        )
+        assertEquals(
+            ExportPasswordStrength.Strong,
+            ProfileSettingsPolicy.exportPasswordStrength("Secure phrase 123!"),
+        )
+    }
+
+    @Test
+    fun notificationPreviewExamplesMatchEveryDeterministicChoice() {
+        assertEquals(
+            "Maya Chen · Can you send the latest version?",
+            NotificationPreviewMode.SenderAndMessage.example,
+        )
+        assertEquals(
+            "Maya Chen · New message",
+            NotificationPreviewMode.SenderOnly.example,
+        )
+        assertEquals(
+            "White Noise · New message",
+            NotificationPreviewMode.Generic.example,
+        )
     }
 
     @Test

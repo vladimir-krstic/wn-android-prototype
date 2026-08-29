@@ -77,6 +77,8 @@ private enum class ProfileScannerError {
     Unavailable,
 }
 
+private val SharePublicKeyCapsuleWidth = 240.dp
+
 @Composable
 fun ShareConnectScreen(
     profile: Profile,
@@ -282,16 +284,18 @@ private fun ShareProfileContent(
             ) {
                 Row(
                     modifier = Modifier
+                        .width(SharePublicKeyCapsuleWidth)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .indication(copyInteractionSource, ripple())
-                        .padding(horizontal = 25.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                         .testTag("share_connect.copy_public_key.visual"),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = profile.shortPublicKey,
+                        text = profile.publicKey,
+                        modifier = Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.MiddleEllipsis,

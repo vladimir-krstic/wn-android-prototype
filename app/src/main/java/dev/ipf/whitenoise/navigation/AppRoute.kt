@@ -77,6 +77,9 @@ sealed interface AppRoute {
     data object Appearance : AppRoute
 
     @Serializable
+    data object Language : AppRoute
+
+    @Serializable
     data object PrivacySecurity : AppRoute
 
     @Serializable

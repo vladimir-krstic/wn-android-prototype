@@ -6,10 +6,29 @@ enum class AppearancePreference(val label: String) {
     Dark("Dark"),
 }
 
+enum class LanguagePreference(val label: String) {
+    System("System default"),
+    English("English"),
+    German("German"),
+    Spanish("Spanish"),
+    French("French"),
+    Italian("Italian"),
+    Portuguese("Portuguese"),
+    Serbian("Serbian"),
+}
+
 enum class NotificationPreviewMode(val label: String) {
     SenderAndMessage("Sender and message"),
     SenderOnly("Sender only"),
     Generic("New message only"),
+    ;
+
+    val example: String
+        get() = when (this) {
+            SenderAndMessage -> "Maya Chen · Can you send the latest version?"
+            SenderOnly -> "Maya Chen · New message"
+            Generic -> "White Noise · New message"
+        }
 }
 
 enum class MediaDownloadPolicy(val label: String) {
@@ -63,7 +82,7 @@ data class ProfileSettings(
     val nativePushNotifications: Boolean = true,
     val notificationPreviewMode: NotificationPreviewMode = NotificationPreviewMode.Generic,
     val appearance: AppearancePreference = AppearancePreference.System,
-    val language: String = "System default (English)",
+    val language: LanguagePreference = LanguagePreference.System,
     val hideScreenInRecents: Boolean = false,
     val requireDeviceAuthentication: Boolean = false,
     val autoLockDuration: AutoLockDuration = AutoLockDuration.Immediately,
@@ -209,6 +228,15 @@ object ProfileKeyFixtures {
     }
 }
 
+enum class ExportPasswordStrength(
+    val label: String,
+    val completedSteps: Int,
+) {
+    Low("Low", 1),
+    Fair("Fair", 2),
+    Strong("Strong", 3),
+}
+
 object ProfileSettingsPolicy {
     fun isValidNostrAddress(value: String): Boolean {
         val trimmed = value.trim()
@@ -218,6 +246,18 @@ object ProfileSettingsPolicy {
 
     fun isValidExportPassword(password: String, confirmation: String): Boolean =
         password.length >= 8 && password == confirmation
+
+    /** Mirrors the pinned iOS export-strength projection without changing export validity. */
+    fun exportPasswordStrength(password: String): ExportPasswordStrength? {
+        if (password.isEmpty()) return null
+        if (password.length < 12) return ExportPasswordStrength.Low
+
+        val isStrong = password.length >= 16 &&
+            password.any(Char::isLetter) &&
+            password.any(Char::isDigit) &&
+            password.any { !it.isLetterOrDigit() }
+        return if (isStrong) ExportPasswordStrength.Strong else ExportPasswordStrength.Fair
+    }
 
     fun hasChatMessageRelay(settings: ProfileSettings): Boolean =
         ProfileRelayFixtures.availability(settings.relays, RelayRole.ChatMessages) ==

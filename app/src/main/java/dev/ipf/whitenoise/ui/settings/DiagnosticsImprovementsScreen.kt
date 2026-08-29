@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
@@ -170,20 +170,37 @@ fun DiagnosticsImprovementsScreen(
     val context = LocalContext.current
     SettingsScaffold(stringResource(R.string.diagnostics_improvements), onBack) {
         SettingsList {
-            item { SettingsSection("Diagnostics") }
-            item { DiagnosticsSwitches(profile, onAnalytics, onLogging, showDetails = true) }
-            item { SettingsSection(stringResource(R.string.stored_diagnostic_logs)) }
             item {
-                SettingsGroup {
-                    SettingsValue("On This Device", if (profile.diagnostics.storedBytes == 0L) "None" else Formatter.formatShortFileSize(context, profile.diagnostics.storedBytes))
-                    SettingsAction(
-                        title = stringResource(R.string.clear_diagnostic_logs),
-                        onClick = { confirmClear = true },
-                        enabled = profile.diagnostics.storedBytes > 0,
-                        destructive = true,
-                    )
+                DiagnosticsSwitches(
+                    profile = profile,
+                    onAnalytics = onAnalytics,
+                    onLogging = onLogging,
+                )
+            }
+            if (profile.diagnostics.records.isNotEmpty()) {
+                item { SettingsSection(stringResource(R.string.stored_diagnostic_logs)) }
+                item {
+                    SettingsGroup(
+                        modifier = Modifier.testTag("diagnostics.stored.group"),
+                    ) {
+                        SettingsValue(
+                            "On This Device",
+                            if (profile.diagnostics.storedBytes == 0L) {
+                                "None"
+                            } else {
+                                Formatter.formatShortFileSize(context, profile.diagnostics.storedBytes)
+                            },
+                        )
+                        SettingsDivider(Modifier.testTag("diagnostics.stored.divider"))
+                        SettingsAction(
+                            title = stringResource(R.string.clear_diagnostic_logs),
+                            onClick = { confirmClear = true },
+                            enabled = profile.diagnostics.storedBytes > 0,
+                            destructive = true,
+                        )
+                    }
+                    SettingsExplainer(stringResource(R.string.diagnostic_logs_retained))
                 }
-                SettingsExplainer(stringResource(R.string.diagnostic_logs_retained))
             }
         }
     }
@@ -203,19 +220,28 @@ fun DiagnosticsImprovementsScreen(
 }
 
 @Composable
-private fun DiagnosticsSwitches(profile: Profile, onAnalytics: (Boolean) -> Unit, onLogging: (Boolean) -> Unit, showDetails: Boolean) {
-    SettingsGroup {
+private fun DiagnosticsSwitches(
+    profile: Profile,
+    onAnalytics: (Boolean) -> Unit,
+    onLogging: (Boolean) -> Unit,
+) {
+    SettingsGroup(
+        modifier = Modifier
+            .padding(top = WhiteNoiseSpacing.Section)
+            .testTag("diagnostics.choices.group"),
+    ) {
         SettingsSwitch(
             stringResource(R.string.share_anonymous_analytics),
             profile.diagnostics.analyticsEnabled,
             onAnalytics,
-            subtitle = if (showDetails) stringResource(R.string.analytics_detail) else null,
+            subtitle = stringResource(R.string.analytics_detail),
         )
+        SettingsDivider(Modifier.testTag("diagnostics.choices.divider"))
         SettingsSwitch(
             stringResource(R.string.share_diagnostic_logs),
             profile.diagnostics.loggingEnabled,
             onLogging,
-            subtitle = if (showDetails) stringResource(R.string.diagnostic_logging_detail) else null,
+            subtitle = stringResource(R.string.diagnostic_logging_detail),
         )
     }
 }

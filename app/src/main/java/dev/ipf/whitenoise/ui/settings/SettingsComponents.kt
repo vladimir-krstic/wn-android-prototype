@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,8 +47,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
+import dev.ipf.whitenoise.ui.components.LocalWhiteNoiseTextFieldContainerColor
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
@@ -56,9 +60,10 @@ internal fun SettingsScaffold(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     prominentTitle: Boolean = false,
-    containerColor: Color = MaterialTheme.colorScheme.background,
-    topBarContainerColor: Color = MaterialTheme.colorScheme.surface,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    topBarContainerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     topBarScrolledContainerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    topBarActions: @Composable RowScope.() -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -76,20 +81,30 @@ internal fun SettingsScaffold(
                 },
                 containerColor = topBarContainerColor,
                 scrolledContainerColor = topBarScrolledContainerColor,
+                actions = topBarActions,
             )
         },
         bottomBar = bottomBar,
         containerColor = containerColor,
     ) { padding ->
-        AdaptiveContent(modifier = Modifier.fillMaxSize().padding(padding)) { content() }
+        CompositionLocalProvider(
+            LocalWhiteNoiseTextFieldContainerColor provides
+                MaterialTheme.colorScheme.surfaceContainerLowest,
+        ) {
+            AdaptiveContent(modifier = Modifier.fillMaxSize().padding(padding)) { content() }
+        }
     }
 }
 
 @Composable
-internal fun SettingsBottomAction(content: @Composable ColumnScope.() -> Unit) {
+internal fun SettingsBottomAction(
+    color: Color = MaterialTheme.colorScheme.surface,
+    tonalElevation: Dp = 2.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
+        color = color,
+        tonalElevation = tonalElevation,
     ) {
         AdaptiveContent {
             Column(
@@ -124,7 +139,7 @@ internal fun SettingsSection(title: String) {
 @Composable
 internal fun SettingsGroup(
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLowest,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -247,6 +262,7 @@ internal fun SettingsChoice(
     onClick: () -> Unit,
     subtitle: String? = null,
     enabled: Boolean = true,
+    highlightSelected: Boolean = true,
 ) {
     val alpha = if (enabled) 1f else 0.38f
     ListItem(
@@ -273,7 +289,7 @@ internal fun SettingsChoice(
             )
         },
         colors = ListItemDefaults.colors(
-            containerColor = if (selected) {
+            containerColor = if (selected && highlightSelected) {
                 MaterialTheme.colorScheme.surfaceContainerHigh
             } else {
                 Color.Transparent

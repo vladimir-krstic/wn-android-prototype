@@ -30,6 +30,7 @@ unrelated icons are unchanged.
 | `ic_settings_contrast` | [contrast](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/contrast/default/24px.xml) | `bdc8b18e0867ddda3cbb545d44696c30869c735e66dfde253ca839194fec7459` |
 | `ic_delete` | [delete](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/delete/default/24px.xml) | `359a195cab8c7720a5b55512c48d9e41a7453e70b17af16ef59d8e4fe29c4778` |
 | `ic_description` | [description](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/description/default/24px.xml) | `551a841606b60d3a4293dd9b83b3485d88c5766c8d4cbca342a4145308e3b8cc` |
+| `ic_download` | [download](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/download/default/24px.xml) | `037028bc8020031a6fdeb5e00340ffc2e552106c0eb25bb21ee6d420568e8570` |
 | `ic_edit` | [edit](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/edit/default/24px.xml) | `415dabf523db5039d18fdfbe1eb55ff53a5f01b377e5887076101e53f3670beb` |
 | `ic_error` | [error](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/error/default/24px.xml) | `23cacab40bf4b17fe514f54f959b3f11ac873b67c925a6a0fd4115565aa2e72e` |
 | `ic_expand_more` | [expand_more](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/expand_more/default/24px.xml) | `d24a57bf297ea4a5e7e5fa044bfb882e741dbb223500b8f99df91323f6ecec8d` |
@@ -42,6 +43,7 @@ unrelated icons are unchanged.
 | `ic_image` | [image](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/image/default/24px.xml) | `bacd74edee36c722cd339e9583ad2e1ce9ea7bc94e90517d12328696b2c8b874` |
 | `ic_info` | [info](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/info/default/24px.xml) | `36123ebb125948a749d85080db5852df88be52181428dd9d3a2da30bafa9392b` |
 | `ic_settings_key` | [key](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/key/default/24px.xml) | `48edb2de5476a32484bd35c294e6b0435e96b4808550af8327ede92fd0d84cd7` |
+| `ic_lock` | [lock](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/lock/default/24px.xml) | `139dea8adbb65bee7f61517189213649c41d94fbf0d8440c9c3d06fce12b19ab` |
 | `ic_logout` | [logout](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/logout/default/24px.xml) | `1bd3a7a32bbab64736e2a347d09ef22bf51c4a4ad50614f95fd59f8a3db2e570` |
 | `ic_settings_logout` | [logout](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/logout/default/24px.xml) | `1bd3a7a32bbab64736e2a347d09ef22bf51c4a4ad50614f95fd59f8a3db2e570` |
 | `ic_mark_unread` | [mark_email_unread](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/mark_email_unread/default/24px.xml) | `13587579fb598fe00d4a0716524fb22b4ae8d26d9fa5a99b811a6ebcde77fec1` |
@@ -59,6 +61,8 @@ unrelated icons are unchanged.
 | `ic_unarchive` | [unarchive](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/unarchive/default/24px.xml) | `82873396ab21481436dff6063f82934951c06f72e0abd4d397e43ca5d2883f66` |
 | `ic_unpin` | [keep_off](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/keep_off/default/24px.xml) | `ee6ec4ffcef4d45abd02e2dc952551adcb6d6e32e3813fa7788c8e8b13492737` |
 | `ic_verified_filled` | [verified (filled)](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/verified/fill1/24px.xml) | `e9e9fd5a25199a241164353503fc422faf97586178a83293c884e0527c540b14` |
+| `ic_visibility` | [visibility](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/visibility/default/24px.xml) | `ce2dbf813e55a7bae1924fb27eaf5a59d522d7e2e89a8e48c877f4b3245afbee` |
+| `ic_visibility_off` | [visibility_off](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/visibility_off/default/24px.xml) | `364471e99875ae33bc770c42ad571522a6f8412ef599e31c7c60e642aecc82d1` |
 | `ic_warning` | [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/24px.xml) | `965f7c2cdde8923bf6f6b005445903ac4fd7848a93ba28a46f569fc306142a15` |
 
 `ic_error` retains its native 80..880 circular bounds in a 960-unit viewport.
