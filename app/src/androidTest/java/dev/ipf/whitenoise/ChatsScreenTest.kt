@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -28,6 +29,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
@@ -332,9 +334,15 @@ class ChatsScreenTest {
         composeRule.onNodeWithText("?").assertDoesNotExist()
         composeRule.onNodeWithText("Group Details").assertDoesNotExist()
         composeRule.onNodeWithText("Create Group").assertIsNotEnabled()
-        composeRule.onNodeWithText("Group Name").performTextInput("Night Owls")
+        val groupName = composeRule.onNodeWithText("Group Name")
+        groupName.performTextReplacement("Night Owls")
+        groupName.assertTextContains("Night Owls")
         composeRule.onNodeWithText("Create Group").assertIsEnabled().performClick()
-        composeRule.runOnIdle { check(createdName == "Night Owls") }
+        composeRule.runOnIdle {
+            check(createdName == "Night Owls") {
+                "Expected the normalized group name, got $createdName"
+            }
+        }
     }
 
     @Test
