@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class DiagnosticsPromptTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
 
     @Test fun scrimAndSwipeDismissalsRecordChoicesWithoutEnablingConsent() {
         val vm = AppViewModel().apply { completeSignIn(OnboardingOrigin.Initial) }

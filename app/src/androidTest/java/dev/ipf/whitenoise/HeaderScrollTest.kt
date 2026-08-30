@@ -32,7 +32,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class HeaderScrollTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Test fun headerFollowsInitialProgrammaticEmptyAndReturnToTopPositions() {

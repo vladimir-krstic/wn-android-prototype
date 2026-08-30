@@ -40,7 +40,7 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalMaterial3Api::class)
 @RunWith(AndroidJUnit4::class)
 class MaterialSheetTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
 
     @Test fun ordinarySheetHasOneSurfaceAndNativeHandleToHeaderSpacingInBothThemes() {
         val dark = mutableStateOf(false)

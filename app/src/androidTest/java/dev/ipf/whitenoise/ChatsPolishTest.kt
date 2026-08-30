@@ -42,7 +42,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ChatsPolishTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
     private fun model() = AppViewModel().apply { completeSignIn(OnboardingOrigin.Initial) }
 
     @Composable private fun Chats(vm: AppViewModel, onNew: () -> Unit = {}, onRecovery: () -> Unit = {}) {

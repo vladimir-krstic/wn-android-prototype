@@ -50,7 +50,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AvatarWebImagePickerTest {
     @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    val composeRule = createAndroidComposeRule<EmptyTestActivity>()
 
     @Test
     fun toolbarAndModeButtonsKeepNativeTargetsAndCompactMargins() {

@@ -46,7 +46,7 @@ import org.junit.runner.RunWith
 /** Exercises the reuse/premeasure path from the Pixel's RectList crash, not just static rows. */
 @RunWith(AndroidJUnit4::class)
 class ChatListScrollRegressionTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
     private val plain = Chat("plain", 0, ChatKind.Group, "Chat", preview = "One line", timestamp = "Now")
 
     @Test fun repeatedFlingAndJumpScrollingKeepsChatsAndMenusUsable() {

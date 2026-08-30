@@ -42,7 +42,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AdaptiveLayoutTest {
     @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    val composeRule = createAndroidComposeRule<EmptyTestActivity>()
 
     @Test
     fun welcomeCapsLogoAndActionWidthsOnExpandedWindows() {

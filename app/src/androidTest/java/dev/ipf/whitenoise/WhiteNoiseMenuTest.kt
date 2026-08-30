@@ -44,7 +44,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class WhiteNoiseMenuTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
 
     @Test fun commandsKeepNativeTargetsAndDisabledStateAndDismissBeforeDispatch() {
         val expanded = mutableStateOf(true)

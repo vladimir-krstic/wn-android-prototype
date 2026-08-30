@@ -44,7 +44,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ChatListRowTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
     private val base = Chat("short", 0, ChatKind.Group, "Hi", preview = "A message", timestamp = "30m")
 
     @Test fun metadataStaysWithTheTitleAndReservesTheTimestampAcrossSizesAndDirections() {

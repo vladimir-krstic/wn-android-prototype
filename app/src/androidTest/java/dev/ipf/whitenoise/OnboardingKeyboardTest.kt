@@ -33,6 +33,40 @@ class OnboardingKeyboardTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
+    fun signInBackReturnsToTheSameWelcomeLayoutAfterEditing() {
+        assertBackRestoresWelcome("Sign In", hasSetTextAction())
+    }
+
+    @Test
+    fun signUpBackReturnsToTheSameWelcomeLayoutAfterEditing() {
+        assertBackRestoresWelcome("Sign Up", hasSetTextAction().and(hasText("Marmota")))
+    }
+
+    private fun assertBackRestoresWelcome(destination: String, editor: SemanticsMatcher) {
+        val markBefore = composeRule.onNodeWithContentDescription("White Noise")
+            .fetchSemanticsNode().boundsInRoot
+        val signUpBefore = composeRule.onNodeWithText("Sign Up").fetchSemanticsNode().boundsInRoot
+
+        composeRule.onNodeWithText(destination).performClick()
+        composeRule.onNode(editor).performClick().assertIsFocused()
+        composeRule.onNodeWithContentDescription("Back").performClick()
+        composeRule.onNodeWithContentDescription("White Noise").assertIsDisplayed()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            ViewCompat.getRootWindowInsets(composeRule.activity.window.decorView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) == false
+        }
+
+        assertEquals(markBefore, composeRule.onNodeWithContentDescription("White Noise").fetchSemanticsNode().boundsInRoot)
+        assertEquals(signUpBefore, composeRule.onNodeWithText("Sign Up").fetchSemanticsNode().boundsInRoot)
+    }
+}
+
+@RunWith(AndroidJUnit4::class)
+class WelcomeKeyboardInsetTest {
+    @get:Rule
+    val composeRule = createAndroidComposeRule<EmptyTestActivity>()
+
+    @Test
     @SdkSuppress(minSdkVersion = 30)
     fun welcomeGeometryDoesNotFollowTheOutgoingKeyboardInsets() {
         lateinit var composeView: View
@@ -82,33 +116,5 @@ class OnboardingKeyboardTest {
                 ViewCompat.requestApplyInsets(composeView)
             }
         }
-    }
-
-    @Test
-    fun signInBackReturnsToTheSameWelcomeLayoutAfterEditing() {
-        assertBackRestoresWelcome("Sign In", hasSetTextAction())
-    }
-
-    @Test
-    fun signUpBackReturnsToTheSameWelcomeLayoutAfterEditing() {
-        assertBackRestoresWelcome("Sign Up", hasSetTextAction().and(hasText("Marmota")))
-    }
-
-    private fun assertBackRestoresWelcome(destination: String, editor: SemanticsMatcher) {
-        val markBefore = composeRule.onNodeWithContentDescription("White Noise")
-            .fetchSemanticsNode().boundsInRoot
-        val signUpBefore = composeRule.onNodeWithText("Sign Up").fetchSemanticsNode().boundsInRoot
-
-        composeRule.onNodeWithText(destination).performClick()
-        composeRule.onNode(editor).performClick().assertIsFocused()
-        composeRule.onNodeWithContentDescription("Back").performClick()
-        composeRule.onNodeWithContentDescription("White Noise").assertIsDisplayed()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            ViewCompat.getRootWindowInsets(composeRule.activity.window.decorView)
-                ?.isVisible(WindowInsetsCompat.Type.ime()) == false
-        }
-
-        assertEquals(markBefore, composeRule.onNodeWithContentDescription("White Noise").fetchSemanticsNode().boundsInRoot)
-        assertEquals(signUpBefore, composeRule.onNodeWithText("Sign Up").fetchSemanticsNode().boundsInRoot)
     }
 }
