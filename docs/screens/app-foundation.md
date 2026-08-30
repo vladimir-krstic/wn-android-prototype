@@ -77,6 +77,9 @@ This status was removed when Batch 1 supplied the real Welcome screen.
 ## Behavior and state
 
 - Root state is deterministic and process-local.
+- If Android restores a signed-in navigation destination without that
+  process-local profile state, the graph clears the orphaned stack and returns
+  to Welcome instead of rendering an empty destination.
 - The foundation exposes no fake loading, account, or backend state.
 - The placeholder survives activity recreation through the navigation stack;
   no business state requires persistence yet.

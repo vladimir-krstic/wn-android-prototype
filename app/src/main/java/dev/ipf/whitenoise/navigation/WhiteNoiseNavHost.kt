@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.Lifecycle
 import androidx.compose.runtime.getValue
@@ -15,6 +16,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import dev.ipf.whitenoise.state.AppViewModel
 import dev.ipf.whitenoise.model.GroupRole
@@ -71,6 +73,19 @@ fun WhiteNoiseNavHost(
     val signInPrivateKey = remember { TextFieldState() }
     var scannedPrivateKey by remember { mutableStateOf<String?>(null) }
     var scannerUnavailable by remember { mutableStateOf(false) }
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+
+    LaunchedEffect(uiState.activeProfileId, currentBackStackEntry?.destination?.route) {
+        val destination = currentBackStackEntry?.destination ?: return@LaunchedEffect
+        val routeName = destination.route?.substringBefore('/')?.substringBefore('?')
+        val isOnboarding = routeName in onboardingRouteNames
+        if (uiState.activeProfile == null && !isOnboarding) {
+            navController.navigate(AppRoute.Welcome()) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     fun returnFromOnboardingForm() {
         focusManager.clearFocus(force = true)
@@ -614,3 +629,9 @@ fun WhiteNoiseNavHost(
         }
     }
 }
+
+private val onboardingRouteNames = setOfNotNull(
+    AppRoute.Welcome::class.qualifiedName,
+    AppRoute.SignIn::class.qualifiedName,
+    AppRoute.SignUp::class.qualifiedName,
+)
