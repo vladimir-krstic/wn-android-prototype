@@ -159,6 +159,7 @@ that the product boundary changed.
 - [App permissions best practices](https://developer.android.com/training/permissions/usage-notes)
 - [Request runtime permissions](https://developer.android.com/training/permissions/requesting)
 - [Privacy best practices](https://developer.android.com/privacy-and-security/about)
+- [Secure clipboard handling](https://developer.android.com/privacy-and-security/risks/secure-clipboard-handling)
 - [BiometricPrompt](https://developer.android.com/identity/sign-in/biometric-auth)
 - [Secure sensitive activities](https://developer.android.com/privacy-and-security/risks/screen-capture)
 - [Notifications](https://developer.android.com/develop/ui/views/notifications)

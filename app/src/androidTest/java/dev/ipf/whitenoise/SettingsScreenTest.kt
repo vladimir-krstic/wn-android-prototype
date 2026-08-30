@@ -1,5 +1,8 @@
 package dev.ipf.whitenoise
 
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -383,6 +386,13 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Export Encrypted Private Key").assertIsDisplayed()
         composeRule.onNodeWithText("Exports use Android’s document picker. Keep exported key files private.")
             .assertDoesNotExist()
+
+        composeRule.onNodeWithText("Copy Private Key").performClick()
+        composeRule.runOnIdle {
+            val clipboard = composeRule.activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = checkNotNull(clipboard.primaryClip)
+            check(clip.description.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true)
+        }
 
         composeRule.onNodeWithText("Export Encrypted Private Key").performClick()
         composeRule.onNodeWithText("Encrypted Private Key").assertIsDisplayed()

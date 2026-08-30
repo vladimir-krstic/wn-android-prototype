@@ -1,9 +1,12 @@
 package dev.ipf.whitenoise.ui.settings
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.PersistableBundle
 import androidx.annotation.DrawableRes
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -971,7 +974,12 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
                     SettingsAction(
                         title = "Copy Private Key",
                         onClick = {
-                            copyToClipboard(context, "Private key", ProfileKeyFixtures.PRIVATE_KEY)
+                            copyToClipboard(
+                                context = context,
+                                label = "Private key",
+                                text = ProfileKeyFixtures.PRIVATE_KEY,
+                                isSensitive = true,
+                            )
                             copiedKey = CopiedProfileKey.Private
                         },
                         leading = {
@@ -1240,7 +1248,25 @@ internal fun qrMatrix(value: String, marginModules: Int = 2): BitMatrix = QRCode
     mapOf(EncodeHintType.MARGIN to marginModules),
 )
 
-internal fun copyToClipboard(context: Context, label: String, text: String) {
+internal fun copyToClipboard(
+    context: Context,
+    label: String,
+    text: String,
+    isSensitive: Boolean = false,
+) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+    val clip = ClipData.newPlainText(label, text)
+    if (isSensitive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        clip.description.extras = PersistableBundle().apply {
+            putBoolean(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    ClipDescription.EXTRA_IS_SENSITIVE
+                } else {
+                    "android.content.extra.IS_SENSITIVE"
+                },
+                true,
+            )
+        }
+    }
+    clipboard.setPrimaryClip(clip)
 }

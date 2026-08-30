@@ -319,7 +319,8 @@ private-key reveal state remain screen-owned and saveable where appropriate.
 - Android Photo Picker and Storage Access Framework for avatar input;
 - platform-default Photo Picker and Files appearances without app color
   overrides;
-- Android Sharesheet and clipboard for explicit public/donation output;
+- Android Sharesheet and clipboard for explicit public/donation output; private-key
+  clipboard content is marked sensitive so supporting system UI can redact its preview;
 - Storage Access Framework document creation for deterministic key exports;
 - app-notification and device-security Settings intents;
 - secure-window protection for Recents previews and screenshots.
