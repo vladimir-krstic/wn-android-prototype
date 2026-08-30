@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -60,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -707,6 +709,8 @@ internal fun SearchResultsBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .imePadding()
+                .testTag("conversation.searchControls")
                 .padding(
                     horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                     vertical = WhiteNoiseSpacing.Related,
@@ -724,9 +728,10 @@ internal fun SearchResultsBottomBar(
                 )
             }
             Surface(
-                modifier = Modifier.weight(1f).semantics {
-                    liveRegion = LiveRegionMode.Polite
-                },
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("conversation.searchCount")
+                    .semantics { liveRegion = LiveRegionMode.Polite },
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
             ) {

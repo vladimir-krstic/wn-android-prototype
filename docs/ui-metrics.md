@@ -238,6 +238,24 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   the vertical center and remain inside the container. The 48 dp value is a
   minimum, so accessibility font scaling can grow the field instead of
   clipping text. Focus, IME, single-line input, clear, and Back are unchanged.
+- Conversation search reuses this exact compact component: 48 dp minimum,
+  `bodyLarge`, the same tonal container, Search/Clear artwork, zero default-
+  scale vertical inset and native growth. Its result controls apply the union
+  of IME and navigation-bar clearance so the 48 dp arrow targets and localized
+  count stay above the keyboard.
+- The conversation identity title uses a 40 dp avatar and a 4 dp gap to the
+  title/metadata column. A user-approved negative 2 dp arrangement between the
+  native `titleMedium` and `labelSmall` line boxes optically reduces their
+  visible leading by about 30%; it does not change either text style. The Row
+  center-aligns the resulting block and avatar inside a transparent 48 dp-
+  minimum touch target and allows the text block to grow at larger font scales.
+  There is no visible container padding. Its absent press/ripple indication is
+  the explicit WN-ANDROID-0094 exception; Button semantics and the Chat Info
+  destination remain. Search is not a root conversation app-bar action.
+- Search-match backgrounds use Android platform cyan, black foreground and a
+  4 dp radius around exact per-line glyph bounds with no horizontal inset.
+  Every matching message remains at full contrast; nonmatches use 38% alpha.
+  This selected-flow color is not added to the app's general Material scheme.
 - Chats toolbar and row avatars have 40 dp and 52 dp visible diameters. Their
   leading artwork edges share the 16 dp content margin inside the same capped
   680 dp pane. The toolbar uses an 8 dp relationship inset in addition to its

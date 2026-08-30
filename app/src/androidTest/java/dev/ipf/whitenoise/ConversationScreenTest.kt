@@ -1,25 +1,36 @@
 package dev.ipf.whitenoise
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.ChatTimelineEntry
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.ui.conversation.ConversationScreen
 import dev.ipf.whitenoise.ui.conversation.MessageDetailsScreen
+import dev.ipf.whitenoise.ui.conversation.SearchHighlightedText
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
+import kotlin.math.abs
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,6 +45,7 @@ class ConversationScreenTest {
         setConversation("fiatjaf")
 
         composeRule.onNodeWithText("Fiatjaf").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Search Messages").assertDoesNotExist()
         composeRule.onNodeWithText("Portable identity for the win.").assertIsDisplayed()
         composeRule.onNodeWithText("Message").assertIsDisplayed()
     }
@@ -44,6 +56,24 @@ class ConversationScreenTest {
 
         composeRule.onNodeWithText("Weekend Walks").assertIsDisplayed()
         composeRule.onNodeWithText("Maya Chen").assertIsDisplayed()
+        val avatar = composeRule.onNodeWithTag(
+            "conversation.header.avatar",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val text = composeRule.onNodeWithTag(
+            "conversation.header.text",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val title = composeRule.onNodeWithTag(
+            "conversation.header.title",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val metadata = composeRule.onNodeWithTag(
+            "conversation.header.metadata",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        assertTrue(abs(avatar.center.y - text.center.y) < 1f)
+        assertTrue(metadata.top < title.bottom)
     }
 
     @Test
@@ -131,23 +161,49 @@ class ConversationScreenTest {
 
     @Test
     fun conversationSearchStaysInPlaceAndReplacesComposerControls() {
-        setConversation("catalog-direct-text")
+        setConversation("catalog-direct-text", initialSearch = true)
 
-        composeRule.onNodeWithContentDescription("Search Messages").performClick()
         composeRule.onNodeWithContentDescription("Search Messages").assertIsDisplayed()
+        composeRule.onNodeWithTag("conversation.searchField").assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("conversation.searchControls").assertIsDisplayed()
         composeRule.onNodeWithText("0 matches").assertIsDisplayed()
+
+        composeRule.activity.onBackPressedDispatcher.onBackPressed()
+        composeRule.onNodeWithTag("conversation.searchField").assertDoesNotExist()
+        composeRule.onNodeWithText("Message").assertIsDisplayed()
     }
 
     @Test
     fun conversationSearchExposesClearAndNamedResultNavigation() {
-        setConversation("catalog-direct-text")
+        setConversation("catalog-direct-text", initialSearch = true)
 
-        composeRule.onNodeWithContentDescription("Search Messages").performClick()
         composeRule.onNodeWithContentDescription("Search Messages").performTextInput("Failed outgoing")
         composeRule.onNodeWithText("1 of 1 match").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Clear search").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Previous Match").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Next Match").assertIsDisplayed()
+    }
+
+    @Test
+    fun conversationSearchUsesRoundedAndroidCyanMatchHighlight() {
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                SearchHighlightedText(
+                    text = "Available file",
+                    query = "ava",
+                    modifier = Modifier.testTag("search.highlight"),
+                )
+            }
+        }
+
+        val pixels = composeRule.onNodeWithTag("search.highlight")
+            .captureToImage()
+            .toPixelMap()
+        assertTrue(
+            (0 until pixels.width).any { x ->
+                (0 until pixels.height).any { y -> pixels[x, y] == Color.Cyan }
+            },
+        )
     }
 
     @Test
@@ -309,7 +365,7 @@ class ConversationScreenTest {
         ).assertIsDisplayed()
     }
 
-    private fun setConversation(chatId: String) {
+    private fun setConversation(chatId: String, initialSearch: Boolean = false) {
         val profile = ProfileFixtures.marmota
         val chat = profile.chats.first { it.id == chatId }
         composeRule.setContent {
@@ -322,6 +378,7 @@ class ConversationScreenTest {
                     onRetry = {},
                     onAcceptInvitation = {},
                     onDeclineInvitation = {},
+                    initialSearch = initialSearch,
                 )
             }
         }

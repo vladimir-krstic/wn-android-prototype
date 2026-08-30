@@ -47,6 +47,7 @@ class ChatInfoScreenTest {
     fun directInfoShowsIdentityQuickActionsAndSharedCategories() {
         val profile = ProfileFixtures.marmota
         val chat = profile.chats.first { it.id == "maya-chen" }
+        var searchOpened = false
         composeRule.setContent {
             WhiteNoiseTheme {
                 ChatInfoScreen(
@@ -57,7 +58,7 @@ class ChatInfoScreenTest {
                     onMember = {},
                     onSharedContent = {},
                     onRelays = {},
-                    onSearch = {},
+                    onSearch = { searchOpened = true },
                     onEditGroup = {},
                     onAddPeople = {},
                     onMute = {},
@@ -70,7 +71,8 @@ class ChatInfoScreenTest {
         composeRule.onNodeWithText("Chat Info").assertIsDisplayed()
         composeRule.onNodeWithText("Shared in Chat").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("About").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Search").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Search").assertIsDisplayed().performClick()
+        composeRule.runOnIdle { check(searchOpened) }
     }
 
     @Test

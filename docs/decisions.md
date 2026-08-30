@@ -2431,3 +2431,58 @@ spacing; action behavior and product state do not change.
 
 Evidence: `ChatCreationScreens.kt`, `ChatsScreenTest`,
 `chats-and-chat-creation.md`, `ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0094 — Conversation identity and search use one compact header system
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+The conversation identity target keeps its complete Button semantics and Chat
+Info navigation, but removes its visible press/ripple indication at the user's
+explicit request. This is a conversation-header-only feedback exception: Back,
+debug and every other Material action keep native state layers. The identity
+uses a 40 dp avatar beside a title/metadata column, with a 4 dp horizontal
+relationship gap. A negative 2 dp arrangement between the native
+`titleMedium` and `labelSmall` line boxes is the user-approved optical
+exception that reduces their visible leading by about 30% without changing
+either type style. Both remain centered on the same vertical axis and free to
+grow for accessible text. A transparent 48 dp-minimum row preserves the
+Android touch target without adding visible container padding. This replaces
+the former 36 dp avatar and 8 dp horizontal gap.
+
+Conversation search reuses `WhiteNoiseCompactSearchField`, including the
+same 48 dp minimum, `bodyLarge` input, rounded tonal container, Search symbol,
+Clear action, focus, keyboard action and growth behavior already used by
+Chats. Its leading app-bar action uses the same Android Back treatment as
+Chats and closes search in place; system Back does the same. Search is
+available only from the existing equal Chat Info/Group Info quick action,
+which returns to the conversation with search focused. The conversation root
+app bar has no Search action. Draft state remains untouched.
+
+Previous/next/count controls retain their compact Material composition but now
+apply IME as well as navigation-bar insets, so they remain immediately above
+the software keyboard. Matching messages all remain at full contrast; only
+nonmatching messages are subdued to 38%. This explicitly supersedes the prior
+current-result-only contrast rule and selected-bubble outline. The current
+position still comes from the newest-first result index and is announced only
+on the current message, while the visible count remains a polite live region.
+
+Every visible query occurrence in message text, visible group-author names,
+attachment labels, link titles and link domains uses Android's platform
+`Color.CYAN` with black foreground. Compose's standard span background is
+square, so one scoped text-layout renderer groups exact glyph bounds per line
+and draws a flush 4 dp rounded background. Case- and diacritic-insensitive
+range mapping matches the existing search projection without changing the
+stored text. Cyan is the user-approved semantic search exception to the
+ordinary monochrome palette; contrast, result position and navigation keep
+the state understandable without color.
+
+Evidence: `ConversationScreen.kt`, `SearchHighlightedText.kt`,
+`TimelineMessageContent.kt`, `MessageInteractionsUi.kt`,
+`SearchHighlightedTextTest`, `ConversationScreenTest`,
+`ChatInfoScreenTest`, `message-interactions-and-search.md`,
+`chat-and-group-information.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Compose search](https://developer.android.com/develop/ui/compose/components/search-bar),
+[app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
+[window insets](https://developer.android.com/develop/ui/compose/system/insets-ui),
+and [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics).

@@ -1,6 +1,6 @@
 # Chat and group information
 
-Status: Visual-polish static gate passed on 2026-08-21; device acceptance pending
+Status: Refined static gate passed on 2026-08-30; device acceptance pending
 
 ## Source evidence
 
@@ -37,6 +37,9 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 - About, Mute/Unmute, Disappearing, and Search use equal 56dp filled-tonal icon
   controls with visible captions and one concise accessibility name. Group
   Info retains the same system without reserving an empty About position.
+  Search is retained as a working root quick action for both direct and group
+  information; it replaces the Chat Info route with the same conversation and
+  opens the shared focused in-place search without mutating the draft.
 - Shared content, members, administration, and chat actions use restrained
   `surfaceContainerLow` groups, transparent Material list items, standard
   symbols, and disclosure chevrons only for routes. Archive and destructive
@@ -88,5 +91,6 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
   changes, and recovery after final-relay removal.
 - Compose route tests for direct/group info, shared categories, admin/member
   states, selected duration treatment, role-aware member profiles, group
-  editing, add people, and normal/empty chat relays compile.
+  editing, add people, the working Search quick action, and normal/empty chat
+  relays compile.
 - Clean build, lint, tests, APKs, and permission/export audits pass.

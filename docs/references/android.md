@@ -1,6 +1,6 @@
 # Official Android reference index
 
-Last reviewed: 2026-08-29.
+Last reviewed: 2026-08-30.
 
 Use this file as a router. Open only the sources relevant to the selected
 screen, confirm that the guidance is still current, and record material links

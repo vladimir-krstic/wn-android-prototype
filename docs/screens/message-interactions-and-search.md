@@ -1,6 +1,6 @@
 # Message interactions and conversation search
 
-Status: Visual-polish static gate passed on 2026-08-21; device acceptance pending
+Status: Refined static gate passed on 2026-08-30; device acceptance pending
 
 ## Source evidence
 
@@ -54,11 +54,20 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
   selected count, named Delete/Forward icon actions, and visible explanation
   when the accepted deleted-message or 32-message rule disables forwarding.
 - Conversation search stays in the transcript, requests focus on entry, owns
-  an in-field Clear action, preserves the draft, and uses compact previous/next
-  icon controls around a live result count. The current result has explicit
-  containment, noncurrent content is subdued, text occurrences use a
-  high-contrast semantic highlight, and result-position semantics are
-  localized.
+  the exact shared 48 dp Chats search field, preserves the draft, and uses
+  compact previous/next icon controls around a live result count. Those
+  controls own IME and navigation-bar clearance. Every matching message stays
+  at full contrast while only nonmatches are subdued. Visible occurrences in
+  message text, group-author names, attachment labels, link titles and link
+  domains use Android platform cyan with black text and exact 4 dp rounded
+  glyph-run backgrounds; the current position remains localized and spoken.
+- The conversation identity target keeps its Chat Info Button semantics but,
+  by explicit user direction, has no press/ripple indication. A 40 dp avatar
+  and the compact title/metadata block share one center axis with a 4 dp
+  horizontal gap. A 2 dp optical overlap between the native title and metadata
+  line boxes reduces their visible leading by about 30%. Search is entered
+  only through Chat/Group Info; Android/system Back closes it in place through
+  the same pattern used by Chats.
 - Message Details now follows the child-destination app-bar hierarchy and
   groups the shared message plus delivery/sender/recipient information on
   restrained tonal surfaces without exposing protocol data.
@@ -74,6 +83,8 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 - Sources rechecked for this pass: [tap and press](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press),
   [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics),
   [Material search](https://developer.android.com/develop/ui/compose/components/search-bar),
+  [Material app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
+  [window insets](https://developer.android.com/develop/ui/compose/system/insets-ui),
   and [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets).
 
 ## Acceptance gates
@@ -94,5 +105,8 @@ move to an anchored menu. Selection bars and media screens are unchanged.
   emoji configuration, mention suggestions, and in-place search compile.
 - Focused tests cover the message context/title, reaction configuration slots,
   selection controls, forwarding limit/search, focused conversation search,
-  named Clear, and previous/next result actions.
+  the shared 48 dp field, named Clear, previous/next/count controls, Back
+  dismissal, matching-message contrast, cyan range generation, and centered
+  header identity geometry with compact title/metadata leading. The root
+  conversation app bar explicitly exposes no Search action.
 - The complete clean static gate and permission/export audit pass.

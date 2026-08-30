@@ -52,7 +52,7 @@ an approved Android difference or explicitly defers device/visual acceptance.
 
 | Capability | Accepted parity scope | Android status |
 | --- | --- | --- |
-| Shared conversation shell | Direct, group, support, invitation, ended, and developer-catalog conversations | Visual-polish static gate passed 2026-08-21 — small Material identity app bar, bounded keyed timeline/composer, tonal sticky day hierarchy, distinct notice/events, semantic selection, visible retry, and coordinated lifecycle panels; device acceptance pending |
+| Shared conversation shell | Direct, group, support, invitation, ended, and developer-catalog conversations | Static gate passed 2026-08-30 — small Material identity app bar center-aligns its 40 dp avatar and compact title/metadata block with a 4 dp horizontal gap and user-approved negative 2 dp line arrangement for about 30% less visible leading; the identity retains Button/Chat Info behavior without the explicitly removed gray press indication, and the root app bar has no Search action; device acceptance pending |
 | Timeline and clustering | Chronology, day boundaries, author and five-minute clusters, date markers, events, notices | Implemented — keyed lazy timeline, sticky date sections, deterministic ordering, cluster edges, group identity and centered information rows |
 | Message states | Incoming/outgoing, sent/delivered/read/failed, retry, deleted/tombstoned, replies and missing fallbacks | Implemented — semantic bubbles, terminal time/state, retry, scoped deletion, reply resolution, action availability, and typed details |
 | Text and links | Plain and multiline text, detected links, link preview, copy/search/read-aloud behavior | Visual-polish static gate passed 2026-08-21 — local first-HTTPS metadata, named suppression, tonal rich cards, copy/search, and received-text Android TextToSpeech with live progress |
@@ -66,7 +66,7 @@ an approved Android difference or explicitly defers device/visual acceptance.
 | Recipient speech actions | Read Aloud, Transcribe, Show/Hide Transcript, Copy Transcript, local-only provenance | Visual-polish static gate passed 2026-08-21 — view-local Transcribe, transcript reveal/copy and provenance, plus Android TextToSpeech with live progress and stop/shutdown lifecycle |
 | Message actions | Long-press context, Reply, Forward, Copy, Select, Info, Delete, permissions and full action availability | Visual-polish static gate passed 2026-08-21 — Android combined-click hold/haptic, contextual message preview, semantic icon rows, named accessibility alternatives, conditional Copy/Retry, tonal typed details, and scoped confirmation |
 | Selection and forwarding | Multi-select mode, target selection, ordered copies, media and keyboard behavior | Visual-polish static gate passed 2026-08-21 — explicit selected containment, live count, named compact actions, disabled-state explanation, native searchable checkboxes, 32-source/5-target limits, and source-ordered copies |
-| Conversation search | Search text, sender, and attachment labels; current count and previous/next navigation | Visual-polish static gate passed 2026-08-21 — focused in-place search, named clear, newest-first projection, localized current-result semantics, text highlighting, explicit selected-result containment, compact older/newer controls, and draft-preserving close |
+| Conversation search | Search text, sender, and attachment labels; current count and previous/next navigation | Static gate passed 2026-08-30 — exact shared 48 dp Chats field and Android Back behavior, focused in-place entry only from Chat/Group Info, IME-visible previous/next/count controls, newest-first projection, full-contrast result messages with only nonmatches subdued, platform-cyan/black 4 dp rounded exact-glyph highlights across visible text/author/attachment/link labels, current-only spoken position, and draft-preserving close; device acceptance pending |
 | Disappearing messages | Header/list indicators, duration setting event, deterministic status behavior | Implemented — list/header indicators, duration choice, and deterministic timeline events derive from chat state |
 | Invitation and ended states | Read history before accept/decline, participation transition, leave/removed/ended composer behavior | Visual-polish static gate passed 2026-08-21 — exact outcomes and history remain intact; invitation, left, removed, blocked, and missing-relay states now share one accessible tonal lifecycle hierarchy with direct recovery |
 | Relay recovery | Per-chat routing, final relay removal, send-disabled history-preserving state, add-to-recover | Implemented — independent editing, final-removal warning, history preservation, send block, Check Chat Relays recovery, and captured-default restore |
@@ -75,8 +75,8 @@ an approved Android difference or explicitly defers device/visual acceptance.
 
 | Capability | Accepted parity scope | Android status |
 | --- | --- | --- |
-| Direct Chat Info | Peer identity, notification/search actions, shared content, chat relays, relationship state | Visual-polish static gate passed 2026-08-21 — uncontained identity, tonal icon actions, grouped shared/actions hierarchy, selected duration state, archive/direct leave, and independent relays |
-| Group Info | Photo/name/description/member count, notifications, search, shared content, management, Leave Group | Visual-polish static gate passed 2026-08-21 — identity/member hierarchy, admin-gated edit/add, shared categories, advanced routes, lifecycle status, archive and destructive leave |
+| Direct Chat Info | Peer identity, notification/search actions, shared content, chat relays, relationship state | Static gate passed 2026-08-30 — uncontained identity, equal tonal icon actions including a tested Search return into the focused conversation flow, grouped shared/actions hierarchy, selected duration state, archive/direct leave, and independent relays; device acceptance pending |
+| Group Info | Photo/name/description/member count, notifications, search, shared content, management, Leave Group | Static gate passed 2026-08-30 — identity/member hierarchy, equal quick actions including Search, admin-gated edit/add, shared categories, advanced routes, lifecycle status, archive and destructive leave; device acceptance pending |
 | Member management | Roles, admin promotion/demotion, add/remove people, last-admin protection, role-aware profile | Visual-polish static gate passed 2026-08-21 — native checkbox selection, separate Profile/Group Actions, confirmed role/removal mutations, actor gates, and last-admin safeguards |
 | Group mutation | Edit metadata/photo, remove photo, deterministic events, leave/ended transitions | Visual-polish static gate passed 2026-08-21 — system Photo Picker, progress/error feedback, content-aligned tonal fields, pinned Save, typed events and authoritative lifecycle updates |
 | Shared media | Media/files/links categories, chronological index, unified viewer and unavailable-page rules | Visual-polish static gate passed 2026-08-21 — counted disclosure rows, complete empty state, stable open three-column grid, exact selected-page shared pager, and semantically styled rich lists |
@@ -107,6 +107,29 @@ an approved Android difference or explicitly defers device/visual acceptance.
 | Sign Out | Active-profile flow, wipe default, typed profile-name gate, routing to switcher or Welcome | Refined 2026-08-30 — expanded-only native sheet, current Material identity row and 2 dp-separated wipe choice, external 32 dp consequence/confirmation helpers, persistent exact-name label and gate, continuous pinned error action, and dismissal-safe named progress; static gate passed and device acceptance pending |
 | Remove Profile | Remove another stored profile with exact-name confirmation and active-profile protection | Visual-polish static gate passed 2026-08-21 — grouped inactive identities, durable no-other-profiles state, focused identity confirmation, and no active-profile action |
 | Erase App Data | Device-wide irreversible flow, stable three-word phrase gate, removes all local state | Reworked 2026-08-29 — Android Material sheet starts Expanded and exposes no partial anchor while retaining Hidden dismissal; semantic error callout, selectable phrase, shared white rounded exact-match field, pinned error action continuous with the gray modal canvas, safe/IME insets and dismissal-safe progress; static gate passed |
+
+## 2026-08-30 conversation header and search refinement
+
+The conversation identity app bar uses a centered 40 dp avatar and compact
+title/metadata block inside a 48 dp touch target. A negative 2 dp line
+arrangement reduces the visible title-to-metadata leading by about 30%. The
+identity remains an accessible Chat Info button while omitting the user-
+rejected visible gray press indication. Conversation search reuses the exact
+compact Chats search field, is available only from Chat/Group Info, keeps every
+matching message at full contrast, and highlights visible matching glyphs with
+Android platform cyan, black text, and 4 dp rounded geometry. Previous/next and
+current/total controls remain visible above the IME, and Android Back closes
+search without losing the draft.
+
+Gate: `./gradlew clean testDebugUnitTest lintDebug assembleDebug
+assembleDebugAndroidTest` passes. All 132 unit tests pass; instrumentation
+sources compile; app and test APKs assemble; lint reports zero errors and 11
+non-blocking warnings for pinned dependency updates and existing unused
+strings. Focused UI coverage verifies header alignment, the shared 48 dp search
+field, Chat Info search entry, Back behavior, result controls and the cyan
+highlight. No emulator/device was launched, installed, interacted with or
+captured; instrumentation execution, TalkBack and visual acceptance remain a
+separately requested step.
 
 ## 2026-08-26 Chats, privacy and shared-sheet static verification
 

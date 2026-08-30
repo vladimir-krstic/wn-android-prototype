@@ -87,6 +87,7 @@ internal fun TimelineAttachmentContent(
     attachments: List<MessageAttachment>,
     outgoing: Boolean,
     onOpenMedia: (List<MessageAttachment>) -> Unit,
+    searchQuery: String = "",
 ) {
     if (attachments.isEmpty()) return
     val visualAttachments = attachments.filter(MessageAttachment::isVisual)
@@ -94,15 +95,16 @@ internal fun TimelineAttachmentContent(
         TimelineMediaGrid(
             attachments = visualAttachments,
             onClick = { onOpenMedia(visualAttachments) },
+            searchQuery = searchQuery,
         )
     }
     attachments.filterNot(MessageAttachment::isVisual).forEach { attachment ->
         when (attachment.kind) {
             MessageAttachmentKind.Voice -> VoiceMessageCard(attachment, outgoing)
-            MessageAttachmentKind.Link -> LinkMessageCard(attachment, outgoing)
+            MessageAttachmentKind.Link -> LinkMessageCard(attachment, outgoing, searchQuery)
             MessageAttachmentKind.File,
             MessageAttachmentKind.Contact,
-            -> DocumentOrContactCard(attachment, outgoing)
+            -> DocumentOrContactCard(attachment, outgoing, searchQuery)
             else -> Unit
         }
     }
@@ -112,6 +114,7 @@ internal fun TimelineAttachmentContent(
 private fun TimelineMediaGrid(
     attachments: List<MessageAttachment>,
     onClick: () -> Unit,
+    searchQuery: String,
 ) {
     val frames = attachments.flatMap { attachment ->
         if (attachment.images.isEmpty()) listOf(VisualFrame(attachment, null))
@@ -134,20 +137,26 @@ private fun TimelineMediaGrid(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         when (MediaLayout.forCount(frames.size)) {
-            dev.ipf.whitenoise.model.MediaGridLayout.Single -> MediaTile(visible.first(), Modifier.fillMaxWidth().height(220.dp))
+            dev.ipf.whitenoise.model.MediaGridLayout.Single -> MediaTile(
+                visible.first(),
+                Modifier.fillMaxWidth().height(220.dp),
+                searchQuery = searchQuery,
+            )
             dev.ipf.whitenoise.model.MediaGridLayout.Two -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                visible.forEach { MediaTile(it, Modifier.weight(1f).aspectRatio(1f)) }
+                visible.forEach { MediaTile(it, Modifier.weight(1f).aspectRatio(1f), searchQuery = searchQuery) }
             }
             dev.ipf.whitenoise.model.MediaGridLayout.Three -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                MediaTile(visible[0], Modifier.weight(1f).height(210.dp))
+                MediaTile(visible[0], Modifier.weight(1f).height(210.dp), searchQuery = searchQuery)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    MediaTile(visible[1], Modifier.fillMaxWidth().height(104.dp))
-                    MediaTile(visible[2], Modifier.fillMaxWidth().height(104.dp))
+                    MediaTile(visible[1], Modifier.fillMaxWidth().height(104.dp), searchQuery = searchQuery)
+                    MediaTile(visible[2], Modifier.fillMaxWidth().height(104.dp), searchQuery = searchQuery)
                 }
             }
             else -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    visible.take(2).forEach { MediaTile(it, Modifier.weight(1f).aspectRatio(1.35f)) }
+                    visible.take(2).forEach {
+                        MediaTile(it, Modifier.weight(1f).aspectRatio(1.35f), searchQuery = searchQuery)
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     visible.drop(2).forEachIndexed { index, frame ->
@@ -155,6 +164,7 @@ private fun TimelineMediaGrid(
                             frame,
                             Modifier.weight(1f).aspectRatio(1f),
                             overflow = if (index == visible.drop(2).lastIndex) overflow else 0,
+                            searchQuery = searchQuery,
                         )
                     }
                 }
@@ -164,10 +174,19 @@ private fun TimelineMediaGrid(
 }
 
 @Composable
-private fun MediaTile(frame: VisualFrame, modifier: Modifier, overflow: Int = 0) {
+private fun MediaTile(
+    frame: VisualFrame,
+    modifier: Modifier,
+    overflow: Int = 0,
+    searchQuery: String,
+) {
     Box(modifier.clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.surfaceContainer)) {
         frame.image?.let { ComposerImage(it, Modifier.fillMaxSize()) }
-            ?: Text(frame.attachment.label, Modifier.align(Alignment.Center).padding(8.dp))
+            ?: SearchHighlightedText(
+                text = frame.attachment.label,
+                query = searchQuery,
+                modifier = Modifier.align(Alignment.Center).padding(8.dp),
+            )
         if (frame.attachment.kind == MessageAttachmentKind.Video) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
@@ -192,7 +211,7 @@ private fun MediaTile(frame: VisualFrame, modifier: Modifier, overflow: Int = 0)
 }
 
 @Composable
-private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
+private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean, searchQuery: String) {
     val container = if (outgoing) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
     } else {
@@ -218,13 +237,19 @@ private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
                 ComposerImage(it, Modifier.size(56.dp).clip(MaterialTheme.shapes.small))
             }
             Column(Modifier.weight(1f)) {
-                Text(
-                    attachment.linkTitle ?: attachment.label,
+                SearchHighlightedText(
+                    text = attachment.linkTitle ?: attachment.label,
+                    query = searchQuery,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 attachment.linkDomain?.let {
-                    Text(it, style = MaterialTheme.typography.labelMedium, color = secondaryContent)
+                    SearchHighlightedText(
+                        text = it,
+                        query = searchQuery,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = secondaryContent,
+                    )
                 }
                 attachment.linkSummary?.let {
                     Text(
@@ -241,7 +266,11 @@ private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
 }
 
 @Composable
-private fun DocumentOrContactCard(attachment: MessageAttachment, outgoing: Boolean) {
+private fun DocumentOrContactCard(
+    attachment: MessageAttachment,
+    outgoing: Boolean,
+    searchQuery: String,
+) {
     val context = LocalContext.current
     val bundled = bundledResource(attachment.label)
     val canOpen = attachment.externalUri?.let {
@@ -288,7 +317,13 @@ private fun DocumentOrContactCard(attachment: MessageAttachment, outgoing: Boole
                     modifier = Modifier.padding(12.dp),
                 )
             }
-            Text(attachment.label, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            SearchHighlightedText(
+                text = attachment.label,
+                query = searchQuery,
+                modifier = Modifier.weight(1f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (canOpen) {
                 TextButton(onClick = {
                     if (bundled != null) {

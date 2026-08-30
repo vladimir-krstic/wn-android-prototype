@@ -3,8 +3,9 @@ package dev.ipf.whitenoise.ui.conversation
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -42,8 +43,6 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -64,6 +63,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -76,9 +77,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -108,6 +106,7 @@ import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseCompactSearchField
 import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
 import dev.ipf.whitenoise.ui.components.drawableResource
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
@@ -165,7 +164,22 @@ fun ConversationScreen(
     val searchResults = remember(chat.timeline, profile.people, searchQuery) {
         ConversationSearch.results(chat, profile, searchQuery)
     }
+    val searchResultMessageIds = remember(searchResults) {
+        searchResults.mapTo(mutableSetOf(), dev.ipf.whitenoise.model.ConversationSearchResult::messageId)
+    }
     val currentSearchMessageId = searchResults.getOrNull(searchResultIndex)?.messageId
+
+    fun closeSearch() {
+        isSearching = false
+        searchQuery = ""
+        searchResultIndex = 0
+    }
+
+    BackHandler(enabled = isSearching, onBack = ::closeSearch)
+    BackHandler(enabled = isSelecting) {
+        isSelecting = false
+        selectedMessageIds = emptySet()
+    }
 
     fun handleAction(message: ChatMessage, action: MessageAction) {
         focusedMessageId = null
@@ -215,16 +229,11 @@ fun ConversationScreen(
                         searchQuery = it
                         searchResultIndex = 0
                     },
-                    onClose = {
-                        isSearching = false
-                        searchQuery = ""
-                        searchResultIndex = 0
-                    },
+                    onClose = ::closeSearch,
                 )
                 else -> ConversationTopBar(
                     chat = chat,
                     onBack = onBack,
-                    onSearch = { isSearching = true },
                     onInfo = onOpenChatInfo,
                     onDeveloperTools = onOpenDeveloperTools,
                 )
@@ -291,7 +300,11 @@ fun ConversationScreen(
                             val resultPosition = searchResults.indexOfFirst {
                                 it.messageId == item.message.id
                             }
-                            val searchPosition = resultPosition.takeIf { it >= 0 }?.let {
+                            val isCurrentSearchResult = isSearching &&
+                                item.message.id == currentSearchMessageId
+                            val searchPosition = resultPosition.takeIf {
+                                isCurrentSearchResult && it >= 0
+                            }?.let {
                                 pluralStringResource(
                                     R.plurals.match_position,
                                     searchResults.size,
@@ -307,13 +320,12 @@ fun ConversationScreen(
                                 onOpenMedia = { viewerAttachments = it },
                                 isSelectionMode = isSelecting,
                                 selected = item.message.id in selectedMessageIds,
-                                searchAlpha = if (
-                                    !isSearching || searchQuery.isBlank() ||
-                                    item.message.id == currentSearchMessageId
-                                ) 1f else 0.38f,
+                                searchAlpha = conversationSearchMessageAlpha(
+                                    isSearching = isSearching,
+                                    query = searchQuery,
+                                    isResult = item.message.id in searchResultMessageIds,
+                                ),
                                 searchQuery = searchQuery.takeIf { isSearching }.orEmpty(),
-                                isCurrentSearchResult = isSearching &&
-                                    item.message.id == currentSearchMessageId,
                                 searchPosition = searchPosition,
                                 onToggleSelection = {
                                     selectedMessageIds = if (item.message.id in selectedMessageIds) {
@@ -460,14 +472,12 @@ fun ConversationScreen(
 private fun ConversationTopBar(
     chat: Chat,
     onBack: () -> Unit,
-    onSearch: () -> Unit,
     onInfo: () -> Unit,
     onDeveloperTools: (() -> Unit)?,
 ) {
     val memberCount = chat.members.size
     val memberLabel = pluralStringResource(R.plurals.group_member_count, memberCount, memberCount)
     val hasTimer = chat.disappearingDuration != DisappearingDuration.Off
-    val searchDescription = stringResource(R.string.search_messages)
     val fullDescription = buildString {
         append(chat.title)
         if (chat.isGroup) append(", $memberLabel")
@@ -487,21 +497,39 @@ private fun ConversationTopBar(
         title = {
             Row(
                 modifier = Modifier
-                    .clickable(role = Role.Button, onClick = onInfo)
-                    .semantics(mergeDescendants = true) { contentDescription = fullDescription },
+                    .heightIn(min = 48.dp)
+                    .clickable(
+                        interactionSource = null,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onInfo,
+                    )
+                    .semantics(mergeDescendants = true) { contentDescription = fullDescription }
+                    .testTag("conversation.header.identity"),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                ProfileAvatar(chat.title, chat.avatar, Modifier.size(36.dp), contentDescription = null)
-                Column(horizontalAlignment = Alignment.Start) {
+                ProfileAvatar(
+                    chat.title,
+                    chat.avatar,
+                    Modifier.size(40.dp).testTag("conversation.header.avatar"),
+                    contentDescription = null,
+                )
+                Column(
+                    modifier = Modifier.testTag("conversation.header.text"),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.spacedBy((-2).dp),
+                ) {
                     Text(
                         chat.title,
+                        modifier = Modifier.testTag("conversation.header.title"),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleMedium,
                     )
                     if (chat.isGroup || hasTimer) {
                         Row(
+                            modifier = Modifier.testTag("conversation.header.metadata"),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -542,12 +570,6 @@ private fun ConversationTopBar(
                     )
                 }
             }
-            IconButton(onClick = onSearch) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_search),
-                    contentDescription = searchDescription,
-                )
-            }
         },
         scrollBehavior = dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll.current,
         colors = TopAppBarDefaults.topAppBarColors(
@@ -584,48 +606,31 @@ private fun ConversationSearchTopBar(
     onClose: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val searchDescription = stringResource(R.string.search_messages)
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        keyboardController?.show()
+    }
     TopAppBar(
         navigationIcon = {
             IconButton(onClick = onClose) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_close),
-                    contentDescription = stringResource(R.string.close),
+                    painter = painterResource(R.drawable.ic_arrow_back),
+                    contentDescription = stringResource(R.string.close_search),
                 )
             }
         },
         title = {
-            TextField(
+            WhiteNoiseCompactSearchField(
                 value = query,
                 onValueChange = onQueryChanged,
+                placeholder = stringResource(R.string.messages),
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
+                    .testTag("conversation.searchField")
                     .semantics { contentDescription = searchDescription },
-                placeholder = { Text(stringResource(R.string.messages)) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_search),
-                        contentDescription = null,
-                    )
-                },
-                trailingIcon = if (query.isNotEmpty()) ({
-                    IconButton(onClick = { onQueryChanged("") }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_close),
-                            contentDescription = stringResource(R.string.clear_search),
-                        )
-                    }
-                }) else null,
-                singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
             )
         },
         scrollBehavior = dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll.current,
@@ -705,7 +710,6 @@ private fun MessageRow(
     selected: Boolean,
     searchAlpha: Float,
     searchQuery: String,
-    isCurrentSearchResult: Boolean,
     searchPosition: String?,
     onToggleSelection: () -> Unit,
     onShowActions: () -> Unit,
@@ -754,6 +758,7 @@ private fun MessageRow(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(searchAlpha)
+            .testTag("conversation.message.${message.id}")
             .background(
                 color = if (isSelectionMode && selected) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
@@ -789,8 +794,9 @@ private fun MessageRow(
             modifier = Modifier.widthIn(max = 340.dp),
         ) {
             if (chat.isGroup && !outgoing && item.startsCluster) {
-                Text(
-                    authorName,
+                SearchHighlightedText(
+                    text = authorName,
+                    query = searchQuery,
                     modifier = Modifier.padding(start = 12.dp, bottom = 3.dp),
                     color = groupAuthorColor(author?.publicKey ?: message.authorId),
                     style = MaterialTheme.typography.labelMedium,
@@ -805,7 +811,6 @@ private fun MessageRow(
                 authorName = authorName,
                 onOpenMedia = onOpenMedia,
                 searchQuery = searchQuery,
-                isCurrentSearchResult = isCurrentSearchResult,
             )
             if (message.reactions.isNotEmpty()) {
                 ReactionRow(
@@ -857,7 +862,6 @@ private fun MessageBubble(
     authorName: String,
     onOpenMedia: (List<MessageAttachment>) -> Unit,
     searchQuery: String,
-    isCurrentSearchResult: Boolean,
 ) {
     val text = message.visibleText(profile.id)
     val description = buildString {
@@ -871,14 +875,6 @@ private fun MessageBubble(
         shape = MaterialTheme.shapes.large,
         color = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-        border = if (isCurrentSearchResult) {
-            BorderStroke(
-                2.dp,
-                if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-            )
-        } else {
-            null
-        },
         modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = description },
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -889,6 +885,7 @@ private fun MessageBubble(
                 attachments = message.attachments,
                 outgoing = outgoing,
                 onOpenMedia = onOpenMedia,
+                searchQuery = searchQuery,
             )
             if (message.attachments.any { it.voiceFormat == VoiceMessageFormat.Both } && text.isNotBlank()) {
                 Text(
@@ -899,10 +896,10 @@ private fun MessageBubble(
             }
             if (text.isNotBlank()) {
                 if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
-                    HighlightedSearchText(
+                    SearchHighlightedText(
                         text = text,
                         query = searchQuery,
-                        outgoing = outgoing,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 } else {
                     Text(
@@ -921,44 +918,6 @@ private fun MessageBubble(
             }
         }
     }
-}
-
-@Composable
-private fun HighlightedSearchText(text: String, query: String, outgoing: Boolean) {
-    val highlightContainer = if (outgoing) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
-    val highlightContent = if (outgoing) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onPrimary
-    }
-    val annotated = remember(text, query, highlightContainer, highlightContent) {
-        buildAnnotatedString {
-            var cursor = 0
-            while (cursor < text.length) {
-                val match = text.indexOf(query, startIndex = cursor, ignoreCase = true)
-                if (match < 0) {
-                    append(text.substring(cursor))
-                    break
-                }
-                append(text.substring(cursor, match))
-                withStyle(
-                    SpanStyle(
-                        color = highlightContent,
-                        background = highlightContainer,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                ) {
-                    append(text.substring(match, match + query.length))
-                }
-                cursor = match + query.length
-            }
-        }
-    }
-    Text(text = annotated, style = MaterialTheme.typography.bodyLarge)
 }
 
 @Composable
