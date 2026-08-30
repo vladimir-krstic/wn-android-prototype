@@ -14,6 +14,7 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -25,7 +26,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.ProfileFixtures
@@ -138,9 +142,9 @@ class ChatsScreenTest {
         val list = composeRule.onNodeWithTag("new_message.list").fetchSemanticsNode().boundsInRoot
         val row = composeRule.onNodeWithTag("creation.person.aisha-rahman")
             .fetchSemanticsNode().boundsInRoot
-        val avatar = composeRule.onNodeWithTag("creation.person.aisha-rahman.avatar")
+        val avatar = composeRule.onNodeWithTag("creation.person.aisha-rahman.avatar", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
-        val name = composeRule.onNodeWithTag("creation.person.aisha-rahman.name")
+        val name = composeRule.onNodeWithTag("creation.person.aisha-rahman.name", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
         val outerInset = with(composeRule.density) { 16.dp.toPx() }
         val avatarTextGap = with(composeRule.density) { 12.dp.toPx() }
@@ -197,8 +201,11 @@ class ChatsScreenTest {
 
         composeRule.onNodeWithText("Continue").assertIsNotEnabled()
         composeRule.onNodeWithTag("creation.searchField").assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("new_group.list").performScrollToNode(hasText("Maya Chen"))
         composeRule.onNodeWithText("Maya Chen").performClick()
-        composeRule.onNodeWithContentDescription("Remove Maya Chen").assertIsDisplayed()
+        composeRule.onNodeWithTag("new_group.list")
+            .performScrollToNode(hasTestTag("new_group.selected.maya-chen"))
+        composeRule.onNodeWithTag("new_group.selected.maya-chen").assertIsDisplayed()
         composeRule.onNodeWithText("Continue").assertIsEnabled().performClick()
         composeRule.runOnIdle { check(continuedWith == listOf("maya-chen")) }
     }
@@ -215,8 +222,11 @@ class ChatsScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("new_group.list").performScrollToNode(hasText("Maya Chen"))
         composeRule.onNodeWithText("Maya Chen").performClick()
-        composeRule.onNodeWithContentDescription("Remove Maya Chen").performClick()
+        composeRule.onNodeWithTag("new_group.list")
+            .performScrollToNode(hasTestTag("new_group.selected.maya-chen"))
+        composeRule.onNodeWithTag("new_group.selected.maya-chen").performClick()
         composeRule.onNodeWithText("Continue").assertIsNotEnabled()
     }
 
@@ -263,30 +273,34 @@ class ChatsScreenTest {
             check(kotlin.math.abs(expected.blue - actual.blue) < .01f)
         }
 
-        val list = composeRule.onNodeWithTag("new_group.list").fetchSemanticsNode().boundsInRoot
+        val listNode = composeRule.onNodeWithTag("new_group.list")
+        val list = listNode.fetchSemanticsNode().boundsInRoot
         val search = composeRule.onNodeWithTag("creation.searchField")
         val searchBounds = search.fetchSemanticsNode().boundsInRoot
+        search.assertHeightIsEqualTo(48.dp)
+        check(kotlin.math.abs((searchBounds.left - list.left) - with(composeRule.density) { 16.dp.toPx() }) < 1f)
+        val searchColor = sampledTopCenterColor("creation.searchField")
+        assertColor(canvas, sampledCornerColor("creation.bottomAction"))
+
+        listNode.performScrollToNode(hasText("Maya Chen"))
         val row = composeRule.onNodeWithTag("creation.person.maya-chen")
             .fetchSemanticsNode().boundsInRoot
-        val avatar = composeRule.onNodeWithTag("creation.person.maya-chen.avatar")
+        val avatar = composeRule.onNodeWithTag("creation.person.maya-chen.avatar", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
-        val name = composeRule.onNodeWithTag("creation.person.maya-chen.name")
+        val name = composeRule.onNodeWithTag("creation.person.maya-chen.name", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
         val divider = composeRule.onNodeWithTag("creation.person.maya-chen.divider")
         val outerInset = with(composeRule.density) { 16.dp.toPx() }
         val avatarTextGap = with(composeRule.density) { 12.dp.toPx() }
 
-        search.assertHeightIsEqualTo(48.dp)
         divider.assertHeightIsEqualTo(2.dp)
-        check(kotlin.math.abs((searchBounds.left - list.left) - outerInset) < 1f)
         check(kotlin.math.abs((row.left - list.left) - outerInset) < 1f)
         check(kotlin.math.abs((avatar.left - row.left) - outerInset) < 1f)
         check(kotlin.math.abs((name.left - avatar.right) - avatarTextGap) < 1f)
-        assertColor(grouped, sampledTopCenterColor("creation.searchField"))
+        assertColor(grouped, searchColor)
         assertColor(grouped, sampledCenterColor("creation.person.maya-chen"))
         assertColor(grouped, sampledBottomStartColor("creation.person.maya-chen"))
         assertColor(canvas, sampledCenterColor("creation.person.maya-chen.divider"))
-        assertColor(canvas, sampledCornerColor("creation.bottomAction"))
         composeRule.onNodeWithTag("creation.person.maya-chen").performClick().assertIsOn()
         composeRule.waitForIdle()
         assertColor(grouped, sampledBottomStartColor("creation.person.maya-chen"))
@@ -369,9 +383,9 @@ class ChatsScreenTest {
             .fetchSemanticsNode().boundsInRoot
         val row = composeRule.onNodeWithTag("creation.person.maya-chen")
             .fetchSemanticsNode().boundsInRoot
-        val avatar = composeRule.onNodeWithTag("creation.person.maya-chen.avatar")
+        val avatar = composeRule.onNodeWithTag("creation.person.maya-chen.avatar", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
-        val name = composeRule.onNodeWithTag("creation.person.maya-chen.name")
+        val name = composeRule.onNodeWithTag("creation.person.maya-chen.name", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
         val outerInset = with(composeRule.density) { 16.dp.toPx() }
         val avatarTextGap = with(composeRule.density) { 12.dp.toPx() }
@@ -380,6 +394,8 @@ class ChatsScreenTest {
         check(kotlin.math.abs((name.left - avatar.right) - avatarTextGap) < 1f)
         assertColor(grouped, sampledCenterColor("creation.person.maya-chen"))
         assertColor(resting, sampledCenterColor("creation.person.maya-chen.divider"))
+        composeRule.onNodeWithTag("group_setup.content").performTouchInput { swipeUp() }
+        composeRule.waitForIdle()
         assertColor(scrolled, sampledCornerColor("creation.bottomAction"))
     }
 
@@ -548,6 +564,6 @@ class ChatsScreenTest {
 
         composeRule.onNodeWithText("Weekend Walks").performClick()
         composeRule.runOnIdle { check(openedGroup == "weekend-walks") }
-        composeRule.onNodeWithText("Add to Another Group").assertIsDisplayed()
+        composeRule.onNodeWithText("Add to Another Group").performScrollTo().assertIsDisplayed()
     }
 }

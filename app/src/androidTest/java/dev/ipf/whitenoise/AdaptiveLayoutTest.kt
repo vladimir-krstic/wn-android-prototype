@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -175,7 +178,7 @@ class AdaptiveLayoutTest {
         }
 
         composeRule.onNodeWithText("Profile name").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Sign Out").assertIsDisplayed()
+        composeRule.onNode(hasClickAction().and(hasText("Sign Out"))).assertIsDisplayed()
     }
 
     @Test
@@ -200,7 +203,7 @@ class AdaptiveLayoutTest {
             }
         }
 
-        composeRule.onNodeWithText("Chats").assertIsDisplayed()
+        composeRule.onNodeWithTag("chats.list").assertWidthIsEqualTo(680.dp)
         composeRule.onNodeWithText("Direct - Text & Delivery").assertIsDisplayed()
     }
 
