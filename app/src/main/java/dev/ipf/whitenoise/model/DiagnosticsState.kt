@@ -8,7 +8,7 @@ data class DiagnosticRecord(
     val profileName: String,
 )
 
-/** Profile-owned, in-memory choices. No collection, transport, or durable storage is performed. */
+/** Profile-owned, in-memory choices. No collection, transport, or app-owned persistence is performed. */
 data class DiagnosticsState(
     val analyticsEnabled: Boolean = false,
     val loggingEnabled: Boolean = false,
@@ -16,6 +16,20 @@ data class DiagnosticsState(
     val records: List<DiagnosticRecord> = emptyList(),
 ) {
     val storedBytes: Long get() = records.sumOf { it.byteCount.toLong() }
+    val diagnosticLogExportText: String
+        get() = buildString {
+            appendLine("White Noise Diagnostic Logs")
+            appendLine("Sanitized local troubleshooting records.")
+            records.filter { it.byteCount > 0 }.forEachIndexed { index, record ->
+                appendLine()
+                appendLine("Log file: ${index + 1}")
+                appendLine("Created: ${record.createdLabel}")
+                appendLine("Recorded size: ${record.byteCount} bytes")
+                appendLine("info | app.ready")
+                appendLine("info | relay.connected")
+                appendLine("info | message.pipeline.ready")
+            }
+        }
     val summary: String get() = when {
         analyticsEnabled && loggingEnabled -> "On"
         analyticsEnabled -> "Analytics"

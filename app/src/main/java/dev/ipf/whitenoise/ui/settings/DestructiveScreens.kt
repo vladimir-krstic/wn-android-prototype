@@ -36,11 +36,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -52,6 +54,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Profile
@@ -70,10 +73,25 @@ fun SignOutSheet(
     onDismiss: () -> Unit,
     onComplete: (wipeData: Boolean) -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     var wipeData by rememberSaveable { mutableStateOf(true) }
     val confirmation = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState() }
     val confirmationValue = confirmation.text.toString()
     var progress by remember { mutableStateOf<String?>(null) }
+    val dismissEnabled by rememberUpdatedState(progress == null)
+    val confirmSheetValueChange = remember {
+        { target: SheetValue -> target != SheetValue.Hidden || dismissEnabled }
+    }
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Expanded,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        confirmValueChange = confirmSheetValueChange,
+    )
+    val wipeExplanation = if (wipeData) {
+        "This profile and all local data will be permanently removed. Previous chats won’t return."
+    } else {
+        "This profile and its local data will stay on this device."
+    }
     LaunchedEffect(progress) {
         if (progress == null) return@LaunchedEffect
         delay(600)
@@ -81,6 +99,7 @@ fun SignOutSheet(
     }
     ModalBottomSheet(
         onDismissRequest = { if (progress == null) onDismiss() },
+        sheetState = sheetState,
         contentWindowInsets = { WindowInsets.safeDrawing },
     ) {
         Column(
@@ -102,34 +121,38 @@ fun SignOutSheet(
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    SettingsGroup {
+                    SettingsGroup(
+                        modifier = Modifier.testTag("sign_out.profile_group"),
+                    ) {
                         ListItem(
-                            headlineContent = { Text(profile.name) },
-                            supportingContent = { Text(profile.shortPublicKey) },
+                            modifier = Modifier.testTag("sign_out.profile"),
                             leadingContent = {
                                 ProfileAvatar(
                                     profile.name,
                                     profile.avatar,
-                                    Modifier.size(48.dp),
+                                    Modifier.size(48.dp).testTag("sign_out.profile.avatar"),
                                     contentDescription = null,
                                 )
                             },
+                            supportingContent = { Text(profile.shortPublicKey) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(profile.name, modifier = Modifier.testTag("sign_out.profile.name"))
+                        }
+                        SettingsDivider(Modifier.testTag("sign_out.profile.divider"))
                         SettingsSwitch(
                             title = "Wipe Data From This Device",
                             checked = wipeData,
                             onCheckedChange = {
                                 wipeData = it
-                                if (!it) confirmation.edit { replace(0, length, "") }
-                            },
-                            subtitle = if (wipeData) {
-                                "This profile and all local data will be permanently removed. Previous chats won’t return."
-                            } else {
-                                "This profile and its local data will stay on this device."
+                                if (!it) {
+                                    confirmation.edit { replace(0, length, "") }
+                                    focusManager.clearFocus()
+                                }
                             },
                         )
                     }
+                    SettingsExplainer(wipeExplanation)
                     if (wipeData) {
                         SettingsSection("Enter Profile Name")
                         WhiteNoiseTextField(
@@ -139,16 +162,21 @@ fun SignOutSheet(
                                 .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
                             label = { Text("Profile name") },
                             lineLimits = TextFieldLineLimits.SingleLine,
-                            supportingText = {
-                                Text("Type “${profile.name}” to confirm permanent removal of this profile and its local data.")
-                            },
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Words,
+                                imeAction = ImeAction.Done,
                             ),
+                            onKeyboardAction = { focusManager.clearFocus() },
+                        )
+                        SettingsExplainer(
+                            "Type “${profile.name}” to confirm permanent removal of this profile and its local data.",
                         )
                     }
                 }
-                SettingsBottomAction {
+                SettingsBottomAction(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 0.dp,
+                ) {
                     DestructiveButton(
                         label = "Sign Out",
                         onClick = {

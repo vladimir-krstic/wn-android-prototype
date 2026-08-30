@@ -6,8 +6,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -17,9 +20,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AvatarAsset
 import dev.ipf.whitenoise.model.ProfileAvatar
@@ -29,8 +34,9 @@ fun ProfileAvatar(
     name: String,
     avatar: ProfileAvatar,
     modifier: Modifier = Modifier,
+    @DrawableRes emptyMonogramIcon: Int? = null,
     contentDescription: String? = if (avatar is ProfileAvatar.Monogram) {
-        "Profile photo, ${name.trim().firstOrNull()?.uppercase() ?: "?"}"
+        name.trim().firstOrNull()?.uppercase()?.let { "Profile photo, $it" } ?: "Profile photo"
     } else {
         "Profile photo"
     },
@@ -67,7 +73,11 @@ fun ProfileAvatar(
                 BitmapFactory.decodeByteArray(avatar.bytes, 0, avatar.bytes.size)?.asImageBitmap()
             }
             if (bitmap == null) {
-                MonogramAvatar(name = name, modifier = avatarModifier)
+                MonogramAvatar(
+                    name = name,
+                    modifier = avatarModifier,
+                    emptyMonogramIcon = emptyMonogramIcon,
+                )
             } else {
                 Image(
                     bitmap = bitmap,
@@ -78,7 +88,27 @@ fun ProfileAvatar(
             }
         }
 
-        ProfileAvatar.Monogram -> MonogramAvatar(name = name, modifier = avatarModifier)
+        ProfileAvatar.Monogram -> MonogramAvatar(
+            name = name,
+            modifier = avatarModifier,
+            emptyMonogramIcon = emptyMonogramIcon,
+        )
+    }
+}
+
+@Composable
+fun AvatarPhotoButton(
+    hasPhoto: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+    ) {
+        Text(stringResource(if (hasPhoto) R.string.change_photo else R.string.add_photo))
     }
 }
 
@@ -86,15 +116,31 @@ fun ProfileAvatar(
 private fun MonogramAvatar(
     name: String,
     modifier: Modifier,
+    @DrawableRes emptyMonogramIcon: Int?,
 ) {
     Box(
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = name.trim().firstOrNull()?.uppercase() ?: "?",
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        val initial = name.trim().firstOrNull()?.uppercase()
+        if (initial != null) {
+            Text(
+                text = initial,
+                style = MaterialTheme.typography.headlineMedium,
+            )
+        } else if (emptyMonogramIcon != null) {
+            Icon(
+                painter = painterResource(emptyMonogramIcon),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Text(
+                text = "?",
+                style = MaterialTheme.typography.headlineMedium,
+            )
+        }
     }
 }
 

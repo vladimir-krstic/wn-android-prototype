@@ -8,6 +8,10 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertWidthIsEqualTo
@@ -22,12 +26,18 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.LanguagePreference
+import dev.ipf.whitenoise.model.MediaDownloadPolicy
 import dev.ipf.whitenoise.model.NotificationPreviewMode
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.model.ProfileSettings
+import dev.ipf.whitenoise.model.ProfileRelayFixtures
+import dev.ipf.whitenoise.model.RelayRole
+import dev.ipf.whitenoise.model.SentMediaQuality
 import dev.ipf.whitenoise.state.AppUiState
 import dev.ipf.whitenoise.ui.settings.AppearanceScreen
 import dev.ipf.whitenoise.ui.settings.DataUsageScreen
@@ -394,7 +404,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun appearanceAndDataUsageUsePlatformChoiceRows() {
+    fun appearanceUsesImmediateThemeChoicesAndLanguageNavigation() {
         var selectedAppearance: AppearancePreference? = null
         var openedLanguage = false
         composeRule.setContent {
@@ -412,12 +422,72 @@ class SettingsScreenTest {
         composeRule.runOnIdle { check(selectedAppearance == AppearancePreference.Dark) }
         composeRule.onNodeWithText("Language").performClick()
         composeRule.runOnIdle { check(openedLanguage) }
+    }
 
+    @Test
+    fun dataUsageUsesSeparatedGroupsImmediateDialogsAndDefaultAwareReset() {
+        var changedSettings: ProfileSettings? = null
         composeRule.setContent {
-            WhiteNoiseTheme { DataUsageScreen(ProfileFixtures.marmota, {}, {}) }
+            WhiteNoiseTheme {
+                DataUsageScreen(
+                    profile = ProfileFixtures.marmota,
+                    onBack = {},
+                    onChange = { changedSettings = it },
+                )
+            }
         }
+
         composeRule.onNodeWithText("Automatic downloads").assertIsDisplayed()
-        composeRule.onNodeWithText("Reset download settings").assertIsDisplayed()
+        composeRule.onNodeWithTag("data_usage.downloads.group").assertIsDisplayed()
+        composeRule.onNodeWithTag("data_usage.downloads.divider.photos").assertIsDisplayed()
+        composeRule.onNodeWithText(
+            "Media that isn't downloaded automatically shows a download button.",
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText("Reset download settings").assertIsNotEnabled()
+
+        composeRule.onNodeWithText("Photos").performClick()
+        composeRule.onNodeWithTag("choice_dialog.options").assertIsDisplayed()
+        composeRule.onNodeWithTag("choice_dialog.option.1").assertIsSelected()
+        composeRule.onNodeWithTag("choice_dialog.option.2").performClick()
+        composeRule.runOnIdle {
+            check(changedSettings?.photoDownloadPolicy == MediaDownloadPolicy.WifiAndCellular)
+        }
+
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(
+            hasText("Photo and video quality"),
+        )
+        composeRule.onNodeWithText("Photo and video quality").performClick()
+        composeRule.onNodeWithTag("choice_dialog.option.0").assertIsSelected()
+        composeRule.onNodeWithText(
+            "High sends uncompressed photos and videos for better quality, but uses more data. " +
+                "Standard compresses media to use less data.",
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag("choice_dialog.option.1").performClick()
+        composeRule.runOnIdle {
+            check(changedSettings?.sentMediaQuality == SentMediaQuality.High)
+        }
+
+        val customizedProfile = ProfileFixtures.marmota.copy(
+            settings = ProfileFixtures.marmota.settings.copy(
+                fileDownloadPolicy = MediaDownloadPolicy.WifiAndCellular,
+            ),
+        )
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                DataUsageScreen(
+                    profile = customizedProfile,
+                    onBack = {},
+                    onChange = { changedSettings = it },
+                )
+            }
+        }
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(
+            hasText("Reset download settings"),
+        )
+        composeRule.onNodeWithText("Reset download settings").assertIsEnabled().performClick()
+        composeRule.runOnIdle {
+            check(changedSettings?.fileDownloadPolicy == ProfileSettings().fileDownloadPolicy)
+        }
     }
 
     @Test
@@ -565,6 +635,7 @@ class SettingsScreenTest {
             check(profile.settings.autoLockDuration.label == "After 5 minutes")
         }
 
+        composeRule.onNodeWithText("Diagnostics & Improvements").assertIsDisplayed()
         composeRule.onNodeWithText("Control optional analytics and diagnostic logs for this profile.")
             .assertIsDisplayed()
         composeRule.onNodeWithText(
@@ -581,23 +652,187 @@ class SettingsScreenTest {
             WhiteNoiseTheme { ProfileRelaysScreen(profile, {}, {}, { _, _ -> true }, { true }, { true }) }
         }
         composeRule.onNodeWithText("Primal").assertIsDisplayed()
-        composeRule.onNodeWithText("Restore default relays").assertIsNotEnabled()
+        composeRule.onNodeWithTag("relays.row.primal").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Connected"),
+        )
+        composeRule.onNodeWithText("Add Relay").assertIsDisplayed()
+        check(
+            composeRule.onAllNodesWithTag(
+                "relay.status.connected.filled",
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().isNotEmpty(),
+        )
+        check(
+            composeRule.onAllNodesWithTag(
+                "relay.status.not_connected.filled",
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().isNotEmpty(),
+        )
+        val density = composeRule.activity.resources.displayMetrics.density
+        val statusWidth = composeRule.onAllNodesWithTag(
+            "relay.status.connected.filled",
+            useUnmergedTree = true,
+        ).fetchSemanticsNodes().first().boundsInRoot.width
+        check(kotlin.math.abs(statusWidth - 20f * density) < 1f)
+        composeRule.onNodeWithTag("relays.restore").assertIsNotEnabled()
+        composeRule.onNodeWithTag("relays.divider.0").assertIsDisplayed()
+        val sectionLeft = composeRule.onNodeWithText(
+            "Profile relays",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.left
+        val helperLeft = composeRule.onNodeWithText(
+            "Relays let your profile publish information, receive chat invitations, and deliver messages.",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.left
+        check(kotlin.math.abs(sectionLeft - helperLeft) < 1f)
+        val groupBottom = composeRule.onNodeWithTag(
+            "relays.group",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.bottom
+        val helperTop = composeRule.onNodeWithText(
+            "Relays let your profile publish information, receive chat invitations, and deliver messages.",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.top
+        check(kotlin.math.abs((helperTop - groupBottom) - 8f * density) < 1f)
 
         composeRule.setContent {
             WhiteNoiseTheme {
                 ProfileRelayDetailsScreen(profile.settings.relays.first(), {}, { _, _ -> true }, { true })
             }
         }
+        composeRule.onNodeWithText("Relay").assertIsDisplayed()
+        composeRule.onNodeWithText("Use For").assertIsDisplayed()
         composeRule.onNodeWithText("Chat Messages").assertIsDisplayed()
         composeRule.onNodeWithText("Status").assertIsDisplayed()
+        composeRule.onNodeWithText("Use for messages in chats you create.", substring = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag("relay.details.role.divider.0").assertIsDisplayed()
+        composeRule.onNodeWithText("Remove Relay").performClick()
+        composeRule.onNodeWithText("Remove Primal?").assertIsDisplayed()
+        composeRule.onNodeWithText("Existing chats keep their current relays.", substring = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun relayDetailKeepsLongUrlOnOneLineWithCompleteSemantics() {
+        val relay = ProfileFixtures.marmota.settings.relays.first {
+            it.name == "White Noise Profile"
+        }
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                ProfileRelayDetailsScreen(relay, {}, { _, _ -> true }, { true })
+            }
+        }
+
+        composeRule.onNodeWithText(relay.url, useUnmergedTree = true).assertIsDisplayed()
+        val density = composeRule.activity.resources.displayMetrics.density
+        val urlRowHeight = composeRule.onNodeWithTag(
+            "relay.metadata.url",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot.height
+        check(kotlin.math.abs(urlRowHeight - 56f * density) < 1f)
+    }
+
+    @Test
+    fun addRelayUsesAValidatedTaskSheetAndRestoreKeepsItsFocusedConfirmation() {
+        val profile = ProfileFixtures.marmota
+        var addedUrl: String? = null
+        var addedRoles: Set<RelayRole>? = null
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                ProfileRelaysScreen(
+                    profile = profile,
+                    onBack = {},
+                    onRelay = {},
+                    onAdd = { url, roles ->
+                        addedUrl = url
+                        addedRoles = roles
+                        true
+                    },
+                    onConnected = { true },
+                    onRestore = { true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Add Relay").performClick()
+        composeRule.onNodeWithTag("sheet.surface").assertIsDisplayed()
+        composeRule.onNodeWithText("Relay URL").assertIsDisplayed()
+        composeRule.onNodeWithText("Use For").assertIsDisplayed()
+        composeRule.onNodeWithText("Receive invitations to new chats and groups.").assertIsDisplayed()
+        composeRule.onNodeWithTag("relay.add.submit").assertIsNotEnabled()
+        composeRule.onNodeWithTag("relay.add.url").performTextInput("wss://relay.example.com")
+        composeRule.onNodeWithTag("relay.add.submit").assertIsEnabled().performClick()
+        composeRule.runOnIdle {
+            check(addedUrl == "wss://relay.example.com")
+            check(addedRoles == RelayRole.entries.toSet())
+        }
+
+        val customized = profile.copy(
+            settings = profile.settings.copy(relays = ProfileRelayFixtures.defaults.dropLast(1)),
+        )
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                ProfileRelaysScreen(customized, {}, {}, { _, _ -> true }, { true }, { true })
+            }
+        }
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(
+            hasText("Restore Default Relays"),
+        )
+        composeRule.onNodeWithText("Restore Default Relays").assertIsEnabled().performClick()
+        composeRule.onNodeWithText("Restore default relays?").assertIsDisplayed()
+        composeRule.onNodeWithText("Custom relays will be removed.", substring = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Restore Defaults").assertIsDisplayed()
     }
 
     @Test
     fun donationSurfaceIsExplicitlyOfflineAndCopyOnly() {
+        composeRule.setContent {
+            WhiteNoiseTheme { ShareConnectScreen(ProfileFixtures.marmota, onBack = {}) }
+        }
+        val establishedQrBounds = composeRule.onNodeWithTag(
+            "share_connect.qr_surface",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
         composeRule.setContent { WhiteNoiseTheme { DonateScreen(onBack = {}) } }
+        composeRule.onNodeWithTag("donate.method_selector").assertIsDisplayed()
+        composeRule.onNodeWithTag("donate.method.0").assertIsOn()
+        composeRule.onNodeWithTag("donate.method.1").assertIsOff()
         composeRule.onNodeWithText("free and open source", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("Copy Lightning address").assertIsDisplayed()
+        composeRule.onNodeWithTag("donate.copy_address.visual", useUnmergedTree = true)
+            .assertWidthIsEqualTo(240.dp)
+            .assertHeightIsEqualTo(32.dp)
+        composeRule.onNodeWithTag("donate.copy_address").assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("donate.method_caption").assertHeightIsEqualTo(20.dp)
+        composeRule.onNodeWithContentDescription("Copy Lightning address").assertIsDisplayed().performClick()
+        composeRule.onNodeWithContentDescription("Lightning address copied").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Lightning donation QR code").assertIsDisplayed()
+        val donationQrBounds = composeRule.onNodeWithTag(
+            "donate.qr_surface",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val donationAddressBounds = composeRule.onNodeWithTag("donate.copy_address")
+            .fetchSemanticsNode().boundsInRoot
+        val donationAddressVisualBounds = composeRule.onNodeWithTag(
+            "donate.copy_address.visual",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val donationCaptionBounds = composeRule.onNodeWithTag("donate.method_caption")
+            .fetchSemanticsNode().boundsInRoot
+        val targetGap = with(composeRule.density) { 1.dp.toPx() }
+        val captionOpticalGap = with(composeRule.density) { 5.dp.toPx() }
+        val qrToAddressTargetGap = donationAddressBounds.top - donationQrBounds.bottom
+        val addressVisualToCaptionGap = donationCaptionBounds.top - donationAddressVisualBounds.bottom
+        check(kotlin.math.abs(establishedQrBounds.width - donationQrBounds.width) < 1f)
+        check(kotlin.math.abs(establishedQrBounds.height - donationQrBounds.height) < 1f)
+        check(kotlin.math.abs(qrToAddressTargetGap - targetGap) < 1f)
+        check(kotlin.math.abs(addressVisualToCaptionGap - captionOpticalGap) < 1f)
+
+        composeRule.onNodeWithTag("donate.method.1").performClick().assertIsOn()
+        composeRule.onNodeWithTag("donate.method.0").assertIsOff()
+        composeRule.onNodeWithContentDescription("Bitcoin donation QR code").assertIsDisplayed()
     }
 
     @Test

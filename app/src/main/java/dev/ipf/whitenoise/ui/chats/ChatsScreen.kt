@@ -32,8 +32,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -78,6 +76,7 @@ import dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll
 import dev.ipf.whitenoise.ui.components.MuteDurationDialog
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseCompactSearchField
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseContentMaxWidth
@@ -278,6 +277,7 @@ fun ChatsScreen(
     muteChat?.let { chat ->
         MuteDurationDialog(
             onDismiss = { muteChat = null },
+            selectedDuration = chat.muteDuration,
             onSelect = {
                 onMute(chat.id, it)
                 muteChat = null
@@ -450,40 +450,14 @@ private fun ChatsSearchTopBar(
 
     TopAppBar(
         title = {
-            TextField(
+            WhiteNoiseCompactSearchField(
                 value = query,
                 onValueChange = onQueryChange,
+                placeholder = stringResource(R.string.search_chats),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .testTag("chats.searchField")
                     .focusRequester(focusRequester),
-                placeholder = { Text(stringResource(R.string.search_chats)) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_search),
-                        contentDescription = null,
-                    )
-                },
-                trailingIcon = if (query.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_close),
-                                contentDescription = stringResource(R.string.clear_search),
-                            )
-                        }
-                    }
-                } else {
-                    null
-                },
-                singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                ),
             )
         },
         navigationIcon = {

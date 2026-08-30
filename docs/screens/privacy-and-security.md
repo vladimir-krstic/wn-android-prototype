@@ -22,13 +22,16 @@ biometric prompting, telemetry transport, persistence or networking.
   action into Android security settings. **Auto-lock** appears only while
   authentication is effective, avoiding a timing control for a disabled gate.
 - Auto-lock is one immediate Material radio choice in a compact alert dialog.
-  The option list is an accessible selectable group on a white-equivalent
-  nested surface; selection is conveyed by the native radio, not a rectangular
-  selected fill.
+  The option list sits directly on the dialog surface as an accessible
+  selectable group, without a nested card or separators. Selection is conveyed
+  by the native radio, not a rectangular selected fill. Dialog-owned padding
+  positions the row; the shared choice row does not add a settings-list inset.
 - **Diagnostics & Improvements** keeps its Off/Analytics/Logs/On summary and a
   focused explanation. Its two independent switches form one separated group.
   Stored logs appear only after the profile has created records; clearing
-  requires a Material alert and preserves the logging preference.
+  requires a Material alert and preserves the logging preference. This is the
+  sole permanent consumer entry; Developer Tools only inspects the read-only
+  logging state and non-empty sanitized file inventory.
 - **Erase App Data** is one destructive row with its consequence outside the
   action. It opens an expanded Material modal bottom sheet with only Expanded
   and Hidden anchors, so it cannot settle at partial height; downward dismissal

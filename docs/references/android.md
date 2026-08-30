@@ -86,6 +86,7 @@ published source and compatibility evidence are linked in
 - [Material OutlinedTextField defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/OutlinedTextFieldDefaults)
 - [Material text-field label positions](https://developer.android.com/reference/kotlin/androidx/compose/material3/TextFieldLabelPosition)
 - [Material buttons](https://developer.android.com/develop/ui/compose/components/button)
+- [Material 3 Expressive button groups](https://m3.material.io/components/button-groups/overview)
 - [Material Button defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonDefaults)
 - [Progress indicators](https://developer.android.com/develop/ui/compose/components/progress)
 - [Focus behavior](https://developer.android.com/develop/ui/compose/touch-input/focus)

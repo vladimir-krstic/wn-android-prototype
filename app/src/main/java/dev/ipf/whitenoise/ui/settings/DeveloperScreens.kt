@@ -1,33 +1,50 @@
 package dev.ipf.whitenoise.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -40,8 +57,12 @@ import dev.ipf.whitenoise.model.ConversationDebugPolicy
 import dev.ipf.whitenoise.model.ConversationDebugSnapshot
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
+import dev.ipf.whitenoise.ui.components.WhiteNoiseFilledTonalButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @Composable
@@ -52,16 +73,31 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
-    onDiagnosticsImprovements: () -> Unit,
 ) {
+    val context = LocalContext.current
     val tools = profile.developerTools
+    var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
+    var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
+    val exportLogs = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri != null) {
+            val result = runCatching {
+                checkNotNull(context.contentResolver.openOutputStream(uri))
+                    .bufferedWriter()
+                    .use { writer -> writer.write(exportContent) }
+            }
+            saveErrorDialog = result.isFailure
+        }
+        exportContent = ""
+    }
     SettingsScaffold(title = "Developer Tools", onBack = onBack) {
         SettingsList {
             item {
                 SettingsCallout(
                     title = "For development and testing only",
                     text = "These tools can expose technical information and change how the app behaves.",
-                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     leading = {
                         Icon(
                             painter = painterResource(R.drawable.ic_warning),
@@ -72,14 +108,14 @@ fun DeveloperToolsScreen(
                 )
             }
             item {
-                SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField)) {
+                SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
                     SettingsSwitch(
                         title = "Developer Tools",
                         checked = tools.isEnabled,
                         onCheckedChange = { onEnabled(it) },
-                        subtitle = "Enable technical tools for this profile.",
                     )
                 }
+                SettingsExplainer("Enable technical tools for this profile.")
             }
             if (tools.isEnabled) {
                 item { SettingsSection("Debugging") }
@@ -89,35 +125,91 @@ fun DeveloperToolsScreen(
                             title = "Debug Mode",
                             checked = tools.debugMode,
                             onCheckedChange = { onDebugMode(it) },
-                            subtitle = "Adds technical details to the accepted conversations.",
                         )
-                        SettingsLink("Diagnostics", "Persistent sanitized event console", onDiagnostics)
-                        SettingsLink("Key Packages", "Exactly one current package", onKeyPackages)
+                        SettingsDivider()
+                        SettingsLink("Diagnostics", "Sanitized event console", onDiagnostics)
+                    }
+                    SettingsExplainer(
+                        "Debug Mode adds technical details to supported conversations.",
+                    )
+                }
+                item {
+                    SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
+                        SettingsLink("Key Packages", "One current package", onKeyPackages)
                     }
                 }
-                item { SettingsSection("Diagnostic logs") }
+                item { SettingsSection("Diagnostic Logs") }
                 item {
+                    val nonemptyRecords = profile.diagnostics.records.filter { it.byteCount > 0 }
                     SettingsGroup {
-                        SettingsLink("Diagnostics & Improvements", profile.diagnostics.summary, onDiagnosticsImprovements)
-                        profile.diagnostics.records.forEach { file ->
+                        SettingsMetadata(
+                            title = "Diagnostic Logging",
+                            value = if (profile.diagnostics.loggingEnabled) "On" else "Off",
+                        )
+                        SettingsDivider()
+                        if (nonemptyRecords.isEmpty()) {
                             ListItem(
-                                headlineContent = { Text(file.filename, fontFamily = FontFamily.Monospace) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            ) {
+                                Text(
+                                    text = "There are no logs.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        nonemptyRecords.forEachIndexed { index, file ->
+                            if (index > 0) SettingsDivider()
+                            ListItem(
                                 supportingContent = { Text("${fileSize(file.byteCount)} · ${file.createdLabel} · ${file.profileName}") },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            ) {
+                                Text(file.filename, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                        if (nonemptyRecords.isNotEmpty()) {
+                            SettingsDivider()
+                            SettingsAction(
+                                title = "Export Diagnostic Logs",
+                                onClick = {
+                                    exportContent = profile.diagnostics.diagnosticLogExportText
+                                    exportLogs.launch("White Noise Diagnostic Logs.txt")
+                                },
+                                leading = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_download),
+                                        contentDescription = null,
+                                    )
+                                },
                             )
                         }
                     }
-                    SettingsExplainer("Analytics and logging choices are independent of Developer Tools. Turning logging off keeps existing records.")
+                    SettingsExplainer(
+                        "Configure or clear diagnostic logs in Privacy & Security. " +
+                            "Existing sanitized files remain available here after logging is turned off.",
+                    )
                 }
             }
             item { SettingsSection("About") }
             item {
                 SettingsGroup {
-                    SettingsValue("Version", "0.1 (1)")
-                    SettingsValue("Built on", "MarmotKit (790eb860)")
+                    SettingsMetadata("Version", "0.1 (1)")
+                    SettingsDivider()
+                    SettingsMetadata("Built on", "MarmotKit (790eb860)")
                 }
             }
         }
+    }
+    if (saveErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { saveErrorDialog = false },
+            title = { Text("Couldn’t Save Diagnostic Logs") },
+            text = { Text("Choose another location and try again.") },
+            confirmButton = {
+                TextButton(onClick = { saveErrorDialog = false }) {
+                    Text("Dismiss")
+                }
+            },
+        )
     }
 }
 
@@ -131,7 +223,60 @@ fun DiagnosticsScreen(
 ) {
     val context = LocalContext.current
     val events = profile.developerTools.diagnosticEvents
-    SettingsScaffold(title = "Diagnostics", onBack = onBack) {
+    var actionsExpanded by remember { mutableStateOf(false) }
+    SettingsScaffold(
+        title = "Diagnostics",
+        onBack = onBack,
+        topBarActions = {
+            Box {
+                IconButton(
+                    onClick = { actionsExpanded = true },
+                    modifier = Modifier.testTag("diagnostics.actions"),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_more_vert),
+                        contentDescription = "Diagnostic actions",
+                    )
+                }
+                WhiteNoiseDropdownMenu(
+                    expanded = actionsExpanded,
+                    onDismissRequest = { actionsExpanded = false },
+                    modifier = Modifier.testTag("diagnostics.actions.menu"),
+                    items = buildList {
+                        diagnosticSummary?.let { summary ->
+                            add(
+                                WhiteNoiseMenuItem(
+                                    label = "Copy Diagnostic Summary",
+                                    icon = R.drawable.ic_content_copy,
+                                    onClick = {
+                                        copyToClipboard(context, "Diagnostic summary", summary)
+                                    },
+                                    modifier = Modifier.testTag("diagnostics.action.copy_summary"),
+                                ),
+                            )
+                        }
+                        add(
+                            WhiteNoiseMenuItem(
+                                label = "Test",
+                                icon = R.drawable.ic_check,
+                                onClick = { onTest() },
+                                modifier = Modifier.testTag("diagnostics.action.test"),
+                            ),
+                        )
+                        add(
+                            WhiteNoiseMenuItem(
+                                label = "Clear Events",
+                                icon = R.drawable.ic_delete,
+                                onClick = { onClear() },
+                                enabled = events.isNotEmpty(),
+                                modifier = Modifier.testTag("diagnostics.action.clear"),
+                            ),
+                        )
+                    },
+                )
+            }
+        },
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -140,42 +285,26 @@ fun DiagnosticsScreen(
             verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = WhiteNoiseSpacing.FormField),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Events", style = MaterialTheme.typography.headlineSmall)
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.semantics { contentDescription = "Live event stream" },
-                ) {
-                    Text(
-                        text = "Live",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-            ) {
-                OutlinedButton(onClick = { onTest() }) { Text("Test") }
-                OutlinedButton(onClick = { onClear() }, enabled = events.isNotEmpty()) { Text("Clear events") }
-                diagnosticSummary?.let { summary ->
-                    OutlinedButton(onClick = { copyToClipboard(context, "Diagnostic summary", summary) }) {
-                        Text("Copy summary")
-                    }
-                }
+                Text(
+                    "Events",
+                    modifier = Modifier.testTag("diagnostics.events_title"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                DiagnosticLiveIndicator()
             }
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                shape = MaterialTheme.shapes.large,
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (events.isEmpty()) {
@@ -191,15 +320,23 @@ fun DiagnosticsScreen(
                                 vertical = WhiteNoiseSpacing.Related,
                             ),
                         ) {
-                            items(events, key = { it.id }) { event ->
-                                Text(
-                                    event.text,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = WhiteNoiseSpacing.FormField),
-                                    fontFamily = FontFamily.Monospace,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
+                            itemsIndexed(events, key = { _, event -> event.id }) { index, event ->
+                                Column {
+                                    Text(
+                                        event.text,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("diagnostics.event.$index")
+                                            .padding(vertical = WhiteNoiseSpacing.FormField),
+                                        fontFamily = FontFamily.Monospace,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    if (index != events.lastIndex) {
+                                        HorizontalDivider(
+                                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -208,6 +345,43 @@ fun DiagnosticsScreen(
         }
     }
 }
+
+@Composable
+private fun DiagnosticLiveIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "diagnostics_live")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.42f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "diagnostics_live_alpha",
+    )
+    Row(
+        modifier = Modifier
+            .testTag("diagnostics.live_indicator")
+            .clearAndSetSemantics { contentDescription = "Live event stream" },
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_settings_cell_tower),
+            contentDescription = null,
+            modifier = Modifier
+                .size(18.dp)
+                .graphicsLayer { alpha = pulseAlpha },
+            tint = DiagnosticLiveGreen,
+        )
+        Text(
+            text = "Live",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+private val DiagnosticLiveGreen = Color(0xFF188038)
 
 @Composable
 fun KeyPackagesScreen(
@@ -219,14 +393,6 @@ fun KeyPackagesScreen(
     SettingsScaffold(
         title = "Key Packages",
         onBack = onBack,
-        bottomBar = {
-            SettingsBottomAction {
-                WhiteNoiseButton(
-                    onClick = { onPublish() },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Publish New Key Package") }
-            }
-        },
     ) {
         SettingsList {
             item { SettingsSection("Current key package") }
@@ -245,7 +411,30 @@ fun KeyPackagesScreen(
             }
             item {
                 SettingsExplainer(
-                    "Publishes a new deterministic key package so this profile can receive group invitations.",
+                    "This profile uses the current package to receive group invitations.",
+                )
+            }
+            item {
+                WhiteNoiseFilledTonalButton(
+                    onClick = { onPublish() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = WhiteNoiseSpacing.CompactScreenMargin,
+                            top = WhiteNoiseSpacing.Section,
+                            end = WhiteNoiseSpacing.CompactScreenMargin,
+                        )
+                        .testTag("key_packages.publish"),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_settings_key),
+                        contentDescription = null,
+                    )
+                    Spacer(Modifier.size(WhiteNoiseSpacing.Related))
+                    Text("Publish New Key Package")
+                }
+                SettingsExplainer(
+                    "Publishing replaces the current package so this profile can receive new group invitations.",
                 )
             }
         }

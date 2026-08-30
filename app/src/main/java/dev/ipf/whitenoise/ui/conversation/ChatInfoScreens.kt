@@ -343,6 +343,7 @@ fun ChatInfoScreen(
     if (muteSheet) {
         MuteDurationDialog(
             onDismiss = { muteSheet = false },
+            selectedDuration = chat.muteDuration,
             onSelect = { onMute(it); muteSheet = false },
         )
     }

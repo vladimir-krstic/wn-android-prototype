@@ -103,6 +103,24 @@ Status: Main Settings/profile switching statically verified on 2026-08-26;
 consumer detail destinations remain at their 2026-08-21 static gate and device
 acceptance is pending
 
+2026-08-30 Relays follow-up: the profile relay list uses separated Material
+name/URL rows with compact semantic connection indicators and an in-list Add
+Relay action instead of a pinned page button. Relay detail uses compact
+key/value metadata, a separated Use For switch group, and an isolated Remove
+Relay action. Add Relay is a validity-aware Material task sheet; remove and
+restore remain focused alerts with accepted product language. The deterministic
+profile-owned relay state and networking boundary are unchanged. See
+`relays.md` for the focused contract.
+
+2026-08-30 Relays refinement: connection state is binary at a glance with a
+filled green check for Connected and a filled red close for every
+not-connected state; TalkBack retains exact Reconnecting/Disconnected wording.
+Restore Default Relays is now a native full-width filled-tonal button. Shared
+Settings helpers beneath groups and buttons align to the same 32 dp content
+line as row titles and section labels app-wide, sit 8 dp below the content they
+explain, and leave the larger 24 dp separation to the following section or
+action. Relay status symbols use the compact 20 dp treatment.
+
 ## Purpose
 
 Give each signed-in profile one reachable place to manage public identity,
@@ -165,6 +183,11 @@ relay networking, and payments remain excluded.
   contextual first-request or blocked-recovery group; it disables all
   profile-owned notification options until granted and refreshes after the
   system prompt or Settings return.
+- Data Usage keeps the four per-media download policies and sent photo/video
+  quality as compact immediate Material radio dialogs rather than copying iOS
+  child-screen depth. Separated groups show every current value, place help
+  with the setting it explains, and disable Reset download settings while all
+  four download policies already match their defaults. See `data-usage.md`.
 - Seven deterministic profile relay records expose connected, reconnecting,
   disconnected, read-only, custom, and unassigned states plus Profile, Inbox,
   and Chat Messages roles. Only connected Chat Messages relays are
@@ -231,8 +254,19 @@ safe-area-aware bottom slot. The Settings root uses one
 expandable identity card, one unheaded
 seven-destination group, an unheaded Help group, and an isolated
 destructive Sign Out group. Consumer details retain relationship-specific
-section labels. Profile, Relays, Support, and Donate pin the
-single primary task action; forms use fully rounded, label-above tonal fields
+section labels. Profile keeps its single save/scan completion task pinned.
+Relays keeps Add Relay in its endpoint group. Support uses one compact identity
+group, an aligned explanation and an inline Start Chat action. Donate uses
+Material 3 Expressive's connected single-choice button group in the centered
+app-bar slot for the peer Lightning and Bitcoin modes. Its identity code is not a Donate-local
+composition: it reuses Share & Connect's adaptive marginless QR matrix, 12 dp
+white frame and 16 dp corners plus the exact 240 × 32 dp public-key capsule
+inside a 48 dp target. The complete address remains one line with middle
+ellipsis, a clipped state layer and copied feedback. The QR-to-address target
+gap remains 1 dp; the smaller `bodyMedium` method caption is optically pulled
+up to 5 dp below the visible capsule without reducing the 48 dp copy target. It
+does not duplicate that contextual copy action in a bottom bar. Forms use fully
+rounded, label-above tonal fields
 whose labels and supporting copy align to the 16 dp input content line;
 unavailable dependencies retain their reason and Android recovery route. The
 main overview uses compact one-line destination rows with 24 dp rounded
@@ -314,7 +348,7 @@ user-directed device polish pass.
 - [Material dialogs](https://developer.android.com/develop/ui/compose/components/dialog) — focused password entry, consequence confirmation, and document-write recovery.
 - [Android settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings) — grouped hierarchy, subordinate screens, dependency explanation, and adaptive measure.
 - [Switches](https://developer.android.com/develop/ui/compose/components/switch) and [radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button) — native boolean and mutually exclusive state semantics.
-- [Tabs](https://developer.android.com/develop/ui/compose/components/tabs) — the two peer donation methods.
+- [Material 3 button groups](https://m3.material.io/components/button-groups/overview) — the connected single-choice donation methods.
 - [Text input](https://developer.android.com/develop/ui/compose/text/user-input) and [BasicTextField API](https://developer.android.com/reference/kotlin/androidx/compose/foundation/text/BasicTextField.composable) — state-based, label-above profile, password, relay fields, and selectable read-only Profile values.
 - [Accessibility in Compose](https://developer.android.com/develop/ui/compose/accessibility) — merged row semantics, read-only Profile state, QR purpose, and private-key exclusion.
 - [Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker) and [Storage Access Framework](https://developer.android.com/guide/topics/providers/document-provider) — user-selected input/output without broad storage permission.
@@ -381,6 +415,9 @@ not restyled. See `app-menus.md` for the exact API/pin and regression evidence.
   creation, while existing chats retain their own relay configuration.
 - Restore Defaults recovers the seven accepted relay fixtures.
 - Support never duplicates; donation never starts a payment.
+- Donate presents Lightning and Bitcoin as one connected radio-semantic button
+  group, keeps one method selected, retains the 1 dp QR-to-address-target gap,
+  and uses a compact `bodyMedium` caption 5 dp below the visible address pill.
 - The main Settings screen keeps a compact 56 dp active-profile row and an
   in-card, divider-separated Add Profile or expandable Switch Profile list row
   with adaptive profile previews, a neutral canvas with white-equivalent

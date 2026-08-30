@@ -305,7 +305,8 @@ user selects each screen for the separate polish pass.
 ## WN-ANDROID-0017 — Product branding and Material roles remain strictly monochrome
 
 - Date: 2026-08-20
-- Status: Approved by explicit user direction and implementation
+- Status: Member-row treatment superseded by WN-ANDROID-0088; identity,
+  fields, photo flow, and bottom action remain current
 
 The launcher differentiator mark exists only to distinguish the installed
 prototype icon. Android 12's system splash uses the exact White Noise mark from
@@ -1699,8 +1700,8 @@ uses Android terminology and describes the visible privacy outcome. The secure
 device state gates **Require device authentication**; an unavailable device
 retains one Android security-settings recovery action. **Auto-lock** is hidden
 until authentication is effective, then opens an immediate native radio dialog
-whose white-equivalent selectable group has separators and no rectangular
-selected fill.
+whose selectable radio list sits directly on the dialog surface without a
+nested card, separators, or rectangular selected fill.
 
 Diagnostics keeps one summarized route and focused explanation. Its permanent
 destination removes the redundant Diagnostics heading, separates the two
@@ -1725,3 +1726,708 @@ Sources: [Android Settings patterns](https://developer.android.com/design/ui/mob
 [Compose dialogs](https://developer.android.com/develop/ui/compose/components/dialog),
 [Compose bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
 and [secure sensitive activities](https://developer.android.com/security/fraud-prevention/activities).
+
+## WN-ANDROID-0068 — Data Usage keeps compact choices modal and section help local
+
+- Date: 2026-08-29
+- Status: Approved by explicit user direction and implementation
+
+Data Usage preserves all pinned iOS values, defaults, reset behavior and
+quality consequences while retaining the more compact Android presentation.
+Each per-media policy has three choices and sent photo/video quality has two,
+so each disclosure opens an immediate Material radio dialog instead of adding
+an iOS-style navigation destination for one small decision. The accessible
+radio list sits directly on the dialog surface without a nested card,
+separators, or a rectangular selected fill. Cancel, scrim and system Back make
+no change.
+
+The main page uses the shared gray Settings canvas, white-equivalent groups and
+two-dp canvas-tone separators. Automatic-download help immediately follows the
+download group; sent-media help follows the sent-media group. Quality's longer
+data/compression consequence appears in its dialog. Reset download settings is
+disabled while Photos, Videos, Audio and Files already match their defaults,
+and restores all four together after any policy changes.
+
+Evidence: `PreferenceScreens.kt`, `SettingsComponents.kt`,
+`SettingsScreenTest`, `data-usage.md`, `settings-and-profile-services.md`, and
+`feature-inventory.md`.
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Compose radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button),
+and [Compose dialogs](https://developer.android.com/develop/ui/compose/components/dialog).
+
+## WN-ANDROID-0069 — Radio dialogs use dialog-owned alignment app-wide
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+App-owned single-choice dialogs share one direct Material radio-row
+composition. `AlertDialog` owns the outer content inset; each option begins at
+that content edge, preserves the radio's native touch target, keeps the native
+radio-to-label relationship, and makes the complete 56 dp-minimum row the one
+selectable accessibility target. Settings `ListItem` remains correct for
+full-page Theme, Language and Notification choices, but is not nested inside a
+dialog because its additional content inset visibly double-indents the radio
+list.
+
+The shared row governs Auto-lock, Photos, Videos, Audio, Files and sent
+photo/video quality. Immediate selection, Cancel, scrim dismissal, system Back
+and existing deterministic preference behavior are unchanged.
+
+Evidence: `WhiteNoiseDialogs.kt`, `PreferenceScreens.kt`,
+`SettingsScreenTest`, `ui-metrics.md`, `privacy-and-security.md`, and
+`data-usage.md`.
+Sources: [Compose radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button)
+and [Compose dialogs](https://developer.android.com/develop/ui/compose/components/dialog).
+
+## WN-ANDROID-0070 — Relays use a status list and a task sheet, not a pinned add command
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Profile Relays preserves the accepted endpoint, role, availability, recovery,
+removal and restore behavior while adopting the Android Settings hierarchy.
+Relay rows keep name and URL as the scan path, move transient connection state
+to a compact trailing availability indicator, and expose the complete
+state through TalkBack. Read only remains secondary capability text. Add Relay
+is the final icon-led peer action inside the relay group; the old persistent
+bottom button is removed because relay creation is not a page-completion task.
+
+Relay detail uses compact horizontal metadata rows and a separated **Use For**
+switch group. URL entry plus three explained roles is a multi-control task, so
+Add Relay moves from an overloaded alert to the shared Material modal bottom
+sheet with one validity-aware filled action. Remove and restore remain focused
+Material alerts and use the pinned product terms **Remove Relay**, **Restore
+Default Relays**, and **Restore Defaults**. The prototype state model and lack
+of live relay networking are unchanged.
+
+Evidence: `RelayDonateScreens.kt`, `SettingsScreenTest`, `relays.md`,
+`settings-and-profile-services.md`, and `feature-inventory.md`.
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Compose switches](https://developer.android.com/develop/ui/compose/components/switch),
+[Compose bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+and [Compose dialogs](https://developer.android.com/develop/ui/compose/components/dialog).
+
+## WN-ANDROID-0071 — Relay status is binary at a glance and Settings helpers share the title line
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Profile Relays keeps the exact Connected, Reconnecting and Disconnected model
+and accessibility wording, but makes the list projection intentionally binary:
+Connected uses a filled green circle/check, while both not-connected states use
+a filled red circle/close. Reconnecting no longer animates as an in-progress
+promise in this deterministic prototype. Shape as well as color communicates
+the state, and TalkBack retains the more precise model label.
+
+**Restore Default Relays** is a full-width filled-tonal Material button with a
+native disabled state, not a white-equivalent settings row. It remains a
+confirmed significant command and stays disabled while defaults are active.
+
+App-wide Settings helper copy now uses the shared 32 dp directional content
+line already used by row titles and section labels. The change lives in
+`SettingsExplainer`, so helper text below groups, containers and standalone
+buttons no longer falls back to the 16 dp outer edge. It begins 8 dp below the
+content it explains and contributes no bottom padding; the next independent
+section or action owns the 24 dp separation. Embedded Material supporting text
+inside list rows, switches and fields remains component-owned and already
+aligns with its corresponding title.
+
+Relay status symbols use a compact 20 dp filled container with a 14 dp glyph.
+The reduction preserves the binary green-check/red-close scan path without
+giving the noninteractive status the same visual weight as the standard 24 dp
+disclosure icon beside it.
+
+Evidence: `RelayDonateScreens.kt`, `SettingsComponents.kt`,
+`SettingsScreenTest`, `relays.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings)
+and [Compose buttons](https://developer.android.com/develop/ui/compose/components/button).
+
+## WN-ANDROID-0072 — Relay detail URLs use the available single-line value space
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Relay detail metadata keeps compact key/value rows but no longer reserves 32%
+of every row for short labels. A 64 dp minimum label column preserves Name,
+URL and Status alignment while the value takes all remaining width. Relay URLs
+use normal Material body typography rather than monospaced text, remain one
+line, and middle-ellipsize only after the available width is measured. The
+complete URL remains present in accessibility semantics.
+
+Evidence: `RelayDonateScreens.kt`, `SettingsScreenTest`, `relays.md`, and
+`feature-inventory.md`.
+Source: [Material 3 ListItem](https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItem.composable).
+
+## WN-ANDROID-0073 — Support, Donate and developer actions stay with their content
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Support, Donate and Developer Tools preserve the accepted product behavior but
+no longer reserve persistent bottom space for actions that are understandable
+only beside their content. Support uses one compact support-identity group,
+the shared title-aligned helper line and an inline availability-aware **Start
+Chat** action. Its relay recovery remains visible before the disabled action.
+
+Donate keeps Android's peer Material primary tabs immediately below the app
+bar instead of copying the iOS segmented-control chrome. A centered concise
+purpose cluster precedes one bounded literal black-on-white QR. The selected
+address is the copy target: it stays one line, middle-ellipsizes only visually,
+retains the complete value in semantics and changes its icon/description after
+copy. The redundant pinned copy button is removed; no wallet or payment
+capability is introduced.
+
+Developer Tools reveals technical groups only while its per-profile master
+gate is enabled. Debug Mode, Diagnostics, Key Packages, diagnostic consent and
+retained records remain behaviorally independent as already specified, but
+peer rows now have visible group separation and explanations use the shared
+helper content line. About uses compact horizontal metadata. Diagnostics keeps
+one semantic Live console with responsive commands and divided event rows.
+**Publish New Key Package** is an inline settings action beside the package it
+replaces, not a page-completion footer.
+
+Evidence: `SupportScreen.kt`, `RelayDonateScreens.kt`, `DeveloperScreens.kt`,
+`SettingsComponents.kt`, `SettingsScreenTest`,
+`DeveloperDestructiveScreenTest`, `settings-and-profile-services.md`,
+`developer-and-destructive-flows.md`, and `feature-inventory.md`.
+Sources: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
+[Compose tabs](https://developer.android.com/develop/ui/compose/components/tabs),
+[Compose cards](https://developer.android.com/develop/ui/compose/components/card),
+and [Compose buttons](https://developer.android.com/develop/ui/compose/components/button).
+
+WN-ANDROID-0074 supersedes WN-ANDROID-0073's Donate selector and locally
+composed identity-code geometry. Its Support and Developer Tools decisions
+remain current.
+
+## WN-ANDROID-0074 — Donate reuses the established selector, QR and npub capsule
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Donate uses the compact Material `SingleChoiceSegmentedButtonRow` previously
+accepted for the peer Share/Connect modes, now centered in the app-bar title
+slot for Lightning and Bitcoin. This preserves the iOS information hierarchy
+without copying Apple's segmented-control drawing or interaction.
+
+Share & Connect and Donate use the same code components rather than parallel
+measurements. Their QR surface takes 81% of the active pane width clamped to
+248–376 dp, generates a marginless matrix, and adds a 12 dp literal-white frame
+inside 16 dp corners. Their identifier capsule is visibly 240 × 32 dp at
+default text scale inside a 48 dp target, with 16 dp directional padding, a
+16 dp copy/check icon, full-value middle ellipsis, a clipped state layer and
+two-second copied feedback. A regression assertion compares the two QR bounds
+directly, so the surfaces cannot silently diverge.
+
+Donate retains its purpose copy, method caption and deterministic copy-only
+behavior. It introduces neither wallet/payment behavior nor a duplicate pinned
+copy action.
+
+Evidence: `IdentityCodeComponents.kt`, `ShareConnectScreen.kt`,
+`RelayDonateScreens.kt`, `SettingsScreenTest`, `ui-metrics.md`,
+`settings-and-profile-services.md`, and `feature-inventory.md`.
+Sources: [Compose segmented buttons](https://developer.android.com/develop/ui/compose/components/segmented-button)
+and [Material content structure](https://m3.material.io/foundations/layout/understanding-layout/overview).
+
+## WN-ANDROID-0075 — Diagnostics commands move to native overflow and Live gains semantic motion
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Diagnostics preserves its one persistent console, deterministic events, empty
+state, optional sanitized summary copy, Test mutation and availability-aware
+clearing. Copy Diagnostic Summary when present, Test, and Clear Events move
+from an exposed button row to a trailing 48 dp vertical-dots `IconButton` and
+the existing shared Material dropdown menu. Clear remains disabled while the
+console is empty. This is the direct Android translation of the accepted iOS
+toolbar menu and lets the console reclaim the command row's height.
+
+The header retains visible **Live** text and merged **Live event stream**
+semantics. An official 18 dp cell-tower/radiowave Material symbol adds the
+user-approved semantic green state and a restrained repeating 0.42-to-1 alpha
+pulse. The animation follows Compose's duration scale and is supplemental;
+text and semantics communicate the complete state with color or motion absent.
+This supersedes the static-indicator exception in the Developer and
+destructive flows brief and WN-ANDROID-0073's exposed responsive commands.
+
+Evidence: `DeveloperScreens.kt`, `ic_more_vert.xml`,
+`DeveloperDestructiveScreenTest`, `developer-and-destructive-flows.md`,
+`ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Compose menus](https://developer.android.com/develop/ui/compose/components/menu)
+and [Compose value-based animation](https://developer.android.com/develop/ui/compose/animation/value-based).
+
+## WN-ANDROID-0076 — Key-package publication is a real contextual button
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+**Publish New Key Package** remains beside the current package because it
+replaces that artifact rather than completing the page, but it no longer
+imitates a Settings destination row. It uses the shared full-width 56 dp
+`WhiteNoiseFilledTonalButton` with the official package symbol, Material-owned
+shape, padding, state layer, focus and Button semantics. The consequence stays
+8 dp below on the shared title-aligned helper line.
+
+The mutation remains deterministic and replaces exactly one profile-owned key
+package. This presentation change adds no progress claim, networking,
+cryptography or persistence. It supersedes WN-ANDROID-0073's generic inline
+settings-action wording for Key Packages without moving the action to a pinned
+footer.
+
+Evidence: `DeveloperScreens.kt`, `DeveloperDestructiveScreenTest`,
+`developer-and-destructive-flows.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0080 — Donate adopts the Expressive connected button group
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Lightning and Bitcoin replace the legacy `SingleChoiceSegmentedButtonRow`
+with Material 3 Expressive's connected single-choice button-group pattern.
+Two native `ToggleButton`s use `ButtonGroupDefaults` leading/trailing shapes,
+selection morphing, native state layers and explicit radio semantics in the
+same centered app-bar slot. The pinned Material 3 artifact already contains
+these APIs, so this decision adds no dependency or custom-drawn control.
+
+The code-to-address-target relationship uses the explicitly approved smaller
+1 dp gap. WN-ANDROID-0084 supersedes this decision's initial caption size and
+lower optical relationship. QR dimensions, address content, copy feedback and
+offline behavior remain unchanged.
+
+This supersedes WN-ANDROID-0074's selector component and Donate's unequal
+16 dp / 1 dp address relationships. The initial implementation incorrectly
+equalized them at the larger value; the user-directed correction retains the
+smaller value for both. Its shared QR and identifier components remain current.
+
+Evidence: `RelayDonateScreens.kt`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Source: [Material 3 button groups](https://m3.material.io/components/button-groups/overview).
+Source: [Compose buttons](https://developer.android.com/develop/ui/compose/components/button).
+
+## WN-ANDROID-0077 — Privacy owns diagnostics choices; Developer Tools only inspects logs
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Privacy & Security remains the sole permanent consumer entry to **Diagnostics
+& Improvements**. It owns the two independent profile choices, aggregate
+retained size, destructive confirmation, and clearing. Developer Tools no
+longer presents a disclosure to that consumer destination and never duplicates
+either preference or the clear action.
+
+When the master developer gate is enabled, **Diagnostic Logs** begins with
+read-only **Diagnostic Logging — On/Off** metadata. It then lists only
+non-empty sanitized profile-owned records; absent or zero-byte records collapse
+to one secondary **There are no logs.** row. Its helper points people to
+Privacy & Security for configuration and clearing while explaining that
+existing sanitized files remain visible after logging is turned off.
+
+This matches the explicitly authorized `wn-ios-prototype@4c25393` ownership
+contract while retaining Android's grouped Material list hierarchy. It also
+follows Android's recommendation to divide settings by meaningful groups and
+subscreens, while keeping technical inventory contextual to Developer Tools.
+
+Evidence: `DeveloperScreens.kt`, `WhiteNoiseNavHost.kt`,
+`DeveloperDestructiveScreenTest`, `diagnostics-and-improvements.md`,
+`privacy-and-security.md`, `developer-and-destructive-flows.md`, and
+`feature-inventory.md`.
+Source: [Android Settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings).
+
+## WN-ANDROID-0078 — Diagnostic logs export through the system document picker
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+When Developer Tools has at least one non-empty sanitized record, its
+Diagnostic Logs group ends with **Export Diagnostic Logs**. The action uses
+AndroidX's `CreateDocument("text/plain")` contract with **White Noise
+Diagnostic Logs.txt** as the suggested name. Android's Storage Access Framework
+owns local/cloud destination selection, cancellation changes nothing, and a
+provider write failure presents **Couldn’t Save Diagnostic Logs** with a
+specific retry instruction.
+
+The profile-owned diagnostics state derives one deterministic report matching
+the accepted iOS content boundary: heading, sanitized purpose line, ordinal log
+entries, creation labels, byte counts, and three fixed technical event labels.
+It excludes profile names and IDs, source filenames, message content, keys, and
+device identifiers. The export action is absent after clearing or before any
+record contains data, needs no broad storage permission, and never changes the
+logging preference or retained inventory.
+
+Evidence: `DiagnosticsState.kt`, `DeveloperScreens.kt`,
+`DiagnosticsConsentTest`, `DeveloperDestructiveScreenTest`,
+`developer-and-destructive-flows.md`, `diagnostics-and-improvements.md`, and
+`feature-inventory.md`.
+Sources: [Storage Access Framework](https://developer.android.com/guide/topics/providers/document-provider)
+and [Activity Result APIs](https://developer.android.com/training/basics/intents/result).
+
+## WN-ANDROID-0079 — Diagnostics header follows the console content line
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+The **Events** title and persistent **Live** status are each inset 16 dp from
+the console surface edges, matching the event text and divider endpoints below.
+This preserves one vertical content line on both sides without changing the
+console shape, app-bar alignment, Live motion, or event density.
+
+A Compose geometry regression compares the title and Live bounds directly to
+the first event row, preventing either header edge from drifting back to the
+rounded surface's outer bounds.
+
+Evidence: `DeveloperScreens.kt`, `DeveloperDestructiveScreenTest`,
+`developer-and-destructive-flows.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0081 — Chat discovery uses one compact contextual search field
+
+- Date: 2026-08-30
+- Status: New Message portion superseded by WN-ANDROID-0085; Chats and New Group remain current
+
+Material's standalone SearchBar is the reference when search is the primary
+surface and its pinned container token is 56 dp. Chats instead enters search
+inside an already-established top app bar. In that bounded context, the active
+query field is 48 dp high and explicitly uses `bodyLarge`, preventing it from
+inheriting the app-bar title typography. Its full-rounded shape, tonal
+container, single-line input, autofocus, IME, clear action, and Back behavior
+remain unchanged.
+
+The compact field uses Material's `DecorationBox` instead of forcing the
+standard 56 dp `TextField` and its 16 dp vertical content padding into a fixed
+48 dp height. Its default-scale vertical content inset is zero, which centers
+and fully contains the placeholder, entered text, cursor and icons. The field
+uses 48 dp as a minimum so larger accessibility text can grow rather than
+clip. Material continues to own editing, selection, decoration colors, shape,
+focus and icon placement.
+
+The field and its native Back/Clear icon buttons meet Android's 48 by 48 dp
+minimum interactive target. New Group reuses this exact component. New
+Message's later user-directed return to a standard 56 dp standalone field is
+recorded in WN-ANDROID-0085. This remains a bounded chat-discovery density
+exception, not a new app-wide search token and not a reduction of any touch
+target.
+
+Evidence: `WhiteNoiseCompactSearchField.kt`, `ChatsScreen.kt`,
+`ChatCreationScreens.kt`, `ChatsPolishTest`, `ChatsScreenTest`,
+`chats-and-chat-creation.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Compose Search bar](https://developer.android.com/develop/ui/compose/components/search-bar)
+and [Android touch-target guidance](https://support.google.com/accessibility/android/answer/7101858).
+
+## WN-ANDROID-0082 — New Message adopts the shared grouped task hierarchy
+
+- Date: 2026-08-30
+- Status: New Group search/directory surfaces superseded by WN-ANDROID-0087;
+  other decisions remain current
+
+New Message, New Group, Set Up Group, Person Profile, and the new Groups in
+Common destination use the established Settings-detail hierarchy:
+`surfaceContainerLow` canvas, `surfaceContainerLowest` control groups, 32 dp
+title/helper content lines, and continuous gray bottom slots around shared
+56 dp task buttons. WN-ANDROID-0085 supersedes this decision's compact-search
+choice for New Message only; New Group retains WN-ANDROID-0081's field.
+
+New Group replaces selected `InputChip`s with the pinned iOS outcome: a stable
+horizontal strip of named 64 dp avatars. Each has a visible 24 dp filled remove
+badge but exposes one whole 80 dp identity tile as the Button-semantic action.
+The searchable directory remains lazy and toggleable, while its transparent
+Material rows sit directly on the gray canvas rather than inside a white card.
+The shared bottom action surface follows the header's scroll-state color:
+`surfaceContainerLow` at rest and `surfaceContainer` after overlap. Set Up
+Group's earlier details-title, white member group, and task-height photo-button
+treatment is superseded by WN-ANDROID-0083.
+
+Person Profile no longer maintains a simplified duplicate identity surface. It
+reuses the Share & Connect avatar proportions, filled verified seal and
+complete-value copy capsule with native middle ellipsis and two-second semantic
+feedback. The accepted iOS About/identity ordering is retained. Groups in
+Common is navigable; eligible Add to Group work uses the shared Material modal
+bottom sheet followed by a confirmation and the existing deterministic member
+mutation. Add/Remove Contact, Block/Unblock, Message/recovery and contextual
+admin actions remain authoritative and now use grouped Material action rows.
+
+This changes presentation and exposes already-modelled group membership; it
+adds no backend, relay, network, persistence, or cryptography scope.
+
+Evidence: `ChatCreationScreens.kt`, `AppRoute.kt`, `WhiteNoiseNavHost.kt`,
+`ChatsScreenTest`, `chats-and-chat-creation.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Sources: [Compose Search bar](https://developer.android.com/develop/ui/compose/components/search-bar),
+[Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+and [Material buttons](https://developer.android.com/develop/ui/compose/components/button).
+
+## WN-ANDROID-0083 — Set Up Group reuses the lightweight identity treatment
+
+- Date: 2026-08-30
+- Status: Member-row treatment superseded by WN-ANDROID-0088; identity,
+  fields, photo flow, and bottom action remain current
+
+Set Up Group uses the same 120 dp `ProfileAvatar` and shared native
+`AvatarPhotoButton` used by Sign Up and Profile for Add/Change Photo. The photo
+source menu, preparation and error states, removal, and system-owned Photos and
+Files contracts remain unchanged.
+
+The fields begin immediately after the identity control; **Group Details** is
+removed because the destination already states the task. **Members** remains a
+useful label. Its later return to the established grouped-row treatment is
+recorded in WN-ANDROID-0088. The pinned Create Group slot uses
+the shared creation treatment: `surfaceContainerLow` at rest and
+`surfaceContainer` after content scrolls beneath the header.
+
+Evidence: `ChatCreationScreens.kt`, `ChatsScreenTest`,
+`chats-and-chat-creation.md`, `ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0084 — Donate caption is smaller and optically closer
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+The Lightning/Bitcoin method caption moves from `bodyLarge` to `bodyMedium`.
+Its line box is pulled 4 dp into the transparent lower portion of the existing
+48 dp address-copy target, leaving a measured 5 dp gap below the visible 32 dp
+pill. The QR-to-address-target gap remains 1 dp, and the shared pill size,
+middle ellipsis, ripple, copy feedback, semantics and full 48 dp target do not
+change.
+
+This is a Donate-only optical correction that supersedes WN-ANDROID-0080's
+larger caption and equal target-bound gap. It does not change the shared npub
+capsule component or create a smaller interactive target.
+
+Evidence: `RelayDonateScreens.kt`, `SettingsScreenTest`,
+`settings-and-profile-services.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0085 — New Message restores standalone search and edge-to-edge scrolling
+
+- Date: 2026-08-30
+- Status: Row-surface portion superseded by WN-ANDROID-0086 and
+  WN-ANDROID-0087; search and viewport remain current
+
+New Message restores Material's standard 56 dp filled text-field treatment
+because persistent search is the primary standalone control in this page body.
+Chats and New Group keep WN-ANDROID-0081's 48 dp contextual field. Both sizes
+remain minimums that preserve native icon targets and can grow with accessible
+text.
+
+The New Message lazy viewport reaches the physical bottom edge instead of
+ending above the navigation area. Safe-bottom and section clearance move into
+the list's content padding, keeping the final person reachable without drawing
+the scroll viewport as a clipped inset panel.
+
+Shared creation person rows remove their redundant screen-local 16 dp outer
+margin. Set Up Group and related free directories use native Material
+`ListItem` content padding as their sole 16 dp leading artwork line. New
+Message and New Group later return to grouped list surfaces with the
+established group margin outside that native inset, as recorded in
+WN-ANDROID-0086 and WN-ANDROID-0087. This changes spacing and viewport
+ownership only; search behavior, selection, navigation, deterministic people
+data and relay requirements are unchanged.
+
+Evidence: `SettingsComponents.kt`, `ChatCreationScreens.kt`,
+`ChatsScreenTest`, `chats-and-chat-creation.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Source: [Compose Search bar](https://developer.android.com/develop/ui/compose/components/search-bar).
+
+## WN-ANDROID-0086 — New Message people return to a grouped Material list
+
+- Date: 2026-08-30
+- Status: New Group exception and separator omission superseded by
+  WN-ANDROID-0087; New Message grouping remains current
+
+New Message returns its people directory to the accepted iOS product outcome:
+one white-equivalent grouped section on the gray task canvas. Rows remain
+individually lazy and keyed; Material segmented shapes round only the first
+and last boundaries, preserving one visual group without building the entire
+directory in an eager nested column. WN-ANDROID-0087 adds the omitted group
+separators and applies the same grouped directory outcome to New Group. Set Up
+Group's later read-only grouped treatment is recorded in WN-ANDROID-0088.
+
+All creation person rows migrate from Material's deprecated legacy `ListItem`
+overload to the current interactive overloads. Material now owns the 12 dp
+leading-content gap already accepted on Chats, replacing the older 16 dp
+avatar-to-name gap while retaining 48 dp avatars, complete-row click/toggle
+semantics, native state layers, selected state, font scaling and ellipsis.
+New Message's group keeps the established 16 dp outer margin and native 16 dp
+internal content inset; its edge-to-edge viewport and safe-bottom scrolling
+padding from WN-ANDROID-0085 are unchanged.
+
+Evidence: pinned iOS `NewChatView.swift` at `0bd7cba`, Material 3 alpha25
+`ListItem` source, `ChatCreationScreens.kt`, `ChatsScreenTest`,
+`chats-and-chat-creation.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Source: [Compose lists](https://developer.android.com/develop/ui/compose/lists).
+
+## WN-ANDROID-0087 — Creation directories use separated grouped surfaces
+
+- Date: 2026-08-30
+- Status: Set Up Group exception superseded by WN-ANDROID-0088; New Message
+  and New Group remain current
+
+New Message and New Group each present their people directory as one
+white-equivalent group on the neutral gray canvas. Every adjacent pair is
+separated by the established 2 dp `surfaceContainerLow` gap used by app-owned
+Settings groups. The gap spans the group's 16 dp outer margin, while each
+current interactive Material `ListItem` keeps its native 16 dp content inset,
+12 dp avatar-to-text relationship, complete-row state layer, selection
+semantics and adaptive measurement. Rows remain individually lazy and keyed;
+they do not become separate cards.
+
+New Group's existing 48 dp-minimum compact search keeps its editing, focus,
+clear, IME and accessibility behavior but changes its container role to
+`surfaceContainerLowest`, matching the grouped people surface. Its 16 dp outer
+margin and full-rounded shape remain unchanged. New Message retains its 56 dp
+standalone search treatment. Set Up Group's later read-only grouped treatment
+is recorded in WN-ANDROID-0088.
+
+Evidence: pinned iOS `NewChatView.swift` at `0bd7cba`,
+`WhiteNoiseCompactSearchField.kt`, `ChatCreationScreens.kt`,
+`ChatsScreenTest`, `chats-and-chat-creation.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Sources: [Compose lazy lists](https://developer.android.com/develop/ui/compose/lists)
+and [Compose search](https://developer.android.com/develop/ui/compose/components/search-bar).
+
+## WN-ANDROID-0088 — Set Up Group completes the grouped member hierarchy
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Set Up Group now presents its read-only Members list as the same single
+white-equivalent segmented group used by the preceding New Message and New
+Group directories. The group keeps a 16 dp outer margin, native 16 dp row
+content inset, Material's 12 dp avatar-to-text relationship, and the app's
+2 dp canvas-tone gaps between adjacent rows. Members remain noninteractive;
+the added surface does not imply selection or editing on this review step.
+
+The shared 120 dp `ProfileAvatar` accepts an optional empty-monogram icon. Set
+Up Group supplies the existing Material group symbol while both name and photo
+are empty, replacing the ambiguous question-mark fallback without creating a
+second avatar component. Entering a name still produces its monogram, and a
+chosen photo still replaces the monogram through the unchanged system-owned
+photo flow. Fields, validation, relay copy, scrolling, and the pinned Create
+Group action remain unchanged.
+
+Evidence: `ProfileAvatar.kt`, `ChatCreationScreens.kt`, `ChatsScreenTest`,
+`chats-and-chat-creation.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Source: [Compose lists](https://developer.android.com/develop/ui/compose/lists).
+
+## WN-ANDROID-0089 — Sign Out adopts the completed settings hierarchy
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Sign Out preserves the accepted product behavior: wipe is the default, exact
+profile-name confirmation gates a wipe, retaining data removes only the
+session, named progress blocks dismissal, and completion routes to the profile
+switcher or Welcome from authoritative remaining state. Android keeps its
+native modal bottom sheet and trailing Close action rather than copying the
+iOS leading circular control.
+
+The sheet now starts Expanded and exposes no partial anchor. Active identity
+and wipe choice are peer rows in one white-equivalent group separated by the
+app's 2 dp canvas-tone divider. The selected wipe consequence moves to the
+shared external 32 dp helper line. Exact-name confirmation retains both the
+section instruction and persistent Material field label; its consequence
+helper uses the same external line. Turning wipe off clears confirmation and
+focus, and the Done IME action clears focus.
+
+The sheet allows native drag, Back and Close dismissal while idle, then vetoes
+every transition to Hidden and disables Close during progress. Its pinned
+error action uses the sheet canvas role at zero tonal elevation, maintaining
+one continuous task surface without changing disabled, ready, progress or
+error semantics.
+
+Evidence: `DestructiveScreens.kt`, `DeveloperDestructiveScreenTest`,
+`developer-and-destructive-flows.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+Sources: [Compose bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+[Compose switches](https://developer.android.com/develop/ui/compose/components/switch),
+and [Compose text input](https://developer.android.com/develop/ui/compose/text/user-input).
+
+## WN-ANDROID-0090 — Mute duration is an aligned rounded radio group
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+`MuteDurationDialog` keeps WN-ANDROID-0039's native `AlertDialog`, five
+immediate choices and safe Cancel/Back/outside dismissal. Its presentation no
+longer nests `ListItem` inside the dialog text slot. It reuses the app's
+whole-row `WhiteNoiseDialogChoiceRow`: the native radio begins on the dialog
+title/text content line, the label keeps the standard 16 dp control
+relationship, and the complete row remains a 56 dp-minimum radio target.
+
+The choice column is one selectable group. A supplied current duration is
+visible through the native selected radio and exposed through radio semantics.
+Each row clips its Material hover, focus, press and ripple state to the shared
+large rounded shape before selection, preventing the prior squared-off state
+layer. Selection still applies immediately; no duration, state mutation, or
+dismissal behavior changes.
+
+Evidence: `MuteDurationDialog.kt`, `WhiteNoiseDialogs.kt`, `ChatsScreen.kt`,
+`ChatInfoScreens.kt`, `MaterialSheetTest`, `chats-and-chat-creation.md`,
+`chat-and-group-information.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Compose dialogs](https://developer.android.com/develop/ui/compose/components/dialog)
+and [Compose radio buttons](https://developer.android.com/develop/ui/compose/components/radio-button).
+
+## WN-ANDROID-0091 — Dialog choice state layers keep an outer gutter
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+The shared immediate-choice row keeps its radio and label on the existing
+dialog-owned content line, but its clipped selectable surface now expands 16 dp
+past that line in both directions. Against Material's default 24 dp alert-dialog
+content inset, this leaves an 8 dp transparent gutter between the rounded
+pressed, focused, hovered, or selected state layer and the dialog edge.
+
+The wider surface restores 16 dp of internal horizontal padding before laying
+out the unchanged native radio target and label relationship. Content therefore
+does not move when the feedback region grows. Mute and the Settings choice
+dialogs continue to share this component, accessibility semantics, 56 dp
+minimum target, immediate selection, and safe dismissal behavior.
+
+Evidence: `WhiteNoiseDialogs.kt`, `MaterialSheetTest`,
+`chats-and-chat-creation.md`, `chat-and-group-information.md`,
+`ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0092 — New Group selection preserves grouped row geometry
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+New Group continues to use Material's toggleable `ListItem` so each person
+keeps selected semantics, full-row interaction, focus, hover, press and ripple
+feedback. Its selected container color already matches the resting container.
+The selected shape now also resolves to the row's current positional segmented
+shape, preserving the same sole, first, middle, or last corners after a person
+is chosen.
+
+The existing trailing vector check remains the only added visual selection
+indicator. This keeps adjacent rows reading as one stable group while the
+selected-avatar strip continues to provide ordered removal controls.
+
+Evidence: `ChatCreationScreens.kt`, `ChatsScreenTest`,
+`chats-and-chat-creation.md`, `ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0093 — Person Profile balances identity spacing and tones About
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Person Profile retains the established Share & Connect identity scale rather
+than introducing another profile-only size system: the avatar remains 32% of
+the active pane clamped to 104–152 dp, the name remains
+`headlineSmall`/semibold, the verified address remains `bodyLarge` with a
+20 dp filled seal, and the public-key capsule remains the shared 240 dp visual
+inside its 48 dp target.
+
+The centered identity stack now applies the same 16 dp relationship above and
+below the name. When About exists, its rounded group begins 16 dp after the
+name and uses `surfaceContainerHigh` instead of the white-equivalent action
+group color. Centered italic `bodyLarge` text remains
+`onSurfaceVariant`, providing the quieter gray-on-gray hierarchy visible in
+the pinned iOS evidence while preserving Android semantic light/dark colors.
+Address and public key continue to follow About with the existing 8 dp related
+spacing; action behavior and product state do not change.
+
+Evidence: `ChatCreationScreens.kt`, `ChatsScreenTest`,
+`chats-and-chat-creation.md`, `ui-metrics.md`, and `feature-inventory.md`.

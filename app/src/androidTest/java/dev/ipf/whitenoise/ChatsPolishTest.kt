@@ -230,6 +230,16 @@ class ChatsPolishTest {
         rule.onNodeWithContentDescription("Check Relays").performClick()
         rule.runOnIdle { assertTrue(recovery) }
         rule.onNodeWithContentDescription("Search Chats").performClick()
+        rule.onNodeWithTag("chats.searchField").assertHeightIsEqualTo(48.dp)
+        val searchBounds = rule.onNodeWithTag("chats.searchField").fetchSemanticsNode().boundsInRoot
+        val placeholderBounds = rule.onNodeWithTag(
+            "white_noise.compactSearch.placeholder",
+            useUnmergedTree = true,
+        )
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(placeholderBounds.top > searchBounds.top)
+        assertTrue(placeholderBounds.bottom < searchBounds.bottom)
+        assertEquals(searchBounds.center.y, placeholderBounds.center.y, 1f)
         rule.onNodeWithTag("chats.newMessage").assertDoesNotExist()
         rule.onNodeWithContentDescription("Close search").performClick()
         rule.onNodeWithTag("chats.newMessage").assertIsDisplayed()

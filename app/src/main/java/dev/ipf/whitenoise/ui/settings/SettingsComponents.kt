@@ -59,6 +59,7 @@ internal fun SettingsScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    contentWindowInsets: WindowInsets = WindowInsets.safeDrawing,
     prominentTitle: Boolean = false,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     topBarContainerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -69,7 +70,7 @@ internal fun SettingsScaffold(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets.safeDrawing,
+        contentWindowInsets = contentWindowInsets,
         topBar = {
             WhiteNoiseTopBar(
                 title = title,
@@ -98,11 +99,13 @@ internal fun SettingsScaffold(
 
 @Composable
 internal fun SettingsBottomAction(
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surface,
     tonalElevation: Dp = 2.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
+        modifier = modifier,
         color = color,
         tonalElevation = tonalElevation,
     ) {
@@ -260,6 +263,7 @@ internal fun SettingsChoice(
     title: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     subtitle: String? = null,
     enabled: Boolean = true,
     highlightSelected: Boolean = true,
@@ -295,7 +299,7 @@ internal fun SettingsChoice(
                 Color.Transparent
             },
         ),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .selectable(
                 selected = selected,
@@ -363,6 +367,26 @@ internal fun SettingsValue(
 }
 
 @Composable
+internal fun SettingsMetadata(
+    title: String,
+    value: String,
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        trailingContent = {
+            Text(
+                text = value,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    )
+}
+
+@Composable
 internal fun SettingsCallout(
     text: String,
     modifier: Modifier = Modifier,
@@ -417,7 +441,15 @@ internal fun SettingsList(content: androidx.compose.foundation.lazy.LazyListScop
 
 @Composable
 internal fun SettingsExplainer(text: String) {
-    Column(modifier = Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = WhiteNoiseSpacing.SettingsSectionInset,
+                top = WhiteNoiseSpacing.Related,
+                end = WhiteNoiseSpacing.SettingsSectionInset,
+            ),
+    ) {
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     }
 }

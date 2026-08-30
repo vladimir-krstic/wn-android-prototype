@@ -1,7 +1,8 @@
 # Diagnostics and first-login privacy choices
 
-Status: User-approved flow implemented on 2026-08-26. Static gate recorded in
-the parity ledger; device execution and visual acceptance remain pending.
+Status: User-approved flow implemented on 2026-08-26 and ownership corrected
+against the scoped iOS baseline on 2026-08-30. Static gate is recorded in the
+parity ledger; device execution and visual acceptance remain pending.
 
 ## Purpose
 
@@ -14,8 +15,10 @@ Initial Sign In, Sign Up, and Add Profile completion; one privacy sheet;
 Privacy & Security → Diagnostics & Improvements; and moving consent out of
 Developer Tools. All state and records are deterministic and in memory. No
 analytics SDK, collection, upload, network, permission, durable storage, or
-dependency upgrade is added. Production wording describes product intent,
-not an implemented transport in this prototype.
+dependency upgrade is added. The one user-initiated developer export writes a
+derived sanitized report to a person-chosen system document provider; the app
+still owns no durable diagnostic store. Production wording describes product
+intent, not an implemented transport in this prototype.
 
 ## Parity contract
 
@@ -32,6 +35,11 @@ not an implemented transport in this prototype.
   contents without changing either preference or recreating them on re-enable.
 - Developer Tools never owns or gates consent. Turning its master off still
   disables debug mode but preserves consent, records, key packages, and events.
+- Developer Tools is a read-only technical inventory: it shows the logging
+  state plus non-empty sanitized records, or **There are no logs.** It never
+  links to this consumer destination or duplicates either switch or clearing.
+  With data present it may explicitly export one sanitized report through the
+  Android system document picker.
 
 ## Entry, navigation, Back, and exit
 
@@ -83,13 +91,17 @@ permanent destination uses the shared pinned header and actual scrolling list.
 hasSeenPrompt, and retained records. `AppUiState.pendingDiagnosticsProfileId`
 is transient scheduling state, retained by the ViewModel across rotation.
 Mutations are ID-bound, so a stale callback cannot change another profile.
-Developer Tools may inspect records, including when logging is off; its link
-opens the consumer diagnostics destination rather than duplicating controls.
+Developer Tools may inspect records, including when logging is off, but has no
+link to the consumer diagnostics destination. Privacy & Security is the only
+entry for preferences, retained-size summary, and confirmed clearing.
 
 ## System integrations
 
-None. Android formats the retained byte count. The sheet and navigation use
-standard Material/AndroidX lifecycle and Back handling.
+Android formats the retained byte count. The sheet and navigation use standard
+Material/AndroidX lifecycle and Back handling. The developer-only inventory
+uses `CreateDocument("text/plain")` to export the accepted sanitized report to
+a person-chosen document provider; it requests no broad storage permission and
+does not change consent or retained records.
 
 ## Accessibility and adaptation
 
@@ -117,6 +129,7 @@ repository-wide baseline refresh:
 - `WhiteNoisePrototype/App/PrototypeDiagnosticsState.swift`
 - `WhiteNoisePrototype/App/WhiteNoisePrototypeApp.swift`
 - `WhiteNoisePrototype/Screens/Shared/DiagnosticsAndImprovementsViews.swift`
+- `WhiteNoisePrototype/Screens/Settings/DeveloperSettingsViews.swift`
 - `WhiteNoisePrototype/Screens/Chats/ChatsView.swift`
 
 ## Approved differences and custom exceptions

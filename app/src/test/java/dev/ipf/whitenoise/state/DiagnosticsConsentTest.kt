@@ -103,6 +103,25 @@ class DiagnosticsConsentTest {
         assertFalse(vm.uiState.activeProfile!!.diagnostics.hasSeenPrompt)
     }
 
+    @Test fun diagnosticExportContainsOnlySanitizedDeterministicLogContent() {
+        val diagnostics = DiagnosticsState().withLogging(
+            enabled = true,
+            profileId = ProfileFixtures.marmota.id,
+            profileName = ProfileFixtures.marmota.name,
+        )
+
+        val export = diagnostics.diagnosticLogExportText
+
+        assertTrue(export.startsWith("White Noise Diagnostic Logs\n"))
+        assertTrue(export.endsWith("info | message.pipeline.ready\n"))
+        assertEquals(2, "Log file:".toRegex().findAll(export).count())
+        assertTrue(export.contains("Recorded size: 24000 bytes"))
+        assertTrue(export.contains("info | relay.connected"))
+        assertFalse(export.contains(ProfileFixtures.marmota.id))
+        assertFalse(export.contains(ProfileFixtures.marmota.name))
+        assertFalse(export.contains(diagnostics.records.first().filename))
+    }
+
     @Test fun readAndArchiveUndoCannotMutateAnotherProfile() {
         val vm = signedIn()
         val id = vm.uiState.activeProfileId!!

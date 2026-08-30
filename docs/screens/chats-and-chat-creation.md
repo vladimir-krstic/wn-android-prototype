@@ -1,8 +1,9 @@
 # Chats and chat creation
 
 Status: Chats controls and shared Material-sheet follow-up implemented on
-2026-08-26. Static verification recorded in the parity ledger; device/visual
-acceptance remains pending.
+2026-08-26; New Message, Person Profile, New Group, and Set Up Group hierarchy
+refined on 2026-08-30. Static verification is recorded in the parity ledger;
+device/visual acceptance remains pending.
 
 ## Approved controls follow-up
 
@@ -62,7 +63,13 @@ the global baseline or import its changed timelines/timestamps.
 - The avatar opens Settings; profile switching and profile addition live in
   the Settings profile header rather than in a Chats-owned switcher.
 - Enter search from the top-app-bar search action and expose a normal Android
-  back/cancel affordance while search is active.
+  back/cancel affordance while search is active. The active top-app-bar field
+  is a compact 48 dp contextual treatment with `bodyLarge` query text, not the
+  full 56 dp standalone SearchBar or inherited app-bar title typography. Back
+  and Clear keep native 48 dp touch targets. Material's decoration layout uses
+  zero vertical content inset at default scale so placeholder, entered text,
+  cursor and icons are centered and fully visible; the field may grow for
+  larger font scales rather than clipping a line into the compact height.
 - Expose Chats, Unread, Archived, and Left through a Material dropdown menu
   opened by the adjacent filter action. Non-default scopes use a native filled
   monochrome icon button with selected semantics and a named current scope.
@@ -111,25 +118,64 @@ the global baseline or import its changed timelines/timestamps.
 - Use full-screen destinations for New Message, person profile, member selection, group setup, and the temporary conversation entry screen. Successful direct or group creation clears the creation flow before opening the conversation.
 - Keep the compact layout phone-first. Expanded-width list/detail behavior is deferred until the conversation surface exists in Batch 3; content still respects the repository adaptive width boundary.
 - New Message and New Group keep search visible because finding people is the
-  primary task on both destinations. The rounded Material search field uses a
-  leading search symbol, an on-demand clear action, and the shared no-results
-  composition; New Group remains the first distinct tonal action on New
-  Message.
-- New Group uses selected `InputChip` items with avatars and explicit removal,
-  plus toggleable person rows with a vector check. Stable order and selection
-  semantics replace the previous Unicode check and remove glyphs.
-- Person Profile uses a bounded identity hierarchy, compact role treatment,
-  tonal About and secondary-action groups, semantic verified state, and one
-  pinned primary Message action. When Chat Message relays are unavailable,
-  that action becomes **Check Chat Relays** and opens the established recovery
-  destination.
+  primary task on both destinations. New Message uses Material's standard
+  56 dp standalone filled search input because it is the primary control in
+  the page body; New Group retains the rounded 48 dp-minimum compact field
+  shared with contextual Chats search. Both use `bodyLarge`, a leading search
+  symbol, on-demand clear action, Search IME action, font-scale growth and the
+  shared no-results composition. Both routes retain the Settings
+  `surfaceContainerLow` canvas. New Message and New Group each present their
+  lazy people directory as one iOS-parity white-equivalent grouped section
+  with rounded outer rows and the app's 2 dp canvas-tone separators. New
+  Group's compact search uses that same white-equivalent container role while
+  retaining its 48 dp minimum and full-rounded shape. Set Up Group presents
+  its read-only members as the same inset white-equivalent segmented group,
+  including 2 dp canvas-tone separators. All creation directories use Material's current interactive
+  `ListItem`, whose 12 dp avatar-to-text relationship matches Chats and is
+  tighter than the deprecated 16 dp overload. New Message's lazy viewport
+  reaches the physical bottom edge while navigation clearance stays inside
+  its scrolling content. New Group remains an ordinary white-equivalent
+  icon-led disclosure rather than a screen-local feature card.
+- New Group shows stable selected order in a horizontal strip of 64 dp avatars
+  with visible filled remove badges and one whole-tile Remove action. The
+  searchable person directory remains toggleable with selected semantics and
+  a vector check. Selecting a person does not morph, round, resize, or recolor
+  that row: its first, middle, last, or sole grouped shape remains unchanged
+  and the check is the only added visual indicator. This replaces the earlier
+  `InputChip` adaptation: the selected identities are the information, not
+  filter criteria.
+- Person Profile reuses the accepted Share & Connect identity proportions,
+  verified seal, complete public-key value, native middle ellipsis, copy/check
+  capsule and two-second semantic copy feedback. The avatar-to-name and
+  name-to-About relationships are both 16 dp so the centered identity reads as
+  one balanced stack. About is a centered italic `bodyLarge` message in
+  `onSurfaceVariant` on a `surfaceContainerHigh` tonal group. When About is
+  present, address and npub follow it as in the pinned iOS hierarchy instead
+  of being duplicated in the header.
+- Profile actions are real grouped Material button rows with official symbols:
+  Groups in Common opens a navigable group list with overlapping previews;
+  an eligible admin can add the person through a standard modal bottom sheet
+  and confirmation; Add/Remove Contact mutates immediately; Block confirms and
+  Unblock does not. Group-admin actions remain a separate labeled group. The
+  role appears in the route title rather than a duplicate identity badge.
+- Message/relay recovery, Continue, and Create Group remain full-width shared
+  56 dp task buttons on a continuous gray bottom slot. That slot uses
+  `surfaceContainerLow` at rest and the same `surfaceContainer` scrolled color
+  as the pinned settings header once content moves beneath it. Set Up Group uses the
+  same gray canvas, the shared 120 dp profile-avatar rendering, and the same
+  native tonal Add/Change Photo action as Sign Up and Profile. The fields begin
+  without a redundant Group Details heading; Members keeps its useful heading
+  and one quiet white-equivalent grouped list rather than independent cards.
+  The empty shared avatar uses the existing group symbol instead of a question
+  mark. When Chat
+  Message relays are unavailable, Message becomes **Check Chat Relays** and
+  opens the established recovery destination.
 - Set Up Group uses the shared fully rounded tonal fields with label, input,
-  icon, and supporting copy on one 16 dp content line, plus a compact tonal
-  photo action, visible preparation/error states,
-  a grouped read-only member review, and a bounded 56 dp pinned Create action.
-  Its empty unnamed avatar uses a semantic group symbol rather than a fake
-  profile initial; the preview becomes the name monogram or chosen photo as
-  input changes. Photo Picker and Files remain completely system-owned.
+  icon, and supporting copy on one 16 dp content line, plus the established
+  profile photo action, visible preparation/error states, grouped read-only
+  member rows with 2 dp separators, and a bounded 56 dp pinned Create action. The avatar
+  becomes the name monogram or chosen photo as input changes. Photo Picker and
+  Files remain completely system-owned.
 
 ## Deterministic data contract
 
@@ -177,8 +223,13 @@ the global baseline or import its changed timelines/timestamps.
   on the captured profile/chat. It does not replace newer drafts, media,
   membership, or other chat fields. A subsequent action replaces the Snackbar.
 - Mute durations are 1 Hour, 8 Hours, 1 Day, 1 Week, and Always, in the shared
-  `MuteDurationDialog` also used by Chat Info. Selection applies immediately;
-  Cancel, Back and outside dismissal change nothing.
+  `MuteDurationDialog` also used by Chat Info. The options form one accessible
+  radio group; its first control begins on the dialog title/content line with
+  no nested list inset. Each complete 56 dp row keeps its control on that line
+  while the rounded interaction surface expands 16 dp outward on both sides,
+  leaving an 8 dp gutter against the dialog edge. The current duration is
+  visibly and semantically selected whenever one exists. Selection applies
+  immediately; Cancel, Back and outside dismissal change nothing.
 - A sole administrator cannot leave a group until another administrator exists.
 - Ended membership copy is normalized to **You left this chat.**, **You left this group.**, or **You were removed from this group.**
 
@@ -253,6 +304,9 @@ compatibility pin and compiled regression evidence are in `app-menus.md`.
 - [Material insets](https://developer.android.com/develop/ui/compose/system/material-insets)
 
 - [Search bar](https://developer.android.com/develop/ui/compose/components/search-bar)
+- [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets)
+- [Material buttons](https://developer.android.com/develop/ui/compose/components/button)
+- [Android touch-target guidance](https://support.google.com/accessibility/android/answer/7101858)
 - [Lazy lists](https://developer.android.com/develop/ui/compose/lists)
 - [Material chips](https://developer.android.com/develop/ui/compose/components/chip)
 - [Compose text input](https://developer.android.com/develop/ui/compose/text/user-input)

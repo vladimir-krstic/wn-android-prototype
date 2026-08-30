@@ -23,7 +23,6 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
+import dev.ipf.whitenoise.ui.components.AvatarPhotoButton
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
@@ -210,16 +210,11 @@ fun SignUpScreen(
                         modifier = Modifier.size(120.dp),
                     )
                     Box {
-                        FilledTonalButton(
+                        AvatarPhotoButton(
+                            hasPhoto = avatar != null,
                             onClick = { isPhotoMenuOpen = true },
                             enabled = !isPreparingPhoto && !isSigningUp,
-                        ) {
-                            Text(
-                                stringResource(
-                                    if (avatar == null) R.string.add_photo else R.string.change_photo,
-                                ),
-                            )
-                        }
+                        )
                         WhiteNoiseDropdownMenu(
                             expanded = isPhotoMenuOpen,
                             onDismissRequest = { isPhotoMenuOpen = false },

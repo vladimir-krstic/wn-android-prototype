@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -20,11 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
-import androidx.compose.foundation.indication
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
@@ -34,7 +28,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,16 +37,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,8 +63,6 @@ private enum class ProfileScannerError {
     InvalidCode,
     Unavailable,
 }
-
-private val SharePublicKeyCapsuleWidth = 240.dp
 
 @Composable
 fun ShareConnectScreen(
@@ -217,7 +202,7 @@ private fun ShareProfileContent(
         contentAlignment = Alignment.TopCenter,
     ) {
         val avatarSize = (maxWidth * 0.32f).coerceIn(104.dp, 152.dp)
-        val qrCodeSize = (maxWidth * 0.81f).coerceIn(248.dp, 376.dp) - 16.dp
+        val availableWidth = maxWidth
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -264,71 +249,26 @@ private fun ShareProfileContent(
                     }
                 }
             }
-            val copyInteractionSource = remember { MutableInteractionSource() }
-            Box(
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .widthIn(max = 360.dp)
-                    .heightIn(min = 48.dp)
-                    .clickable(
-                        interactionSource = copyInteractionSource,
-                        indication = null,
-                        role = Role.Button,
-                        onClick = onCopy,
-                    )
-                    .testTag("share_connect.copy_public_key")
-                    .semantics {
-                        stateDescription = copyState
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .width(SharePublicKeyCapsuleWidth)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .indication(copyInteractionSource, ripple())
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .testTag("share_connect.copy_public_key.visual"),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = profile.publicKey,
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.MiddleEllipsis,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Icon(
-                        painter = painterResource(
-                            if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
-                        ),
-                        contentDescription = stringResource(
-                            if (copied) R.string.copied else R.string.copy_public_key,
-                        ),
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            IdentifierCopyCapsule(
+                value = profile.publicKey,
+                copied = copied,
+                onCopy = onCopy,
+                copyContentDescription = stringResource(R.string.copy_public_key),
+                copiedContentDescription = stringResource(R.string.copied),
+                notCopiedStateDescription = copyState,
+                copiedStateDescription = copyState,
+                targetTestTag = "share_connect.copy_public_key",
+                visualTestTag = "share_connect.copy_public_key.visual",
+                modifier = Modifier.padding(top = 4.dp),
+            )
 
-            Surface(
-                modifier = Modifier
-                    .padding(top = 16.dp)
-                    .size(qrCodeSize + 24.dp)
-                    .testTag("share_connect.qr_surface"),
-                shape = MaterialTheme.shapes.large,
-                color = Color.White,
-            ) {
-                ProfileCode(
-                    value = profile.publicKey,
-                    modifier = Modifier.padding(12.dp),
-                    contentDescription = stringResource(R.string.profile_qr_code),
-                    marginModules = 0,
-                )
-            }
+            IdentityQrCodeSurface(
+                value = profile.publicKey,
+                availableWidth = availableWidth,
+                contentDescription = stringResource(R.string.profile_qr_code),
+                testTag = "share_connect.qr_surface",
+                modifier = Modifier.padding(top = 16.dp),
+            )
             Text(
                 text = stringResource(R.string.scan_to_connect),
                 modifier = Modifier.padding(top = 1.dp),

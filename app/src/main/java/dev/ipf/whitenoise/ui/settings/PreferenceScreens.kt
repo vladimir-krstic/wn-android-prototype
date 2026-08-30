@@ -4,7 +4,6 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,7 +22,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -37,6 +35,7 @@ import dev.ipf.whitenoise.model.NotificationPreviewMode
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileSettings
 import dev.ipf.whitenoise.model.SentMediaQuality
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @Composable
@@ -406,40 +405,82 @@ fun DataUsageScreen(
     onChange: (ProfileSettings) -> Unit,
 ) {
     val settings = profile.settings
+    val defaults = ProfileSettings()
+    val downloadsUseDefaults =
+        settings.photoDownloadPolicy == defaults.photoDownloadPolicy &&
+            settings.videoDownloadPolicy == defaults.videoDownloadPolicy &&
+            settings.audioDownloadPolicy == defaults.audioDownloadPolicy &&
+            settings.fileDownloadPolicy == defaults.fileDownloadPolicy
     var picker by remember { mutableStateOf<DataPicker?>(null) }
     var qualityPicker by remember { mutableStateOf(false) }
     SettingsScaffold(title = "Data Usage", onBack = onBack) {
         SettingsList {
             item { SettingsSection("Automatic downloads") }
             item {
-                SettingsGroup {
-                    SettingsLink("Photos", settings.photoDownloadPolicy.label, onClick = { picker = DataPicker.Photos })
-                    SettingsLink("Videos", settings.videoDownloadPolicy.label, onClick = { picker = DataPicker.Videos })
-                    SettingsLink("Audio", settings.audioDownloadPolicy.label, onClick = { picker = DataPicker.Audio })
-                    SettingsLink("Files", settings.fileDownloadPolicy.label, onClick = { picker = DataPicker.Files })
+                SettingsGroup(
+                    modifier = Modifier.testTag("data_usage.downloads.group"),
+                ) {
+                    SettingsLink(
+                        title = "Photos",
+                        value = settings.photoDownloadPolicy.label,
+                        onClick = { picker = DataPicker.Photos },
+                    )
+                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.photos"))
+                    SettingsLink(
+                        title = "Videos",
+                        value = settings.videoDownloadPolicy.label,
+                        onClick = { picker = DataPicker.Videos },
+                    )
+                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.videos"))
+                    SettingsLink(
+                        title = "Audio",
+                        value = settings.audioDownloadPolicy.label,
+                        onClick = { picker = DataPicker.Audio },
+                    )
+                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.audio"))
+                    SettingsLink(
+                        title = "Files",
+                        value = settings.fileDownloadPolicy.label,
+                        onClick = { picker = DataPicker.Files },
+                    )
+                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.files"))
                     SettingsAction(
                         title = "Reset download settings",
                         subtitle = "Restore the default policy for every media type.",
+                        enabled = !downloadsUseDefaults,
                         onClick = {
                             onChange(
                                 settings.copy(
-                                    photoDownloadPolicy = ProfileSettings().photoDownloadPolicy,
-                                    videoDownloadPolicy = ProfileSettings().videoDownloadPolicy,
-                                    audioDownloadPolicy = ProfileSettings().audioDownloadPolicy,
-                                    fileDownloadPolicy = ProfileSettings().fileDownloadPolicy,
+                                    photoDownloadPolicy = defaults.photoDownloadPolicy,
+                                    videoDownloadPolicy = defaults.videoDownloadPolicy,
+                                    audioDownloadPolicy = defaults.audioDownloadPolicy,
+                                    fileDownloadPolicy = defaults.fileDownloadPolicy,
                                 ),
                             )
                         },
                     )
                 }
             }
+            item {
+                SettingsExplainer(
+                    "Media that isn't downloaded automatically shows a download button.",
+                )
+            }
             item { SettingsSection("Sent media") }
             item {
-                SettingsGroup {
-                    SettingsLink("Photo and video quality", settings.sentMediaQuality.label, onClick = { qualityPicker = true })
+                SettingsGroup(
+                    modifier = Modifier.testTag("data_usage.sent_media.group"),
+                ) {
+                    SettingsLink(
+                        title = "Photo and video quality",
+                        value = settings.sentMediaQuality.label,
+                        onClick = { qualityPicker = true },
+                    )
                 }
             }
-            item { SettingsExplainer("Choose when White Noise may download each media type.") }
+            item {
+                SettingsExplainer("Choose the quality for photos and videos you send.")
+            }
         }
     }
     picker?.let { target ->
@@ -470,10 +511,13 @@ fun DataUsageScreen(
     }
     if (qualityPicker) {
         ChoiceDialog(
-            title = "Sent media quality",
+            title = "Photo and video quality",
             values = SentMediaQuality.entries,
             selected = settings.sentMediaQuality,
             label = SentMediaQuality::label,
+            supportingText =
+                "High sends uncompressed photos and videos for better quality, but uses more data. " +
+                    "Standard compresses media to use less data.",
             onDismiss = { qualityPicker = false },
             onSelect = {
                 onChange(settings.copy(sentMediaQuality = it))
@@ -496,6 +540,7 @@ private fun <T> ChoiceDialog(
     values: List<T>,
     selected: T,
     label: (T) -> String,
+    supportingText: String? = null,
     onDismiss: () -> Unit,
     onSelect: (T) -> Unit,
 ) {
@@ -503,23 +548,28 @@ private fun <T> ChoiceDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.surfaceContainerLowest)
-                    .selectableGroup()
-                    .testTag("choice_dialog.options"),
-            ) {
-                values.forEachIndexed { index, value ->
-                    if (index > 0) {
-                        SettingsDivider()
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectableGroup()
+                        .testTag("choice_dialog.options"),
+                ) {
+                    values.forEachIndexed { index, value ->
+                        WhiteNoiseDialogChoiceRow(
+                            title = label(value),
+                            selected = value == selected,
+                            modifier = Modifier.testTag("choice_dialog.option.$index"),
+                            onClick = { onSelect(value) },
+                        )
                     }
-                    SettingsChoice(
-                        title = label(value),
-                        selected = value == selected,
-                        highlightSelected = false,
-                        onClick = { onSelect(value) },
+                }
+                supportingText?.let {
+                    Text(
+                        text = it,
+                        modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }

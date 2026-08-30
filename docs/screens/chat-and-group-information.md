@@ -61,7 +61,10 @@ Status: Visual-polish static gate passed on 2026-08-21; device acceptance pendin
 - Material top app bars and Scaffold own destination navigation and content
   structure; lists and lazy grids retain stable collection identity.
 - Chats and Chat Info share `MuteDurationDialog`, a native AlertDialog with
-  immediate duration selection and safe Cancel/Back/outside dismissal. Timer
+  aligned, rounded whole-row radio choices, visible current-duration state,
+  immediate duration selection and safe Cancel/Back/outside dismissal. Its
+  state layer expands toward the dialog edges with an 8 dp outer gutter while
+  16 dp internal padding keeps the radio content on the title line. Timer
   choices use the shared sheet surface/header with scrollable radio rows.
   AlertDialog also owns focused
   destructive consequences, and native radio/checkbox controls expose current

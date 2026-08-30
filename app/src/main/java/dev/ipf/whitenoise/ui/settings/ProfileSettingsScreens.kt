@@ -36,7 +36,6 @@ import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -88,6 +87,7 @@ import dev.ipf.whitenoise.model.ProfileKeyFixtures
 import dev.ipf.whitenoise.model.ProfileSettingsPolicy
 import dev.ipf.whitenoise.state.AppUiState
 import dev.ipf.whitenoise.ui.chats.ProfileSwitcherSheet
+import dev.ipf.whitenoise.ui.components.AvatarPhotoButton
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
@@ -747,10 +747,11 @@ fun EditProfileScreen(
             ProfileAvatar(nameValue, avatar, Modifier.size(120.dp))
             if (isEditing) {
                 Box {
-                    FilledTonalButton(
+                    AvatarPhotoButton(
+                        hasPhoto = avatar != ProfileAvatar.Monogram,
                         onClick = { photoMenu = true },
                         enabled = !isPreparingPhoto,
-                    ) { Text(if (avatar == ProfileAvatar.Monogram) "Add photo" else "Change photo") }
+                    )
                     WhiteNoiseDropdownMenu(
                         expanded = photoMenu,
                         onDismissRequest = { photoMenu = false },

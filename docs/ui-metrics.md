@@ -14,7 +14,7 @@ small details. White Noise maps that guidance to these shared tokens:
 | --- | ---: | --- |
 | Compact-screen horizontal margin | 16 dp | `CompactScreenMargin` |
 | Settings section heading inset | 32 dp | `SettingsSectionInset` |
-| Closely related controls or actions | 8 dp | `Related` |
+| Closely related controls, actions, or helper copy | 8 dp | `Related` |
 | Peer fields in one form group | 16 dp | `FormField` |
 | Separate content groups or an inline primary action after fields | 24 dp | `Section` |
 | Pinned bottom task-action inset | 16 dp | `PinnedActionInset` |
@@ -53,6 +53,11 @@ active pane.
   padding. Closely related stacked buttons use an 8 dp gap.
 - Compact contextual actions, search bars, menus, and message composers keep
   their native component metrics instead of inheriting form spacing.
+- App-owned single-choice dialogs place direct 56 dp-minimum selectable rows in
+  the dialog content slot. The row starts at the dialog-owned content edge,
+  lets `RadioButton` retain its native touch-target inset, and keeps 16 dp
+  between that target and the label. Do not nest a settings `ListItem` inside
+  the already-padded dialog slot; that creates a second horizontal inset.
 
 ## Settings overview
 
@@ -90,6 +95,13 @@ active pane.
   the 16 dp compact margin plus the list item's 16 dp internal content inset.
   This aligns the heading with leading icons on the overview and with row text
   on icon-free detail lists; it does not align to the outer container edge.
+- Settings helper/explainer text outside a group or button also starts 32 dp
+  from the active pane edge. This is the same row-title/section-label content
+  line: 16 dp outer group or button margin plus Material's 16 dp list content
+  inset. It begins 8 dp below the group or action it explains and adds no
+  bottom padding of its own; the following independent section or action owns
+  the standard 24 dp separation. Do not align these helpers to the 16 dp outer
+  container edge or give them symmetric vertical padding.
 - Do not add supporting text when the headline already names the destination.
   Keep it only for an actionable unavailable reason. The Appearance choice is
   intentionally absent from the root and remains visible/selectable inside
@@ -173,6 +185,29 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   target, permission, torch, system Back and swipe-dismiss metrics. Dismissal
   returns to the stable identity page.
 
+## Donate
+
+- Lightning and Bitcoin use Material 3 Expressive's connected button-group
+  pattern in the center-aligned app-bar title slot: two `ToggleButton`s with
+  the library's connected leading/trailing shapes, native selection motion and
+  radio semantics. Donate does not draw a legacy segmented control or add a
+  redundant page title beside the selector.
+- The donation QR reuses `IdentityQrCodeSurface` exactly. The technical surface
+  is 81% of the active pane width clamped to 248–376 dp, the encoded matrix has
+  no encoder-owned margin modules, and the app adds exactly 12 dp of literal
+  white padding per edge inside the theme's 16 dp `large` corner shape.
+- The donation address reuses `IdentifierCopyCapsule` exactly. Its visible pill
+  is 240 × 32 dp at default text scale inside a transparent 48 dp target, with
+  16 dp horizontal and 8 dp vertical content padding, a 16 dp copy/check icon,
+  full-value middle ellipsis, a state layer clipped to the pill and two-second
+  copied feedback. Donate must not introduce local QR or capsule geometry.
+- QR-to-address-target spacing remains the Donate-specific compact 1 dp
+  relationship. The method caption uses `bodyMedium` and is pulled 4 dp into
+  the transparent bottom portion of the unchanged 48 dp copy target, leaving
+  5 dp between the visible 32 dp capsule and the caption line box. This reduces
+  the caption's perceived padding without shrinking or moving the copy target.
+  It is a Donate-specific optical correction, not a general layout token.
+
 ## Web-image task sheet
 
 - Close and Done use native compact app-bar controls, not 56 dp form actions.
@@ -192,6 +227,17 @@ enlarge or reposition the system splash to imitate the Welcome composition.
 
 ## Chats and shared scrolling headers
 
+- Chats and New Group share one compact contextual search component: its
+  rounded field is 48 dp high at default scale and uses `bodyLarge`, rather
+  than inheriting an app-bar title style. This is a user-approved contextual
+  exception to Material's 56 dp standalone SearchBar token. New Message uses
+  the standard 56 dp filled field because search is a primary standalone page
+  control there. Back and Clear remain native 48 dp icon-button
+  targets. The field uses Material's text-field decoration with zero vertical
+  content inset at default scale; placeholder, input, cursor and icons share
+  the vertical center and remain inside the container. The 48 dp value is a
+  minimum, so accessibility font scaling can grow the field instead of
+  clipping text. Focus, IME, single-line input, clear, and Back are unchanged.
 - Chats toolbar and row avatars have 40 dp and 52 dp visible diameters. Their
   leading artwork edges share the 16 dp content margin inside the same capped
   680 dp pane. The toolbar uses an 8 dp relationship inset in addition to its
@@ -254,7 +300,7 @@ enlarge or reposition the system splash to imitate the Welcome composition.
 
 ## App-owned Material menus
 
-- All six popup entry points use `WhiteNoiseDropdownMenu`: native
+- All app-owned popup entry points use `WhiteNoiseDropdownMenu`: native
   `DropdownMenuPopup`, one `DropdownMenuGroup`, and the new command/selected
   item overloads, not the baseline menu overloads.
 - Use `MenuDefaults.groupShapes` and index-aware `itemShape` with no local
@@ -271,6 +317,39 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   the group's native clipping. No fixed menu dimensions or custom edge logic.
 - WN-ANDROID-0040 pins Material 3 alpha25 for API 23 compatibility; see
   `docs/screens/app-menus.md` for the implementation and API-status audit.
+
+## Diagnostics
+
+- The **Events** / **Live** header uses the console's 16 dp inner content line:
+  both edges are inset one `FormField` from the console surface, matching the
+  event text and divider endpoints instead of the surface's outer bounds.
+- The centered Diagnostics app bar keeps a native 48 dp trailing `IconButton`
+  with the official 24 dp vertical-dots symbol. It anchors
+  `WhiteNoiseDropdownMenu`; optional **Copy Diagnostic Summary**, **Test**, and
+  **Clear Events** retain the shared menu's native 20 dp leading icons, item
+  targets, shapes, colors, focus, placement, dismissal and scrolling. Clear is
+  disabled while the console is empty. No duplicate command row appears in
+  content.
+- The Events header pairs an 18 dp official cell-tower/radiowave symbol with
+  **Live** using a 6 dp gap. The symbol uses semantic success green and a
+  900 ms 0.42-to-1 alpha pulse with reverse repeat. Its visible Live text and
+  merged **Live event stream** description are persistent, so motion and color
+  only reinforce state; Compose animation duration follows the system scale.
+- The console remains the one flexible-width, flexible-height 16 dp-corner
+  technical surface below the header. Removing the exposed action row gives
+  that console the reclaimed height at every window size and font scale.
+
+## Key Packages
+
+- **Publish New Key Package** uses the shared full-width 56 dp
+  `WhiteNoiseFilledTonalButton`, inset 16 dp from the active pane and separated
+  24 dp from the current-package explanation. Its official 24 dp package
+  symbol and label are one native button target with Material-owned shape,
+  padding, state layer, focus and semantics. It is neither a white-equivalent
+  settings row nor a pinned page-completion action.
+- The consequence begins 8 dp below the button on the shared 32 dp helper
+  content line. Publishing still replaces exactly one deterministic package;
+  presentation does not introduce progress, networking or persistence.
 
 ## Ordinary Material sheets
 
@@ -298,6 +377,87 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   internal horizontal padding. The combined 8 + 16 dp geometry preserves the
   shared 24 dp grid while preventing pressed feedback from becoming an
   edge-to-edge rectangular band.
+
+### Immediate-choice dialogs
+
+- `MuteDurationDialog` uses Material `AlertDialog` and one selectable radio
+  group in its text slot. It does not nest Material `ListItem`, so the first
+  native radio target begins on the dialog title/text content line instead of
+  adding a second 16 dp list inset.
+- Each duration is one 56 dp-minimum whole-row radio target. The native radio
+  and label have the standard 16 dp relationship; the row clips hover, focus,
+  pressed and ripple feedback to `MaterialTheme.shapes.large` before applying
+  selection. That clipped surface expands 16 dp beyond the dialog content line
+  on each side, leaving an 8 dp gutter against the default alert-dialog edge,
+  then restores 16 dp internal padding so the radio and label do not move. The
+  selected duration remains visible and exposed through radio semantics when
+  the dialog has a current value.
+
+### Destructive task sheets
+
+- Sign Out starts expanded and exposes only Expanded and Hidden anchors. It
+  keeps Material-owned sheet motion/dismissal while idle and rejects every
+  transition to Hidden during named progress.
+- The active identity and wipe choice are peer rows in one 16 dp-inset
+  `surfaceContainerLowest` group with the established 2 dp
+  `surfaceContainerLow` divider. The profile row uses Material's current
+  12 dp leading-content relationship.
+- The dynamic wipe consequence and exact-name confirmation helper use the
+  shared settings helper geometry: 32 dp from the pane edge, 8 dp below their
+  related group or field, with no helper-owned bottom padding. The destructive
+  field keeps a persistent Material label above its input.
+- The pinned 56 dp destructive action uses `surfaceContainerLow` at zero tonal
+  elevation so it reads as one continuous gray task canvas, not a raised or
+  differently colored footer.
+
+## New Message and person profiles
+
+- New Message, New Group, Set Up Group, Person Profile and Groups in Common
+  use the Settings-detail color hierarchy: `surfaceContainerLow` canvas and
+  `surfaceContainerLowest` groups. New Message's persistent people search is a
+  standard 56 dp filled field; New Group reuses the compact 48 dp-minimum
+  contextual field used by active Chats search.
+- People directories stay lazy and use the current interactive Material
+  `ListItem` overload. Its native 12 dp leading-content relationship replaces
+  the deprecated overload's 16 dp avatar-to-text gap, matching Chats even with
+  creation's smaller 48 dp avatar. New Message and New Group rows each form
+  one 16 dp-inset, white-equivalent segmented group with rounded first/last
+  rows, native 16 dp internal content padding, and a 2 dp canvas-tone gap
+  between adjacent rows. New Group's compact search keeps its 48 dp minimum
+  and 16 dp outer margin but uses the same `surfaceContainerLowest` fill as
+  the people group. Selected New Group rows retain the exact same positional
+  segmented shape and fill as their resting state; only the trailing vector
+  check and selected semantics change. Set Up Group uses the same 16 dp-inset
+  segmented group and 2 dp separators for its read-only member review. Every
+  variant retains native measurement, text slots, state layer and font-scale
+  growth.
+- New Message does not reserve the bottom safe area outside its lazy viewport.
+  The viewport reaches the screen edge; the safe bottom plus 24 dp section
+  clearance belongs to scroll content so the final person remains reachable.
+- Selected New Group members use 64 dp avatars inside 80 dp-wide removable
+  identity tiles. A 24 dp filled close badge is visual feedback; the entire
+  tile is the Button-semantic remove target, so the badge never becomes an
+  undersized independent control.
+- Person Profile shares the Share & Connect 32%-of-pane avatar clamp
+  (104–152 dp), 20 dp filled verified seal, 240 dp visible npub capsule inside
+  its 48 dp target, complete source value and native middle ellipsis. The name
+  retains `headlineSmall`/semibold and sits 16 dp below the avatar; an available
+  About group begins another 16 dp below the name. About uses
+  `surfaceContainerHigh` with centered italic `bodyLarge`/
+  `onSurfaceVariant`, while action groups remain `surfaceContainerLowest`.
+  About and action groups retain 16 dp outer margins; independent groups are
+  24 dp apart and labeled section text follows the 32 dp content line.
+- Continue, Create Group, Message and relay recovery use the shared 56 dp
+  primary task button in a zero-elevation bottom slot. Its resting
+  `surfaceContainerLow` changes to `surfaceContainer` whenever the shared
+  tracked scroll state overlaps content, matching the settings top app bar.
+  Set Up Group reuses the 120 dp `ProfileAvatar` and native default-height
+  tonal Add/Change Photo button already used by Sign Up and Profile. The empty
+  avatar uses the existing 40 dp group symbol until a name or photo is present.
+  Group fields need no duplicate section title; member rows form one quiet
+  white-equivalent group under the Members heading. Material
+  bottom sheets own Add-to-Group width, shape, handle, motion, insets, focus,
+  Back and dismissal.
 
 ## Notifications
 

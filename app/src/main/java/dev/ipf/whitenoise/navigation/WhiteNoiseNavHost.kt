@@ -23,6 +23,7 @@ import dev.ipf.whitenoise.model.ProfileExitDestination
 import dev.ipf.whitenoise.model.ConversationDebugPolicy
 import dev.ipf.whitenoise.ui.chats.ChatsScreen
 import dev.ipf.whitenoise.ui.chats.GroupSetupScreen
+import dev.ipf.whitenoise.ui.chats.GroupsInCommonScreen
 import dev.ipf.whitenoise.ui.chats.NewChatScreen
 import dev.ipf.whitenoise.ui.chats.NewGroupScreen
 import dev.ipf.whitenoise.ui.chats.PersonProfileScreen
@@ -352,7 +353,6 @@ fun WhiteNoiseNavHost(
                     onDebugMode = appViewModel::setDebugMode,
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics()) },
                     onKeyPackages = { navController.navigate(AppRoute.KeyPackages) },
-                    onDiagnosticsImprovements = { navController.navigate(AppRoute.DiagnosticsImprovements) },
                 )
             }
         }
@@ -431,6 +431,24 @@ fun WhiteNoiseNavHost(
                         appViewModel.removeGroupMember(chat.id, person.id)
                     },
                     onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) },
+                    onGroupsInCommon = {
+                        navController.navigate(AppRoute.GroupsInCommon(person.id))
+                    },
+                    onAddToGroup = { chatId -> appViewModel.addGroupMembers(chatId, listOf(person.id)) },
+                )
+            }
+        }
+        composable<AppRoute.GroupsInCommon> { entry ->
+            val route = entry.toRoute<AppRoute.GroupsInCommon>()
+            val profile = uiState.activeProfile
+            val person = appViewModel.person(route.personId)
+            if (profile != null && person != null) {
+                GroupsInCommonScreen(
+                    profile = profile,
+                    person = person,
+                    onBack = { navController.popBackStack() },
+                    onOpenGroup = { openConversation(it, clearsCreationFlow = false) },
+                    onAddToGroup = { chatId -> appViewModel.addGroupMembers(chatId, listOf(person.id)) },
                 )
             }
         }

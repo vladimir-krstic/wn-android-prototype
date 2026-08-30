@@ -106,11 +106,34 @@ class MaterialSheetTest {
         rule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f, 2f)) {
                 WhiteNoiseTheme {
-                    if (visible.value) MuteDurationDialog({ visible.value = false }) { result = it; visible.value = false }
+                    if (visible.value) {
+                        MuteDurationDialog(
+                            onDismiss = { visible.value = false },
+                            selectedDuration = MuteDuration.OneDay,
+                        ) {
+                            result = it
+                            visible.value = false
+                        }
+                    }
                 }
             }
         }
         rule.onNodeWithText("Always").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("1 Day").assertIsSelected()
+        rule.onNodeWithText("1 Hour").assertIsNotSelected()
+        val title = rule.onNodeWithText("Mute for").fetchSemanticsNode().boundsInRoot
+        val dialog = rule.onNodeWithTag("mute.duration.dialog")
+            .fetchSemanticsNode().boundsInRoot
+        val firstChoice = rule.onNodeWithTag("mute.duration.OneHour")
+            .fetchSemanticsNode().boundsInRoot
+        val firstRadio = rule.onAllNodesWithTag(
+            testTag = "dialog.choice.radio",
+            useUnmergedTree = true,
+        )[0].fetchSemanticsNode().boundsInRoot
+        assertEquals(8f, firstChoice.left - dialog.left, 1f)
+        assertEquals(8f, dialog.right - firstChoice.right, 1f)
+        assertEquals(16f, title.left - firstChoice.left, 1f)
+        assertEquals(title.left, firstRadio.left, 1f)
         rule.onNodeWithTag("mute.duration.dialog").performKeyInput { pressKey(Key.Back) }
         rule.runOnIdle { assertNull(result); visible.value = true }
         rule.onNodeWithTag("mute.duration.dialog").performTouchInput { click(Offset(-20f, -20f)) }
