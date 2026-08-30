@@ -87,7 +87,9 @@ alert dialogs.
 ## Behavior and state
 
 The Add Relay action is disabled until the normalized URL is valid and unique
-and at least one role is selected. Submission delegates to the existing state
+and at least one role is selected. Distinct URLs retain distinct internal row
+identities even when their readable URL slugs collide, so role changes and
+removal remain scoped to one relay. Submission delegates to the existing state
 mutation; a rejected race remains in the sheet with the validation error.
 Role changes remain immediate. Connected versus not connected is always
 represented by both color and check/close shape while exact Reconnecting or

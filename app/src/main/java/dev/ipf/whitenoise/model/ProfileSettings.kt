@@ -160,8 +160,15 @@ object ProfileRelayFixtures {
         val normalized = normalize(value) ?: return null
         if (roles.isEmpty() || relays.any { normalize(it.url) == normalized }) return null
         val slug = normalized.removePrefix("wss://").replace(Regex("[^a-zA-Z0-9]+"), "-").trim('-')
+        val existingIds = relays.mapTo(mutableSetOf(), ProfileRelay::id)
+        val baseId = "custom-$slug"
+        var id = baseId
+        var suffix = 2
+        while (id in existingIds) {
+            id = "$baseId-${suffix++}"
+        }
         return relays + ProfileRelay(
-            id = "custom-$slug",
+            id = id,
             name = normalized.removePrefix("wss://"),
             url = normalized,
             status = RelayConnectionStatus.Reconnecting,

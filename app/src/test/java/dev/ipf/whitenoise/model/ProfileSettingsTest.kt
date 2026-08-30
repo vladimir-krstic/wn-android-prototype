@@ -74,6 +74,18 @@ class ProfileSettingsTest {
     }
 
     @Test
+    fun distinctCustomRelaysKeepUniqueIdsWhenTheirReadableSlugsCollide() {
+        val first = ProfileRelayFixtures.add(emptyList(), "wss://relay.example.com/a-b")!!
+        val second = ProfileRelayFixtures.add(first, "wss://relay.example.com/a/b")!!
+
+        assertEquals(
+            listOf("custom-relay-example-com-a-b", "custom-relay-example-com-a-b-2"),
+            second.map(ProfileRelay::id),
+        )
+        assertEquals(2, second.map(ProfileRelay::id).distinct().size)
+    }
+
+    @Test
     fun addressAndExportPasswordValidationStayDeterministic() {
         assertTrue(ProfileSettingsPolicy.isValidNostrAddress("marmota@whitenoise.example"))
         assertFalse(ProfileSettingsPolicy.isValidNostrAddress("not an address"))
