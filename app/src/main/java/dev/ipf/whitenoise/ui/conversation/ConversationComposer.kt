@@ -473,7 +473,7 @@ fun FullConversationComposer(
     var isPreparing by remember { mutableStateOf(false) }
     var attachmentError by remember { mutableStateOf(false) }
     var preparationJob by remember { mutableStateOf<Job?>(null) }
-    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraUri by rememberSaveable(chat.id) { mutableStateOf<Uri?>(null) }
     var attachmentCounter by rememberSaveable(chat.id) { mutableIntStateOf(0) }
     var preparationGeneration by remember { mutableIntStateOf(0) }
     var voiceState by rememberSaveable(chat.id, stateSaver = ComposerVoiceStateSaver) {
@@ -550,6 +550,7 @@ fun FullConversationComposer(
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
         val uri = cameraUri
         if (saved && uri != null) prepareVisualUris(listOf(uri))
+        cameraUri = null
     }
 
     DisposableEffect(Unit) {
@@ -736,29 +737,47 @@ fun FullConversationComposer(
                             label = stringResource(R.string.camera),
                             icon = R.drawable.ic_camera,
                             onClick = {
-                                val directory = File(context.cacheDir, "camera").apply { mkdirs() }
-                                val file = File.createTempFile("white-noise-", ".jpg", directory)
-                                cameraUri = FileProvider.getUriForFile(
-                                    context,
-                                    "${context.packageName}.files",
-                                    file,
-                                )
-                                camera.launch(cameraUri!!)
+                                attachmentError = false
+                                val launched = runCatching {
+                                    val directory = File(context.cacheDir, "camera").apply { mkdirs() }
+                                    val file = File.createTempFile("white-noise-", ".jpg", directory)
+                                    val uri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.files",
+                                        file,
+                                    )
+                                    cameraUri = uri
+                                    camera.launch(uri)
+                                }.isSuccess
+                                if (!launched) {
+                                    cameraUri = null
+                                    attachmentError = true
+                                }
                             },
                         ),
                         WhiteNoiseMenuItem(
                             label = stringResource(R.string.photos_and_videos),
                             icon = R.drawable.ic_image,
                             onClick = {
-                                visualPicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
-                                )
+                                attachmentError = false
+                                attachmentError = runCatching {
+                                    visualPicker.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageAndVideo,
+                                        ),
+                                    )
+                                }.isFailure
                             },
                         ),
                         WhiteNoiseMenuItem(
                             label = stringResource(R.string.files),
                             icon = R.drawable.ic_description,
-                            onClick = { documentPicker.launch(arrayOf("*/*")) },
+                            onClick = {
+                                attachmentError = false
+                                attachmentError = runCatching {
+                                    documentPicker.launch(arrayOf("*/*"))
+                                }.isFailure
+                            },
                         ),
                         WhiteNoiseMenuItem(
                             label = stringResource(R.string.contact),

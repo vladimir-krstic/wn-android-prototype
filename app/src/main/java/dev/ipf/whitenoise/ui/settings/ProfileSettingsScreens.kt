@@ -875,7 +875,7 @@ fun EditProfileScreen(
 fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
     val context = LocalContext.current
     var showPrivate by rememberSaveable { mutableStateOf(false) }
-    var exportContent by remember { mutableStateOf("") }
+    var pendingExport by rememberSaveable(profile.id) { mutableStateOf<ProfileKeyExport?>(null) }
     var passwordDialog by remember { mutableStateOf(false) }
     var rawExportDialog by remember { mutableStateOf(false) }
     var saveErrorDialog by remember { mutableStateOf(false) }
@@ -885,15 +885,24 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
     val passwordValue = password.text.toString()
     val confirmationValue = confirmation.text.toString()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-        if (uri != null) {
+        val request = pendingExport
+        if (uri != null && request != null) {
+            val content = when (request) {
+                ProfileKeyExport.Raw -> ProfileKeyFixtures.rawExport(profile)
+                ProfileKeyExport.Encrypted -> ProfileKeyFixtures.encryptedExport(profile, password.text.toString())
+            }
             val result = runCatching {
                 checkNotNull(context.contentResolver.openOutputStream(uri))
                     .bufferedWriter()
-                    .use { writer -> writer.write(exportContent) }
+                    .use { writer -> writer.write(content) }
             }
             saveErrorDialog = result.isFailure
         }
-        exportContent = ""
+        if (request == ProfileKeyExport.Encrypted) {
+            password.edit { replace(0, length, "") }
+            confirmation.edit { replace(0, length, "") }
+        }
+        pendingExport = null
     }
 
     fun clearExportPassword() {
@@ -1055,9 +1064,12 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        exportContent = ProfileKeyFixtures.rawExport(profile)
+                        pendingExport = ProfileKeyExport.Raw
                         rawExportDialog = false
-                        export.launch("${profile.id}-white-noise-key.txt")
+                        if (runCatching { export.launch("${profile.id}-white-noise-key.txt") }.isFailure) {
+                            pendingExport = null
+                            saveErrorDialog = true
+                        }
                     },
                 ) {
                     Text(
@@ -1128,10 +1140,16 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
                 TextButton(
                     enabled = ProfileSettingsPolicy.isValidExportPassword(passwordValue, confirmationValue),
                     onClick = {
-                        exportContent = ProfileKeyFixtures.encryptedExport(profile, passwordValue)
+                        pendingExport = ProfileKeyExport.Encrypted
                         passwordDialog = false
-                        clearExportPassword()
-                        export.launch("${profile.id}-white-noise-key.wnkey.txt")
+                        if (runCatching {
+                                export.launch("${profile.id}-white-noise-key.wnkey.txt")
+                            }.isFailure
+                        ) {
+                            pendingExport = null
+                            clearExportPassword()
+                            saveErrorDialog = true
+                        }
                     },
                 ) { Text("Export") }
             },
@@ -1230,6 +1248,8 @@ private fun ProfileKeySupportingText(text: String) {
 }
 
 private enum class CopiedProfileKey { Public, Private }
+
+private enum class ProfileKeyExport { Raw, Encrypted }
 
 @Composable
 internal fun ProfileCode(
