@@ -37,6 +37,7 @@ import dev.ipf.whitenoise.model.WipeConfirmationPhrase
 import dev.ipf.whitenoise.model.LinkPreviewDetector
 import dev.ipf.whitenoise.model.VoiceMessageFixture
 import dev.ipf.whitenoise.model.VoiceMessageFormat
+import dev.ipf.whitenoise.model.VoiceDraftSubmission
 import dev.ipf.whitenoise.model.MessageActionPolicy
 import dev.ipf.whitenoise.model.MessageDeletionScope
 import dev.ipf.whitenoise.model.composerAvailability
@@ -614,15 +615,18 @@ class AppViewModel : ViewModel() {
 
     fun sendVoice(
         chatId: String,
-        format: VoiceMessageFormat,
-        transcript: String,
+        submission: VoiceDraftSubmission,
     ): Boolean {
         val (text, attachments) = VoiceMessageFixture.result(
             id = "$chatId-voice-${createdChatSequence + 1}",
-            format = format,
-            editedTranscript = transcript,
+            format = submission.format,
+            editedTranscript = submission.transcript,
+            durationSeconds = submission.durationSeconds,
         )
-        if ((format == VoiceMessageFormat.Text || format == VoiceMessageFormat.Both) && text.isBlank()) {
+        if (
+            (submission.format == VoiceMessageFormat.Text || submission.format == VoiceMessageFormat.Both) &&
+            text.isBlank()
+        ) {
             return false
         }
         return sendContent(chatId, text, attachments, null)

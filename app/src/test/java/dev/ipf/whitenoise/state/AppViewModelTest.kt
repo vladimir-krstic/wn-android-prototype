@@ -12,6 +12,7 @@ import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.MessageDeliveryState
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
+import dev.ipf.whitenoise.model.VoiceDraftSubmission
 import dev.ipf.whitenoise.model.VoiceMessageFormat
 import dev.ipf.whitenoise.model.MessageDeletionScope
 import dev.ipf.whitenoise.navigation.OnboardingOrigin
@@ -324,12 +325,30 @@ class AppViewModelTest {
             val viewModel = signedInMarmota()
             val before = viewModel.chat("fiatjaf")!!.timeline.size
 
-            assertTrue(viewModel.sendVoice("fiatjaf", format, "Edited transcript"))
+            assertTrue(
+                viewModel.sendVoice(
+                    "fiatjaf",
+                    VoiceDraftSubmission(format, "Edited transcript", durationSeconds = 17),
+                ),
+            )
             val chat = viewModel.chat("fiatjaf")!!
             val sent = (chat.timeline.last() as ChatTimelineEntry.Message).message
             assertEquals(before + 1, chat.timeline.size)
             assertEquals(if (format == VoiceMessageFormat.Voice) "" else "Edited transcript", sent.text)
             assertEquals(if (format == VoiceMessageFormat.Text) 0 else 1, sent.attachments.size)
+            sent.attachments.singleOrNull()?.let { assertEquals(17, it.durationSeconds) }
+        }
+    }
+
+    @Test
+    fun blankVoiceTranscriptIsRejectedForTextAndBothButNotVoice() {
+        VoiceMessageFormat.entries.forEach { format ->
+            val viewModel = signedInMarmota()
+            val accepted = viewModel.sendVoice(
+                "fiatjaf",
+                VoiceDraftSubmission(format, "   ", durationSeconds = 3),
+            )
+            assertEquals(format == VoiceMessageFormat.Voice, accepted)
         }
     }
 

@@ -57,12 +57,12 @@ an approved Android difference or explicitly defers device/visual acceptance.
 | Message states | Incoming/outgoing, sent/delivered/read/failed, retry, deleted/tombstoned, replies and missing fallbacks | Implemented — semantic bubbles, terminal time/state, retry, scoped deletion, reply resolution, action availability, and typed details |
 | Text and links | Plain and multiline text, detected links, link preview, copy/search/read-aloud behavior | Visual-polish static gate passed 2026-08-21 — local first-HTTPS metadata, named suppression, tonal rich cards, copy/search, and received-text Android TextToSpeech with live progress |
 | Images and video | One-to-seven media layout coverage, aspect clamping, viewer paging, capture and selection | Visual-polish static gate passed 2026-08-21 — count-derived grids, standard playback treatment, Photo Picker/external camera selection, ordered draft shelf, and safe-area exact-page HorizontalPager viewers |
-| Files and rich content | Documents, contact, GIF showcase, deterministic labels/previews, unavailable media | Visual-polish static gate passed 2026-08-21 — system document handoff, semantic file/contact cards, bounded contact/GIF sheets, unavailable placeholders, and local-only fixture behavior |
+| Files and rich content | Documents, contact, GIF showcase, deterministic labels/previews, unavailable media | Refined static gate passed 2026-08-30 — system document handoff, semantic file/contact cards, full-height searchable contact sheet with a white-equivalent segmented group and short public keys, retained bounded legacy GIF content, unavailable placeholders, and local-only fixture behavior; updated device inspection pending |
 | Reactions | Quick reactions, full emoji picker, counts, current-profile selection and replacement | Visual-polish static gate passed 2026-08-21 — profile-owned quick strip, selected extra, scroll-safe Material reactions, adaptive 48dp emoji grid, named configuration slots, swap/reset/apply, and semantic selected count chips |
 | Replies and mentions | Reply context, deleted/missing fallback, group-member mention filtering | Implemented — action-owned reply draft/focus, cancellation and fallbacks; group draft suggestions derive from matching active members |
-| Composer | Empty/one-line/multiline drafts, pull expansion, keyboard behavior, send clearing, link/media/file states | Visual-polish static gate passed 2026-08-21 — one tonal task region preserves authoritative drafts, bounded expansion, insets, link/reply/mention context, ordered attachments, and atomic clear/send |
-| Attachments | Android-native photo/video picker, camera, document picker, preview/remove/viewer behavior | Visual-polish static gate passed 2026-08-21 without sensitive permissions — semantic Material sheets/shelf, visible named removal, preparation/error feedback, platform contracts, and exact-page shared viewer |
-| Speech messages | Hold to record, review, deterministic waveform/sample, Transcribe, Voice/Text/Both formats, playback | Visual-polish static gate passed 2026-08-21 as the approved deterministic local simulation — code-native waveform, timer/review, editable transcript, format choice, and standard progress playback |
+| Composer | Empty/one-line/multiline drafts, pull expansion, keyboard behavior, send clearing, link/media/file states | Device gate passed 2026-08-30; subsequent static-gated polish removes the full-width backing/divider, restores the idle 48 dp Add action to the app-standard `primary` contrast, gives the 48 dp-minimum Foundation capsule a lower-emphasis 1 dp `outlineVariant`, and lets the timeline paint to the physical bottom edge while safe-bottom/composer clearance remains scrollable content padding; compact reservation, header-to-IME expansion, direction-locked spring drag, newest-visible timeline push, Back/focus/inset priority, ten/six/eight-line budgets, attached context and atomic send clearing remain; updated device inspection pending |
+| Attachments | Android-native photo/video picker, camera, document picker, preview/remove/viewer behavior | Device gate passed 2026-08-30 without sensitive permissions; subsequent static-gated polish uses a composer-scoped Material popup provider to place Camera/Photos and videos/Files/Contact with a clear 10 dp visible gap above Add and the native menu shadow, no GIF acquisition, 20-item Photo Picker, aspect-derived ordered shelf, 48 dp removal, preparation/error feedback, platform contracts and exact-page review; existing GIF content remains compatible; updated device inspection pending |
+| Speech messages | Hold to record, review, deterministic waveform/sample, Transcribe, Voice/Text/Both formats, playback | Device gate passed 2026-08-30 as the approved deterministic local simulation; subsequent static-gated polish uses 24 dp idle/live waveform geometry, one trailing visible sample per 200 ms, red icon-only Stop, upward-arrow Send, filled circular Play/Pause, light-gray bubble-led Transcribe, compact clipped 32 dp-minimum state layers inside unchanged 48 dp Transcribe/format targets, and an above-content format selector with a source-attached popup while preserving the 400 ms hold, uncapped timer, saveable inline review, deterministic transcription, editing, duration and exactly one result; updated device inspection pending |
 | Recipient speech actions | Read Aloud, Transcribe, Show/Hide Transcript, Copy Transcript, local-only provenance | Visual-polish static gate passed 2026-08-21 — view-local Transcribe, transcript reveal/copy and provenance, plus Android TextToSpeech with live progress and stop/shutdown lifecycle |
 | Message actions | Long-press context, Reply, Forward, Copy, Select, Info, Delete, permissions and full action availability | Visual-polish static gate passed 2026-08-21 — Android combined-click hold/haptic, contextual message preview, semantic icon rows, named accessibility alternatives, conditional Copy/Retry, tonal typed details, and scoped confirmation |
 | Selection and forwarding | Multi-select mode, target selection, ordered copies, media and keyboard behavior | Visual-polish static gate passed 2026-08-21 — explicit selected containment, live count, named compact actions, disabled-state explanation, native searchable checkboxes, 32-source/5-target limits, and source-ordered copies |
@@ -130,6 +130,47 @@ field, Chat Info search entry, Back behavior, result controls and the cyan
 highlight. No emulator/device was launched, installed, interacted with or
 captured; instrumentation execution, TalkBack and visual acceptance remain a
 separately requested step.
+
+## 2026-08-30 message composer overhaul
+
+The available composer is now a transparent overlay with no full-width backing
+or divider, a separate 48 dp Add action, compact Foundation editor capsule,
+and exactly two direct-drag endpoints. It reserves only its compact height and
+pushes the timeline by the exact travel only when the newest message was
+visible. Android owns IME,
+Back, insets, focus, spring settling and accessible alternatives. The anchored
+attachment menu is exactly Camera, Photos and videos, Files, Contact; Photo
+Picker supports 20 items and GIF acquisition is removed without invalidating
+GIF content. Ordered aspect-derived previews remain inline.
+
+Voice is an inline deterministic Idle/Recording/Review state machine with a
+400 ms hold, uncapped timer, playback, transcription, anchored Voice/Text/Both
+format menu, editable transcript, duration preservation and exactly one
+outgoing result. Review and expansion restore safely; an interrupted active
+recording restores as Review.
+
+Gate: `./gradlew testDebugUnitTest lintDebug assembleDebug
+assembleDebugAndroidTest` passes after the optical follow-up with 137 unit
+tests, no lint errors, and both APKs. Before that follow-up, focused
+`ConversationScreenTest` passed 30/30 tests on an Android 17 Pixel 10 Pro XL
+emulator, and hands-on captures covered compact/expanded and IME states,
+attachments/menu, live recording, pre/post-transcription review, all three
+formats, dark appearance, 150% text and a wider resizable window. The updated
+instrumentation APK compiles but has not been installed or run; the prior
+captures do not evidence the latest optical adjustments. The repository-wide
+instrumentation command also continues into unrelated legacy test classes
+whose activity harness or historical assertions predate this flow. User visual
+acceptance remains pending.
+
+Subsequent user-approved polish gives Add a clear 10 dp popup gap and keeps the
+format popup 2 dp above its target (10 dp from its inset visible pill), with Material's native menu shadow; matches idle
+waveform artwork to the 24 dp Add icon footprint, and replaces the flashing
+sparse live waveform with a dense 24 dp deterministic trailing window. Stop is
+now a red icon-only action; Send uses an upward arrow; Review uses a filled
+Play/Pause circle and light-gray bubble-led Transcribe; contact sharing opens
+an expanded searchable sheet with a white-equivalent grouped directory. Static
+evidence is recorded in the same implementation and tests; the prior device
+captures predate these optical adjustments.
 
 ## 2026-08-26 Chats, privacy and shared-sheet static verification
 

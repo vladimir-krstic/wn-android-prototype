@@ -1,5 +1,9 @@
 package dev.ipf.whitenoise.model
 
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlin.math.sin
+
 data class DeterministicLinkPreview(
     val url: String,
     val title: String,
@@ -90,13 +94,14 @@ object VoiceMessageFixture {
         id: String,
         format: VoiceMessageFormat,
         editedTranscript: String = transcript,
+        durationSeconds: Int = VoiceMessageFixture.durationSeconds,
     ): Pair<String, List<MessageAttachment>> {
         val normalizedTranscript = editedTranscript.trim()
         return when (format) {
-            VoiceMessageFormat.Voice -> "" to listOf(attachment(id, format, null))
+            VoiceMessageFormat.Voice -> "" to listOf(attachment(id, format, null, durationSeconds))
             VoiceMessageFormat.Text -> normalizedTranscript to emptyList()
             VoiceMessageFormat.Both -> normalizedTranscript to listOf(
-                attachment(id, format, normalizedTranscript),
+                attachment(id, format, normalizedTranscript, durationSeconds),
             )
         }
     }
@@ -105,14 +110,205 @@ object VoiceMessageFixture {
         id: String,
         format: VoiceMessageFormat,
         transcript: String?,
+        durationSeconds: Int,
     ) = MessageAttachment(
         id = id,
         kind = MessageAttachmentKind.Voice,
         label = "Voice message",
         transcript = transcript,
-        durationSeconds = durationSeconds,
+        durationSeconds = durationSeconds.coerceAtLeast(1),
         voiceFormat = format,
     )
+}
+
+data class VoiceDraftSubmission(
+    val format: VoiceMessageFormat,
+    val transcript: String,
+    val durationSeconds: Int,
+)
+
+sealed interface ComposerVoiceState {
+    data object Idle : ComposerVoiceState
+
+    data class Recording(val elapsedTenths: Int = 0) : ComposerVoiceState
+
+    data class Review(
+        val durationSeconds: Int,
+        val transcript: String? = null,
+        val format: VoiceMessageFormat = VoiceMessageFormat.Voice,
+        val isTranscribing: Boolean = false,
+        val playbackTenths: Int = 0,
+        val isPlaying: Boolean = false,
+    ) : ComposerVoiceState
+}
+
+object ComposerVoiceReducer {
+    fun start(state: ComposerVoiceState): ComposerVoiceState =
+        if (state == ComposerVoiceState.Idle) ComposerVoiceState.Recording() else state
+
+    fun tick(state: ComposerVoiceState): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Recording -> state.copy(elapsedTenths = state.elapsedTenths + 1)
+        else -> state
+    }
+
+    fun stop(state: ComposerVoiceState): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Recording -> ComposerVoiceState.Review(
+            durationSeconds = ((state.elapsedTenths + 9) / 10).coerceAtLeast(1),
+        )
+        else -> state
+    }
+
+    fun beginTranscription(state: ComposerVoiceState): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Review -> if (state.transcript == null) {
+            state.copy(isTranscribing = true, isPlaying = false)
+        } else {
+            state
+        }
+        else -> state
+    }
+
+    fun finishTranscription(
+        state: ComposerVoiceState,
+        transcript: String,
+    ): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Review -> state.copy(
+            transcript = transcript,
+            format = VoiceMessageFormat.Both,
+            isTranscribing = false,
+        )
+        else -> state
+    }
+
+    fun selectFormat(
+        state: ComposerVoiceState,
+        format: VoiceMessageFormat,
+    ): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Review -> state.copy(format = format, isPlaying = false)
+        else -> state
+    }
+
+    fun editTranscript(
+        state: ComposerVoiceState,
+        transcript: String,
+    ): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Review -> state.copy(transcript = transcript)
+        else -> state
+    }
+
+    fun togglePlayback(state: ComposerVoiceState): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Review -> state.copy(
+            playbackTenths = if (state.playbackTenths >= state.durationSeconds * 10) 0 else state.playbackTenths,
+            isPlaying = !state.isPlaying,
+        )
+        else -> state
+    }
+
+    fun advancePlayback(state: ComposerVoiceState): ComposerVoiceState = when (state) {
+        is ComposerVoiceState.Review -> {
+            val next = state.playbackTenths + 1
+            if (next >= state.durationSeconds * 10) {
+                state.copy(playbackTenths = state.durationSeconds * 10, isPlaying = false)
+            } else {
+                state.copy(playbackTenths = next)
+            }
+        }
+        else -> state
+    }
+
+    fun canSend(state: ComposerVoiceState): Boolean = when (state) {
+        is ComposerVoiceState.Review -> state.format == VoiceMessageFormat.Voice ||
+            !state.transcript.isNullOrBlank()
+        else -> false
+    }
+
+    fun restore(state: ComposerVoiceState): ComposerVoiceState = when (state) {
+        ComposerVoiceState.Idle -> state
+        is ComposerVoiceState.Recording -> stop(state)
+        is ComposerVoiceState.Review -> state.copy(isTranscribing = false, isPlaying = false)
+    }
+}
+
+/** Deterministic waveform geometry shared by live recording and voice review. */
+object ComposerWaveformPolicy {
+    const val QuietSample = 0.08f
+    const val VisualSamplePeriodTenths = 2
+
+    /** Keeps the elapsed timer precise while advancing the visible waveform at a calmer cadence. */
+    fun visualTick(elapsedTenths: Int): Int =
+        elapsedTenths.coerceAtLeast(0) / VisualSamplePeriodTenths
+
+    fun liveSample(tick: Int): Float {
+        val first = sin(tick * 0.73)
+        val second = sin(tick * 0.19 + 1.4)
+        return (0.18 + abs(first * second) * 0.82).toFloat().coerceIn(0.1f, 1f)
+    }
+
+    fun liveWindow(latestTick: Int, count: Int): List<Float> =
+        List(count.coerceAtLeast(1)) { index ->
+            val tick = latestTick - count + index + 1
+            if (tick > 0) liveSample(tick) else QuietSample
+        }
+
+    fun reviewWindow(count: Int): List<Float> = List(count.coerceAtLeast(1)) { index ->
+        val first = sin((index + 37) * 0.61)
+        val second = sin((index * 3 + 37) * 0.17)
+        (0.2 + abs(first * second) * 0.8).toFloat().coerceIn(0.12f, 1f)
+    }
+}
+
+object ComposerExpansionPolicy {
+    const val ExpandedTopGapDp = 24
+    const val ProjectedTravelThresholdDp = 48
+    const val CompactTextLines = 10
+    const val CompactCaptionLines = 6
+    const val CompactTranscriptLines = 8
+
+    fun compactLineLimit(hasAttachments: Boolean): Int =
+        if (hasAttachments) CompactCaptionLines else CompactTextLines
+
+    fun clampProgress(progress: Float): Float = progress.coerceIn(0f, 1f)
+
+    fun shouldPushTimeline(newestMessageVisible: Boolean): Boolean = newestMessageVisible
+
+    fun destinationExpanded(progress: Float, projectedTravelDp: Float): Boolean = when {
+        projectedTravelDp <= -ProjectedTravelThresholdDp -> true
+        projectedTravelDp >= ProjectedTravelThresholdDp -> false
+        else -> progress >= 0.5f
+    }
+}
+
+data class ComposerAttachmentSize(
+    val heightDp: Int,
+    val widthDp: Int,
+)
+
+object ComposerAttachmentSizing {
+    const val VisualHeightDp = 112
+    const val VisualMinWidthDp = 68
+    const val VisualMaxWidthDp = 200
+    const val UtilityHeightDp = 72
+    const val ContactWidthDp = 104
+    const val FileWidthDp = 160
+    const val VisualShelfHeightDp = 128
+    const val UtilityShelfHeightDp = 88
+
+    fun forKind(kind: MessageAttachmentKind, aspectRatio: Float = 4f / 3f): ComposerAttachmentSize =
+        if (kind == MessageAttachmentKind.Photo || kind == MessageAttachmentKind.Photos ||
+            kind == MessageAttachmentKind.Video ||
+            kind == MessageAttachmentKind.Gif
+        ) {
+            ComposerAttachmentSize(
+                heightDp = VisualHeightDp,
+                widthDp = (VisualHeightDp * aspectRatio)
+                    .roundToInt()
+                    .coerceIn(VisualMinWidthDp, VisualMaxWidthDp),
+            )
+        } else {
+            ComposerAttachmentSize(
+                heightDp = UtilityHeightDp,
+                widthDp = if (kind == MessageAttachmentKind.Contact) ContactWidthDp else FileWidthDp,
+            )
+        }
 }
 
 data class ComposerSeed(

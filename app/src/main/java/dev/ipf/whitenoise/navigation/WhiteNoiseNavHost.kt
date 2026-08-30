@@ -504,9 +504,7 @@ fun WhiteNoiseNavHost(
                     onSuppressDraftLink = { appViewModel.suppressDraftLink(chat.id, it) },
                     onCancelDraftReply = { appViewModel.cancelDraftReply(chat.id) },
                     onSendDraft = { appViewModel.sendDraft(chat.id) },
-                    onSendVoice = { format, transcript ->
-                        appViewModel.sendVoice(chat.id, format, transcript)
-                    },
+                    onSendVoice = { submission -> appViewModel.sendVoice(chat.id, submission) },
                     onReply = { appViewModel.setDraftReply(chat.id, it) },
                     onReaction = { messageId, emoji, remove ->
                         appViewModel.setMessageReaction(chat.id, messageId, emoji, remove)

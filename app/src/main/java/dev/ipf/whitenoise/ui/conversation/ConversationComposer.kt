@@ -1,22 +1,35 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -24,8 +37,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -37,15 +48,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,6 +63,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ripple
 import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import androidx.compose.material3.Scaffold
@@ -63,6 +74,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -71,7 +83,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,18 +94,41 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -101,25 +139,301 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AvatarAsset
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatTimelineEntry
+import dev.ipf.whitenoise.model.ComposerAttachmentSizing
+import dev.ipf.whitenoise.model.ComposerExpansionPolicy
+import dev.ipf.whitenoise.model.ComposerVoiceReducer
+import dev.ipf.whitenoise.model.ComposerVoiceState
+import dev.ipf.whitenoise.model.ComposerWaveformPolicy
 import dev.ipf.whitenoise.model.LinkPreviewDetector
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
 import dev.ipf.whitenoise.model.Person
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileAvatar
+import dev.ipf.whitenoise.model.VoiceDraftSubmission
 import dev.ipf.whitenoise.model.VoiceMessageFixture
 import dev.ipf.whitenoise.model.VoiceMessageFormat
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
-import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuPlacement
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.drawableResource
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
+private val ComposerVoiceStateSaver: Saver<ComposerVoiceState, Any> = listSaver(
+    save = { state ->
+        when (state) {
+            ComposerVoiceState.Idle -> listOf("idle")
+            is ComposerVoiceState.Recording -> listOf(
+                "review",
+                ((state.elapsedTenths + 9) / 10).coerceAtLeast(1),
+                false,
+                "",
+                VoiceMessageFormat.Voice.name,
+                0,
+            )
+            is ComposerVoiceState.Review -> listOf(
+                "review",
+                state.durationSeconds,
+                state.transcript != null,
+                state.transcript.orEmpty(),
+                state.format.name,
+                state.playbackTenths,
+            )
+        }
+    },
+    restore = { values ->
+        if (values.firstOrNull() == "review") {
+            ComposerVoiceReducer.restore(ComposerVoiceState.Review(
+                durationSeconds = values[1] as Int,
+                transcript = (values[3] as String).takeIf { values[2] as Boolean },
+                format = VoiceMessageFormat.valueOf(values[4] as String),
+                playbackTenths = values[5] as Int,
+            ))
+        } else {
+            ComposerVoiceState.Idle
+        }
+    },
+)
+
+private class MentionVisualTransformation(
+    mentionNames: List<String>,
+    private val background: Color,
+) : VisualTransformation {
+    private val regex = mentionNames
+        .filter(String::isNotBlank)
+        .sortedByDescending(String::length)
+        .takeIf(List<String>::isNotEmpty)
+        ?.joinToString("|") { Regex.escape(it) }
+        ?.let { Regex("(?<!\\S)@(?:$it)(?=\\s|$)", RegexOption.IGNORE_CASE) }
+
+    override fun filter(text: AnnotatedString): TransformedText {
+        val styled = AnnotatedString.Builder(text)
+        regex?.findAll(text.text)?.forEach { match ->
+            styled.addStyle(
+                SpanStyle(background = background),
+                match.range.first,
+                match.range.last + 1,
+            )
+        }
+        return TransformedText(styled.toAnnotatedString(), OffsetMapping.Identity)
+    }
+}
+
+private fun Modifier.composerExpansionGesture(
+    enabled: Boolean,
+    onStart: () -> Float,
+    onDrag: (startProgress: Float, translationY: Float) -> Unit,
+    onEnd: (velocityY: Float) -> Unit,
+    onCancel: () -> Unit,
+): Modifier = if (!enabled) {
+    this
+} else {
+    pointerInput(enabled) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            val pointerId: PointerId = down.id
+            val origin = down.position
+            val velocityTracker = VelocityTracker().apply { addPosition(down.uptimeMillis, origin) }
+            var verticalGesture = false
+            var horizontalGesture = false
+            var startProgress = 0f
+            var completed = false
+            while (!completed) {
+                val change = awaitPointerEvent().changes.firstOrNull { it.id == pointerId }
+                if (change == null) {
+                    if (verticalGesture) onCancel()
+                    completed = true
+                    continue
+                }
+                velocityTracker.addPosition(change.uptimeMillis, change.position)
+                val translation = change.position - origin
+                if (!verticalGesture && !horizontalGesture && translation.getDistance() >= viewConfiguration.touchSlop) {
+                    if (abs(translation.y) > abs(translation.x)) {
+                        verticalGesture = true
+                        startProgress = onStart()
+                    } else {
+                        horizontalGesture = true
+                    }
+                }
+                if (verticalGesture) {
+                    change.consume()
+                    onDrag(startProgress, translation.y)
+                }
+                if (!change.pressed) {
+                    if (verticalGesture) onEnd(velocityTracker.calculateVelocity().y)
+                    completed = true
+                }
+            }
+        }
+    }
+}
+
+private fun Modifier.voiceLongPressGesture(
+    enabled: Boolean,
+    onLongPress: () -> Unit,
+): Modifier = if (!enabled) {
+    this
+} else {
+    pointerInput(enabled) {
+        coroutineScope outer@{
+            val movementTolerance = 32.dp.toPx()
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                var eligible = true
+                var longPressed = false
+                val longPressJob = this@outer.launch {
+                    delay(400)
+                    if (eligible) {
+                        longPressed = true
+                        onLongPress()
+                    }
+                }
+                var pressed = true
+                while (pressed) {
+                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+                    pressed = change?.pressed == true
+                    if (change == null || (change.position - down.position).getDistance() > movementTolerance) {
+                        eligible = false
+                        longPressJob.cancel()
+                    }
+                    if (longPressed) change?.consume()
+                }
+                eligible = false
+                longPressJob.cancel()
+            }
+        }
+    }
+}
+
+/** Keeps the app-shell outside-tap observer from clearing a focus acquired by this editor tap. */
+private fun Modifier.consumeEditorTapAtFinalPass(): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final).consume()
+        waitForUpOrCancellation(pass = PointerEventPass.Final)?.consume()
+    }
+}
+
+@Composable
+private fun ComposerLeadingAction(
+    voiceState: ComposerVoiceState,
+    menuExpanded: Boolean,
+    onMenuExpandedChange: (Boolean) -> Unit,
+    addAttachmentDescription: String,
+    enabled: Boolean,
+    menuItems: List<WhiteNoiseMenuItem>,
+    onCancelVoice: () -> Unit,
+) {
+    val isAddAction = voiceState == ComposerVoiceState.Idle
+    val containerColor = when {
+        !isAddAction -> MaterialTheme.colorScheme.surfaceContainerHigh
+        enabled -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    }
+    val contentColor = when {
+        !isAddAction -> MaterialTheme.colorScheme.onSurface
+        enabled -> MaterialTheme.colorScheme.onPrimary
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
+    Box(Modifier.size(48.dp).testTag("conversation.attachment.add")) {
+        Surface(
+            modifier = Modifier.fillMaxSize().testTag("conversation.attachment.add.surface"),
+            shape = CircleShape,
+            color = containerColor,
+            contentColor = contentColor,
+        ) {
+            IconButton(
+                onClick = {
+                    if (voiceState is ComposerVoiceState.Review) {
+                        onCancelVoice()
+                    } else {
+                        onMenuExpandedChange(true)
+                    }
+                },
+                enabled = enabled,
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (voiceState is ComposerVoiceState.Review) R.drawable.ic_close else R.drawable.ic_add,
+                    ),
+                    contentDescription = if (voiceState is ComposerVoiceState.Review) {
+                        stringResource(R.string.cancel)
+                    } else {
+                        addAttachmentDescription
+                    },
+                    tint = contentColor,
+                )
+            }
+        }
+        if (voiceState == ComposerVoiceState.Idle) {
+            WhiteNoiseDropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { onMenuExpandedChange(false) },
+                items = menuItems,
+                modifier = Modifier.testTag("conversation.attachment.menu"),
+                anchorSpacing = 10.dp,
+                placement = WhiteNoiseMenuPlacement.AboveAnchor,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ComposerSendButton(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    description: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxSize()) {
+            Surface(
+                modifier = Modifier.size(32.dp),
+                shape = CircleShape,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                contentColor = if (enabled) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_upward),
+                        contentDescription = description,
+                        modifier = Modifier.size(20.dp).testTag("conversation.send.icon"),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniWaveformGlyph(color: Color, modifier: Modifier = Modifier) {
+    val heights = listOf(6.dp, 12.dp, 18.dp, 12.dp, 6.dp)
+    Row(
+        modifier = modifier.size(24.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        heights.forEach { height ->
+            Box(Modifier.width(2.dp).height(height).background(color, CircleShape))
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,26 +446,37 @@ fun FullConversationComposer(
     onSuppressLink: (String?) -> Unit,
     onCancelReply: () -> Unit,
     onSendDraft: () -> Boolean,
-    onSendVoice: (VoiceMessageFormat, String) -> Boolean,
+    onSendVoice: (VoiceDraftSubmission) -> Boolean,
+    modifier: Modifier = Modifier,
+    onCompactHeightChanged: (Int) -> Unit = {},
+    onExpansionPresentationChanged: (Boolean, Float) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val addAttachmentDescription = stringResource(R.string.add_attachment)
     val recordVoiceDescription = stringResource(R.string.record_voice_message)
+    val expandMessageLabel = stringResource(R.string.expand_message)
+    val collapseMessageLabel = stringResource(R.string.collapse_message)
+    val hideKeyboardLabel = stringResource(R.string.hide_keyboard)
     val coroutineScope = rememberCoroutineScope()
     val messageFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
     var attachmentMenuOpen by remember { mutableStateOf(false) }
     var contactPickerOpen by remember { mutableStateOf(false) }
-    var gifPickerOpen by remember { mutableStateOf(false) }
     var mediaViewerAttachmentId by remember { mutableStateOf<String?>(null) }
     var isExpanded by rememberSaveable(chat.id) { mutableStateOf(false) }
+    val expansionProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f) }
+    var isDraggingExpansion by remember { mutableStateOf(false) }
+    var isSettlingExpansion by remember { mutableStateOf(false) }
+    var compactHeightPx by remember(chat.id) { mutableIntStateOf(0) }
     var isPreparing by remember { mutableStateOf(false) }
     var attachmentError by remember { mutableStateOf(false) }
     var preparationJob by remember { mutableStateOf<Job?>(null) }
     var cameraUri by remember { mutableStateOf<Uri?>(null) }
     var attachmentCounter by rememberSaveable(chat.id) { mutableIntStateOf(0) }
-    var isRecording by remember { mutableStateOf(false) }
-    var recordingSeconds by remember { mutableIntStateOf(0) }
-    var voiceReviewOpen by remember { mutableStateOf(false) }
+    var voiceState by rememberSaveable(chat.id, stateSaver = ComposerVoiceStateSaver) {
+        mutableStateOf<ComposerVoiceState>(ComposerVoiceState.Idle)
+    }
 
     fun nextId(prefix: String): String {
         attachmentCounter += 1
@@ -197,7 +522,7 @@ fun FullConversationComposer(
     }
 
     val visualPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(7),
+        ActivityResultContracts.PickMultipleVisualMedia(20),
     ) { uris -> prepareVisualUris(uris) }
     val documentPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
@@ -224,14 +549,32 @@ fun FullConversationComposer(
     }
 
     DisposableEffect(Unit) {
-        onDispose { preparationJob?.cancel() }
+        onDispose {
+            preparationJob?.cancel()
+            if (context.findActivity()?.isChangingConfigurations != true) {
+                voiceState = ComposerVoiceState.Idle
+            }
+        }
     }
-    LaunchedEffect(isRecording) {
-        if (!isRecording) return@LaunchedEffect
-        recordingSeconds = 0
-        while (isRecording && recordingSeconds < 59) {
-            delay(1_000)
-            if (isRecording) recordingSeconds += 1
+    LaunchedEffect(voiceState is ComposerVoiceState.Recording) {
+        while (voiceState is ComposerVoiceState.Recording) {
+            delay(100)
+            voiceState = ComposerVoiceReducer.tick(voiceState)
+        }
+    }
+    LaunchedEffect((voiceState as? ComposerVoiceState.Review)?.isPlaying) {
+        while ((voiceState as? ComposerVoiceState.Review)?.isPlaying == true) {
+            delay(100)
+            voiceState = ComposerVoiceReducer.advancePlayback(voiceState)
+        }
+    }
+    LaunchedEffect((voiceState as? ComposerVoiceState.Review)?.isTranscribing) {
+        if ((voiceState as? ComposerVoiceState.Review)?.isTranscribing == true) {
+            delay(450)
+            voiceState = ComposerVoiceReducer.finishTranscription(
+                voiceState,
+                VoiceMessageFixture.transcript,
+            )
         }
     }
     LaunchedEffect(chat.draftReplyMessageId) {
@@ -239,6 +582,7 @@ fun FullConversationComposer(
     }
 
     val linkPreview = LinkPreviewDetector.first(chat.draftText)
+        ?.takeIf { chat.draftAttachments.isEmpty() && voiceState == ComposerVoiceState.Idle }
         ?.takeUnless { it.url == chat.suppressedDraftLinkUrl }
     val replyMessage = chat.draftReplyMessageId?.let { id ->
         chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().firstOrNull { it.message.id == id }?.message
@@ -254,165 +598,321 @@ fun FullConversationComposer(
                 (mentionQuery.isBlank() || person.name.contains(mentionQuery, ignoreCase = true))
         }.take(5)
     }
+    val mentionNames = remember(chat.members, profile.people) {
+        val memberIds = chat.members.mapTo(mutableSetOf()) { it.personId }
+        profile.people.filter { it.id in memberIds }.map(Person::name)
+    }
     val sendable = chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty() || linkPreview != null
+    val isExpansionEnabled = when (val state = voiceState) {
+        ComposerVoiceState.Idle -> true
+        is ComposerVoiceState.Recording -> false
+        is ComposerVoiceState.Review -> state.transcript != null && state.format != VoiceMessageFormat.Voice
+    }
 
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val expandedTopGapPx = with(density) { ComposerExpansionPolicy.ExpandedTopGapDp.dp.roundToPx() }
+        val expandedHeightPx = (constraints.maxHeight - expandedTopGapPx).coerceAtLeast(compactHeightPx)
+        val travelPx = (expandedHeightPx - compactHeightPx).coerceAtLeast(1)
+        val usesFlexibleLayout = compactHeightPx > 0 &&
+            (isExpanded || expansionProgress.value > 0f || isDraggingExpansion || isSettlingExpansion)
+        val presentedHeightPx = if (usesFlexibleLayout) {
+            compactHeightPx + (travelPx * expansionProgress.value).roundToInt()
+        } else {
+            compactHeightPx
+        }
+
+        suspend fun settle(expanded: Boolean, initialVelocity: Float = 0f) {
+            if (isExpanded != expanded) isExpanded = expanded
+            isSettlingExpansion = true
+            expansionProgress.animateTo(
+                targetValue = if (expanded) 1f else 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+                initialVelocity = initialVelocity,
+            )
+            isSettlingExpansion = false
+        }
+
+        LaunchedEffect(isExpansionEnabled) {
+            if (!isExpansionEnabled && (isExpanded || expansionProgress.value > 0f)) settle(false)
+        }
+        LaunchedEffect(expansionProgress, travelPx, isDraggingExpansion, isSettlingExpansion) {
+            snapshotFlow {
+                Triple(expansionProgress.value, isDraggingExpansion, isSettlingExpansion)
+            }.collect { (progress, dragging, settling) ->
+                onExpansionPresentationChanged(
+                    dragging || settling || progress > 0f,
+                    travelPx * progress,
+                )
+            }
+        }
+        BackHandler(enabled = isExpanded && !attachmentMenuOpen) {
+            coroutineScope.launch { settle(false) }
+        }
+
+        val expansionModifier = Modifier.composerExpansionGesture(
+            enabled = isExpansionEnabled && compactHeightPx > 0 && travelPx > 1,
+            onStart = {
+                isDraggingExpansion = true
+                isSettlingExpansion = false
+                coroutineScope.launch { expansionProgress.stop() }
+                expansionProgress.value
+            },
+            onDrag = { startProgress, translationY ->
+                coroutineScope.launch {
+                    expansionProgress.snapTo(
+                        ComposerExpansionPolicy.clampProgress(startProgress - (translationY / travelPx)),
+                    )
+                }
+            },
+            onEnd = { velocityY ->
+                isDraggingExpansion = false
+                val projectedTravelDp = with(density) { (velocityY * 0.5f).toDp().value }
+                val destination = ComposerExpansionPolicy.destinationExpanded(
+                    expansionProgress.value,
+                    projectedTravelDp,
+                )
+                coroutineScope.launch { settle(destination, initialVelocity = -velocityY / travelPx) }
+            },
+            onCancel = {
+                isDraggingExpansion = false
+                coroutineScope.launch { settle(isExpanded) }
+            },
+        )
+
         Column(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(horizontal = WhiteNoiseSpacing.Related, vertical = WhiteNoiseSpacing.Related)
-                .then(if (isExpanded) Modifier.heightIn(min = 300.dp, max = 560.dp) else Modifier),
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.fillMaxHeight() else Modifier),
-                shape = if (isExpanded) MaterialTheme.shapes.large else MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                Column {
-                    if (chat.draftAttachments.isNotEmpty()) {
-                        DraftAttachmentShelf(
-                            attachments = chat.draftAttachments,
-                            onPreview = { mediaViewerAttachmentId = it },
-                            onRemove = onRemoveAttachment,
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
-                    }
-                    linkPreview?.let { preview ->
-                        DraftLinkPreview(
-                            title = preview.title,
-                            domain = preview.domain,
-                            summary = preview.summary,
-                            image = preview.image,
-                            onRemove = { onSuppressLink(preview.url) },
-                        )
-                    }
-                    replyMessage?.let { message ->
-                        DraftReplyQuote(
-                            author = if (message.authorId == profile.id) {
-                                stringResource(R.string.you)
-                            } else {
-                                profile.people.firstOrNull { it.id == message.authorId }?.name
-                                    ?: stringResource(R.string.unknown_person)
-                            },
-                            text = message.text.ifBlank { message.attachments.firstOrNull()?.label.orEmpty() },
-                            onCancel = onCancelReply,
-                        )
-                    }
-                    if (mentionMatch != null && mentionPeople.isNotEmpty()) {
-                        MentionSuggestions(
-                            people = mentionPeople,
-                            onSelect = { person ->
-                                val range = mentionMatch.range
-                                val prefix = chat.draftText.substring(0, range.first)
-                                val separator = if (prefix.isNotEmpty() && !prefix.endsWith(' ')) " " else ""
-                                onDraftTextChanged("$prefix$separator@${person.name} ")
-                            },
-                        )
-                    }
-                    if (isRecording) {
-                        RecordingComposer(
-                            seconds = recordingSeconds,
-                            onCancel = { isRecording = false },
-                            onStop = {
-                                isRecording = false
-                                voiceReviewOpen = true
-                            },
-                        )
+                .then(
+                    if (usesFlexibleLayout) {
+                        Modifier.height(with(density) { presentedHeightPx.toDp() })
                     } else {
-                        ComposerInputRow(
-                            text = chat.draftText,
-                            onTextChanged = onDraftTextChanged,
-                            onAddAttachment = { attachmentMenuOpen = true },
-                            onSend = onSendDraft,
-                            onRecord = { isRecording = true },
-                            sendable = sendable,
-                            enabled = !isPreparing,
-                            isExpanded = isExpanded,
-                            focusRequester = messageFocusRequester,
-                            addAttachmentDescription = addAttachmentDescription,
-                            recordVoiceDescription = recordVoiceDescription,
-                        )
-                        if (chat.draftText.contains('\n') || chat.draftAttachments.isNotEmpty() || isExpanded) {
-                            TextButton(
-                                onClick = { isExpanded = !isExpanded },
-                                modifier = Modifier.align(Alignment.End).padding(end = WhiteNoiseSpacing.Related),
-                            ) {
-                                Text(
-                                    stringResource(
-                                        if (isExpanded) R.string.collapse_message else R.string.expand_message,
-                                    ),
+                        Modifier
+                    },
+                )
+                .onSizeChanged { size ->
+                    if (!usesFlexibleLayout && size.height != compactHeightPx) {
+                        compactHeightPx = size.height
+                        onCompactHeightChanged(size.height)
+                    }
+                }
+                .testTag("conversation.composer.host"),
+        ) {
+            if (mentionMatch != null && mentionPeople.isNotEmpty() && !usesFlexibleLayout) {
+                MentionSuggestions(
+                    people = mentionPeople,
+                    onSelect = { person ->
+                        val range = mentionMatch.range
+                        val prefix = chat.draftText.substring(0, range.first)
+                        val separator = if (prefix.isNotEmpty() && !prefix.endsWith(' ')) " " else ""
+                        onDraftTextChanged("$prefix$separator@${person.name} ")
+                    },
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (usesFlexibleLayout) Modifier.weight(1f) else Modifier)
+                    .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                if (voiceState !is ComposerVoiceState.Recording) {
+                    ComposerLeadingAction(
+                        voiceState = voiceState,
+                        menuExpanded = attachmentMenuOpen,
+                        onMenuExpandedChange = { attachmentMenuOpen = it },
+                        addAttachmentDescription = addAttachmentDescription,
+                        enabled = !isPreparing,
+                        menuItems = listOf(
+                        WhiteNoiseMenuItem(
+                            label = stringResource(R.string.camera),
+                            icon = R.drawable.ic_camera,
+                            onClick = {
+                                val directory = File(context.cacheDir, "camera").apply { mkdirs() }
+                                val file = File.createTempFile("white-noise-", ".jpg", directory)
+                                cameraUri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.files",
+                                    file,
+                                )
+                                camera.launch(cameraUri!!)
+                            },
+                        ),
+                        WhiteNoiseMenuItem(
+                            label = stringResource(R.string.photos_and_videos),
+                            icon = R.drawable.ic_image,
+                            onClick = {
+                                visualPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
+                                )
+                            },
+                        ),
+                        WhiteNoiseMenuItem(
+                            label = stringResource(R.string.files),
+                            icon = R.drawable.ic_description,
+                            onClick = { documentPicker.launch(arrayOf("*/*")) },
+                        ),
+                        WhiteNoiseMenuItem(
+                            label = stringResource(R.string.contact),
+                            icon = R.drawable.ic_person,
+                            onClick = { contactPickerOpen = true },
+                        ),
+                        ),
+                        onCancelVoice = {
+                            voiceState = ComposerVoiceState.Idle
+                            coroutineScope.launch { settle(false) }
+                        },
+                    )
+                }
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .then(if (usesFlexibleLayout) Modifier.fillMaxHeight() else Modifier)
+                        .then(expansionModifier)
+                        .semantics {
+                            customActions = buildList {
+                                if (isExpansionEnabled) {
+                                    add(
+                                        CustomAccessibilityAction(
+                                            if (isExpanded) collapseMessageLabel else expandMessageLabel,
+                                        ) {
+                                            coroutineScope.launch { settle(!isExpanded) }
+                                            true
+                                        },
+                                    )
+                                    if (isExpanded) {
+                                        add(CustomAccessibilityAction(hideKeyboardLabel) {
+                                            focusManager.clearFocus()
+                                            true
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                        .testTag("conversation.composer.surface"),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Column(
+                        modifier = Modifier.then(if (usesFlexibleLayout) Modifier.fillMaxHeight() else Modifier),
+                    ) {
+                        if (chat.draftAttachments.isNotEmpty() && voiceState == ComposerVoiceState.Idle) {
+                            DraftAttachmentShelf(
+                                attachments = chat.draftAttachments,
+                                onPreview = { mediaViewerAttachmentId = it },
+                                onRemove = onRemoveAttachment,
+                            )
+                            if (chat.draftAttachments.any(MessageAttachment::isVisual)) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    thickness = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant,
                                 )
                             }
                         }
-                    }
-                    if (isPreparing) {
-                        Row(
-                            modifier = Modifier
-                                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = 4.dp)
-                                .semantics { liveRegion = LiveRegionMode.Polite },
-                            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Text(stringResource(R.string.preparing_attachment))
+                        linkPreview?.let { preview ->
+                            DraftLinkPreview(
+                                title = preview.title,
+                                domain = preview.domain,
+                                summary = preview.summary,
+                                image = preview.image,
+                                onRemove = { onSuppressLink(preview.url) },
+                            )
                         }
-                    }
-                    if (attachmentError) {
-                        Text(
-                            stringResource(R.string.attachment_error),
-                            modifier = Modifier
-                                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = 4.dp)
-                                .semantics { liveRegion = LiveRegionMode.Polite },
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                        replyMessage?.takeIf { voiceState == ComposerVoiceState.Idle }?.let { message ->
+                            DraftReplyQuote(
+                                author = if (message.authorId == profile.id) {
+                                    stringResource(R.string.you)
+                                } else {
+                                    profile.people.firstOrNull { it.id == message.authorId }?.name
+                                        ?: stringResource(R.string.unknown_person)
+                                },
+                                text = message.text.ifBlank { message.attachments.firstOrNull()?.label.orEmpty() },
+                                onCancel = onCancelReply,
+                            )
+                        }
+                        when (val state = voiceState) {
+                            ComposerVoiceState.Idle -> ComposerTextInput(
+                                text = chat.draftText,
+                                onTextChanged = onDraftTextChanged,
+                                onSend = {
+                                    if (onSendDraft()) coroutineScope.launch { settle(false) }
+                                },
+                                onRecord = {
+                                    focusManager.clearFocus()
+                                    voiceState = ComposerVoiceReducer.start(voiceState)
+                                    coroutineScope.launch { settle(false) }
+                                },
+                                sendable = sendable,
+                                enabled = !isPreparing,
+                                expanded = usesFlexibleLayout,
+                                hasAttachments = chat.draftAttachments.isNotEmpty(),
+                                focusRequester = messageFocusRequester,
+                                mentionNames = mentionNames,
+                                recordVoiceDescription = recordVoiceDescription,
+                                modifier = if (usesFlexibleLayout) Modifier.weight(1f) else Modifier,
+                            )
+                            is ComposerVoiceState.Recording -> RecordingComposer(
+                                elapsedTenths = state.elapsedTenths,
+                                onStop = { voiceState = ComposerVoiceReducer.stop(voiceState) },
+                            )
+                            is ComposerVoiceState.Review -> VoiceReviewComposer(
+                                state = state,
+                                expanded = usesFlexibleLayout,
+                                onStateChanged = { selected ->
+                                    voiceState = selected
+                                    if (selected.format == VoiceMessageFormat.Voice && isExpanded) {
+                                        coroutineScope.launch { settle(false) }
+                                    }
+                                },
+                                onSend = {
+                                    val submission = VoiceDraftSubmission(
+                                        format = state.format,
+                                        transcript = state.transcript.orEmpty(),
+                                        durationSeconds = state.durationSeconds,
+                                    )
+                                    if (onSendVoice(submission)) {
+                                        voiceState = ComposerVoiceState.Idle
+                                        coroutineScope.launch { settle(false) }
+                                    }
+                                },
+                                modifier = if (usesFlexibleLayout) Modifier.weight(1f) else Modifier,
+                            )
+                        }
+                        if (isPreparing) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = 4.dp)
+                                    .semantics { liveRegion = LiveRegionMode.Polite },
+                                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                                Text(stringResource(R.string.preparing_attachment))
+                            }
+                        }
+                        if (attachmentError) {
+                            Text(
+                                stringResource(R.string.attachment_error),
+                                modifier = Modifier
+                                    .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = 4.dp)
+                                    .semantics { liveRegion = LiveRegionMode.Polite },
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    if (attachmentMenuOpen) {
-        ModalBottomSheet(onDismissRequest = { attachmentMenuOpen = false }) {
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = WhiteNoiseSpacing.CompactScreenMargin)) {
-                WhiteNoiseSheetHeader(stringResource(R.string.add_attachment))
-                AttachmentAction(R.drawable.ic_camera, stringResource(R.string.camera)) {
-                    attachmentMenuOpen = false
-                    val directory = File(context.cacheDir, "camera").apply { mkdirs() }
-                    val file = File.createTempFile("white-noise-", ".jpg", directory)
-                    cameraUri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.files",
-                        file,
-                    )
-                    camera.launch(cameraUri!!)
-                }
-                AttachmentAction(R.drawable.ic_image, stringResource(R.string.photos_and_videos)) {
-                    attachmentMenuOpen = false
-                    visualPicker.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
-                    )
-                }
-                AttachmentAction(R.drawable.ic_description, stringResource(R.string.file)) {
-                    attachmentMenuOpen = false
-                    documentPicker.launch(arrayOf("*/*"))
-                }
-                AttachmentAction(R.drawable.ic_person, stringResource(R.string.contact)) {
-                    attachmentMenuOpen = false
-                    contactPickerOpen = true
-                }
-                AttachmentAction(R.drawable.ic_image, stringResource(R.string.gif)) {
-                    attachmentMenuOpen = false
-                    gifPickerOpen = true
-                }
-            }
-        }
-    }
     if (contactPickerOpen) {
         ContactPickerSheet(
             people = profile.people,
@@ -432,24 +932,6 @@ fun FullConversationComposer(
             },
         )
     }
-    if (gifPickerOpen) {
-        GifPickerSheet(
-            onDismiss = { gifPickerOpen = false },
-            onSelect = { asset, label ->
-                onAddAttachments(
-                    listOf(
-                        MessageAttachment(
-                            id = nextId("gif"),
-                            kind = MessageAttachmentKind.Gif,
-                            label = label,
-                            images = listOf(ProfileAvatar.Asset(asset)),
-                        ),
-                    ),
-                )
-                gifPickerOpen = false
-            },
-        )
-    }
     mediaViewerAttachmentId?.let { initialAttachmentId ->
         DraftMediaViewer(
             attachments = chat.draftAttachments.filter(MessageAttachment::isVisual),
@@ -461,83 +943,103 @@ fun FullConversationComposer(
             },
         )
     }
-    if (voiceReviewOpen) {
-        VoiceReviewSheet(
-            onDismiss = { voiceReviewOpen = false },
-            onSend = { format, transcript ->
-                if (onSendVoice(format, transcript)) voiceReviewOpen = false
-            },
-        )
-    }
 }
 
 @Composable
-private fun ColumnScope.ComposerInputRow(
+private fun ComposerTextInput(
     text: String,
     onTextChanged: (String) -> Unit,
-    onAddAttachment: () -> Unit,
-    onSend: () -> Boolean,
+    onSend: () -> Unit,
     onRecord: () -> Unit,
     sendable: Boolean,
     enabled: Boolean,
-    isExpanded: Boolean,
+    expanded: Boolean,
+    hasAttachments: Boolean,
     focusRequester: FocusRequester,
-    addAttachmentDescription: String,
+    mentionNames: List<String>,
     recordVoiceDescription: String,
+    modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalHapticFeedback.current
+    val mentionBackground = MaterialTheme.colorScheme.surfaceContainerHighest
+    val mentionTransformation = remember(mentionNames, mentionBackground) {
+        MentionVisualTransformation(mentionNames, mentionBackground)
+    }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .then(if (isExpanded) Modifier.weight(1f) else Modifier)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .heightIn(min = 48.dp)
+            .then(if (expanded) Modifier.fillMaxHeight() else Modifier),
         verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        IconButton(onClick = onAddAttachment, enabled = enabled) {
-            Icon(
-                painter = painterResource(R.drawable.ic_add),
-                contentDescription = addAttachmentDescription,
-            )
-        }
-        TextField(
+        BasicTextField(
             value = text,
             onValueChange = onTextChanged,
             enabled = enabled,
             modifier = Modifier
                 .weight(1f)
+                .consumeEditorTapAtFinalPass()
                 .focusRequester(focusRequester)
-                .then(if (isExpanded) Modifier.fillMaxHeight() else Modifier),
-            placeholder = { Text(stringResource(R.string.message)) },
-            minLines = if (isExpanded) 8 else 1,
-            maxLines = if (isExpanded) 20 else 10,
-            textStyle = MaterialTheme.typography.bodyLarge,
+                .heightIn(min = 48.dp)
+                .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
+                .testTag("conversation.composer.editor"),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
             keyboardActions = KeyboardActions(),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-            ),
+            minLines = 1,
+            maxLines = if (expanded) Int.MAX_VALUE else ComposerExpansionPolicy.compactLineLimit(hasAttachments),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            visualTransformation = mentionTransformation,
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
+                        .padding(start = 14.dp, top = 12.dp, bottom = 12.dp),
+                    contentAlignment = if (expanded) Alignment.TopStart else Alignment.CenterStart,
+                ) {
+                    if (text.isEmpty()) {
+                        Text(
+                            stringResource(R.string.message),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    innerTextField()
+                }
+            },
         )
         if (sendable) {
-            FilledIconButton(
-                onClick = { onSend() },
+            ComposerSendButton(
+                onClick = onSend,
                 enabled = enabled,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_send),
-                    contentDescription = stringResource(R.string.send),
-                )
-            }
+                description = stringResource(R.string.send),
+            )
         } else {
-            IconButton(onClick = onRecord, enabled = enabled) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_mic),
-                    contentDescription = recordVoiceDescription,
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .voiceLongPressGesture(
+                        enabled = enabled,
+                        onLongPress = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onRecord()
+                        },
+                    )
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = recordVoiceDescription
+                        onClick(label = recordVoiceDescription) {
+                            onRecord()
+                            true
+                        }
+                    }
+                    .testTag("conversation.voice"),
+                contentAlignment = Alignment.Center,
+            ) {
+                MiniWaveformGlyph(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("conversation.voice.icon"),
                 )
             }
         }
@@ -577,27 +1079,38 @@ private fun DraftAttachmentShelf(
         attachments.size,
         attachments.size,
     )
+    val hasVisual = attachments.any(MessageAttachment::isVisual)
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(
+                if (hasVisual) ComposerAttachmentSizing.VisualShelfHeightDp.dp
+                else ComposerAttachmentSizing.UtilityShelfHeightDp.dp,
+            )
+            .testTag("conversation.composer.attachments")
             .semantics { contentDescription = description },
         contentPadding = PaddingValues(
             horizontal = WhiteNoiseSpacing.Related,
             vertical = WhiteNoiseSpacing.Related,
         ),
         horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        verticalAlignment = Alignment.Bottom,
     ) {
         items(attachments, key = MessageAttachment::id) { attachment ->
             val removeDescription = stringResource(R.string.remove_attachment, attachment.label)
             val isVisual = attachment.isVisual()
+            val cardSize = if (isVisual) {
+                visualAttachmentSize(attachment)
+            } else {
+                ComposerAttachmentSizing.forKind(attachment.kind)
+            }
             Surface(
                 modifier = Modifier
-                    .height(104.dp)
-                    .widthIn(min = 104.dp, max = 160.dp)
+                    .height(cardSize.heightDp.dp)
+                    .width(cardSize.widthDp.dp)
                     .then(if (isVisual) Modifier.clickable { onPreview(attachment.id) } else Modifier)
                     .semantics { contentDescription = attachment.label },
-                shape = MaterialTheme.shapes.medium,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 12.dp, bottomEnd = 12.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
             ) {
                 Box {
@@ -615,6 +1128,19 @@ private fun DraftAttachmentShelf(
             }
         }
     }
+}
+
+@Composable
+private fun visualAttachmentSize(attachment: MessageAttachment) = remember(attachment) {
+    val ratio = when (val image = attachment.images.firstOrNull()) {
+        is ProfileAvatar.DeviceImage -> {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(image.bytes, 0, image.bytes.size, options)
+            if (options.outHeight > 0) options.outWidth.toFloat() / options.outHeight else 4f / 3f
+        }
+        else -> 4f / 3f
+    }
+    ComposerAttachmentSizing.forKind(attachment.kind, ratio)
 }
 
 @Composable
@@ -745,20 +1271,39 @@ private fun DraftRemoveButton(
 private fun VoiceWaveform(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface,
+    liveTick: Int? = null,
+    progress: Float = 1f,
+    attenuateQuietSamples: Boolean = false,
 ) {
-    val heights = listOf(8, 16, 24, 32, 24, 14, 28, 18, 10, 22, 30, 18, 8)
-    Row(
-        modifier = modifier.height(36.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        heights.forEach { barHeight ->
-            Box(
-                Modifier
-                    .width(3.dp)
-                    .height(barHeight.dp)
-                    .background(color, CircleShape),
-            )
+    val waveformHeight = 24.dp
+    val barWidth = 2.dp
+    val barSpacing = 2.dp
+    BoxWithConstraints(modifier = modifier.height(waveformHeight)) {
+        val barCount = ((maxWidth + barSpacing) / (barWidth + barSpacing))
+            .toInt()
+            .coerceAtLeast(1)
+        val samples = remember(liveTick, barCount) {
+            if (liveTick == null) {
+                ComposerWaveformPolicy.reviewWindow(barCount)
+            } else {
+                ComposerWaveformPolicy.liveWindow(liveTick, barCount)
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(barSpacing),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            samples.forEachIndexed { index, sample ->
+                val progressAlpha = if ((index + 1f) / samples.size <= progress) 1f else 0.25f
+                val quietAlpha = if (attenuateQuietSamples) sample.coerceIn(0.28f, 1f) else 1f
+                Box(
+                    Modifier
+                        .width(barWidth)
+                        .height((waveformHeight * sample).coerceAtLeast(3.dp))
+                        .background(color.copy(alpha = progressAlpha * quietAlpha), CircleShape),
+                )
+            }
         }
     }
 }
@@ -842,118 +1387,98 @@ private fun DraftReplyQuote(author: String, text: String, onCancel: () -> Unit) 
 }
 
 @Composable
-private fun RecordingComposer(seconds: Int, onCancel: () -> Unit, onStop: () -> Unit) {
+private fun RecordingComposer(elapsedTenths: Int, onStop: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = WhiteNoiseSpacing.Related, vertical = WhiteNoiseSpacing.Related),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
     ) {
         VoiceWaveform(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .testTag("conversation.voice.recording.waveform"),
             color = MaterialTheme.colorScheme.error,
+            liveTick = ComposerWaveformPolicy.visualTick(elapsedTenths),
+            attenuateQuietSamples = true,
         )
         Text(
-            "0:${seconds.coerceAtMost(59).toString().padStart(2, '0')}",
-            style = MaterialTheme.typography.labelLarge,
+            formatDuration(elapsedTenths / 10),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelLarge.copy(fontFamily = FontFamily.Monospace),
         )
-        TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
-        FilledTonalButton(onClick = onStop) { Text(stringResource(R.string.stop_recording)) }
+        IconButton(
+            onClick = onStop,
+            modifier = Modifier
+                .size(48.dp)
+                .testTag("conversation.voice.stop"),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_stop),
+                contentDescription = stringResource(R.string.stop_recording),
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp).testTag("conversation.voice.stop.icon"),
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VoiceReviewSheet(
-    onDismiss: () -> Unit,
-    onSend: (VoiceMessageFormat, String) -> Unit,
+private fun VoiceReviewComposer(
+    state: ComposerVoiceState.Review,
+    expanded: Boolean,
+    onStateChanged: (ComposerVoiceState.Review) -> Unit,
+    onSend: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    var hasTranscript by remember { mutableStateOf(false) }
-    var transcript by remember { mutableStateOf(VoiceMessageFixture.transcript) }
-    var formatName by remember { mutableStateOf(VoiceMessageFormat.Both.name) }
     var formatMenuOpen by remember { mutableStateOf(false) }
-    val format = VoiceMessageFormat.valueOf(formatName)
-    val sendEnabled = format == VoiceMessageFormat.Voice || transcript.isNotBlank()
-    val effectiveFormat = if (hasTranscript) format else VoiceMessageFormat.Voice
-    val sendLabel = stringResource(
-        when (effectiveFormat) {
+    val showsPlayback = state.format != VoiceMessageFormat.Text
+    val showsTranscript = state.transcript != null && state.format != VoiceMessageFormat.Voice
+    val remainingTenths = (state.durationSeconds * 10 - state.playbackTenths).coerceAtLeast(0)
+    val sendDescription = stringResource(
+        when (state.format) {
             VoiceMessageFormat.Voice -> R.string.send_voice_message
             VoiceMessageFormat.Text -> R.string.send_text_message
             VoiceMessageFormat.Both -> R.string.send_voice_and_text
         },
     )
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        WhiteNoiseSheetHeader(stringResource(R.string.voice_message_review))
-        Box(
+    val transcribeDescription = stringResource(R.string.transcribe_recording)
+    val transcribingDescription = stringResource(R.string.transcribing)
+    Box(
+        modifier = modifier.fillMaxWidth().then(if (expanded) Modifier.fillMaxHeight() else Modifier),
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = WhiteNoiseSpacing.Section).padding(bottom = WhiteNoiseSpacing.CompactScreenMargin),
-            contentAlignment = Alignment.TopCenter,
+                .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
+                .padding(bottom = 48.dp),
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
-                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            if (state.transcript != null) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                    ) {
-                        VoiceWaveform(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            "0:08",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
-                if (!hasTranscript) {
-                    FilledTonalButton(
-                        onClick = {
-                            hasTranscript = true
-                            formatName = VoiceMessageFormat.Both.name
-                        },
-                        modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.transcribe))
-                    }
-                } else {
                     Box {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().clickable { formatMenuOpen = true },
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        val formatDescription =
+                            "${stringResource(R.string.message_format)}: ${state.format.label}"
+                        CompactComposerTextAction(
+                            onClick = { formatMenuOpen = true },
+                            contentDescription = formatDescription,
+                            targetTestTag = "conversation.voice.format",
+                            visualTestTag = "conversation.voice.format.visual",
+                            modifier = Modifier
+                                .heightIn(min = 48.dp),
                         ) {
-                            Row(
-                                modifier = Modifier.padding(
-                                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                                    vertical = 12.dp,
-                                ),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        stringResource(R.string.message_format),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(format.label, style = MaterialTheme.typography.bodyLarge)
-                                }
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_expand_more),
-                                    contentDescription = null,
-                                )
-                            }
+                            Text(
+                                state.format.label,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Icon(
+                                painterResource(R.drawable.ic_expand_more),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                         WhiteNoiseDropdownMenu(
                             expanded = formatMenuOpen,
@@ -961,112 +1486,342 @@ private fun VoiceReviewSheet(
                             items = VoiceMessageFormat.entries.map { option ->
                                 WhiteNoiseMenuItem(
                                     label = option.label,
-                                    selected = option == format,
-                                    onClick = { formatName = option.name },
+                                    selected = option == state.format,
+                                    onClick = {
+                                        onStateChanged(
+                                            ComposerVoiceReducer.selectFormat(
+                                                state,
+                                                option,
+                                            ) as ComposerVoiceState.Review,
+                                        )
+                                    },
                                 )
                             },
+                            modifier = Modifier.testTag("conversation.voice.format.menu"),
+                            anchorSpacing = 2.dp,
+                            placement = WhiteNoiseMenuPlacement.AboveAnchor,
                         )
                     }
-                    if (format != VoiceMessageFormat.Voice) {
-                        TextField(
-                            value = transcript,
-                            onValueChange = { transcript = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text(stringResource(R.string.transcript)) },
-                            minLines = 3,
-                            maxLines = 8,
-                            shape = MaterialTheme.shapes.extraLarge,
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                            ),
-                        )
-                    }
-                }
-                WhiteNoiseButton(
-                    onClick = { onSend(effectiveFormat, transcript) },
-                    enabled = sendEnabled,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(sendLabel)
-                }
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) {
-                    Text(stringResource(R.string.discard))
                 }
             }
+            if (showsPlayback) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = {
+                            onStateChanged(
+                                ComposerVoiceReducer.togglePlayback(state) as ComposerVoiceState.Review,
+                            )
+                        },
+                        modifier = Modifier.size(48.dp),
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .testTag("conversation.voice.play.container"),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(
+                                        if (state.isPlaying) {
+                                            R.drawable.ic_pause
+                                        } else {
+                                            R.drawable.ic_play_arrow
+                                        },
+                                    ),
+                                    contentDescription = stringResource(
+                                        if (state.isPlaying) R.string.pause else R.string.play,
+                                    ),
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                    }
+                    VoiceWaveform(
+                        modifier = Modifier.weight(1f),
+                        progress = state.playbackTenths.toFloat() /
+                            (state.durationSeconds * 10).coerceAtLeast(1),
+                    )
+                    Text(
+                        formatDuration((remainingTenths + 9) / 10),
+                        modifier = Modifier.padding(end = 12.dp),
+                        style = MaterialTheme.typography.labelLarge.copy(fontFamily = FontFamily.Monospace),
+                    )
+                }
+            }
+            if (showsTranscript) {
+                BasicTextField(
+                    value = state.transcript.orEmpty(),
+                    onValueChange = {
+                        onStateChanged(
+                            ComposerVoiceReducer.editTranscript(state, it) as ComposerVoiceState.Review,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .consumeEditorTapAtFinalPass()
+                        .then(
+                            if (expanded) Modifier.weight(1f)
+                            else Modifier.heightIn(max = 208.dp),
+                        )
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .testTag("conversation.voice.transcript"),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    minLines = 1,
+                    maxLines = if (expanded) Int.MAX_VALUE else ComposerExpansionPolicy.CompactTranscriptLines,
+                    decorationBox = { editor ->
+                        Box(
+                            modifier = if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.TopStart,
+                        ) {
+                            if (state.transcript.isNullOrEmpty()) {
+                                Text(
+                                    stringResource(R.string.transcript),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                            }
+                            editor()
+                        }
+                    },
+                )
+            }
+        }
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(48.dp),
+        ) {
+            Box(Modifier.align(Alignment.Center)) {
+                if (state.transcript == null) {
+                    val transcribeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
+                    CompactComposerTextAction(
+                        onClick = {
+                            onStateChanged(
+                                ComposerVoiceReducer.beginTranscription(state) as ComposerVoiceState.Review,
+                            )
+                        },
+                        enabled = !state.isTranscribing,
+                        contentDescription = if (state.isTranscribing) {
+                            transcribingDescription
+                        } else {
+                            transcribeDescription
+                        },
+                        targetTestTag = "conversation.voice.transcribe",
+                        visualTestTag = "conversation.voice.transcribe.visual",
+                    ) {
+                        if (state.isTranscribing) {
+                            CircularProgressIndicator(
+                                Modifier.size(18.dp),
+                                color = transcribeColor,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings_chat_bubble_outline),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .testTag("conversation.voice.transcribe.icon"),
+                                tint = transcribeColor,
+                            )
+                        }
+                        Text(
+                            stringResource(
+                                if (state.isTranscribing) R.string.transcribing else R.string.transcribe,
+                            ),
+                            modifier = Modifier.testTag("conversation.voice.transcribe.label"),
+                            color = transcribeColor,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+            }
+            ComposerSendButton(
+                onClick = onSend,
+                enabled = ComposerVoiceReducer.canSend(state),
+                description = sendDescription,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactComposerTextAction(
+    onClick: () -> Unit,
+    contentDescription: String,
+    targetTestTag: String,
+    visualTestTag: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .semantics { this.contentDescription = contentDescription }
+            .testTag(targetTestTag)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(CircleShape)
+                .indication(interactionSource, ripple())
+                .heightIn(min = 32.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .testTag(visualTestTag),
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content,
+        )
+    }
+}
+
+private fun formatDuration(seconds: Int): String =
+    "${seconds.coerceAtLeast(0) / 60}:${(seconds.coerceAtLeast(0) % 60).toString().padStart(2, '0')}"
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ContactPickerSheet(
     people: List<Person>,
     onDismiss: () -> Unit,
     onSelect: (Person) -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp),
-            contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
-        ) {
-            item {
-                WhiteNoiseSheetHeader(stringResource(R.string.choose_contact))
-            }
-            items(people.take(12), key = Person::id) { person ->
-                ListItem(
-                    headlineContent = { Text(person.name) },
-                    leadingContent = {
-                        ProfileAvatar(
-                            person.name,
-                            person.avatar,
-                            Modifier.size(48.dp),
-                            contentDescription = null,
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable { onSelect(person) },
-                )
+    var query by rememberSaveable { mutableStateOf("") }
+    val filteredPeople = remember(people, query) {
+        val value = query.trim()
+        if (value.isEmpty()) {
+            people
+        } else {
+            people.filter {
+                it.name.contains(value, ignoreCase = true) ||
+                    it.publicKey.contains(value, ignoreCase = true)
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GifPickerSheet(onDismiss: () -> Unit, onSelect: (AvatarAsset, String) -> Unit) {
-    val gifs = listOf(
-        AvatarAsset.Marmot to "Marmot looking around",
-        AvatarAsset.Badger to "Badger waving",
-        AvatarAsset.Fox to "Fox celebrating",
-    )
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp),
-            contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
-        ) {
-            item {
-                WhiteNoiseSheetHeader(stringResource(R.string.choose_gif))
-            }
-            items(gifs, key = { it.second }) { (asset, label) ->
-                ListItem(
-                    headlineContent = { Text(label) },
-                    leadingContent = {
-                        Image(
-                            painterResource(asset.drawableResource),
-                            null,
-                            Modifier.size(56.dp).clip(MaterialTheme.shapes.medium),
-                            contentScale = ContentScale.Crop,
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxHeight(),
+        sheetState = sheetState,
+    ) {
+        Column(Modifier.fillMaxSize().testTag("conversation.contact.sheet")) {
+            WhiteNoiseSheetHeader(stringResource(R.string.share_contact), onClose = onDismiss)
+            TextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
+                    .heightIn(min = 56.dp)
+                    .testTag("conversation.contact.search"),
+                placeholder = { Text(stringResource(R.string.name_or_public_key)) },
+                leadingIcon = {
+                    Icon(painterResource(R.drawable.ic_search), contentDescription = null)
+                },
+                trailingIcon = if (query.isEmpty()) {
+                    null
+                } else {
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(
+                                painterResource(R.drawable.ic_close),
+                                stringResource(R.string.clear_search),
+                            )
+                        }
+                    }
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                singleLine = true,
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(
+                    start = WhiteNoiseSpacing.CompactScreenMargin,
+                    top = WhiteNoiseSpacing.Related,
+                    end = WhiteNoiseSpacing.CompactScreenMargin,
+                    bottom = WhiteNoiseSpacing.Section,
+                ),
+            ) {
+                if (filteredPeople.isEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.no_results),
+                            modifier = Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.Section),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
                         )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable { onSelect(asset, label) },
-                )
+                    }
+                } else {
+                    itemsIndexed(filteredPeople, key = { _, person -> person.id }) { index, person ->
+                        val shapes = ListItemDefaults.segmentedShapes(
+                            index = index,
+                            count = filteredPeople.size,
+                            defaultShapes = ListItemDefaults.shapes(
+                                shape = RoundedCornerShape(0.dp),
+                            ),
+                        )
+                        ListItem(
+                            onClick = { onSelect(person) },
+                            modifier = Modifier.testTag("conversation.contact.${person.id}"),
+                            leadingContent = {
+                                ProfileAvatar(
+                                    person.name,
+                                    person.avatar,
+                                    Modifier.size(48.dp),
+                                    contentDescription = null,
+                                )
+                            },
+                            supportingContent = {
+                                Text(
+                                    person.shortPublicKey,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            shapes = shapes,
+                            colors = ListItemDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                            ),
+                            content = {
+                                Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            },
+                        )
+                        if (index != filteredPeople.lastIndex) {
+                            Spacer(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(2.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1217,22 +1972,6 @@ private fun DraftMediaViewer(
 }
 
 @Composable
-private fun AttachmentAction(iconRes: Int, label: String, onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(label) },
-        leadingContent = {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-    )
-}
-
-@Composable
 internal fun ComposerImage(
     image: ProfileAvatar,
     modifier: Modifier = Modifier,
@@ -1272,7 +2011,7 @@ internal fun MessageAttachment.isVisual(): Boolean = when (kind) {
 }
 
 private fun displayName(
-    context: android.content.Context,
+    context: Context,
     uri: Uri,
     fallback: String,
 ): String {
@@ -1286,4 +2025,10 @@ private fun displayName(
     return cursor?.use {
         if (it.moveToFirst()) it.getString(0) else null
     } ?: fallback
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

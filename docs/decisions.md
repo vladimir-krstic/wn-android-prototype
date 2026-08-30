@@ -2486,3 +2486,257 @@ Sources: [Compose search](https://developer.android.com/develop/ui/compose/compo
 [app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
 [window insets](https://developer.android.com/develop/ui/compose/system/insets-ui),
 and [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics).
+
+## WN-ANDROID-0095 — Composer uses an overlay, anchored acquisition, and inline voice
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+The available conversation composer moves from Scaffold bottom-bar ownership
+to an in-window overlay with an opaque adaptive surface and 1 dp top divider.
+Only its measured compact height is reserved below the timeline. The separate
+48 dp Add control and 48 dp-minimum Foundation editor capsule provide two
+directly draggable endpoints: content-driven compact and expanded from 24 dp
+below the chat header to the IME or safe bottom. Expansion preserves focus;
+only a newest-visible timeline is translated by the exact composer travel.
+Android retains Back, focus, insets, direction locking, interruptible spring
+settling, minimum targets, and accessibility alternatives.
+
+The Add control uses the shared anchored Material menu for Camera, Photos and
+videos, Files, and Contact. GIF is no longer acquired here but remains valid
+persisted and received content. The ordered inline shelf owns previews and
+removal while platform camera, Photo Picker (up to 20), and document contracts
+retain their system presentation.
+
+Deterministic speech is an inline Idle/Recording/Review state machine. A
+400 ms hold starts recording; Stop, Cancel, playback, transcription, the
+anchored Voice/Text/Both format choice, editing, and submission remain in the
+composer. Exactly one outgoing message preserves the simulated duration.
+Recreation converts an active recording to Review and restores Review or the
+expansion endpoint safely.
+
+This supersedes WN-ANDROID-0039 only for the composer attachment chooser and
+voice-review sheet. WN-ANDROID-0039 still governs the deterministic Contact
+picker and every other ordinary app-owned sheet.
+
+Evidence: `ComposerModels.kt`, `AppViewModel.kt`,
+`ConversationComposer.kt`, `ConversationScreen.kt`,
+`ComposerModelsTest`, `AppViewModelTest`, `ConversationScreenTest`, and
+`composer-media-and-speech.md`.
+Sources: [Compose gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures),
+[gesture animation](https://developer.android.com/develop/ui/compose/animation/advanced),
+[window insets](https://developer.android.com/develop/ui/compose/system/insets-ui),
+[Material menus](https://developer.android.com/develop/ui/compose/components/menu),
+[Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker),
+and [Compose accessibility](https://developer.android.com/develop/ui/compose/accessibility/semantics).
+
+## WN-ANDROID-0096 — Composer chrome and recording waveform are optically lighter
+
+- Date: 2026-08-30
+- Status: Stop action and popup placement superseded by WN-ANDROID-0097;
+  other decisions remain current
+
+The conversation composer overlay no longer paints a full-width adaptive
+surface or top divider. Only the separate Add control and editor capsule own
+containers, so the timeline canvas remains continuous behind their margins.
+This supersedes WN-ANDROID-0095 only for the host backing and divider.
+
+The Add popup remains the shared Material menu but uses a scoped 2 dp optical
+gap directly above its 48 dp trigger. Idle waveform artwork is reduced to
+24 dp to match the visible Material Add icon while both retain 48 dp targets.
+Recording uses a visible tonal Stop Recording button and a 24 dp waveform of
+2 dp bars separated by 2 dp. The precise elapsed state still ticks every
+100 ms; presentation advances a deterministic trailing sample every 200 ms,
+instead of regenerating the whole waveform, to make motion calmer and more
+natural. Review uses the same compact waveform geometry.
+
+Evidence: `ComposerModels.kt`, `ConversationComposer.kt`,
+`ComposerModelsTest`, `ConversationScreenTest`, `ui-metrics.md`,
+`composer-media-and-speech.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0097 — Composer controls attach to their source and contact sharing expands
+
+- Date: 2026-08-30
+- Status: Add popup gap superseded by WN-ANDROID-0099 and popup shadow by
+  WN-ANDROID-0100; other decisions remain current
+
+Recording replaces the textual tonal Stop action with the official red 20 dp
+Stop symbol inside a 48 dp `IconButton`. Every composer submission uses the
+official upward arrow inside the existing 32 dp filled circle and 48 dp target.
+Voice Review uses a 32 dp filled Play/Pause circle inside a 48 dp action. Its
+pre-transcription command pairs an official 20 dp chat-bubble symbol with
+light-gray **Transcribe** text. Once a transcript exists, the compact
+Voice/Text/Both selector moves above playback and text, matching the accepted
+information order without changing format behavior or accessible labels.
+
+Material's stock popup provider enforces a 48 dp window-edge margin. At the
+bottom composer edge that margin rejects the correct above-trigger coordinate
+and visually detaches the popup. Add and Message Format therefore keep
+`DropdownMenuPopup`, `DropdownMenuGroup`, Material items, focus, Back/outside
+dismissal, RTL alignment, and popup motion, but use a scoped public
+`DropdownMenuPopupPositionProvider` that attaches the group exactly 2 dp above
+its source and calculates the transform origin from that source. Material
+offers a configurable shadow elevation, not a direction-specific shadow; these
+upward groups use zero elevation so shadow blur cannot visually consume the
+requested 2 dp clear gap. Every other app menu retains Material's adaptive
+provider and default shadow.
+
+Contact sharing remains an app-owned Material modal sheet but now opens
+expanded with no partial anchor. It uses the ordinary neutral sheet canvas, a
+standard searchable field, and one white-equivalent segmented contact group
+with 2 dp canvas-tone separators, names, short public keys, and 48 dp avatars.
+Material continues to own the sheet's width, top shape, handle, insets, drag,
+Back, and dismissal. Selection still queues exactly one deterministic contact
+attachment.
+
+This supersedes WN-ANDROID-0096's tonal textual Stop action and stock-provider
+popup placement. Its transparent host, 24 dp idle/live waveform geometry and
+200 ms visible waveform advance remain current.
+
+Evidence: `WhiteNoiseMenus.kt`, `ConversationComposer.kt`, official
+`ic_arrow_upward.xml` and `ic_stop.xml`, `ConversationScreenTest`,
+`composer-media-and-speech.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Compose menu API](https://developer.android.com/reference/kotlin/androidx/compose/material3/DropdownMenu.composable),
+[Menu anchor positioning](https://developer.android.com/reference/kotlin/androidx/compose/material3/MenuAnchorPosition),
+and [Compose bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets-partial).
+
+## WN-ANDROID-0098 — Voice-review text actions separate targets from state layers
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+Voice Review keeps accessible 48 dp-minimum touch targets for Transcribe and
+the Voice/Text/Both Message Format selector, but no longer lets their visible
+press treatment fill those targets. Each outer target owns click, focus,
+semantics and a remembered `MutableInteractionSource` without drawing an
+indication. A separate inner pill clips the shared Material ripple to a 32 dp
+minimum around the icon/label or label/chevron, with 8 dp horizontal and 4 dp
+vertical content padding plus 4 dp transparent horizontal breathing room
+inside the target. The visible pill and target remain minimums rather than
+fixed heights, so larger text can grow instead of clipping.
+
+This applies the existing WN-ANDROID-0054 target/visual-layer pattern to the
+two voice-review text actions. Voice state, anchored menu placement, semantics,
+keyboard behavior and submission do not change.
+
+Evidence: `ConversationComposer.kt`, `ConversationScreenTest`,
+`composer-media-and-speech.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Handling interactions](https://developer.android.com/develop/ui/compose/touch-input/user-interactions/handling-interactions),
+[InteractionSource](https://developer.android.com/reference/kotlin/androidx/compose/foundation/interaction/InteractionSource),
+and [Compose accessibility testing](https://developer.android.com/codelabs/basic-android-kotlin-compose-test-accessibility).
+
+## WN-ANDROID-0099 — Composer Add menu matches the selector's visible separation
+
+- Date: 2026-08-30
+- Status: Shadow treatment superseded by WN-ANDROID-0100; other decisions remain current
+
+The Message Format popup remains 2 dp above its transparent 48 dp target. Its
+32 dp visible pill is centered inside that target, so the reviewed visible
+pill-to-menu separation is 10 dp. The Add control fills its entire 48 dp target;
+its popup therefore uses a direct 10 dp anchor gap to match that accepted
+visible separation instead of retaining WN-ANDROID-0097's barely perceptible
+2 dp gap. Both upward popups retain zero shadow elevation, anchored motion,
+RTL alignment, focus, Back and outside dismissal.
+
+Within the compact Transcribe pill, the official chat-bubble or progress
+symbol and label now use only the shared 8 dp related-control spacing. The
+removed duplicate 8 dp spacer had accidentally produced a 16 dp gap. Target,
+state-layer, type, color, transcription and accessibility behavior remain
+unchanged.
+
+Evidence: `ConversationComposer.kt`, `ConversationScreenTest`,
+`composer-media-and-speech.md`, `ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0100 — Upward composer menus retain native elevation
+
+- Date: 2026-08-30
+- Status: Approved by explicit user direction and implementation
+
+The Add and Message Format popups restore Material's native
+`MenuDefaults.ShadowElevation` instead of forcing zero elevation. In the
+pinned Material 3 implementation this resolves through the menu token to
+Level 2 (3 dp), separating each popup from timeline content while preserving
+the accepted 10 dp visible Add gap, the format selector's 2 dp target gap,
+above-anchor placement, lower-edge transform origin, focus, RTL, motion, Back
+and outside dismissal. No direction-specific or custom shadow is introduced.
+
+This supersedes only the zero-shadow portions of WN-ANDROID-0097 and
+WN-ANDROID-0099.
+
+Evidence: `ConversationComposer.kt`, pinned Material 3 alpha25 sources,
+`composer-media-and-speech.md`, `ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0101 — Floating composer controls own contrast over an edge-to-edge timeline
+
+- Date: 2026-08-31
+- Status: Control color roles superseded by WN-ANDROID-0102; edge-to-edge
+  viewport and transparent-host decisions remain current
+
+The transparent composer host remains free of a full-width surface or divider.
+Instead, its individual controls provide separation over mixed timeline media:
+the available idle Add action uses the Material primary/on-primary pair, while
+the editor capsule keeps its neutral container and gains a 1 dp adaptive
+on-surface outline. Voice Review Cancel remains neutral so the primary treatment
+continues to identify attachment acquisition rather than every leading action.
+
+The available-composer timeline viewport now paints to the physical bottom
+edge. Scaffold's top and horizontal safe content padding still position the
+conversation, but its bottom safe inset moves into lazy-list content padding
+together with the measured compact composer height. This allows media to scroll
+behind the floating controls and gesture-navigation area while the newest item
+can still settle fully above them. The composer overlay separately consumes the
+navigation-bar inset and continues to follow the IME, avoiding the former white
+bottom cutout and inset duplication.
+
+This refines WN-ANDROID-0096's transparent host without restoring its
+superseded backing or divider.
+
+Evidence: `ConversationScreen.kt`, `ConversationComposer.kt`,
+`ConversationScreenTest`, `composer-media-and-speech.md`, and
+`feature-inventory.md`. Sources: [Material 3 design system](https://developer.android.com/develop/ui/compose/designsystems/material3),
+[Material Surface](https://developer.android.com/reference/kotlin/androidx/compose/material3/Surface.composable),
+[edge-to-edge codelab](https://developer.android.com/codelabs/edge-to-edge), and
+[Compose insets](https://developer.android.com/develop/ui/compose/system/insets-ui).
+
+## WN-ANDROID-0102 — Composer contrast uses Material's medium-emphasis roles
+
+- Date: 2026-08-31
+- Status: Superseded by WN-ANDROID-0103
+
+The transparent host and edge-to-edge timeline remain unchanged, but the two
+floating controls step down from WN-ANDROID-0101's strongest contrast. The
+editor capsule border changes from `onSurface` to Material's primary outline
+role, which resolves to the theme's medium gray and remains adaptive. The idle
+Add action changes from `primary`/`onPrimary` to
+`secondary`/`onSecondary`. In White Noise's monochrome scheme, `secondary` is
+the intended medium-gray filled accent; `secondaryContainer` would reproduce
+nearly the same light tone as the earlier low-contrast button. Review Cancel
+remains neutral and disabled Add retains semantic disabled colors.
+
+This supersedes only WN-ANDROID-0101's Add and capsule color-role choices.
+
+Evidence: `WhiteNoiseTheme.kt`, `ConversationComposer.kt`,
+`composer-media-and-speech.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Sources: [Material 3 color usage](https://developer.android.com/develop/ui/compose/designsystems/material3),
+[Compose ColorScheme](https://developer.android.com/reference/kotlin/androidx/compose/material3/ColorScheme),
+and [filled tonal buttons](https://developer.android.com/reference/kotlin/androidx/compose/material3/FilledTonalButton.composable).
+
+## WN-ANDROID-0103 — Composer restores primary Add and softens only the outline
+
+- Date: 2026-08-31
+- Status: Approved by explicit user direction and implementation
+
+The idle Add action returns to `primary`/`onPrimary`, matching the app's other
+filled actions and resolving to black with a white icon in the light theme.
+The editor capsule keeps its neutral container but steps its 1 dp boundary down
+from `outline` to `outlineVariant`, Material's lower-emphasis outline role. The
+result preserves separation over mixed timeline content without making the
+entire composer visually heavy. Review Cancel remains neutral and disabled Add
+retains semantic disabled colors.
+
+This supersedes WN-ANDROID-0102's Add and capsule color-role choices only. The
+transparent host and edge-to-edge timeline remain unchanged.
+
+Evidence: `WhiteNoiseTheme.kt`, `ConversationComposer.kt`,
+`composer-media-and-speech.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Source: [Compose ColorScheme](https://developer.android.com/reference/kotlin/androidx/compose/material3/ColorScheme).

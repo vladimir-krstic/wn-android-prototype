@@ -53,6 +53,26 @@ active pane.
   padding. Closely related stacked buttons use an 8 dp gap.
 - Compact contextual actions, search bars, menus, and message composers keep
   their native component metrics instead of inheriting form spacing.
+- The conversation composer host is transparent: only the separate 48 dp Add
+  control and 48 dp-minimum editor capsule draw containers. Over mixed
+  timeline content, the idle Add control uses `primary`/`onPrimary` and the
+  capsule uses a 1 dp `outlineVariant`; these semantic roles adapt in dark mode
+  without restoring a full-width backing. Its attachment
+  popup uses the user-approved 10 dp visible trigger gap; this is a scoped optical
+  placement exception to the 4/8 dp layout rhythm. Bottom composer menus use
+  an above-anchor provider because Material's stock 48 dp window-edge margin
+  otherwise detaches them from their triggers. Their groups retain Material's
+  default menu shadow elevation so they separate from content behind them.
+  Idle waveform artwork is 24 dp inside a 48 dp target.
+  Live/review waveforms use 2 dp bars, 2 dp gaps, and a 24 dp visual height.
+  Stop is a red 20 dp square and Send is a 20 dp upward arrow inside separate
+  48 dp targets. Review Play uses a 32 dp filled circle inside a 48 dp target.
+  Review Transcribe and Message Format keep transparent 48 dp-minimum targets,
+  but share interactions with separate clipped 32 dp-minimum visible pills.
+  Those pills use 8 dp horizontal and 4 dp vertical content padding; 4 dp of
+  transparent horizontal breathing room remains inside each target. Large
+  text may grow the visible pill and target instead of clipping.
+  Transcribe uses one 8 dp icon/label relationship with no additional spacer.
 - App-owned single-choice dialogs place direct 56 dp-minimum selectable rows in
   the dialog content slot. The row starts at the dialog-owned content edge,
   lets `RadioButton` retain its native touch-target inset, and keeps 16 dp
@@ -330,9 +350,12 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   standard selection colors, shapes, radio semantics and a leading check.
   Destructive commands retain `error` text/icon roles; disabled colors remain
   native. Do not apply a global high-surface override to new menus.
-- The popup owns position/focus/motion/RTL/Back/outside dismissal. A regular
+- The popup owns focus/motion/RTL/Back/outside dismissal. The composer-only
+  bottom-edge exception uses the popup's public position-provider contract to
+  attach the group 2 dp above its trigger and preserve a lower-edge transform
+  origin; other menus retain Material's adaptive position provider. A regular
   `verticalScroll` inside the group makes tall menus reachable while retaining
-  the group's native clipping. No fixed menu dimensions or custom edge logic.
+  the group's native clipping. No fixed menu dimensions are introduced.
 - WN-ANDROID-0040 pins Material 3 alpha25 for API 23 compatibility; see
   `docs/screens/app-menus.md` for the implementation and API-status audit.
 

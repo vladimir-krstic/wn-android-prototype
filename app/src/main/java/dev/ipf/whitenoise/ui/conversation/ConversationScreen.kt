@@ -20,9 +20,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -51,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,9 +64,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -70,6 +77,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
@@ -80,12 +88,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatKind
 import dev.ipf.whitenoise.model.ChatMessage
 import dev.ipf.whitenoise.model.ChatTimelineEntry
 import dev.ipf.whitenoise.model.ComposerAvailability
+import dev.ipf.whitenoise.model.ComposerExpansionPolicy
 import dev.ipf.whitenoise.model.ConversationItem
 import dev.ipf.whitenoise.model.ConversationProjection
 import dev.ipf.whitenoise.model.ConversationSearch
@@ -101,6 +112,7 @@ import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.ReactionCatalog
 import dev.ipf.whitenoise.model.VoiceMessageFormat
+import dev.ipf.whitenoise.model.VoiceDraftSubmission
 import dev.ipf.whitenoise.model.composerAvailability
 import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
@@ -111,7 +123,19 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
 import dev.ipf.whitenoise.ui.components.drawableResource
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
-@OptIn(ExperimentalMaterial3Api::class)
+private fun Modifier.blockPointerInput(enabled: Boolean): Modifier = if (!enabled) {
+    this
+} else {
+    pointerInput(enabled) {
+        awaitPointerEventScope {
+            while (true) {
+                awaitPointerEvent().changes.forEach { it.consume() }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ConversationScreen(
     profile: Profile,
@@ -128,7 +152,7 @@ fun ConversationScreen(
     onSuppressDraftLink: (String?) -> Unit = {},
     onCancelDraftReply: () -> Unit = {},
     onSendDraft: () -> Boolean = { onSend(chat.draftText) },
-    onSendVoice: (VoiceMessageFormat, String) -> Boolean = { _, _ -> false },
+    onSendVoice: (VoiceDraftSubmission) -> Boolean = { false },
     onReply: (String) -> Boolean = { false },
     onReaction: (String, String, Boolean) -> Boolean = { _, _, _ -> false },
     onQuickReactionsChanged: (List<String>) -> Boolean = { false },
@@ -156,7 +180,17 @@ fun ConversationScreen(
     var isSearching by rememberSaveable(chat.id) { mutableStateOf(initialSearch) }
     var searchQuery by rememberSaveable(chat.id) { mutableStateOf("") }
     var searchResultIndex by rememberSaveable(chat.id) { mutableIntStateOf(0) }
+    var compactComposerHeightPx by remember(chat.id) { mutableIntStateOf(0) }
+    var composerPresentationActive by remember(chat.id) { mutableStateOf(false) }
+    var composerTravelPx by remember(chat.id) { mutableStateOf(0f) }
+    var pushTimelineWithComposer by remember(chat.id) { mutableStateOf(false) }
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val coroutineScope = rememberCoroutineScope()
+    val composerAvailability = chat.composerAvailability(profile)
+    val showsAvailableComposer = !isSearching && !isSelecting &&
+        composerAvailability == ComposerAvailability.Available
     val messages = remember(chat.timeline) {
         chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().map(ChatTimelineEntry.Message::message)
     }
@@ -255,16 +289,9 @@ fun ConversationScreen(
                     onDelete = { deleteMessageIds = selectedMessageIds },
                     onForward = { forwardMessageIds = selectedMessageIds },
                 )
-                else -> ConversationBottomBar(
+                composerAvailability != ComposerAvailability.Available -> ConversationBottomBar(
                     profile = profile,
                     chat = chat,
-                    onDraftTextChanged = onDraftTextChanged,
-                    onAddDraftAttachments = onAddDraftAttachments,
-                    onRemoveDraftAttachment = onRemoveDraftAttachment,
-                    onSuppressDraftLink = onSuppressDraftLink,
-                    onCancelDraftReply = onCancelDraftReply,
-                    onSendDraft = onSendDraft,
-                    onSendVoice = onSendVoice,
                     onAccept = onAcceptInvitation,
                     onDecline = { showDeclineConfirmation = true },
                     onCheckRelays = onOpenChatInfo,
@@ -273,22 +300,65 @@ fun ConversationScreen(
         },
         containerColor = MaterialTheme.colorScheme.surface,
     ) { contentPadding ->
-        AdaptiveContent(
-            modifier = Modifier.fillMaxSize().padding(contentPadding),
+        val appliedContentPadding = if (showsAvailableComposer) {
+            val leftPadding = contentPadding.calculateLeftPadding(layoutDirection)
+            val rightPadding = contentPadding.calculateRightPadding(layoutDirection)
+            PaddingValues(
+                start = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                    leftPadding
+                } else {
+                    rightPadding
+                },
+                top = contentPadding.calculateTopPadding(),
+                end = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                    rightPadding
+                } else {
+                    leftPadding
+                },
+                bottom = 0.dp,
+            )
+        } else {
+            contentPadding
+        }
+        val bottomSafePadding = if (showsAvailableComposer && !WindowInsets.isImeVisible) {
+            contentPadding.calculateBottomPadding()
+        } else {
+            0.dp
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(appliedContentPadding)
+                .consumeWindowInsets(appliedContentPadding)
+                .then(if (showsAvailableComposer) Modifier.imePadding() else Modifier),
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+            AdaptiveContent(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("conversation.timeline")
+                    .graphicsLayer {
+                        translationY = if (pushTimelineWithComposer) -composerTravelPx else 0f
+                    }
+                    .blockPointerInput(composerPresentationActive)
+                    .then(
+                        if (composerPresentationActive) Modifier.clearAndSetSemantics { } else Modifier,
+                    ),
                 state = listState,
                 contentPadding = PaddingValues(
-                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                    vertical = WhiteNoiseSpacing.Related,
+                    start = WhiteNoiseSpacing.CompactScreenMargin,
+                    top = WhiteNoiseSpacing.Related,
+                    end = WhiteNoiseSpacing.CompactScreenMargin,
+                    bottom = WhiteNoiseSpacing.Related + bottomSafePadding +
+                        with(density) { compactComposerHeightPx.toDp() },
                 ),
                 verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Bottom),
+                userScrollEnabled = !composerPresentationActive,
             ) {
                 items.forEach { item ->
                     when (item) {
                         is ConversationItem.DayHeader -> stickyHeader(key = item.id) {
-                            DayHeader(item.label)
+                            DayHeader(item.label, visible = !composerPresentationActive)
                         }
                         is ConversationItem.EventItem -> item(key = item.id, contentType = "event") {
                             TimelineInformation(item.entry.text)
@@ -340,6 +410,44 @@ fun ConversationScreen(
                             )
                         }
                     }
+                }
+            }
+            }
+            if (showsAvailableComposer) {
+                AdaptiveContent(
+                    modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+                ) {
+                    FullConversationComposer(
+                        profile = profile,
+                        chat = chat,
+                        onDraftTextChanged = onDraftTextChanged,
+                        onAddAttachments = onAddDraftAttachments,
+                        onRemoveAttachment = onRemoveDraftAttachment,
+                        onSuppressLink = onSuppressDraftLink,
+                        onCancelReply = onCancelDraftReply,
+                        onSendDraft = onSendDraft,
+                        onSendVoice = onSendVoice,
+                        modifier = Modifier.fillMaxSize(),
+                        onCompactHeightChanged = { measuredHeight ->
+                            val wasAtBottom = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ==
+                                listState.layoutInfo.totalItemsCount - 1
+                            compactComposerHeightPx = measuredHeight
+                            if (wasAtBottom && items.isNotEmpty()) {
+                                coroutineScope.launch { listState.scrollToItem(items.lastIndex) }
+                            }
+                        },
+                        onExpansionPresentationChanged = { active, travel ->
+                            if (active && !composerPresentationActive) {
+                                pushTimelineWithComposer = ComposerExpansionPolicy.shouldPushTimeline(
+                                    listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ==
+                                        listState.layoutInfo.totalItemsCount - 1,
+                                )
+                            }
+                            if (!active) pushTimelineWithComposer = false
+                            composerPresentationActive = active
+                            composerTravelPx = travel
+                        },
+                    )
                 }
             }
         }
@@ -641,10 +749,11 @@ private fun ConversationSearchTopBar(
 }
 
 @Composable
-private fun DayHeader(label: String) {
+private fun DayHeader(label: String, visible: Boolean = true) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (visible) 1f else 0f)
             .padding(vertical = WhiteNoiseSpacing.FormField),
         contentAlignment = Alignment.Center,
     ) {
@@ -1051,13 +1160,6 @@ private fun groupAuthorColor(seed: String): Color {
 private fun ConversationBottomBar(
     profile: Profile,
     chat: Chat,
-    onDraftTextChanged: (String) -> Unit,
-    onAddDraftAttachments: (List<MessageAttachment>) -> Unit,
-    onRemoveDraftAttachment: (String) -> Unit,
-    onSuppressDraftLink: (String?) -> Unit,
-    onCancelDraftReply: () -> Unit,
-    onSendDraft: () -> Boolean,
-    onSendVoice: (VoiceMessageFormat, String) -> Boolean,
     onAccept: () -> Unit,
     onDecline: () -> Unit,
     onCheckRelays: () -> Unit,
@@ -1065,21 +1167,7 @@ private fun ConversationBottomBar(
     val availability = chat.composerAvailability(profile)
     when (availability) {
         ComposerAvailability.PendingInvitation -> InvitationActions(chat, onDecline, onAccept)
-        ComposerAvailability.Available -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
-            AdaptiveContent {
-                FullConversationComposer(
-                    profile = profile,
-                    chat = chat,
-                    onDraftTextChanged = onDraftTextChanged,
-                    onAddAttachments = onAddDraftAttachments,
-                    onRemoveAttachment = onRemoveDraftAttachment,
-                    onSuppressLink = onSuppressDraftLink,
-                    onCancelReply = onCancelDraftReply,
-                    onSendDraft = onSendDraft,
-                    onSendVoice = onSendVoice,
-                )
-            }
-        }
+        ComposerAvailability.Available -> Unit
         ComposerAvailability.Left -> ConversationStatus(
             if (chat.isGroup) stringResource(R.string.left_group_status) else stringResource(R.string.left_chat_status),
         )
