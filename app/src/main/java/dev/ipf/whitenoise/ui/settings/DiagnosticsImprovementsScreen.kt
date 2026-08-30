@@ -14,10 +14,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +62,10 @@ internal fun DiagnosticsPromptHost(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DiagnosticsPromptSheet(profile: Profile, onAnalytics: (Boolean) -> Unit, onLogging: (Boolean) -> Unit, onDismiss: () -> Unit) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
     val scope = rememberCoroutineScope()
     // Only actual dismissals record a decision; composition disposal/recreation does not.
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {

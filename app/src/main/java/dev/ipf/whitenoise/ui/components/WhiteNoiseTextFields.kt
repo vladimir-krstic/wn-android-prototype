@@ -254,7 +254,7 @@ private fun WhiteNoiseTextFieldContainer(
 }
 
 private fun whiteNoiseTextFieldContentPadding(): PaddingValues =
-    OutlinedTextFieldDefaults.contentPadding(
+    OutlinedTextFieldDefaults.contentPaddingWithoutLabel(
         start = WhiteNoiseTextFieldDefaults.ContentInset,
         end = WhiteNoiseTextFieldDefaults.ContentInset,
     )

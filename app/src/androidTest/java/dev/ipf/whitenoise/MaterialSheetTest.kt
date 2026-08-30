@@ -7,8 +7,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -48,7 +49,13 @@ class MaterialSheetTest {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
                 WhiteNoiseTheme(if (dark.value) AppearancePreference.Dark else AppearancePreference.Light) {
                     expected = MaterialTheme.colorScheme.surfaceContainer
-                    WhiteNoiseModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+                    WhiteNoiseModalBottomSheet(
+                        {},
+                        sheetState = rememberBottomSheetState(
+                            initialValue = SheetValue.Hidden,
+                            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+                        ),
+                    ) {
                         WhiteNoiseSheetHeader("Sheet title")
                         ListItem(
                             headlineContent = { Text("An ordinary option") },

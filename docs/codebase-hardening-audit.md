@@ -25,13 +25,15 @@ decision even when device inspection passes.
 - Lint reports 18 non-fatal findings: 11 `UnusedResources`, six deliberately
   deferred dependency-version warnings, and one `AutoboxingStateCreation`
   hint.
-- Kotlin compilation reports deprecated Material API usage across list items,
-  sheet state creation, and one text-field padding call. These compile today
-  but are tracked so the pinned Material version is not carrying avoidable
-  migration debt.
+- Kotlin compilation initially reported deprecated Material API usage across
+  list items, sheet state creation, and one text-field padding call. The
+  behavior-equivalent state and padding replacements are complete. The list
+  replacement is a design-sensitive expressive component and remains scoped
+  to flow-level visual work.
 - Device environment: a physical Pixel 8a is connected through ADB and the
-  `Pixel_10_Pro_XL` emulator definition is available. Connected execution and
-  current screenshots have not yet been claimed.
+  `Pixel_10_Pro_XL` emulator definition is available. The first connected run
+  executed all 166 instrumentation tests but exposed test-host and device-
+  wakefulness failures; it is not accepted as product evidence.
 
 ## Findings
 
@@ -39,10 +41,11 @@ decision even when device inspection passes.
 | --- | --- | --- | --- | --- | --- |
 | H-001 | P2 | Resources | Lint identified `ic_send` plus ten strings as unused. Exact `R`-reference review confirmed the resources were not consumed. Removal preserves persisted GIF content and deletes only unreachable acquisition/review labels. | Fixed | `refactor: remove lint-proven dead resources`; lint no longer reports any unused resource |
 | H-002 | P2 | Conversation state | Lint reported boxed `mutableStateOf(0f)` for a hot composer-offset value in `ConversationScreen.kt`; Compose provides primitive float state. | Fixed | `refactor: remove lint-proven dead resources`; migrated to `mutableFloatStateOf`; lint hint cleared |
-| H-003 | P2 | Shared Material components | Kotlin compilation reports deprecated `ListItem`, sheet-state, and outlined-field-padding overloads in production and one test. The pinned alpha25 replacement APIs must be inspected before mechanical migration. | Open | Pending safe-cleanup checkpoint |
+| H-003 | P2 | Shared Material components | Kotlin compilation reported deprecated sheet-state and no-label outlined-field-padding overloads. Pinned alpha25 source provides explicit replacements. | Fixed | Sheet states now declare their allowed endpoints with `rememberBottomSheetState`; the external-label field uses `contentPaddingWithoutLabel`; static gate passes |
+| H-003b | P3 | List components | The remaining deprecated `ListItem` replacement is a different expressive component with configurable padding, alignment, shapes, state colors, and elevation. A bulk rename could silently alter accepted geometry and semantics. | Deferred by design | Migrate only inside a bounded visually inspected flow; do not perform a repository-wide mechanical rewrite |
 | H-004 | P2 | Documentation | `README.md` says the app declares only camera permission, while the manifest, notification implementation, tests, decisions, and screen brief also deliberately declare and request `POST_NOTIFICATIONS`. | Open | Pending documentation reconciliation |
 | H-005 | P2 | Device acceptance | The parity ledger and briefs still mark many flows as device/visual/TalkBack pending. Current goal explicitly authorizes device inspection. | Open | Pending bounded flow inspections |
-| H-006 | P1 | Instrumentation reliability | The complete connected suite has not yet been run against the current build; historical briefs record unrelated legacy harness/assertion failures. Current authoritative result is missing. | Open | Pending connected baseline |
+| H-006 | P1 | Instrumentation reliability | The first full Pixel 8a run executed 166 tests: seven non-Compose tests passed and 159 Compose tests failed before producing valid product evidence. Sixteen component-test classes launch content-owning `MainActivity` and then call the rule's `setContent`; later tests also lost their Compose root when the physical device entered its 30-second doze timeout. A separately rerun empty-hosted conversation test passed once the device was awake. | Open, active | Repair test hosts, keep the device awake for the bounded run, then rerun all 166 tests and triage genuine assertions separately |
 | H-007 | P3 | File organization | Several cohesive UI files exceed 1,000 lines, led by `ConversationComposer.kt` at 2,034 lines. Size alone does not justify a split; extraction is allowed only where the responsibility and tests form a real reusable boundary. | Audit only | Deferred unless concrete duplication or ownership defects are found |
 | H-008 | P3 | Dependencies | Lint reports newer Navigation, Material, and CameraX artifacts. The goal explicitly forbids dependency upgrades, and Material alpha25 is a recorded API-23 compatibility decision. | Rejected for this goal | Retain pins; no implementation change |
 
@@ -52,6 +55,7 @@ decision even when device inspection passes.
 | --- | --- | --- | --- |
 | 1 | Clean baseline, repository map, initial prioritized findings | Complete; clean gate and evidence recorded | `docs: establish codebase hardening audit` |
 | 2a | Lint-proven dead resources and boxed composer travel state | Complete; 11 resources removed and lint reduced from 18 findings to the six intentionally deferred dependency warnings | `refactor: remove lint-proven dead resources` |
+| 2b | Behavior-equivalent pinned Material API cleanup | Complete; sheet endpoint state and external-label text-field padding use their current explicit APIs; unit, lint, and both assemble gates pass | Pending commit |
 
 ## Remaining audit coverage
 
