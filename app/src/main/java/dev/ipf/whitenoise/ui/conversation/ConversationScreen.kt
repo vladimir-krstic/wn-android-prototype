@@ -51,6 +51,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -182,7 +183,7 @@ fun ConversationScreen(
     var searchResultIndex by rememberSaveable(chat.id) { mutableIntStateOf(0) }
     var compactComposerHeightPx by remember(chat.id) { mutableIntStateOf(0) }
     var composerPresentationActive by remember(chat.id) { mutableStateOf(false) }
-    var composerTravelPx by remember(chat.id) { mutableStateOf(0f) }
+    var composerTravelPx by remember(chat.id) { mutableFloatStateOf(0f) }
     var pushTimelineWithComposer by remember(chat.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val density = LocalDensity.current

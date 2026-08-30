@@ -37,8 +37,8 @@ decision even when device inspection passes.
 
 | ID | Severity | Area | Evidence and governing expectation | Status | Verification / commit |
 | --- | --- | --- | --- | --- | --- |
-| H-001 | P2 | Resources | Lint identifies `ic_send` plus ten strings as unused. Exact `R`-reference review confirms the resources are not consumed. Removal must preserve persisted GIF content and only delete unreachable acquisition/review labels. | Open | Pending safe-cleanup checkpoint |
-| H-002 | P2 | Conversation state | Lint reports boxed `mutableStateOf(0f)` for a hot composer-offset value in `ConversationScreen.kt`; Compose provides primitive float state. | Open | Pending safe-cleanup checkpoint |
+| H-001 | P2 | Resources | Lint identified `ic_send` plus ten strings as unused. Exact `R`-reference review confirmed the resources were not consumed. Removal preserves persisted GIF content and deletes only unreachable acquisition/review labels. | Fixed | `refactor: remove lint-proven dead resources`; lint no longer reports any unused resource |
+| H-002 | P2 | Conversation state | Lint reported boxed `mutableStateOf(0f)` for a hot composer-offset value in `ConversationScreen.kt`; Compose provides primitive float state. | Fixed | `refactor: remove lint-proven dead resources`; migrated to `mutableFloatStateOf`; lint hint cleared |
 | H-003 | P2 | Shared Material components | Kotlin compilation reports deprecated `ListItem`, sheet-state, and outlined-field-padding overloads in production and one test. The pinned alpha25 replacement APIs must be inspected before mechanical migration. | Open | Pending safe-cleanup checkpoint |
 | H-004 | P2 | Documentation | `README.md` says the app declares only camera permission, while the manifest, notification implementation, tests, decisions, and screen brief also deliberately declare and request `POST_NOTIFICATIONS`. | Open | Pending documentation reconciliation |
 | H-005 | P2 | Device acceptance | The parity ledger and briefs still mark many flows as device/visual/TalkBack pending. Current goal explicitly authorizes device inspection. | Open | Pending bounded flow inspections |
@@ -51,6 +51,7 @@ decision even when device inspection passes.
 | Checkpoint | Scope | Result | Commit |
 | --- | --- | --- | --- |
 | 1 | Clean baseline, repository map, initial prioritized findings | Complete; clean gate and evidence recorded | `docs: establish codebase hardening audit` |
+| 2a | Lint-proven dead resources and boxed composer travel state | Complete; 11 resources removed and lint reduced from 18 findings to the six intentionally deferred dependency warnings | `refactor: remove lint-proven dead resources` |
 
 ## Remaining audit coverage
 
