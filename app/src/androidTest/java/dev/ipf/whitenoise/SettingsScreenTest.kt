@@ -108,7 +108,7 @@ class SettingsScreenTest {
             Triple("privacy_security", "Privacy & Security", "Device protection and auto-lock"),
             Triple("data_usage", "Data Usage", "Downloads and sent-media quality"),
             Triple("relays", "Relays", null),
-            Triple("support", "Support", "A unique local support conversation"),
+            Triple("support", "Chat with support", "A unique local support conversation"),
             Triple("donate", "Donate", "Lightning or Bitcoin"),
             Triple("developer_tools", "Developer Tools", "Development and testing only"),
             Triple("sign_out", "Sign Out", "End this profile’s session"),
@@ -347,7 +347,7 @@ class SettingsScreenTest {
 
         composeRule.onNodeWithText("Edit").assertIsDisplayed()
         composeRule.onNodeWithText("Save").assertDoesNotExist()
-        composeRule.onNodeWithText("Change photo").assertDoesNotExist()
+        composeRule.onNodeWithText("Change Photo").assertDoesNotExist()
         composeRule.onNodeWithText("Verified address").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Verified").assertIsDisplayed()
         composeRule.onNodeWithTag("profile.name_field").assertIsEnabled()
@@ -358,7 +358,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("profile.name_field").assertIsEnabled()
         composeRule.onNodeWithTag("profile.address_field").assertIsEnabled()
         composeRule.onNodeWithTag("profile.about_field").assertIsEnabled()
-        composeRule.onNodeWithText("Change photo").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Change Photo").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("profile.name_field").performTextReplacement("Marmota Updated")
         composeRule.onNodeWithText("Save").performClick()
 
@@ -391,8 +391,6 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("profile_keys.password_strength").assertDoesNotExist()
         composeRule.onNodeWithText("Use a long, unique password. You’ll need it to open the encrypted file.")
             .assertIsDisplayed()
-        composeRule.onNodeWithTag("profile_keys.export_password")
-            .performScrollTo()
         composeRule.onAllNodesWithText("Export")[1].assertIsNotEnabled()
         composeRule.onNodeWithTag("profile_keys.export_password").performTextInput("safe-password")
         composeRule.onNodeWithTag("profile_keys.password_strength").assertIsDisplayed()
@@ -400,8 +398,11 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("profile_keys.export_confirmation").performTextInput("safe-password")
         composeRule.onAllNodesWithText("Export")[1].assertIsEnabled()
         composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Export Private Key").performClick()
+        composeRule.onNodeWithTag("settings.list")
+            .performScrollToNode(hasText("Export Private Key"))
+        composeRule.onNodeWithText("Export Private Key").assertIsDisplayed().performClick()
         composeRule.onNodeWithText("Keep Your Private Key Safe").assertIsDisplayed()
         composeRule.onNodeWithText(
             "Store this file somewhere secure. The encrypted export or a trusted password manager is safer.",
