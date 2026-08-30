@@ -18,6 +18,10 @@ class ComposerModelsTest {
         assertEquals("Android Developers", preview.title)
         assertEquals("https://developer.android.com/develop/ui/compose", preview.url)
         assertEquals(MessageAttachmentKind.Link, preview.attachment("link").kind)
+
+        val uppercaseScheme = LinkPreviewDetector.first("HTTPS://Developer.Android.Com/reference")!!
+        assertEquals("developer.android.com", uppercaseScheme.domain)
+        assertEquals("Android Developers", uppercaseScheme.title)
     }
 
     @Test

@@ -84,6 +84,7 @@ object ConversationSearch {
         if (normalized.isEmpty()) return emptyList()
         return chat.timeline.filterIsInstance<ChatTimelineEntry.Message>()
             .map(ChatTimelineEntry.Message::message)
+            .filterNot(ChatMessage::isDeleted)
             .filter { message -> message.searchableText(profile).contains(normalized) }
             .sortedWith(
                 compareByDescending<ChatMessage> { it.dayOrdinal }

@@ -32,7 +32,8 @@ Status: Refined static gate passed on 2026-08-30; device acceptance pending
 - Conversation search stays in place. A top Material search field updates
   immediately; bottom previous/next/count controls replace the composer and
   select results newest first across message text, sender, and attachment/link
-  labels. Search never mutates the draft.
+  labels. Deleted messages never contribute content or sender metadata to
+  results. Search never mutates the draft.
 - Group composer mention suggestions derive only from active members and insert
   the selected visible name into the authoritative draft.
 

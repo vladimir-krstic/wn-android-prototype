@@ -72,4 +72,25 @@ class MessageInteractionModelsTest {
         val all = ConversationSearch.results(profile.chats.first { it.id == "fiatjaf" }, profile, "White Noise")
         assertEquals(all.sortedWith(compareByDescending<ConversationSearchResult> { it.dayOrdinal }.thenByDescending { it.minuteOfDay }), all)
     }
+
+    @Test
+    fun conversationSearchExcludesDeletedContentAndSenderMetadata() {
+        val profile = ProfileFixtures.marmota
+        val deleted = ChatTimelineEntry.Message(
+            ChatMessage(
+                id = "deleted-search-result",
+                authorId = "maya-chen",
+                dayOrdinal = 3,
+                dayLabel = "Today",
+                minuteOfDay = 720,
+                timeLabel = "Now",
+                text = "Private text that was deleted",
+                deletionState = MessageDeletionState.DeletedByOther,
+            ),
+        )
+        val chat = profile.chats.first { it.id == "fiatjaf" }.copy(timeline = listOf(deleted))
+
+        assertTrue(ConversationSearch.results(chat, profile, "Private text").isEmpty())
+        assertTrue(ConversationSearch.results(chat, profile, "Maya Chen").isEmpty())
+    }
 }

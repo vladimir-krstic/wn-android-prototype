@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.model
 
+import java.net.URI
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -28,7 +29,9 @@ object LinkPreviewDetector {
 
     fun first(text: String): DeterministicLinkPreview? {
         val value = httpsPattern.find(text)?.value?.trimEnd('.', ',', ')', ']', '}') ?: return null
-        val domain = value.removePrefix("https://").substringBefore('/').lowercase()
+        val domain = runCatching { URI(value).host?.lowercase() }.getOrNull()
+            ?.trimEnd('.')
+            ?: return null
         if (domain.isBlank() || !domain.contains('.')) return null
         return when (domain) {
             "whitenoise.chat", "www.whitenoise.chat" -> DeterministicLinkPreview(
