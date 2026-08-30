@@ -20,6 +20,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.test.espresso.Espresso.pressBack
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.navigation.OnboardingOrigin
@@ -42,15 +43,19 @@ class DiagnosticsPromptTest {
             DiagnosticsPromptHost(vm.uiState, true, { id, enabled -> vm.setAnalyticsEnabled(id, enabled) },
                 { id, enabled -> vm.setDiagnosticLoggingEnabled(id, enabled) }, vm::dismissDiagnosticsPrompt)
         } }
-        rule.onNodeWithTag("sheet.surface").performTouchInput { click(Offset(centerX, -24f)) }
+        val sheetContent = rule.onNodeWithTag("diagnostics.prompt").fetchSemanticsNode()
+        injectScreenTap(
+            sheetContent.positionOnScreen.x + sheetContent.size.width / 2f,
+            sheetContent.positionOnScreen.y - 8f,
+        )
         rule.waitUntil { vm.uiState.activeProfile!!.diagnostics.hasSeenPrompt }
         rule.runOnIdle {
             assertFalse(vm.uiState.activeProfile!!.diagnostics.analyticsEnabled)
             assertFalse(vm.uiState.activeProfile!!.diagnostics.loggingEnabled)
             vm.completeSignIn(OnboardingOrigin.AddProfile)
         }
-        rule.onNodeWithTag("sheet.surface").performTouchInput {
-            swipe(Offset(centerX, 20f), Offset(centerX, height.toFloat() - 4f), 300)
+        rule.onNodeWithTag("sheet.dragHandle", useUnmergedTree = true).performTouchInput {
+            swipe(Offset(centerX, centerY), Offset(centerX, centerY + 500f), 300)
         }
         rule.waitUntil { vm.uiState.activeProfile!!.diagnostics.hasSeenPrompt }
         rule.runOnIdle {
@@ -125,22 +130,23 @@ class DiagnosticsPromptTest {
             }
         }
 
-        val content = rule.onNodeWithTag("diagnostics.prompt.content").fetchSemanticsNode().boundsInRoot
         val analyticsRow = rule.onNodeWithTag("diagnostics.prompt.analytics.row").fetchSemanticsNode().boundsInRoot
         val loggingRow = rule.onNodeWithTag("diagnostics.prompt.logging.row").fetchSemanticsNode().boundsInRoot
         val intro = rule.onNodeWithTag("diagnostics.prompt.intro", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val analyticsLabel = rule.onNodeWithTag("diagnostics.prompt.analytics.label", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val analyticsSwitch = rule.onNodeWithTag("diagnostics.prompt.analytics.switch", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val privacy = rule.onNodeWithTag("diagnostics.prompt.privacy", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val relatedInset = with(rule.density) { 8.dp.toPx() }
+        val fieldInset = with(rule.density) { 16.dp.toPx() }
+        val sectionInset = with(rule.density) { 24.dp.toPx() }
 
-        assertEquals(content.left + 8f, analyticsRow.left, 1f)
-        assertEquals(content.right - 8f, analyticsRow.right, 1f)
-        assertEquals(content.left + 8f, loggingRow.left, 1f)
-        assertEquals(content.right - 8f, loggingRow.right, 1f)
-        assertEquals(content.left + 24f, intro.left, 1f)
+        assertEquals(relatedInset, analyticsRow.left, 1f)
+        assertEquals(analyticsRow.left, loggingRow.left, 1f)
+        assertEquals(analyticsRow.right, loggingRow.right, 1f)
+        assertEquals(sectionInset, intro.left, 1f)
         assertEquals(intro.left, analyticsLabel.left, 1f)
         assertEquals(intro.left, privacy.left, 1f)
-        assertEquals(content.right - 24f, analyticsSwitch.right, 1f)
+        assertEquals(analyticsRow.right - fieldInset, analyticsSwitch.right, 1f)
     }
 
     @Test fun backDismissalRecordsAnOffChoiceForOnlyThePresentedProfile() {
@@ -152,8 +158,8 @@ class DiagnosticsPromptTest {
             }
         }
         rule.onNodeWithText("Help Improve White Noise").assertIsDisplayed()
-        // Deliver Back to the dialog window, not the Activity underneath it.
-        rule.onNodeWithTag("diagnostics.prompt").performKeyInput { pressKey(androidx.compose.ui.input.key.Key.Back) }
+        // Deliver Back to the sheet window, not the Activity underneath it.
+        pressBack()
         rule.waitUntil { vm.uiState.activeProfile!!.diagnostics.hasSeenPrompt }
         rule.runOnIdle {
             assertFalse(vm.uiState.activeProfile!!.diagnostics.analyticsEnabled)
@@ -183,7 +189,9 @@ class DiagnosticsPromptTest {
         rule.onNodeWithText("Share Anonymous Analytics").performScrollTo().assertIsOff()
         rule.onNodeWithText("Share Diagnostic Logs").performScrollTo().assertIsOff()
         rule.onNodeWithTag("diagnostics.choices.divider").assertIsDisplayed()
-        rule.onNodeWithTag("diagnostics.stored.divider").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag("settings.list")
+            .performScrollToNode(hasText("Clear Diagnostic Logs"))
+        rule.onNodeWithTag("diagnostics.stored.divider").assertIsDisplayed()
         rule.onNodeWithText("Clear Diagnostic Logs").performScrollTo().performClick()
         rule.onNodeWithText("Clear diagnostic logs?").assertIsDisplayed()
         rule.onNodeWithText("Cancel").performClick()

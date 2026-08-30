@@ -156,8 +156,8 @@ private fun DiagnosticsPromptSwitch(
             checked = checked,
             onCheckedChange = null,
             modifier = Modifier
-                .clearAndSetSemantics { }
-                .testTag("diagnostics.prompt.$tag.switch"),
+                .testTag("diagnostics.prompt.$tag.switch")
+                .clearAndSetSemantics { },
         )
     }
 }
