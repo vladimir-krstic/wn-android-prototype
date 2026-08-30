@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -58,15 +59,15 @@ class AvatarWebImagePickerTest {
 
         val content = composeRule.onNodeWithTag(ContentTag).fetchSemanticsNode().boundsInRoot
         val close = composeRule.onNodeWithContentDescription("Close")
-            .assertHeightIsAtLeast(48.dp).fetchSemanticsNode().boundsInRoot
+            .assertTouchHeightIsEqualTo(48.dp).fetchSemanticsNode().boundsInRoot
         val done = composeRule.onNodeWithText("Done")
-            .assertIsNotEnabled().assertHeightIsAtLeast(48.dp).fetchSemanticsNode().boundsInRoot
+            .assertIsNotEnabled().assertTouchHeightIsEqualTo(48.dp).fetchSemanticsNode().boundsInRoot
         val search = composeRule.onNodeWithText("Search")
-            .assertIsSelected().assertHeightIsAtLeast(48.dp)
+            .assertIsSelected().assertTouchHeightIsEqualTo(48.dp)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
             .fetchSemanticsNode().boundsInRoot
         val url = composeRule.onNodeWithText("URL")
-            .assertIsNotSelected().assertHeightIsAtLeast(48.dp).fetchSemanticsNode().boundsInRoot
+            .assertIsNotSelected().assertTouchHeightIsEqualTo(48.dp).fetchSemanticsNode().boundsInRoot
         val title = composeRule.onNodeWithText("Find Image on Web").fetchSemanticsNode().boundsInRoot
 
         assertEquals(16f, content.right - done.right, 1f)
@@ -149,7 +150,7 @@ class AvatarWebImagePickerTest {
         field.performImeAction()
         field.assertIsNotFocused()
         composeRule.onNodeWithContentDescription("Clear search")
-            .assertHeightIsAtLeast(48.dp).performClick()
+            .assertTouchHeightIsEqualTo(48.dp).performClick()
 
         composeRule.onNodeWithText("Enter a search to find an image.").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Clear search").assertDoesNotExist()

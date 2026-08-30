@@ -15,10 +15,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -32,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.Espresso.pressBack
 import androidx.test.filters.SdkSuppress
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
@@ -68,7 +67,7 @@ class WhiteNoiseMenuTest {
         }
         rule.onNodeWithText("Archive")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
-            .assertHeightIsAtLeast(48.dp)
+            .assertTouchHeightIsEqualTo(48.dp)
         rule.onNodeWithText("Delete").assertIsNotEnabled().performTouchInput { click() }
         rule.runOnIdle { assertTrue(events.isEmpty()) }
         rule.onNodeWithText("Archive").performClick()
@@ -173,10 +172,15 @@ class WhiteNoiseMenuTest {
                 }
             }
         }
-        rule.onNodeWithTag("menu").performKeyInput { pressKey(Key.Back) }
+        pressBack()
         rule.onNodeWithTag("menu").assertDoesNotExist()
         rule.runOnIdle { assertEquals(0, actions); assertEquals(1, dismissals); expanded.value = true }
-        rule.onNodeWithTag("menu").performTouchInput { click(Offset(-20f, -20f)) }
+        val menu = rule.onNodeWithTag("menu").fetchSemanticsNode()
+        injectScreenTap(
+            menu.positionOnScreen.x + menu.size.width + 8f,
+            menu.positionOnScreen.y + menu.size.height / 2f,
+        )
+        rule.waitForIdle()
         rule.onNodeWithTag("menu").assertDoesNotExist()
         rule.runOnIdle { assertEquals(0, actions); assertEquals(2, dismissals) }
     }
@@ -209,7 +213,7 @@ class WhiteNoiseMenuTest {
         rule.onNodeWithText("Open menu").performClick()
         assertMenuInsideVisibleWindow()
         rule.onNodeWithText("Option 7").performScrollTo().assertIsDisplayed()
-        rule.onNodeWithTag("menu").performKeyInput { pressKey(Key.Back) }
+        pressBack()
         rule.onNodeWithTag("menu").assertDoesNotExist()
         rule.onNodeWithTag("editor").assertIsFocused().assertTextEquals("Keep this draft")
     }

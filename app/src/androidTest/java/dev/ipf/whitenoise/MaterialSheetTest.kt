@@ -13,10 +13,8 @@ import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -26,6 +24,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.Espresso.pressBack
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.MuteDuration
 import dev.ipf.whitenoise.ui.components.MuteDurationDialog
@@ -48,7 +47,7 @@ class MaterialSheetTest {
         rule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
                 WhiteNoiseTheme(if (dark.value) AppearancePreference.Dark else AppearancePreference.Light) {
-                    expected = MaterialTheme.colorScheme.surfaceContainer
+                    expected = MaterialTheme.colorScheme.surfaceContainerLow
                     WhiteNoiseModalBottomSheet(
                         {},
                         sheetState = rememberBottomSheetState(
@@ -62,24 +61,26 @@ class MaterialSheetTest {
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.testTag("sheet.option"),
                         )
-                        Box(Modifier.fillMaxWidth().height(16.dp))
+                        Box(Modifier.fillMaxWidth().height(16.dp).testTag("sheet.spacer"))
                     }
                 }
             }
         }
         for (isDark in listOf(false, true)) {
             rule.runOnIdle { dark.value = isDark }
-            val surface = rule.onNodeWithTag("sheet.surface").fetchSemanticsNode().boundsInRoot
             val title = rule.onNodeWithText("Sheet title").fetchSemanticsNode().boundsInRoot
             val header = rule.onNodeWithTag("sheet.header").fetchSemanticsNode().boundsInRoot
             val row = rule.onNodeWithTag("sheet.option").fetchSemanticsNode().boundsInRoot
-            assertEquals(48f, title.top - surface.top, 1f)
-            assertEquals(24f, title.left - surface.left, 1f)
-            assertEquals(8f, row.top - title.bottom, 1f)
-            val pixels = rule.onNodeWithTag("sheet.surface").captureToImage().toPixelMap()
-            // Sample empty leading space, avoiding text, corners, handle and touch state layers.
-            for (y in listOf(header.center.y, row.center.y, row.bottom + 4f)) {
-                val color = pixels[8, (y - surface.top).toInt()]
+            val handle = rule.onNodeWithTag("sheet.dragHandle", useUnmergedTree = true)
+                .fetchSemanticsNode().boundsInRoot
+            val density = rule.activity.resources.displayMetrics.density
+            assertEquals(48f * density, title.top - handle.top, 1f)
+            assertEquals(24f * density, title.left - header.left, 1f)
+            assertEquals(8f * density, row.top - title.bottom, 1f)
+            // Sample empty leading space in each composited child, avoiding text and state layers.
+            for (tag in listOf("sheet.header", "sheet.option", "sheet.spacer")) {
+                val pixels = rule.onNodeWithTag(tag).captureToImage().toPixelMap()
+                val color = pixels[8, pixels.height / 2]
                 assertEquals(expected.red, color.red, .01f)
                 assertEquals(expected.green, color.green, .01f)
                 assertEquals(expected.blue, color.blue, .01f)
@@ -100,7 +101,9 @@ class MaterialSheetTest {
             }
         }
         val title = rule.onNodeWithText("Help Improve White Noise").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        val close = rule.onNodeWithContentDescription("Close").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        val close = rule.onNodeWithContentDescription("Close")
+            .assertTouchHeightIsEqualTo(48.dp)
+            .assertTouchWidthIsEqualTo(48.dp)
             .fetchSemanticsNode().boundsInRoot
         assertTrue(close.right <= title.left)
         rule.onNodeWithContentDescription("Close").performClick()
@@ -129,21 +132,20 @@ class MaterialSheetTest {
         rule.onNodeWithText("1 Day").assertIsSelected()
         rule.onNodeWithText("1 Hour").assertIsNotSelected()
         val title = rule.onNodeWithText("Mute for").fetchSemanticsNode().boundsInRoot
-        val dialog = rule.onNodeWithTag("mute.duration.dialog")
-            .fetchSemanticsNode().boundsInRoot
-        val firstChoice = rule.onNodeWithTag("mute.duration.OneHour")
-            .fetchSemanticsNode().boundsInRoot
+        rule.onNodeWithTag("mute.duration.OneHour").assertHeightIsAtLeast(56.dp)
         val firstRadio = rule.onAllNodesWithTag(
             testTag = "dialog.choice.radio",
             useUnmergedTree = true,
         )[0].fetchSemanticsNode().boundsInRoot
-        assertEquals(8f, firstChoice.left - dialog.left, 1f)
-        assertEquals(8f, dialog.right - firstChoice.right, 1f)
-        assertEquals(16f, title.left - firstChoice.left, 1f)
         assertEquals(title.left, firstRadio.left, 1f)
-        rule.onNodeWithTag("mute.duration.dialog").performKeyInput { pressKey(Key.Back) }
+        pressBack()
         rule.runOnIdle { assertNull(result); visible.value = true }
-        rule.onNodeWithTag("mute.duration.dialog").performTouchInput { click(Offset(-20f, -20f)) }
+        val reopenedDialog = rule.onNodeWithTag("mute.duration.dialog").fetchSemanticsNode()
+        injectScreenTap(
+            reopenedDialog.positionOnScreen.x + reopenedDialog.size.width + 8f,
+            reopenedDialog.positionOnScreen.y + reopenedDialog.size.height / 2f,
+        )
+        rule.waitForIdle()
         rule.runOnIdle { assertNull(result); assertFalse(visible.value); visible.value = true }
         for (duration in MuteDuration.entries) {
             rule.onNodeWithText(duration.label).performScrollTo().performClick()

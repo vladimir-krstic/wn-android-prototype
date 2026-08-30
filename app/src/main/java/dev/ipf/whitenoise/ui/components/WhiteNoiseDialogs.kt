@@ -98,8 +98,8 @@ fun WhiteNoiseDialogChoiceRow(
                 enabled = enabled,
                 onClick = null,
                 modifier = Modifier
-                    .clearAndSetSemantics { }
-                    .testTag("dialog.choice.radio"),
+                    .testTag("dialog.choice.radio")
+                    .clearAndSetSemantics { },
             )
             Text(
                 text = title,

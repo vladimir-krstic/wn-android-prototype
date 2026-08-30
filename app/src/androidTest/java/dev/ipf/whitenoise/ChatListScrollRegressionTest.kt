@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.SubcomposeLayoutState
 import androidx.compose.ui.layout.SubcomposeSlotReusePolicy
@@ -23,6 +22,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.Espresso.pressBack
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.AttachmentPreview
 import dev.ipf.whitenoise.model.Chat
@@ -86,7 +86,7 @@ class ChatListScrollRegressionTest {
             val first = rule.onNodeWithTag("chat.row.${projected.first().id}")
             first.performTouchInput { longClick() }
             first.assertIsSelected()
-            rule.onNodeWithTag("chat.menu.${projected.first().id}").performKeyInput { pressKey(Key.Back) }
+            pressBack()
             first.assertIsNotSelected().performClick()
             rule.onNodeWithContentDescription("New Message").assertIsDisplayed()
             rule.runOnIdle { assertEquals(before, vm.uiState.activeProfile!!.chats) }

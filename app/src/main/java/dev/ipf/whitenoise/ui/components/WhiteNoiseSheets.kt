@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +49,9 @@ fun WhiteNoiseModalBottomSheet(
             containerColor = scheme.surfaceContainerLow,
             contentColor = scheme.onSurface,
             contentWindowInsets = contentWindowInsets,
+            dragHandle = {
+                BottomSheetDefaults.DragHandle(Modifier.testTag("sheet.dragHandle"))
+            },
             content = content,
         )
     }
@@ -61,12 +65,14 @@ fun WhiteNoiseSheetHeader(
     closeEnabled: Boolean = true,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(
-            start = WhiteNoiseSpacing.Section,
-            end = if (onClose == null) WhiteNoiseSpacing.Section else WhiteNoiseSpacing.Related,
-            bottom = WhiteNoiseSpacing.Related,
-        )
-            .testTag("sheet.header"),
+        Modifier
+            .fillMaxWidth()
+            .testTag("sheet.header")
+            .padding(
+                start = WhiteNoiseSpacing.Section,
+                end = if (onClose == null) WhiteNoiseSpacing.Section else WhiteNoiseSpacing.Related,
+                bottom = WhiteNoiseSpacing.Related,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

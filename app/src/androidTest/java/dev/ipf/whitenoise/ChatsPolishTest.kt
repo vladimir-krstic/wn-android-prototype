@@ -9,8 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -21,6 +19,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.Espresso.pressBack
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.ChatScope
 import dev.ipf.whitenoise.model.ChatProjection
@@ -90,7 +89,7 @@ class ChatsPolishTest {
         rule.onNodeWithTag("chat.row.$id").assertIsSelected()
         rule.onNodeWithText("Archive").assertIsDisplayed()
         rule.runOnIdle { assertEquals(before, vm.chat(id)) }
-        rule.onNodeWithTag("chat.menu.$id").performKeyInput { pressKey(Key.Back) }
+        pressBack()
         rule.onNodeWithText("Archive").assertDoesNotExist()
         rule.onNodeWithTag("chat.row.$id").assertIsNotSelected()
         rule.onNodeWithContentDescription("New Message").assertIsDisplayed()
@@ -125,8 +124,8 @@ class ChatsPolishTest {
                 )
             }
         }
-        rule.onNodeWithTag("chat.row.active-group").performTouchInput { swipeLeft(durationMillis = 500) }
-        rule.onNodeWithTag("chat.row.active-group").performTouchInput { swipeRight(durationMillis = 500) }
+        rule.onNodeWithTag("chat.row.active-group").performTouchInput { swipeLeft(durationMillis = 200) }
+        rule.onNodeWithTag("chat.row.active-group").performTouchInput { swipeRight(durationMillis = 200) }
         rule.onNodeWithText("Leave Group").assertDoesNotExist()
         rule.onNodeWithTag("chat.row.active-group").performTouchInput { longClick() }
         rule.onNodeWithText("Leave Group").performClick()
@@ -151,6 +150,7 @@ class ChatsPolishTest {
         rule.runOnIdle { assertTrue(vm.chat(id)!!.isArchived); assertFalse(vm.chat(id)!!.isPinned) }
         rule.onNodeWithText("Undo").performClick()
         rule.runOnIdle { assertFalse(vm.chat(id)!!.isArchived); assertTrue(vm.chat(id)!!.isPinned) }
+        rule.onNodeWithTag("chats.list").performScrollToNode(hasTestTag("chat.row.$id"))
         val actions = rule.onNodeWithTag("chat.row.$id").fetchSemanticsNode().config[SemanticsActions.CustomActions]
         rule.runOnIdle {
             assertTrue(actions.any { it.label == "Unpin" })
@@ -342,7 +342,7 @@ class ChatsPolishTest {
             val labels = dev.ipf.whitenoise.model.ChatListActionPolicy.all(rows[index])
             val positions = labels.map { action -> rule.onNodeWithTag("chat.action.${action.name}").fetchSemanticsNode().positionOnScreen.y }
             assertEquals(positions.sorted(), positions)
-            rule.onNodeWithTag("chat.menu.$id").performKeyInput { pressKey(Key.Back) }
+            pressBack()
         }
     }
 
@@ -351,8 +351,13 @@ class ChatsPolishTest {
         val id = "catalog-direct-text"
         rule.setContent { WhiteNoiseTheme { Chats(vm) } }
         rule.onNodeWithTag("chat.row.$id").performTouchInput { longClick() }
-        // Deliver an outside touch to the native popup window, not to the Activity behind it.
-        rule.onNodeWithTag("chat.menu.$id").performTouchInput { click(Offset(-20f, -20f)) }
+        val root = rule.onAllNodes(isRoot()).fetchSemanticsNodes()
+            .maxBy { it.size.width.toLong() * it.size.height }
+        injectScreenTap(
+            root.positionOnScreen.x + root.size.width - 2f,
+            root.positionOnScreen.y + root.size.height / 2f,
+        )
+        rule.waitForIdle()
         rule.onNodeWithTag("chat.menu.$id").assertDoesNotExist()
         rule.onNodeWithTag("chat.row.$id").assertIsNotSelected()
     }
