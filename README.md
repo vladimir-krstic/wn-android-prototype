@@ -35,8 +35,10 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 The runtime is intentionally offline and deterministic. It declares camera
 permission only for the user-selected Private Key or Share &amp; Connect QR
-scanner and requests it just in time. It declares no network, storage,
-microphone, notification, or location permission.
+scanner and requests it just in time. On Android 13 and newer, the Settings
+prototype also requests `POST_NOTIFICATIONS` from its explicit notification
+access action; the app does not create or deliver notifications. It declares
+no network, storage, microphone, or location permission.
 
 Implementation status: Batches 0–9 are complete at the static verification
 gate. The app includes the complete accepted onboarding, profile, Chats,

@@ -44,14 +44,17 @@ store.
 | Camera attachment | External `TakePicture` contract and non-exported FileProvider | None |
 | Share/copy | Android Sharesheet and clipboard | None |
 | Read aloud | Android TextToSpeech with lifecycle shutdown | None |
-| Notification/security controls | Explicit Android settings intents | None |
+| Notification access | Android 13+ runtime prompt and app-notification settings handoff | Notifications, requested only from the explicit Settings action |
+| Security controls | Explicit Android security-settings intent | None |
 | Recents privacy | Activity `FLAG_SECURE` derived from active profile | None |
 
-The merged application declares camera permission only for the selected
-Private Key or Share & Connect QR scanner. It intentionally declares no network, storage,
-microphone, notification, or location permission. There is no backend,
-transport, durable persistence, real authentication, cryptography, payment,
-telemetry upload, microphone capture, or speech recognition.
+The merged application declares camera permission for the selected Private Key
+or Share & Connect QR scanner and `POST_NOTIFICATIONS` for the explicit Android
+notification-access gate. It intentionally declares no network, storage,
+microphone, or location permission. The notification prototype requests access
+but does not create or deliver notifications. There is no backend, transport,
+durable persistence, real authentication, cryptography, payment, telemetry
+upload, microphone capture, or speech recognition.
 
 ## Verification boundary
 
