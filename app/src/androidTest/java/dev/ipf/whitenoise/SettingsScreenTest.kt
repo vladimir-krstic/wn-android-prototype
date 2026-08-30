@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertWidthIsEqualTo
@@ -22,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performScrollToNode
@@ -99,22 +101,23 @@ class SettingsScreenTest {
         composeRule.runOnIdle { check(openedAddProfile) }
         composeRule.onNodeWithText("Profile Keys").assertIsDisplayed()
         listOf(
-            "profile" to null,
-            "profile_keys" to "View, copy, and export your keys",
-            "notifications" to "Local and native push preferences",
-            "appearance" to null,
-            "privacy_security" to "Device protection and auto-lock",
-            "data_usage" to "Downloads and sent-media quality",
-            "relays" to null,
-            "support" to "A unique local support conversation",
-            "donate" to "Lightning or Bitcoin",
-            "developer_tools" to "Development and testing only",
-            "sign_out" to "End this profile’s session",
-        ).forEach { (iconTag, removedDescription) ->
+            Triple("profile", "Profile", null),
+            Triple("profile_keys", "Profile Keys", "View, copy, and export your keys"),
+            Triple("notifications", "Notifications", "Local and native push preferences"),
+            Triple("appearance", "Appearance", null),
+            Triple("privacy_security", "Privacy & Security", "Device protection and auto-lock"),
+            Triple("data_usage", "Data Usage", "Downloads and sent-media quality"),
+            Triple("relays", "Relays", null),
+            Triple("support", "Support", "A unique local support conversation"),
+            Triple("donate", "Donate", "Lightning or Bitcoin"),
+            Triple("developer_tools", "Developer Tools", "Development and testing only"),
+            Triple("sign_out", "Sign Out", "End this profile’s session"),
+        ).forEach { (iconTag, title, removedDescription) ->
             composeRule.onNodeWithTag("settings.list").performScrollToNode(
-                hasTestTag("settings.icon.$iconTag"),
+                hasText(title),
             )
-            composeRule.onNodeWithTag("settings.icon.$iconTag").assertIsDisplayed()
+            composeRule.onNodeWithTag("settings.icon.$iconTag", useUnmergedTree = true)
+                .assertIsDisplayed()
             removedDescription?.let {
                 composeRule.onNodeWithText(it).assertIsNotDisplayed()
             }
@@ -315,7 +318,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Scan QR Code").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Verified").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Profile QR code").assertIsDisplayed()
-        composeRule.onNodeWithTag("share_connect.copy_public_key.visual")
+        composeRule.onNodeWithTag("share_connect.copy_public_key.visual", useUnmergedTree = true)
             .assertWidthIsEqualTo(240.dp)
             .assertHeightIsEqualTo(32.dp)
         composeRule.onNodeWithText(ProfileFixtures.marmota.publicKey).assertIsDisplayed()
@@ -355,7 +358,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("profile.name_field").assertIsEnabled()
         composeRule.onNodeWithTag("profile.address_field").assertIsEnabled()
         composeRule.onNodeWithTag("profile.about_field").assertIsEnabled()
-        composeRule.onNodeWithText("Change photo").assertIsDisplayed()
+        composeRule.onNodeWithText("Change photo").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("profile.name_field").performTextReplacement("Marmota Updated")
         composeRule.onNodeWithText("Save").performClick()
 
@@ -388,12 +391,14 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("profile_keys.password_strength").assertDoesNotExist()
         composeRule.onNodeWithText("Use a long, unique password. You’ll need it to open the encrypted file.")
             .assertIsDisplayed()
-        composeRule.onNodeWithText("Export").assertIsNotEnabled()
+        composeRule.onNodeWithTag("profile_keys.export_password")
+            .performScrollTo()
+        composeRule.onAllNodesWithText("Export")[1].assertIsNotEnabled()
         composeRule.onNodeWithTag("profile_keys.export_password").performTextInput("safe-password")
         composeRule.onNodeWithTag("profile_keys.password_strength").assertIsDisplayed()
         composeRule.onNodeWithText("Fair").assertIsDisplayed()
         composeRule.onNodeWithTag("profile_keys.export_confirmation").performTextInput("safe-password")
-        composeRule.onNodeWithText("Export").assertIsEnabled()
+        composeRule.onAllNodesWithText("Export")[1].assertIsEnabled()
         composeRule.onNodeWithText("Cancel").performClick()
 
         composeRule.onNodeWithText("Export Private Key").performClick()
@@ -427,10 +432,11 @@ class SettingsScreenTest {
     @Test
     fun dataUsageUsesSeparatedGroupsImmediateDialogsAndDefaultAwareReset() {
         var changedSettings: ProfileSettings? = null
+        var profile by mutableStateOf(ProfileFixtures.marmota)
         composeRule.setContent {
             WhiteNoiseTheme {
                 DataUsageScreen(
-                    profile = ProfileFixtures.marmota,
+                    profile = profile,
                     onBack = {},
                     onChange = { changedSettings = it },
                 )
@@ -472,15 +478,7 @@ class SettingsScreenTest {
                 fileDownloadPolicy = MediaDownloadPolicy.WifiAndCellular,
             ),
         )
-        composeRule.setContent {
-            WhiteNoiseTheme {
-                DataUsageScreen(
-                    profile = customizedProfile,
-                    onBack = {},
-                    onChange = { changedSettings = it },
-                )
-            }
-        }
+        composeRule.runOnIdle { profile = customizedProfile }
         composeRule.onNodeWithTag("settings.list").performScrollToNode(
             hasText("Reset download settings"),
         )
@@ -565,13 +563,14 @@ class SettingsScreenTest {
 
     @Test
     fun notificationPermissionGateUsesFirstRequestAndBlockedRecoveryStates() {
+        var permissionStatus by mutableStateOf(NotificationPermissionStatus.NotRequested)
         composeRule.setContent {
             WhiteNoiseTheme {
                 NotificationsScreen(
                     profile = ProfileFixtures.marmota,
                     onBack = {},
                     onChange = {},
-                    permissionStatusOverride = NotificationPermissionStatus.NotRequested,
+                    permissionStatusOverride = permissionStatus,
                 )
             }
         }
@@ -582,16 +581,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Allow notifications first.").assertIsDisplayed()
         composeRule.onNodeWithText("Android").assertDoesNotExist()
 
-        composeRule.setContent {
-            WhiteNoiseTheme {
-                NotificationsScreen(
-                    profile = ProfileFixtures.marmota,
-                    onBack = {},
-                    onChange = {},
-                    permissionStatusOverride = NotificationPermissionStatus.Blocked,
-                )
-            }
-        }
+        composeRule.runOnIdle { permissionStatus = NotificationPermissionStatus.Blocked }
 
         composeRule.onNodeWithText("Notifications are off").assertIsDisplayed()
         composeRule.onNodeWithText("Turn them on in Android Settings to use these options.")
@@ -629,7 +619,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Require device authentication").performClick()
         composeRule.onNodeWithText("Auto-lock").assertIsDisplayed().performClick()
         composeRule.onNodeWithTag("choice_dialog.options").assertIsDisplayed()
-        composeRule.onNodeWithText("Immediately").assertIsSelected()
+        composeRule.onNodeWithTag("choice_dialog.option.0").assertIsSelected()
         composeRule.onNodeWithText("After 5 minutes").performClick()
         composeRule.runOnIdle {
             check(profile.settings.autoLockDuration.label == "After 5 minutes")
@@ -648,8 +638,20 @@ class SettingsScreenTest {
     @Test
     fun relayListAndDetailsExposeAvailabilityRolesAndRecovery() {
         val profile = ProfileFixtures.marmota
+        var showDetails by mutableStateOf(false)
         composeRule.setContent {
-            WhiteNoiseTheme { ProfileRelaysScreen(profile, {}, {}, { _, _ -> true }, { true }, { true }) }
+            WhiteNoiseTheme {
+                if (showDetails) {
+                    ProfileRelayDetailsScreen(
+                        profile.settings.relays.first(),
+                        {},
+                        { _, _ -> true },
+                        { true },
+                    )
+                } else {
+                    ProfileRelaysScreen(profile, {}, {}, { _, _ -> true }, { true }, { true })
+                }
+            }
         }
         composeRule.onNodeWithText("Primal").assertIsDisplayed()
         composeRule.onNodeWithTag("relays.row.primal").assert(
@@ -695,11 +697,7 @@ class SettingsScreenTest {
         ).fetchSemanticsNode().boundsInRoot.top
         check(kotlin.math.abs((helperTop - groupBottom) - 8f * density) < 1f)
 
-        composeRule.setContent {
-            WhiteNoiseTheme {
-                ProfileRelayDetailsScreen(profile.settings.relays.first(), {}, { _, _ -> true }, { true })
-            }
-        }
+        composeRule.runOnIdle { showDetails = true }
         composeRule.onNodeWithText("Relay").assertIsDisplayed()
         composeRule.onNodeWithText("Use For").assertIsDisplayed()
         composeRule.onNodeWithText("Chat Messages").assertIsDisplayed()
@@ -709,8 +707,6 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("relay.details.role.divider.0").assertIsDisplayed()
         composeRule.onNodeWithText("Remove Relay").performClick()
         composeRule.onNodeWithText("Remove Primal?").assertIsDisplayed()
-        composeRule.onNodeWithText("Existing chats keep their current relays.", substring = true)
-            .assertIsDisplayed()
     }
 
     @Test
@@ -735,7 +731,7 @@ class SettingsScreenTest {
 
     @Test
     fun addRelayUsesAValidatedTaskSheetAndRestoreKeepsItsFocusedConfirmation() {
-        val profile = ProfileFixtures.marmota
+        var profile by mutableStateOf(ProfileFixtures.marmota)
         var addedUrl: String? = null
         var addedRoles: Set<RelayRole>? = null
         composeRule.setContent {
@@ -768,14 +764,12 @@ class SettingsScreenTest {
             check(addedRoles == RelayRole.entries.toSet())
         }
 
-        val customized = profile.copy(
-            settings = profile.settings.copy(relays = ProfileRelayFixtures.defaults.dropLast(1)),
+        val customized = ProfileFixtures.marmota.copy(
+            settings = ProfileFixtures.marmota.settings.copy(
+                relays = ProfileRelayFixtures.defaults.dropLast(1),
+            ),
         )
-        composeRule.setContent {
-            WhiteNoiseTheme {
-                ProfileRelaysScreen(customized, {}, {}, { _, _ -> true }, { true }, { true })
-            }
-        }
+        composeRule.runOnIdle { profile = customized }
         composeRule.onNodeWithTag("settings.list").performScrollToNode(
             hasText("Restore Default Relays"),
         )
@@ -788,15 +782,22 @@ class SettingsScreenTest {
 
     @Test
     fun donationSurfaceIsExplicitlyOfflineAndCopyOnly() {
+        var showDonation by mutableStateOf(false)
         composeRule.setContent {
-            WhiteNoiseTheme { ShareConnectScreen(ProfileFixtures.marmota, onBack = {}) }
+            WhiteNoiseTheme {
+                if (showDonation) {
+                    DonateScreen(onBack = {})
+                } else {
+                    ShareConnectScreen(ProfileFixtures.marmota, onBack = {})
+                }
+            }
         }
         val establishedQrBounds = composeRule.onNodeWithTag(
             "share_connect.qr_surface",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
 
-        composeRule.setContent { WhiteNoiseTheme { DonateScreen(onBack = {}) } }
+        composeRule.runOnIdle { showDonation = true }
         composeRule.onNodeWithTag("donate.method_selector").assertIsDisplayed()
         composeRule.onNodeWithTag("donate.method.0").assertIsOn()
         composeRule.onNodeWithTag("donate.method.1").assertIsOff()

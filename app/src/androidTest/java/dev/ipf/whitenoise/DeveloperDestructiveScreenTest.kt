@@ -1,14 +1,17 @@
 package dev.ipf.whitenoise
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -44,7 +47,7 @@ class DeveloperDestructiveScreenTest {
             }
         }
         composeRule.onNodeWithText("For development and testing only").assertIsDisplayed()
-        composeRule.onNodeWithText("Developer Tools").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Developer Tools")[0].assertIsDisplayed()
     }
 
     @Test
@@ -162,19 +165,22 @@ class DeveloperDestructiveScreenTest {
                 diagnosticEvents = emptyList(),
             ),
         )
+        var showKeyPackages by mutableStateOf(false)
+        var published = false
         composeRule.setContent {
-            WhiteNoiseTheme { DiagnosticsScreen(profile, null, {}, { true }, { true }) }
+            WhiteNoiseTheme {
+                if (showKeyPackages) {
+                    KeyPackagesScreen(profile, {}, { published = true; true })
+                } else {
+                    DiagnosticsScreen(profile, null, {}, { true }, { true })
+                }
+            }
         }
         composeRule.onNodeWithText("No Events").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Diagnostic actions").performClick()
         composeRule.onNodeWithText("Clear Events").assertIsNotEnabled()
 
-        var published = false
-        composeRule.setContent {
-            WhiteNoiseTheme {
-                KeyPackagesScreen(profile, {}, { published = true; true })
-            }
-        }
+        composeRule.runOnIdle { showKeyPackages = true }
         composeRule.onNodeWithTag("key_packages.publish").assertIsEnabled().performClick()
         composeRule.runOnIdle { check(published) }
     }
@@ -197,8 +203,15 @@ class DeveloperDestructiveScreenTest {
 
     @Test
     fun signOutAndEraseUseSeparateNativeSheetsAndConsequences() {
+        var showErase by mutableStateOf(false)
         composeRule.setContent {
-            WhiteNoiseTheme { SignOutSheet(ProfileFixtures.marmota, {}, {}) }
+            WhiteNoiseTheme {
+                if (showErase) {
+                    EraseAppDataSheet(listOf("marmota", "pebble"), {}, {})
+                } else {
+                    SignOutSheet(ProfileFixtures.marmota, {}, {})
+                }
+            }
         }
         composeRule.onNodeWithText("Wipe Data From This Device").assertIsDisplayed()
         composeRule.onNodeWithText("Profile name").assertIsDisplayed()
@@ -209,21 +222,18 @@ class DeveloperDestructiveScreenTest {
             "Type “Marmota” to confirm permanent removal of this profile and its local data.",
         ).assertIsDisplayed()
         composeRule.onNodeWithTag("sign_out.profile.divider").assertHeightIsEqualTo(2.dp)
-        val signOutRoot = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
         val signOutSheet = composeRule.onNodeWithTag("sheet.surface").fetchSemanticsNode().boundsInRoot
-        assertTrue(signOutSheet.top <= signOutRoot.height * 0.1f)
+        val windowHeight = composeRule.activity.window.decorView.height.toFloat()
+        assertTrue(signOutSheet.top <= windowHeight * 0.1f)
 
-        composeRule.setContent {
-            WhiteNoiseTheme { EraseAppDataSheet(listOf("marmota", "pebble"), {}, {}) }
-        }
+        composeRule.runOnIdle { showErase = true }
         composeRule.onNodeWithText("This can’t be undone").assertIsDisplayed()
         composeRule.onNodeWithText("Confirmation phrase").assertIsDisplayed()
         composeRule.onNodeWithTag("erase.warning").assertIsDisplayed()
         composeRule.onNodeWithTag("erase.phrase").assertIsDisplayed()
         composeRule.onNodeWithTag("erase.confirmation").assertIsDisplayed()
-        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
         val eraseSheet = composeRule.onNodeWithTag("sheet.surface").fetchSemanticsNode().boundsInRoot
-        assertTrue(eraseSheet.top <= root.height * 0.1f)
+        assertTrue(eraseSheet.top <= windowHeight * 0.1f)
     }
 
     @Test

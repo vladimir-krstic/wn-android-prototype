@@ -1684,11 +1684,11 @@ private fun CompactComposerTextAction(
     ) {
         Row(
             modifier = Modifier
+                .testTag(visualTestTag)
                 .clip(CircleShape)
                 .indication(interactionSource, ripple())
                 .heightIn(min = 32.dp)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .testTag(visualTestTag),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             verticalAlignment = Alignment.CenterVertically,
             content = content,

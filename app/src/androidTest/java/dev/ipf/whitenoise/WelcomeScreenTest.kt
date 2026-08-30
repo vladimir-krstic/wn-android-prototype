@@ -14,8 +14,10 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
@@ -102,16 +104,16 @@ class WelcomeScreenTest {
     }
 
     @Test
-    fun signUpActionSharesTheFormScrollContainer() {
+    fun signUpFormScrollsIndependentlyBehindThePinnedAction() {
         composeRule.onNodeWithText("Sign Up").performClick()
 
         composeRule.onNode(
             hasScrollAction()
                 .and(hasAnyDescendant(hasText("Name")))
-                .and(hasAnyDescendant(hasText("About")))
-                .and(hasAnyDescendant(hasText("Sign Up"))),
+                .and(hasAnyDescendant(hasText("About"))),
             useUnmergedTree = true,
         ).assertIsDisplayed()
+        composeRule.onNodeWithTag("onboarding.sign_up.action").assertIsDisplayed()
     }
 
     @Test
@@ -120,7 +122,7 @@ class WelcomeScreenTest {
         val nameField = composeRule.onNode(hasSetTextAction().and(hasText("Marmota")))
 
         nameField.performClick().assertIsFocused()
-        composeRule.onRoot().performTouchInput {
+        composeRule.onAllNodes(isRoot())[0].performTouchInput {
             click(Offset(x = 1f, y = center.y))
         }
 

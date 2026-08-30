@@ -58,7 +58,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -338,7 +337,6 @@ private fun RelayStatusIndicator(status: RelayConnectionStatus) {
     Surface(
         modifier = Modifier
             .size(RelayStatusIndicatorSize)
-            .clearAndSetSemantics { }
             .testTag(
                 if (connected) "relay.status.connected.filled" else "relay.status.not_connected.filled",
             ),
@@ -371,8 +369,8 @@ private fun RelayMetadataRow(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related)
-            .testTag("relay.metadata.${title.lowercase()}"),
+            .testTag("relay.metadata.${title.lowercase()}")
+            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
     ) {

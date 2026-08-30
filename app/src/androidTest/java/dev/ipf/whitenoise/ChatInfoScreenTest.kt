@@ -1,5 +1,8 @@
 package dev.ipf.whitenoise
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -127,15 +130,20 @@ class ChatInfoScreenTest {
     fun groupEditAndAddMembersDestinationsCompileWithNativeControls() {
         val profile = ProfileFixtures.marmota
         val chat = profile.chats.first { it.id == "weekend-walks" }
+        var showAddPeople by mutableStateOf(false)
         composeRule.setContent {
-            WhiteNoiseTheme { EditGroupScreen(chat, {}, { _, _, _ -> true }) }
+            WhiteNoiseTheme {
+                if (showAddPeople) {
+                    AddGroupMembersScreen(profile, chat, {}, { true })
+                } else {
+                    EditGroupScreen(chat, {}, { _, _, _ -> true })
+                }
+            }
         }
         composeRule.onNodeWithText("Edit Group").assertIsDisplayed()
 
-        composeRule.setContent {
-            WhiteNoiseTheme { AddGroupMembersScreen(profile, chat, {}, { true }) }
-        }
-        composeRule.onNodeWithText("Add People").assertIsDisplayed()
+        composeRule.runOnIdle { showAddPeople = true }
+        composeRule.onNodeWithText("Name or npub").assertIsDisplayed()
     }
 
     @Test

@@ -103,11 +103,11 @@ internal fun IdentifierCopyCapsule(
         Row(
             modifier = Modifier
                 .width(IdentifierCapsuleWidth)
+                .testTag(visualTestTag)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .indication(interactionSource, ripple())
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .testTag(visualTestTag),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

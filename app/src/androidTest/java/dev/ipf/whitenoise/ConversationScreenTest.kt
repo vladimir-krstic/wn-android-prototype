@@ -194,10 +194,11 @@ class ConversationScreenTest {
         composeRule.onNodeWithText("Contact").assertIsDisplayed()
         composeRule.onNodeWithText("GIF").assertDoesNotExist()
 
-        val add = composeRule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode().boundsInRoot
-        val menu = composeRule.onNodeWithTag("conversation.attachment.menu").fetchSemanticsNode().boundsInRoot
+        val add = composeRule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode()
+        val menu = composeRule.onNodeWithTag("conversation.attachment.menu").fetchSemanticsNode()
         val expectedGap = 10.dp.value * composeRule.density.density
-        assertTrue(abs((add.top - menu.bottom) - expectedGap) < 1.5f)
+        val actualGap = add.positionOnScreen.y - menu.positionOnScreen.y - menu.size.height
+        assertTrue(abs(actualGap - expectedGap) < 1.5f)
     }
 
     @Test
@@ -232,17 +233,24 @@ class ConversationScreenTest {
             "conversation.voice.format.visual",
             useUnmergedTree = true,
         ).assertHeightIsEqualTo(32.dp)
-        val format = composeRule.onNodeWithTag("conversation.voice.format")
-            .fetchSemanticsNode().boundsInRoot
+        val formatNode = composeRule.onNodeWithTag("conversation.voice.format")
+            .fetchSemanticsNode()
+        val format = formatNode.boundsInRoot
         val formatVisual = composeRule.onNodeWithTag(
             "conversation.voice.format.visual",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
         assertTrue(format.height > formatVisual.height)
         assertTrue(format.width > formatVisual.width)
-        val menu = composeRule.onNodeWithTag("conversation.voice.format.menu").fetchSemanticsNode().boundsInRoot
+        val menu = composeRule.onNodeWithTag("conversation.voice.format.menu").fetchSemanticsNode()
         val expectedGap = 2.dp.value * composeRule.density.density
-        assertTrue(abs((format.top - menu.bottom) - expectedGap) < 1.5f)
+        val actualGap = formatNode.positionOnScreen.y - menu.positionOnScreen.y - menu.size.height
+        org.junit.Assert.assertEquals(
+            "Voice-format menu gap",
+            expectedGap,
+            actualGap,
+            1.5f,
+        )
         val radioItem = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
         composeRule.onNode(hasText("Both").and(radioItem)).assertIsSelected()
         composeRule.onNode(hasText("Text").and(radioItem)).performClick()
@@ -307,13 +315,19 @@ class ConversationScreenTest {
         voice.performTouchInput { longClick(durationMillis = 450) }
         composeRule.onNodeWithTag("conversation.voice.recording.waveform").assertHeightIsEqualTo(24.dp)
         composeRule.onNodeWithTag("conversation.voice.stop").assertHeightIsAtLeast(48.dp)
-        composeRule.onNodeWithTag("conversation.voice.stop.icon")
+        composeRule.onNodeWithTag(
+            "conversation.voice.stop.icon",
+            useUnmergedTree = true,
+        )
             .assertWidthIsEqualTo(20.dp)
             .assertHeightIsEqualTo(20.dp)
         composeRule.onNodeWithText("Stop Recording").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Stop Recording").assertIsDisplayed().performClick()
         composeRule.onNodeWithContentDescription("Play").assertIsDisplayed()
-        composeRule.onNodeWithTag("conversation.voice.play.container")
+        composeRule.onNodeWithTag(
+            "conversation.voice.play.container",
+            useUnmergedTree = true,
+        )
             .assertWidthIsEqualTo(32.dp)
             .assertHeightIsEqualTo(32.dp)
         composeRule.onNodeWithText("Transcribe").assertIsDisplayed()
@@ -330,7 +344,10 @@ class ConversationScreenTest {
         ).fetchSemanticsNode().boundsInRoot
         assertTrue(transcribeTarget.height > transcribeVisual.height)
         assertTrue(transcribeTarget.width > transcribeVisual.width)
-        composeRule.onNodeWithTag("conversation.voice.transcribe.icon")
+        composeRule.onNodeWithTag(
+            "conversation.voice.transcribe.icon",
+            useUnmergedTree = true,
+        )
             .assertWidthIsEqualTo(20.dp)
             .assertHeightIsEqualTo(20.dp)
         val transcribeIcon = composeRule.onNodeWithTag(
@@ -414,9 +431,9 @@ class ConversationScreenTest {
 
         composeRule.onNodeWithText("Share Contact").assertIsDisplayed()
         composeRule.onNodeWithTag("conversation.contact.search").assertHeightIsAtLeast(56.dp)
-        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
         val sheet = composeRule.onNodeWithTag("conversation.contact.sheet").fetchSemanticsNode().boundsInRoot
-        assertTrue(sheet.height > root.height * 0.85f)
+        val windowHeight = composeRule.activity.window.decorView.height.toFloat()
+        assertTrue(sheet.height > windowHeight * 0.85f)
         composeRule.onNodeWithText("Name or Public Key").assertIsDisplayed()
         composeRule.onNodeWithTag("conversation.contact.catalog-direct-text").assertIsDisplayed()
     }

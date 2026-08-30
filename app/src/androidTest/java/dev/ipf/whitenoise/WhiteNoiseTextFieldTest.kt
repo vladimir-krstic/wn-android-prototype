@@ -41,8 +41,10 @@ class WhiteNoiseTextFieldTest {
         }
 
         val field = composeRule.onNodeWithTag("field").getUnclippedBoundsInRoot()
-        val label = composeRule.onNodeWithTag("label").getUnclippedBoundsInRoot()
-        val support = composeRule.onNodeWithTag("support").getUnclippedBoundsInRoot()
+        val label = composeRule.onNodeWithTag("label", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val support = composeRule.onNodeWithTag("support", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
 
         assertEquals(
             WhiteNoiseTextFieldDefaults.ContentInset.value,
