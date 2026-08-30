@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.net.Uri
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -19,6 +20,17 @@ object AvatarImageProcessor {
     private const val MaximumDimension = 512
 
     suspend fun prepare(
+        contentResolver: ContentResolver,
+        uri: Uri,
+    ): ByteArray? = try {
+        prepareImage(contentResolver, uri)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        null
+    }
+
+    private suspend fun prepareImage(
         contentResolver: ContentResolver,
         uri: Uri,
     ): ByteArray? = withContext(Dispatchers.IO) {

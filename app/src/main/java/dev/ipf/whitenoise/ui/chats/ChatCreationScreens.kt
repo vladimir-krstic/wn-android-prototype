@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -596,25 +597,31 @@ fun GroupSetupScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var webPickerOpen by remember { mutableStateOf(false) }
     var processingJob by remember { mutableStateOf<Job?>(null) }
+    var processingGeneration by remember { mutableIntStateOf(0) }
     var isPreparingPhoto by remember { mutableStateOf(false) }
     var photoError by remember { mutableStateOf(false) }
     var relayError by remember { mutableStateOf(false) }
     val selectedPeople = selectedPersonIds.mapNotNull { id -> profile.people.firstOrNull { it.id == id } }
 
     fun prepare(uri: android.net.Uri) {
+        val generation = ++processingGeneration
         processingJob?.cancel()
         processingJob = coroutineScope.launch {
             isPreparingPhoto = true
             photoError = false
-            val bytes = runCatching { AvatarImageProcessor.prepare(context.contentResolver, uri) }.getOrNull()
-            if (bytes == null) {
-                photoError = true
-            } else {
-                avatar = ProfileAvatar.DeviceImage(bytes)
-                webChoiceId = null
-                photoError = false
+            try {
+                val bytes = AvatarImageProcessor.prepare(context.contentResolver, uri)
+                if (generation != processingGeneration) return@launch
+                if (bytes == null) {
+                    photoError = true
+                } else {
+                    avatar = ProfileAvatar.DeviceImage(bytes)
+                    webChoiceId = null
+                    photoError = false
+                }
+            } finally {
+                if (generation == processingGeneration) isPreparingPhoto = false
             }
-            isPreparingPhoto = false
         }
     }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(::prepare) }

@@ -61,6 +61,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -755,24 +756,28 @@ fun EditGroupScreen(
     }
     var avatar by remember(chat.avatar) { mutableStateOf(chat.avatar) }
     var job by remember { mutableStateOf<Job?>(null) }
+    var preparationGeneration by remember { mutableIntStateOf(0) }
     var isPreparingPhoto by remember { mutableStateOf(false) }
     var photoError by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
+            val generation = ++preparationGeneration
             job?.cancel()
             job = scope.launch {
                 isPreparingPhoto = true
                 photoError = false
-                val bytes = runCatching {
-                    AvatarImageProcessor.prepare(context.contentResolver, uri)
-                }.getOrNull()
-                if (bytes == null) {
-                    photoError = true
-                } else {
-                    avatar = ProfileAvatar.DeviceImage(bytes)
+                try {
+                    val bytes = AvatarImageProcessor.prepare(context.contentResolver, uri)
+                    if (generation != preparationGeneration) return@launch
+                    if (bytes == null) {
+                        photoError = true
+                    } else {
+                        avatar = ProfileAvatar.DeviceImage(bytes)
+                    }
+                } finally {
+                    if (generation == preparationGeneration) isPreparingPhoto = false
                 }
-                isPreparingPhoto = false
             }
         }
     }

@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -89,22 +90,26 @@ fun SignUpScreen(
     var photoError by remember { mutableStateOf<String?>(null) }
     var isSigningUp by remember { mutableStateOf(false) }
     var preparationJob by remember { mutableStateOf<Job?>(null) }
+    var preparationGeneration by remember { mutableIntStateOf(0) }
 
     fun prepare(uri: android.net.Uri) {
+        val generation = ++preparationGeneration
         preparationJob?.cancel()
         preparationJob = scope.launch {
             isPreparingPhoto = true
             photoError = null
-            val prepared = runCatching {
-                AvatarImageProcessor.prepare(context.contentResolver, uri)
-            }.getOrNull()
-            if (prepared == null) {
-                photoError = photoErrorText
-            } else {
-                avatar = ProfileAvatar.DeviceImage(prepared)
-                webChoiceId = null
+            try {
+                val prepared = AvatarImageProcessor.prepare(context.contentResolver, uri)
+                if (generation != preparationGeneration) return@launch
+                if (prepared == null) {
+                    photoError = photoErrorText
+                } else {
+                    avatar = ProfileAvatar.DeviceImage(prepared)
+                    webChoiceId = null
+                }
+            } finally {
+                if (generation == preparationGeneration) isPreparingPhoto = false
             }
-            isPreparingPhoto = false
         }
     }
 

@@ -50,8 +50,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -101,6 +103,7 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.onboarding.AvatarWebImagePicker
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -653,23 +656,36 @@ fun EditProfileScreen(
     var webPicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var isPreparingPhoto by remember { mutableStateOf(false) }
+    var preparationJob by remember { mutableStateOf<Job?>(null) }
+    var preparationGeneration by remember { mutableIntStateOf(0) }
     fun prepare(uri: Uri) {
-        scope.launch {
+        val generation = ++preparationGeneration
+        preparationJob?.cancel()
+        preparationJob = scope.launch {
             isPreparingPhoto = true
             error = null
-            val bytes = runCatching { AvatarImageProcessor.prepare(context.contentResolver, uri) }.getOrNull()
-            isPreparingPhoto = false
-            if (bytes == null) {
-                error = "This image could not be prepared."
-            } else {
-                avatar = ProfileAvatar.DeviceImage(bytes)
+            try {
+                val bytes = AvatarImageProcessor.prepare(context.contentResolver, uri)
+                if (generation != preparationGeneration) return@launch
+                if (bytes == null) {
+                    error = "This image could not be prepared."
+                } else {
+                    avatar = ProfileAvatar.DeviceImage(bytes)
+                }
+            } finally {
+                if (generation == preparationGeneration) isPreparingPhoto = false
             }
         }
     }
     val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { it?.let(::prepare) }
     val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(::prepare) }
+    DisposableEffect(Unit) { onDispose { preparationJob?.cancel() } }
 
     fun resetDraft() {
+        preparationGeneration += 1
+        preparationJob?.cancel()
+        preparationJob = null
+        isPreparingPhoto = false
         name.edit { replace(0, length, profile.name) }
         about.edit { replace(0, length, profile.about) }
         address.edit { replace(0, length, profile.nostrAddress) }

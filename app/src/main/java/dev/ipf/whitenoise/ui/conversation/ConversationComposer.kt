@@ -475,6 +475,7 @@ fun FullConversationComposer(
     var preparationJob by remember { mutableStateOf<Job?>(null) }
     var cameraUri by remember { mutableStateOf<Uri?>(null) }
     var attachmentCounter by rememberSaveable(chat.id) { mutableIntStateOf(0) }
+    var preparationGeneration by remember { mutableIntStateOf(0) }
     var voiceState by rememberSaveable(chat.id, stateSaver = ComposerVoiceStateSaver) {
         mutableStateOf<ComposerVoiceState>(ComposerVoiceState.Idle)
     }
@@ -486,39 +487,41 @@ fun FullConversationComposer(
 
     fun prepareVisualUris(uris: List<Uri>) {
         if (uris.isEmpty()) return
+        val generation = ++preparationGeneration
         preparationJob?.cancel()
         preparationJob = coroutineScope.launch {
             isPreparing = true
             attachmentError = false
-            val prepared = mutableListOf<MessageAttachment>()
-            for (uri in uris) {
-                val type = context.contentResolver.getType(uri).orEmpty()
-                if (type.startsWith("video/")) {
-                    prepared += MessageAttachment(
-                        id = nextId("video"),
-                        kind = MessageAttachmentKind.Video,
-                        label = displayName(context, uri, "Video"),
-                        images = listOf(ProfileAvatar.Asset(AvatarAsset.GardenClub)),
-                        externalUri = uri.toString(),
-                    )
-                } else {
-                    val bytes = runCatching {
-                        AvatarImageProcessor.prepare(context.contentResolver, uri)
-                    }.getOrNull()
-                    if (bytes == null) {
-                        attachmentError = true
-                    } else {
+            try {
+                val prepared = mutableListOf<MessageAttachment>()
+                for (uri in uris) {
+                    val type = runCatching { context.contentResolver.getType(uri) }.getOrNull().orEmpty()
+                    if (type.startsWith("video/")) {
                         prepared += MessageAttachment(
-                            id = nextId("photo"),
-                            kind = MessageAttachmentKind.Photo,
-                            label = displayName(context, uri, "Photo"),
-                            images = listOf(ProfileAvatar.DeviceImage(bytes)),
+                            id = nextId("video"),
+                            kind = MessageAttachmentKind.Video,
+                            label = displayName(context, uri, "Video"),
+                            images = listOf(ProfileAvatar.Asset(AvatarAsset.GardenClub)),
+                            externalUri = uri.toString(),
                         )
+                    } else {
+                        val bytes = AvatarImageProcessor.prepare(context.contentResolver, uri)
+                        if (bytes == null) {
+                            if (generation == preparationGeneration) attachmentError = true
+                        } else {
+                            prepared += MessageAttachment(
+                                id = nextId("photo"),
+                                kind = MessageAttachmentKind.Photo,
+                                label = displayName(context, uri, "Photo"),
+                                images = listOf(ProfileAvatar.DeviceImage(bytes)),
+                            )
+                        }
                     }
                 }
+                if (generation == preparationGeneration && prepared.isNotEmpty()) onAddAttachments(prepared)
+            } finally {
+                if (generation == preparationGeneration) isPreparing = false
             }
-            if (prepared.isNotEmpty()) onAddAttachments(prepared)
-            isPreparing = false
         }
     }
 
@@ -2018,18 +2021,17 @@ private fun displayName(
     context: Context,
     uri: Uri,
     fallback: String,
-): String {
-    val cursor = context.contentResolver.query(
+): String = runCatching {
+    context.contentResolver.query(
         uri,
         arrayOf(OpenableColumns.DISPLAY_NAME),
         null,
         null,
         null,
-    )
-    return cursor?.use {
+    )?.use {
         if (it.moveToFirst()) it.getString(0) else null
-    } ?: fallback
-}
+    }
+}.getOrNull() ?: fallback
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
