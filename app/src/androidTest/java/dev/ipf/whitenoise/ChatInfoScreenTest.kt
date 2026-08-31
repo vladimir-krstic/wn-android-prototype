@@ -5,12 +5,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.ipf.whitenoise.model.ConversationMediaProjection
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.model.MuteDuration
 import dev.ipf.whitenoise.model.SharedContentCategory
@@ -114,6 +118,66 @@ class ChatInfoScreenTest {
             WhiteNoiseTheme { SharedContentScreen(profile, chat, SharedContentCategory.Documents, {}) }
         }
         composeRule.onNodeWithText("Project Brief.pdf").assertIsDisplayed()
+    }
+
+    @Test
+    fun sharedMediaUsesExactFrameViewerAndGoToMessageCallback() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "catalog-media-viewer" }
+        val selected = ConversationMediaProjection.items(chat, profile).first {
+            it.key.attachmentId == "viewer-gallery" && it.key.imageIndex == 1
+        }
+        var targetMessageId: String? = null
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                SharedContentScreen(
+                    profile = profile,
+                    chat = chat,
+                    category = SharedContentCategory.Media,
+                    onBack = {},
+                    onGoToMessage = { targetMessageId = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            "conversation.shared.media.${selected.key.stableId}",
+        ).performClick()
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("More options").performClick()
+        composeRule.onNodeWithText("Go to Message").performClick()
+
+        composeRule.runOnIdle { org.junit.Assert.assertEquals("MED-VIEW-01", targetMessageId) }
+    }
+
+    @Test
+    fun sharedMediaPagerUsesTheWholeChatAndUpdatesSenderTimeAndPosition() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "catalog-media-gallery" }
+        val first = ConversationMediaProjection.items(chat, profile).first()
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                SharedContentScreen(profile, chat, SharedContentCategory.Media, {})
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            "conversation.shared.media.${first.key.stableId}",
+        ).performClick()
+        composeRule.onNodeWithTag("conversation.media.viewer.sender")
+            .assertTextContains("Media - Gallery Layouts")
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertTextContains("Today, 10:00 AM · 1 of 27")
+
+        repeat(2) {
+            composeRule.onNodeWithTag("conversation.media.viewer.pager")
+                .performTouchInput { swipeLeft() }
+            composeRule.waitForIdle()
+        }
+        composeRule.onNodeWithTag("conversation.media.viewer.sender").assertTextContains("You")
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertTextContains("Today, 10:08 AM · 3 of 27")
     }
 
     @Test

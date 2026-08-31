@@ -1,9 +1,10 @@
 # Composer, attachments, media, and speech
 
-Status: Current Pixel 8a device inspection passed on 2026-08-31 for compact,
-IME-visible, attachment-menu, recording, review, transcription, format-menu,
-200%-type dark, RTL, and forced wider-window states. Automated static and
-connected gates pass; user visual acceptance remains separate.
+Status: Current Pixel 8a device inspection passed on 2026-08-31 for the earlier
+compact, IME-visible, attachment-menu, recording, review, transcription,
+format-menu, 200%-type dark, RTL, and forced wider-window states. The subsequent
+rich-content accessory/review refinement has a clean static gate; renewed
+device inspection and user visual acceptance remain pending.
 
 ## Source evidence
 
@@ -14,6 +15,9 @@ connected gates pass; user visual acceptance remains separate.
 - `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/PrototypeComposerTextView.swift`
 - `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/PrototypeComposerMediaViewer.swift`
 - composer, attachment, media, and voice cases in `PrototypeChatModelTests.swift` and `ChatFlowsUITests.swift`
+- user-approved current-iOS comparison at `wn-ios-prototype@4c25393f0eb6` for
+  rich composer accessories, reply geometry, and draft-media review only; this
+  scoped evidence does not repin the Android baseline
 
 The iOS source establishes product states, ordering, format choices, and
 two-endpoint behavior. Android owns presentation, accessibility, Back, IME,
@@ -45,7 +49,10 @@ pickers, popup placement, focus, motion, and safe-area handling.
   composition, mention styling, focus, and external updates without inheriting
   Material TextField's larger container. Compact budgets are ten text lines,
   six caption lines with attachments, and eight transcript lines; overflow
-  scrolls internally.
+  scrolls internally. Complete member mentions use the adaptive medium-neutral
+  `outlineVariant`/`onSurface` pair and the same shared 4 dp rounded glyph-run
+  renderer as conversation search; Compose's square span background is not
+  used.
 - The composer has exactly two endpoints. Compact is content-driven. Expanded
   begins 24 dp below the chat header and ends above the IME or bottom safe
   area. A direction-locked vertical drag settles with an interruptible spring,
@@ -73,9 +80,14 @@ pickers, popup placement, focus, motion, and safe-area handling.
   content without changing the visible gap above Add. GIF acquisition is removed; persisted GIF drafts, fixtures,
   received GIFs, rendering, and media review remain.
 - Camera uses `TakePicture`, visual media uses Android Photo Picker with a
-  20-item limit, and files use `OpenMultipleDocuments`. No camera, microphone,
-  storage, network, notification, or location permission is introduced.
-  Contact selection remains deterministic in an expanded Material sheet. The
+  20-item limit, and files use `OpenMultipleDocuments`. The merged app already
+  declares `CAMERA` for the approved QR scanners, so Android also gates the
+  external capture intent on that permission. Camera therefore requests access
+  just in time after selection, launches capture immediately after approval,
+  and provides Allow Camera or Open Settings recovery after denial. The
+  attachment flow introduces no storage, microphone, network, notification, or
+  location permission. Contact selection remains deterministic in an expanded
+  Material sheet. The
   sheet uses the app's neutral canvas, a 56 dp searchable field, and one
   white-equivalent segmented contact group with names, short public keys, and
   2 dp canvas-tone separators.
@@ -84,7 +96,31 @@ pickers, popup placement, focus, motion, and safe-area handling.
   media is 112 dp high with aspect-derived 68–200 dp widths; utility cards are
   72 dp high with 104–160 dp widths. The shelf has 8 dp padding/gaps, clipped
   rounded top corners, a visual-media-only 1 dp inset separator, and a visible
-  removal affordance inside a 48 dp target.
+  removal affordance inside a 48 dp target. Photo, album, GIF, file, contact,
+  link-preview, and reply cancellation all use one shared accessory: a
+  transparent 48 × 48 dp semantic target, a 20 × 20 dp visible circle, a 12 dp
+  close symbol, and equal 6 dp top/end insets. Its indication is clipped to the
+  visible circle while the full target remains operable.
+- Utility cards keep their accepted 72 dp height without vertical content
+  clipping. Contact cards show a 40 dp avatar or monogram and a visible
+  single-line name. File cards keep the extension plus the final three stem
+  characters visible while only the leading stem ellipsizes.
+- Composer replies and timeline reply cards share one natural-height quote
+  block: a 3 dp capsule begins 12 dp from the card edge, followed by a 10 dp
+  text gap, author, and a two-line excerpt. Incoming/outgoing roles remain
+  adaptive; composer cancellation overlays the top end without moving the
+  quote geometry. The shared content does not force one container shape:
+  composer quotes use the same 8 dp inset as attachment imagery and a 16 dp
+  radius inside the 24 dp composer, while timeline quotes use an 8 dp inset and
+  8 dp radius inside their 16 dp message bubble. Message body content remains
+  aligned at 12 dp. Link previews use the composer quote's same 8 dp outer
+  inset and 16 dp radius so their card is also concentric with the composer.
+- Draft review shows no rail for one item. Multi-item review uses 72 dp targets
+  containing 64 dp cropped images with no unselected frame; only the selected
+  image receives a 2 dp `onBackground` ring. Inclusion is a 22 dp circular
+  check inside a 48 dp target, with explicit inclusion state and hint. The
+  target follows the fitted preview image rather than the pager bounds, placing
+  the visible check inside its bottom-end corner with 4 dp from both edges.
 - Deterministic link previews appear only for text-only drafts. Adding an
   attachment suppresses the card without losing draft text or the user's
   per-link suppression choice.
@@ -146,8 +182,8 @@ pickers, popup placement, focus, motion, and safe-area handling.
 ## Acceptance evidence
 
 - `testDebugUnitTest`, `lintDebug`, `assembleDebug`, and
-  `assembleDebugAndroidTest` pass on 2026-08-31. The current unit suite contains
-  137 passing tests and lint reports no errors. Instrumentation sources include
+  `assembleDebugAndroidTest` pass on 2026-08-31. The unit suite passes and lint
+  reports no errors. Instrumentation sources include
   the transparent host; the 10 dp Add gap and format selector's 2 dp anchor/
   10 dp visible-pill gap; 20/24/32/48 dp
   Stop, waveform, Play and target geometry; format ordering; and the expanded
@@ -171,6 +207,25 @@ pickers, popup placement, focus, motion, and safe-area handling.
   assertions no longer match current screens. Those pre-existing failures are
   outside this flow; the isolated composer host prevents them from obscuring
   the 30-scenario composer result.
+
+- Camera capture now accounts for the merged manifest's QR-scanner `CAMERA`
+  declaration: the composer requests access from the explicit Camera action,
+  retains the pending capture across the permission/settings round trip, and
+  only creates and launches the FileProvider-backed `TakePicture` request once
+  access is granted. Static verification for this regression is recorded in
+  WN-ANDROID-0104; renewed hands-on capture remains pending.
+- The rich-content follow-up adds unit coverage for suffix-preserving filenames
+  and compiled Compose coverage for shared 48/20/12/6 dp removal geometry,
+  unclipped utility labels at 200% type/RTL, shared quote-bar geometry, clean
+  selected-only draft thumbnails, fitted-image bottom-end inclusion geometry,
+  inclusion semantics, and the hidden single-item rail. `testDebugUnitTest`,
+  `lintDebug`, `assembleDebug`, and
+  `assembleDebugAndroidTest` are the required static gate; these updated states
+  have not yet been visually inspected.
+- The mention-highlight follow-up adds exact-name/range unit coverage and a
+  compiled pixel regression for the adaptive medium-gray background,
+  `onSurface` foreground, and shared rounded-corner treatment. Device
+  inspection of this state remains pending.
 
 Sources: [Compose gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures),
 [gesture animation](https://developer.android.com/develop/ui/compose/animation/advanced),

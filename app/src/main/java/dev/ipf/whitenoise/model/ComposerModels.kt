@@ -285,6 +285,24 @@ data class ComposerAttachmentSize(
     val widthDp: Int,
 )
 
+data class PreservedFilename(
+    val leading: String,
+    val suffix: String,
+)
+
+fun preserveFilenameSuffix(filename: String): PreservedFilename {
+    val trimmed = filename.trim()
+    if (trimmed.isEmpty()) return PreservedFilename("", "")
+    val dot = trimmed.lastIndexOf('.').takeIf { it in 1 until trimmed.lastIndex }
+    val stem = if (dot == null) trimmed else trimmed.substring(0, dot)
+    val extension = if (dot == null) "" else trimmed.substring(dot)
+    if (stem.length <= 3) return PreservedFilename("", stem + extension)
+    return PreservedFilename(
+        leading = stem.dropLast(3),
+        suffix = stem.takeLast(3) + extension,
+    )
+}
+
 object ComposerAttachmentSizing {
     const val VisualHeightDp = 112
     const val VisualMinWidthDp = 68

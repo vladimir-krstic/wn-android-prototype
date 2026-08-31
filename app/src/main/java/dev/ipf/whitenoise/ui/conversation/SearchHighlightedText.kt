@@ -62,7 +62,11 @@ internal fun SearchHighlightedText(
     Box(modifier) {
         if (ranges.isNotEmpty()) {
             Canvas(Modifier.matchParentSize()) {
-                layoutResult?.drawSearchHighlights(this, ranges)
+                layoutResult?.drawRoundedTextHighlights(
+                    drawScope = this,
+                    ranges = ranges,
+                    color = AndroidSearchMatchCyan,
+                )
             }
         }
         Text(
@@ -77,9 +81,10 @@ internal fun SearchHighlightedText(
     }
 }
 
-private fun TextLayoutResult.drawSearchHighlights(
+internal fun TextLayoutResult.drawRoundedTextHighlights(
     drawScope: DrawScope,
     ranges: List<IntRange>,
+    color: Color,
 ) = with(drawScope) {
     val radius = 4.dp.toPx()
     ranges.forEach { range ->
@@ -102,7 +107,7 @@ private fun TextLayoutResult.drawSearchHighlights(
         }
         lineBounds.values.forEach { bounds ->
             drawRoundRect(
-                color = AndroidSearchMatchCyan,
+                color = color,
                 topLeft = bounds.topLeft,
                 size = bounds.size,
                 cornerRadius = CornerRadius(radius, radius),

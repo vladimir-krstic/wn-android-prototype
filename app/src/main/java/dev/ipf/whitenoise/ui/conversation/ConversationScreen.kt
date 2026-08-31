@@ -99,6 +99,9 @@ import dev.ipf.whitenoise.model.ChatTimelineEntry
 import dev.ipf.whitenoise.model.ComposerAvailability
 import dev.ipf.whitenoise.model.ComposerExpansionPolicy
 import dev.ipf.whitenoise.model.ConversationItem
+import dev.ipf.whitenoise.model.ConversationMediaKey
+import dev.ipf.whitenoise.model.ConversationMediaProjection
+import dev.ipf.whitenoise.model.ConversationMediaSelection
 import dev.ipf.whitenoise.model.ConversationProjection
 import dev.ipf.whitenoise.model.ConversationSearch
 import dev.ipf.whitenoise.model.DisappearingDuration
@@ -159,15 +162,18 @@ fun ConversationScreen(
     onQuickReactionsChanged: (List<String>) -> Boolean = { false },
     onDeleteMessages: (Set<String>, MessageDeletionScope) -> Boolean = { _, _ -> false },
     onForwardMessages: (Set<String>, List<String>) -> Boolean = { _, _ -> false },
+    onForwardMedia: (ConversationMediaKey, List<String>, String) -> Boolean = { _, _, _ -> false },
     onOpenMessageDetails: (String) -> Unit = {},
     onOpenChatInfo: () -> Unit = {},
     onOpenDeveloperTools: (() -> Unit)? = null,
     initialSearch: Boolean = false,
+    initialMessageId: String? = null,
 ) {
     val items = remember(chat.timeline) { ConversationProjection.items(chat) }
     val listState = rememberLazyListState()
     var showDeclineConfirmation by remember { mutableStateOf(false) }
-    var viewerAttachments by remember { mutableStateOf<List<MessageAttachment>?>(null) }
+    var viewerSelection by remember { mutableStateOf<ConversationMediaSelection?>(null) }
+    var forwardMediaKey by remember { mutableStateOf<ConversationMediaKey?>(null) }
     var focusedMessageId by remember { mutableStateOf<String?>(null) }
     var isSelecting by remember { mutableStateOf(false) }
     var selectedMessageIds by remember { mutableStateOf(emptySet<String>()) }
@@ -181,6 +187,9 @@ fun ConversationScreen(
     var isSearching by rememberSaveable(chat.id) { mutableStateOf(initialSearch) }
     var searchQuery by rememberSaveable(chat.id) { mutableStateOf("") }
     var searchResultIndex by rememberSaveable(chat.id) { mutableIntStateOf(0) }
+    var pendingInitialMessageId by rememberSaveable(chat.id, initialMessageId) {
+        mutableStateOf(initialMessageId)
+    }
     var compactComposerHeightPx by remember(chat.id) { mutableIntStateOf(0) }
     var composerPresentationActive by remember(chat.id) { mutableStateOf(false) }
     var composerTravelPx by remember(chat.id) { mutableFloatStateOf(0f) }
@@ -237,7 +246,18 @@ fun ConversationScreen(
     }
 
     LaunchedEffect(chat.id, items.size) {
-        if (items.isNotEmpty()) listState.scrollToItem(items.lastIndex)
+        val target = pendingInitialMessageId
+        val targetIndex = target?.let { messageId ->
+            items.indexOfFirst {
+                it is ConversationItem.MessageItem && it.message.id == messageId
+            }
+        } ?: -1
+        if (targetIndex >= 0) {
+            listState.scrollToItem(targetIndex)
+            pendingInitialMessageId = null
+        } else if (items.isNotEmpty()) {
+            listState.scrollToItem(items.lastIndex)
+        }
     }
     LaunchedEffect(currentSearchMessageId) {
         val messageId = currentSearchMessageId ?: return@LaunchedEffect
@@ -389,7 +409,9 @@ fun ConversationScreen(
                                 chat = chat,
                                 item = item,
                                 onRetry = { onRetry(item.message.id) },
-                                onOpenMedia = { viewerAttachments = it },
+                                onOpenMedia = { key ->
+                                    viewerSelection = ConversationMediaProjection.selection(chat, profile, key)
+                                },
                                 isSelectionMode = isSelecting,
                                 selected = item.message.id in selectedMessageIds,
                                 searchAlpha = conversationSearchMessageAlpha(
@@ -483,10 +505,21 @@ fun ConversationScreen(
         )
     }
 
-    viewerAttachments?.let { attachments ->
+    viewerSelection?.let { selection ->
         ReadOnlyMediaViewer(
-            attachments = attachments,
-            onDismiss = { viewerAttachments = null },
+            selection = selection,
+            onDismiss = { viewerSelection = null },
+            onForward = { item ->
+                forwardMediaKey = item.key
+                viewerSelection = null
+            },
+            onGoToMessage = { item ->
+                viewerSelection = null
+                val itemIndex = items.indexOfFirst {
+                    it is ConversationItem.MessageItem && it.message.id == item.message.id
+                }
+                if (itemIndex >= 0) coroutineScope.launch { listState.animateScrollToItem(itemIndex) }
+            },
         )
     }
 
@@ -553,12 +586,23 @@ fun ConversationScreen(
             profile = profile,
             sourceChatId = chat.id,
             onDismiss = { forwardMessageIds = null },
-            onForward = { targets ->
+            onForward = { targets, _ ->
                 if (onForwardMessages(ids, targets)) {
                     forwardMessageIds = null
                     isSelecting = false
                     selectedMessageIds = emptySet()
                 }
+            },
+        )
+    }
+    forwardMediaKey?.let { key ->
+        ForwardMessagesSheet(
+            profile = profile,
+            sourceChatId = chat.id,
+            onDismiss = { forwardMediaKey = null },
+            allowsAccompanyingMessage = true,
+            onForward = { targets, message ->
+                if (onForwardMedia(key, targets, message)) forwardMediaKey = null
             },
         )
     }
@@ -817,7 +861,7 @@ private fun MessageRow(
     chat: Chat,
     item: ConversationItem.MessageItem,
     onRetry: () -> Unit,
-    onOpenMedia: (List<MessageAttachment>) -> Unit,
+    onOpenMedia: (ConversationMediaKey) -> Unit,
     isSelectionMode: Boolean,
     selected: Boolean,
     searchAlpha: Float,
@@ -974,7 +1018,7 @@ private fun MessageBubble(
     outgoing: Boolean,
     item: ConversationItem.MessageItem,
     authorName: String,
-    onOpenMedia: (List<MessageAttachment>) -> Unit,
+    onOpenMedia: (ConversationMediaKey) -> Unit,
     searchQuery: String,
     readAloudController: ReadAloudController,
 ) {
@@ -990,45 +1034,55 @@ private fun MessageBubble(
         shape = MaterialTheme.shapes.large,
         color = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = description },
+        modifier = Modifier
+            .testTag("conversation.message.bubble.${message.id}")
+            .semantics(mergeDescendants = true) { contentDescription = description },
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
             if (message.replyToMessageId != null) {
-                ReplyQuote(profile, item, outgoing)
-            }
-            TimelineAttachmentContent(
-                attachments = message.attachments,
-                outgoing = outgoing,
-                onOpenMedia = onOpenMedia,
-                searchQuery = searchQuery,
-            )
-            if (message.attachments.any { it.voiceFormat == VoiceMessageFormat.Both } && text.isNotBlank()) {
-                Text(
-                    stringResource(R.string.transcribed),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
+                ReplyQuote(
+                    profile = profile,
+                    item = item,
+                    outgoing = outgoing,
+                    modifier = Modifier.padding(horizontal = 8.dp),
                 )
             }
-            if (text.isNotBlank()) {
-                if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
-                    SearchHighlightedText(
-                        text = text,
-                        query = searchQuery,
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                } else {
+            Column(modifier = Modifier.padding(horizontal = 12.dp)) {
+                TimelineAttachmentContent(
+                    attachments = message.attachments,
+                    outgoing = outgoing,
+                    messageId = message.id,
+                    onOpenMedia = onOpenMedia,
+                    searchQuery = searchQuery,
+                )
+                if (message.attachments.any { it.voiceFormat == VoiceMessageFormat.Both } && text.isNotBlank()) {
                     Text(
-                        text = text,
-                        fontStyle = if (message.deletionState == MessageDeletionState.None) {
-                            FontStyle.Normal
-                        } else {
-                            FontStyle.Italic
-                        },
-                        style = MaterialTheme.typography.bodyLarge,
+                        stringResource(R.string.transcribed),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
-                if (!outgoing && message.deletionState == MessageDeletionState.None) {
-                    ReadAloudAction(message.id, text, readAloudController)
+                if (text.isNotBlank()) {
+                    if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
+                        SearchHighlightedText(
+                            text = text,
+                            query = searchQuery,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    } else {
+                        Text(
+                            text = text,
+                            fontStyle = if (message.deletionState == MessageDeletionState.None) {
+                                FontStyle.Normal
+                            } else {
+                                FontStyle.Italic
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    if (!outgoing && message.deletionState == MessageDeletionState.None) {
+                        ReadAloudAction(message.id, text, readAloudController)
+                    }
                 }
             }
         }
@@ -1036,7 +1090,12 @@ private fun MessageBubble(
 }
 
 @Composable
-private fun ReplyQuote(profile: Profile, item: ConversationItem.MessageItem, outgoing: Boolean) {
+private fun ReplyQuote(
+    profile: Profile,
+    item: ConversationItem.MessageItem,
+    outgoing: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val source = item.resolvedReply
     val author = source?.let { message ->
         if (message.authorId == profile.id) stringResource(R.string.you) else {
@@ -1049,22 +1108,27 @@ private fun ReplyQuote(profile: Profile, item: ConversationItem.MessageItem, out
         source != null -> source.visibleText(profile.id).ifBlank { source.attachments.firstOrNull()?.label.orEmpty() }
         else -> stringResource(R.string.original_message_unavailable)
     }
-    val overlay = if (outgoing) Color.White.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surface
-    Surface(
-        color = overlay,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-    ) {
-        Column(Modifier.padding(8.dp)) {
-            Text(
-                author?.let { stringResource(R.string.reply_from, it) }
-                    ?: stringResource(R.string.original_message_unavailable),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(body, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
-        }
+    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val secondary = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
     }
+    ConversationQuoteBlock(
+        author = author ?: stringResource(R.string.original_message_unavailable),
+        excerpt = body,
+        containerColor = if (outgoing) {
+            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        contentColor = content,
+        secondaryColor = secondary,
+        accentColor = content,
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier.fillMaxWidth().padding(bottom = 6.dp),
+        testTagPrefix = "conversation.message.quote",
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

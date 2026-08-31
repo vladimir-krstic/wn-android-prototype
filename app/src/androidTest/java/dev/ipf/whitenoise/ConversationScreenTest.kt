@@ -2,6 +2,7 @@ package dev.ipf.whitenoise
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
@@ -14,28 +15,34 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -44,8 +51,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import dev.ipf.whitenoise.model.ChatTimelineEntry
 import dev.ipf.whitenoise.model.AppearancePreference
+import dev.ipf.whitenoise.model.ComposerAvailability
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.model.VoiceDraftSubmission
+import dev.ipf.whitenoise.model.composerAvailability
 import dev.ipf.whitenoise.ui.conversation.ConversationScreen
 import dev.ipf.whitenoise.ui.conversation.MessageDetailsScreen
 import dev.ipf.whitenoise.ui.conversation.SearchHighlightedText
@@ -120,8 +129,274 @@ class ConversationScreenTest {
         composeRule.onNodeWithContentDescription("4 draft attachments").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Badger").performClick()
         composeRule.onNodeWithText("Preview").assertIsDisplayed()
-        composeRule.onNodeWithText("Included").assertIsDisplayed()
+        composeRule.onNodeWithTag("conversation.media.inclusion.target").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Included"),
+        )
         composeRule.onNodeWithContentDescription("2 of 4").assertIsDisplayed()
+        composeRule.onAllNodesWithTag("conversation.media.thumbnail.unselected", useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .also { assertTrue(it.isNotEmpty()) }
+    }
+
+    @Test
+    fun composerRemoveUsesOneAccessibleTargetAndConcentricVisualCircle() {
+        setConversation("catalog-composer-photo")
+
+        composeRule.onNodeWithTag("conversation.composer.remove.target", useUnmergedTree = true)
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("conversation.composer.remove.visual", useUnmergedTree = true)
+            .assertWidthIsEqualTo(20.dp)
+            .assertHeightIsEqualTo(20.dp)
+        val target = composeRule.onNodeWithTag(
+            "conversation.composer.remove.target",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val visual = composeRule.onNodeWithTag(
+            "conversation.composer.remove.visual",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val sixDp = with(composeRule.density) { 6.dp.toPx() }
+        assertTrue(abs(visual.top - target.top - sixDp) < 1f)
+        assertTrue(abs(target.right - visual.right - sixDp) < 1f)
+    }
+
+    @Test
+    fun utilityCardsExposeContactAndFullFilenameWhileKeepingCompactGeometry() {
+        setConversation("catalog-composer-contact")
+        composeRule.onNodeWithText("Maya Chen").assertIsDisplayed()
+
+        setConversation("catalog-composer-file")
+        composeRule.onNodeWithContentDescription("Project Brief.pdf").assertIsDisplayed()
+    }
+
+    @Test
+    fun utilityCardsRemainReadableAtLargeTypeInRtlMixedShelf() {
+        val profile = ProfileFixtures.marmota
+        val fileChat = profile.chats.first { it.id == "catalog-composer-file" }
+        val contactChat = profile.chats.first { it.id == "catalog-composer-contact" }
+        val chat = fileChat.copy(
+            draftAttachments = fileChat.draftAttachments + contactChat.draftAttachments,
+        )
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = 1f, fontScale = 2f),
+                LocalLayoutDirection provides LayoutDirection.Rtl,
+            ) {
+                WhiteNoiseTheme {
+                    ConversationScreen(profile, chat, {}, { true }, {}, {}, {})
+                }
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Project Brief.pdf").assertIsDisplayed()
+        composeRule.onNodeWithText("Maya Chen", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun composerAndMessageRepliesUseAlignedAccentsAndConcentricInsets() {
+        setConversation("catalog-composer-reply")
+        val composerSurface = composeRule.onNodeWithTag(
+            "conversation.composer.surface",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val composerContainer = composeRule.onNodeWithTag(
+            "conversation.composer.quote.container",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val composerBar = composeRule.onNodeWithTag(
+            "conversation.composer.quote.bar",
+            useUnmergedTree = true,
+        ).assertWidthIsEqualTo(3.dp).fetchSemanticsNode().boundsInRoot
+
+        setConversation("catalog-group-messages")
+        val messageBubble = composeRule.onNodeWithTag(
+            "conversation.message.bubble.GRP-RPL-02",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val messageContainer = composeRule.onNodeWithTag(
+            "conversation.message.quote.container",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val messageBar = composeRule.onNodeWithTag(
+            "conversation.message.quote.bar",
+            useUnmergedTree = true,
+        ).assertWidthIsEqualTo(3.dp).fetchSemanticsNode().boundsInRoot
+        val eightDp = with(composeRule.density) { 8.dp.toPx() }
+        val twelveDp = with(composeRule.density) { 12.dp.toPx() }
+
+        assertTrue(abs(composerContainer.left - composerSurface.left - eightDp) < 1f)
+        assertTrue(abs(composerSurface.right - composerContainer.right - eightDp) < 1f)
+        assertTrue(abs(composerContainer.top - composerSurface.top - eightDp) < 1f)
+        assertTrue(abs(messageContainer.left - messageBubble.left - eightDp) < 1f)
+        assertTrue(abs(messageBubble.right - messageContainer.right - eightDp) < 1f)
+        assertTrue(abs(messageContainer.top - messageBubble.top - eightDp) < 1f)
+        assertTrue(abs(composerBar.left - composerContainer.left - twelveDp) < 1f)
+        assertTrue(abs(messageBar.left - messageContainer.left - twelveDp) < 1f)
+    }
+
+    @Test
+    fun linkPreviewUsesTheSameConcentricComposerInset() {
+        setConversation("catalog-composer-link-preview")
+        val composerSurface = composeRule.onNodeWithTag(
+            "conversation.composer.surface",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val linkPreview = composeRule.onNodeWithTag(
+            "conversation.composer.linkPreview",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val eightDp = with(composeRule.density) { 8.dp.toPx() }
+
+        assertTrue(abs(linkPreview.left - composerSurface.left - eightDp) < 1f)
+        assertTrue(abs(composerSurface.right - linkPreview.right - eightDp) < 1f)
+        assertTrue(abs(linkPreview.top - composerSurface.top - eightDp) < 1f)
+    }
+
+    @Test
+    fun singleDraftMediaHidesThumbnailRailAndUsesCompactInclusionControl() {
+        setConversation("catalog-composer-photo")
+
+        composeRule.onNodeWithContentDescription("Photo ready to send").performClick()
+
+        val image = composeRule.onNodeWithTag(
+            "conversation.media.preview.image.0",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val target = composeRule.onNodeWithTag(
+            "conversation.media.inclusion.target",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val visual = composeRule.onNodeWithTag(
+            "conversation.media.inclusion.visual",
+            useUnmergedTree = true,
+        )
+            .assertWidthIsEqualTo(22.dp)
+            .assertHeightIsEqualTo(22.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val fourDp = with(composeRule.density) { 4.dp.toPx() }
+
+        assertTrue(abs(target.right - image.right) < 1f)
+        assertTrue(abs(target.bottom - image.bottom) < 1f)
+        assertTrue(abs(image.right - visual.right - fourDp) < 1f)
+        assertTrue(abs(image.bottom - visual.bottom - fourDp) < 1f)
+        composeRule.onNodeWithTag("conversation.media.thumbnail.target").assertDoesNotExist()
+    }
+
+    @Test
+    fun sentViewerStartsOnExactAlbumTileAndPagesAcrossTheChatWithoutThumbnails() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "catalog-media-viewer" }
+        val lastDestinationId = profile.chats.last {
+            it.id != chat.id && it.composerAvailability(profile) == ComposerAvailability.Available
+        }.id
+        setConversation(chat.id)
+
+        composeRule.onNodeWithTag("conversation.media.tile.viewer-gallery.1").performClick()
+
+        composeRule.onNodeWithTag("conversation.media.viewer.sender")
+            .assertTextContains("Media - Viewer & Actions")
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertTextContains("2 of 4")
+        composeRule.onNodeWithTag("conversation.media.thumbnail.target").assertDoesNotExist()
+        composeRule.onNodeWithTag("conversation.media.viewer.share")
+            .assertIsDisplayed()
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("conversation.media.viewer.forward")
+            .assertIsDisplayed()
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithText("Share").assertDoesNotExist()
+        composeRule.onNodeWithText("Forward").assertDoesNotExist()
+
+        val zoomIn = composeRule.onNodeWithTag(
+            "conversation.media.viewer.page.1",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+            .first { it.label == "Zoom In" }
+        composeRule.runOnIdle { assertTrue(zoomIn.action()) }
+        composeRule.onNodeWithTag("conversation.media.viewer.pager").performTouchInput { swipeLeft() }
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertTextContains("2 of 4")
+
+        composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeRule.onNodeWithTag("conversation.media.viewer.pager").performTouchInput { swipeLeft() }
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertTextContains("3 of 4")
+
+        composeRule.onNodeWithTag("conversation.media.viewer.forward").performClick()
+        composeRule.onNodeWithTag("conversation.forward.search")
+            .assertIsDisplayed()
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("conversation.forward.composer")
+            .assertIsDisplayed()
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("conversation.forward.message")
+            .assertIsDisplayed()
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("conversation.forward.submit")
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+        val destinationBounds = composeRule.onNodeWithTag("conversation.forward.destinations")
+            .fetchSemanticsNode().boundsInRoot
+        val composerBounds = composeRule.onNodeWithTag("conversation.forward.composer")
+            .fetchSemanticsNode().boundsInRoot
+        val forwardContentBounds = composeRule.onNodeWithTag("conversation.forward.content")
+            .fetchSemanticsNode().boundsInRoot
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        assertTrue(destinationBounds.bottom > composerBounds.top)
+        assertTrue(abs(destinationBounds.bottom - rootBounds.bottom) < 1f)
+        assertTrue(forwardContentBounds.height >= rootBounds.height * 0.8f)
+        assertTrue(forwardContentBounds.top > rootBounds.top)
+
+        val firstDestination = composeRule.onNodeWithTag(
+            "conversation.forward.destination.catalog-direct-text",
+        ).assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox),
+        ).fetchSemanticsNode().boundsInRoot
+        val secondDestination = composeRule.onNodeWithTag(
+            "conversation.forward.destination.catalog-direct-dates",
+        ).fetchSemanticsNode().boundsInRoot
+        val twoDp = with(composeRule.density) { 2.dp.toPx() }
+        assertTrue(abs(secondDestination.top - firstDestination.bottom - twoDp) < 1f)
+
+        composeRule.onNodeWithTag("conversation.forward.destination.catalog-direct-text")
+            .performClick()
+        composeRule.onNodeWithTag(
+            "conversation.forward.destination.catalog-direct-text.check",
+            useUnmergedTree = true,
+        ).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Forward to 1 Chat").assertIsDisplayed()
+        composeRule.onNodeWithText("Forward to 1 Chat").assertDoesNotExist()
+
+        val capSampleY = with(composeRule.density) { 8.dp.roundToPx() }
+        val restingSheet = composeRule.onNodeWithTag("sheet.surface")
+            .captureToImage().toPixelMap()
+        val restingCap = restingSheet[restingSheet.width / 2, capSampleY]
+        composeRule.onNodeWithTag("conversation.forward.destinations")
+            .performTouchInput { swipeUp() }
+        composeRule.waitForIdle()
+        val scrolledSheet = composeRule.onNodeWithTag("sheet.surface")
+            .captureToImage().toPixelMap()
+        val scrolledCap = scrolledSheet[scrolledSheet.width / 2, capSampleY]
+        val scrolledTop = composeRule.onNodeWithTag("conversation.forward.top")
+            .captureToImage().toPixelMap()[0, 0]
+        assertTrue(
+            scrolledCap.red + scrolledCap.green + scrolledCap.blue <
+                restingCap.red + restingCap.green + restingCap.blue,
+        )
+        assertTrue(abs(scrolledCap.red - scrolledTop.red) < 0.01f)
+        assertTrue(abs(scrolledCap.green - scrolledTop.green) < 0.01f)
+        assertTrue(abs(scrolledCap.blue - scrolledTop.blue) < 0.01f)
+
+        composeRule.onNodeWithTag("conversation.forward.destinations")
+            .performScrollToNode(hasTestTag("conversation.forward.destination.$lastDestinationId"))
+        val lastDestination = composeRule.onNodeWithTag(
+            "conversation.forward.destination.$lastDestinationId",
+        ).fetchSemanticsNode().boundsInRoot
+        val eightDp = with(composeRule.density) { 8.dp.toPx() }
+        assertTrue(lastDestination.bottom <= composerBounds.top - eightDp)
     }
 
     @Test
@@ -509,6 +784,44 @@ class ConversationScreenTest {
                 (0 until pixels.height).any { y -> pixels[x, y] == Color.Cyan }
             },
         )
+    }
+
+    @Test
+    fun composerMentionUsesTheSharedRoundedMediumNeutralHighlight() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "catalog-composer-mention" }
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                MaterialTheme(
+                    colorScheme = MaterialTheme.colorScheme.copy(
+                        outlineVariant = Color.Magenta,
+                        onSurface = Color.Yellow,
+                    ),
+                ) {
+                    ConversationScreen(profile, chat, {}, { true }, {}, {}, {})
+                }
+            }
+        }
+
+        val pixels = composeRule.onNodeWithTag("conversation.composer.editor")
+            .captureToImage()
+            .toPixelMap()
+        val highlightPixels = buildList {
+            repeat(pixels.width) { x ->
+                repeat(pixels.height) { y ->
+                    if (pixels[x, y] == Color.Magenta) add(x to y)
+                }
+            }
+        }
+        assertTrue(highlightPixels.isNotEmpty())
+        assertTrue(
+            (0 until pixels.width).any { x ->
+                (0 until pixels.height).any { y -> pixels[x, y] == Color.Yellow }
+            },
+        )
+        val left = highlightPixels.minOf { it.first }
+        val top = highlightPixels.minOf { it.second }
+        assertTrue(pixels[left, top] != Color.Magenta)
     }
 
     @Test

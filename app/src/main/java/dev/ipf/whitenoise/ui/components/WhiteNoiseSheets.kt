@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,6 +36,7 @@ fun WhiteNoiseModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
+    containerColor: Color? = null,
     contentWindowInsets: @Composable () -> WindowInsets = { WindowInsets.safeDrawing },
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -46,7 +48,7 @@ fun WhiteNoiseModalBottomSheet(
             onDismissRequest = onDismissRequest,
             modifier = modifier.testTag("sheet.surface"),
             sheetState = sheetState,
-            containerColor = scheme.surfaceContainerLow,
+            containerColor = containerColor ?: scheme.surfaceContainerLow,
             contentColor = scheme.onSurface,
             contentWindowInsets = contentWindowInsets,
             dragHandle = {

@@ -34,8 +34,10 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 - One `app` module and one launcher activity
 
 The runtime is intentionally offline and deterministic. It declares camera
-permission only for the user-selected Private Key or Share &amp; Connect QR
-scanner and requests it just in time. On Android 13 and newer, the Settings
+permission for the user-selected Private Key and Share &amp; Connect QR scanners.
+Because Android also gates an external photo-capture intent when that manifest
+permission is present, the scanners and the chat Camera action request access
+only after the person selects them. On Android 13 and newer, the Settings
 prototype also requests `POST_NOTIFICATIONS` from its explicit notification
 access action; the app does not create or deliver notifications. It declares
 no network, storage, microphone, or location permission.

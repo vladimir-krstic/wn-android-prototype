@@ -50,6 +50,7 @@
     <string name="profile_qr_code">Profile QR code</string>
     <string name="camera_access_needed">Camera Access Needed</string>
     <string name="camera_permission_detail">Allow camera access to scan a Private Key QR code.</string>
+    <string name="camera_attachment_permission_detail">Allow camera access to take a photo for this chat.</string>
     <string name="allow_camera">Allow Camera</string>
     <string name="open_settings">Open Settings</string>
     <string name="turn_flashlight_on">Turn flashlight on</string>
@@ -366,4 +367,17 @@
     <string name="remove_named_relay">Remove %1$s</string>
     <string name="remove_relay">Remove Relay</string>
     <string name="save">Save</string>
+    <string name="share">Share</string>
+    <string name="share_media">Share media</string>
+    <string name="more_options">More options</string>
+    <string name="go_to_message">Go to Message</string>
+    <string name="add_a_message">Add a message</string>
+    <string name="zoom_in">Zoom In</string>
+    <string name="zoom_out">Zoom Out</string>
+    <string name="reset_zoom">Reset Zoom</string>
+    <string name="zoom_level">Zoom %1$d%%</string>
+    <string name="media_viewer_metadata">%1$s · %2$d of %3$d</string>
+    <string name="media_saved">Media saved</string>
+    <string name="media_save_error">Couldn’t save this media. Choose a destination and try again.</string>
+    <string name="media_share_error">Couldn’t prepare this media for sharing. Try again.</string>
 </resources>

@@ -1,12 +1,15 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -16,7 +19,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -48,6 +53,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -56,7 +62,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -76,7 +81,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetState
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,6 +113,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -116,6 +124,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
@@ -124,6 +133,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -133,8 +143,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AvatarAsset
@@ -154,6 +167,7 @@ import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.VoiceDraftSubmission
 import dev.ipf.whitenoise.model.VoiceMessageFixture
 import dev.ipf.whitenoise.model.VoiceMessageFormat
+import dev.ipf.whitenoise.model.preserveFilenameSuffix
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuPlacement
@@ -206,27 +220,31 @@ private val ComposerVoiceStateSaver: Saver<ComposerVoiceState, Any> = listSaver(
 )
 
 private class MentionVisualTransformation(
-    mentionNames: List<String>,
-    private val background: Color,
+    private val ranges: List<IntRange>,
+    private val contentColor: Color,
 ) : VisualTransformation {
-    private val regex = mentionNames
+    override fun filter(text: AnnotatedString): TransformedText {
+        val styled = AnnotatedString.Builder(text)
+        ranges.filter { it.first >= 0 && it.last < text.length }.forEach { range ->
+            styled.addStyle(
+                SpanStyle(color = contentColor),
+                range.first,
+                range.last + 1,
+            )
+        }
+        return TransformedText(styled.toAnnotatedString(), OffsetMapping.Identity)
+    }
+}
+
+internal fun mentionRanges(text: String, mentionNames: List<String>): List<IntRange> {
+    val regex = mentionNames
         .filter(String::isNotBlank)
         .sortedByDescending(String::length)
         .takeIf(List<String>::isNotEmpty)
         ?.joinToString("|") { Regex.escape(it) }
         ?.let { Regex("(?<!\\S)@(?:$it)(?=\\s|$)", RegexOption.IGNORE_CASE) }
-
-    override fun filter(text: AnnotatedString): TransformedText {
-        val styled = AnnotatedString.Builder(text)
-        regex?.findAll(text.text)?.forEach { match ->
-            styled.addStyle(
-                SpanStyle(background = background),
-                match.range.first,
-                match.range.last + 1,
-            )
-        }
-        return TransformedText(styled.toAnnotatedString(), OffsetMapping.Identity)
-    }
+        ?: return emptyList()
+    return regex.findAll(text).map(MatchResult::range).toList()
 }
 
 private fun Modifier.composerExpansionGesture(
@@ -475,6 +493,8 @@ fun FullConversationComposer(
     var attachmentError by remember { mutableStateOf(false) }
     var preparationJob by remember { mutableStateOf<Job?>(null) }
     var cameraUri by rememberSaveable(chat.id) { mutableStateOf<Uri?>(null) }
+    var cameraCapturePending by rememberSaveable(chat.id) { mutableStateOf(false) }
+    var showCameraPermissionRecovery by rememberSaveable(chat.id) { mutableStateOf(false) }
     var attachmentCounter by rememberSaveable(chat.id) { mutableIntStateOf(0) }
     var preparationGeneration by remember { mutableIntStateOf(0) }
     var voiceState by rememberSaveable(chat.id, stateSaver = ComposerVoiceStateSaver) {
@@ -552,6 +572,69 @@ fun FullConversationComposer(
         val uri = cameraUri
         if (saved && uri != null) prepareVisualUris(listOf(uri))
         cameraUri = null
+    }
+    fun launchCameraCapture() {
+        cameraCapturePending = false
+        attachmentError = false
+        val launched = runCatching {
+            val directory = File(context.cacheDir, "camera").apply { mkdirs() }
+            val file = File.createTempFile("white-noise-", ".jpg", directory)
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.files",
+                file,
+            )
+            cameraUri = uri
+            camera.launch(uri)
+        }.isSuccess
+        if (!launched) {
+            cameraUri = null
+            attachmentError = true
+        }
+    }
+    val cameraSettings = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        if (
+            cameraCapturePending &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA,
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCameraCapture()
+        } else if (cameraCapturePending) {
+            showCameraPermissionRecovery = true
+        }
+    }
+    val cameraPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted && cameraCapturePending) {
+            launchCameraCapture()
+        } else if (cameraCapturePending) {
+            showCameraPermissionRecovery = true
+        }
+    }
+    fun requestCameraCapture() {
+        attachmentError = false
+        cameraCapturePending = true
+        if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA,
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCameraCapture()
+        } else {
+            val requested = runCatching {
+                cameraPermission.launch(Manifest.permission.CAMERA)
+            }.isSuccess
+            if (!requested) {
+                cameraCapturePending = false
+                attachmentError = true
+            }
+        }
     }
 
     DisposableEffect(Unit) {
@@ -737,24 +820,7 @@ fun FullConversationComposer(
                         WhiteNoiseMenuItem(
                             label = stringResource(R.string.camera),
                             icon = R.drawable.ic_camera,
-                            onClick = {
-                                attachmentError = false
-                                val launched = runCatching {
-                                    val directory = File(context.cacheDir, "camera").apply { mkdirs() }
-                                    val file = File.createTempFile("white-noise-", ".jpg", directory)
-                                    val uri = FileProvider.getUriForFile(
-                                        context,
-                                        "${context.packageName}.files",
-                                        file,
-                                    )
-                                    cameraUri = uri
-                                    camera.launch(uri)
-                                }.isSuccess
-                                if (!launched) {
-                                    cameraUri = null
-                                    attachmentError = true
-                                }
-                            },
+                            onClick = ::requestCameraCapture,
                         ),
                         WhiteNoiseMenuItem(
                             label = stringResource(R.string.photos_and_videos),
@@ -956,6 +1022,67 @@ fun FullConversationComposer(
             },
         )
     }
+    if (showCameraPermissionRecovery) {
+        val openSettings = context.findActivity()?.let { activity ->
+            !ActivityCompat.shouldShowRequestPermissionRationale(
+                activity,
+                Manifest.permission.CAMERA,
+            )
+        } == true
+        AlertDialog(
+            onDismissRequest = {
+                showCameraPermissionRecovery = false
+                cameraCapturePending = false
+            },
+            title = { Text(stringResource(R.string.camera_access_needed)) },
+            text = { Text(stringResource(R.string.camera_attachment_permission_detail)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCameraPermissionRecovery = false
+                        if (openSettings) {
+                            val opened = runCatching {
+                                cameraSettings.launch(
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", context.packageName, null),
+                                    ),
+                                )
+                            }.isSuccess
+                            if (!opened) {
+                                cameraCapturePending = false
+                                attachmentError = true
+                            }
+                        } else {
+                            val requested = runCatching {
+                                cameraPermission.launch(Manifest.permission.CAMERA)
+                            }.isSuccess
+                            if (!requested) {
+                                cameraCapturePending = false
+                                attachmentError = true
+                            }
+                        }
+                    },
+                ) {
+                    Text(
+                        stringResource(
+                            if (openSettings) R.string.open_settings else R.string.allow_camera,
+                        ),
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showCameraPermissionRecovery = false
+                        cameraCapturePending = false
+                    },
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
     mediaViewerAttachmentId?.let { initialAttachmentId ->
         DraftMediaViewer(
             attachments = chat.draftAttachments.filter(MessageAttachment::isVisual),
@@ -985,10 +1112,13 @@ private fun ComposerTextInput(
     modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
-    val mentionBackground = MaterialTheme.colorScheme.surfaceContainerHighest
-    val mentionTransformation = remember(mentionNames, mentionBackground) {
-        MentionVisualTransformation(mentionNames, mentionBackground)
+    val mentionBackground = MaterialTheme.colorScheme.outlineVariant
+    val mentionContent = MaterialTheme.colorScheme.onSurface
+    val highlightedMentions = remember(text, mentionNames) { mentionRanges(text, mentionNames) }
+    val mentionTransformation = remember(highlightedMentions, mentionContent) {
+        MentionVisualTransformation(highlightedMentions, mentionContent)
     }
+    var mentionLayout by remember { mutableStateOf<Pair<String, TextLayoutResult>?>(null) }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1014,6 +1144,7 @@ private fun ComposerTextInput(
             maxLines = if (expanded) Int.MAX_VALUE else ComposerExpansionPolicy.compactLineLimit(hasAttachments),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             visualTransformation = mentionTransformation,
+            onTextLayout = { mentionLayout = text to it },
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier
@@ -1029,7 +1160,23 @@ private fun ComposerTextInput(
                             style = MaterialTheme.typography.bodyLarge,
                         )
                     }
-                    innerTextField()
+                    Box {
+                        Canvas(
+                            Modifier
+                                .matchParentSize()
+                                .testTag("conversation.composer.mentionHighlight"),
+                        ) {
+                            mentionLayout
+                                ?.takeIf { it.first == text }
+                                ?.second
+                                ?.drawRoundedTextHighlights(
+                                    drawScope = this,
+                                    ranges = highlightedMentions,
+                                    color = mentionBackground,
+                                )
+                        }
+                        innerTextField()
+                    }
                 }
             },
         )
@@ -1142,7 +1289,7 @@ private fun DraftAttachmentShelf(
                         attachment = attachment,
                         modifier = Modifier.fillMaxSize(),
                     )
-                    DraftRemoveButton(
+                    ComposerAccessoryRemoveButton(
                         onClick = { onRemove(attachment.id) },
                         description = removeDescription,
                         highContrast = isVisual,
@@ -1213,79 +1360,66 @@ private fun DraftAttachmentContent(
                 }
             }
         }
-        attachment.kind == MessageAttachmentKind.Contact -> Column(
-            modifier = modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            attachment.images.firstOrNull()?.let { image ->
-                ComposerImage(image, Modifier.size(44.dp).clip(CircleShape))
-                Spacer(Modifier.height(WhiteNoiseSpacing.Related))
-            }
-            Text(
-                attachment.label.removePrefix("Contact: "),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        else -> Column(
-            modifier = modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_description),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(WhiteNoiseSpacing.Related))
-            Text(
-                attachment.label,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DraftRemoveButton(
-    onClick: () -> Unit,
-    description: String,
-    modifier: Modifier = Modifier,
-    highContrast: Boolean = false,
-) {
-    IconButton(onClick = onClick, modifier = modifier) {
-        Surface(
-            modifier = Modifier.size(28.dp),
-            shape = CircleShape,
-            color = if (highContrast) {
-                MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.88f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-            contentColor = if (highContrast) {
-                MaterialTheme.colorScheme.inverseOnSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            border = BorderStroke(
-                1.dp,
-                if (highContrast) MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.7f)
-                else MaterialTheme.colorScheme.outlineVariant,
-            ),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_close),
-                    contentDescription = description,
-                    modifier = Modifier.size(16.dp),
+        attachment.kind == MessageAttachmentKind.Contact -> {
+            val name = attachment.label.removePrefix("Contact: ").trim()
+            Column(
+                modifier = modifier.padding(horizontal = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                ProfileAvatar(
+                    name = name,
+                    avatar = attachment.images.firstOrNull() ?: ProfileAvatar.Monogram,
+                    modifier = Modifier.size(40.dp),
+                    contentDescription = null,
                 )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    name,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+        else -> {
+            val filename = remember(attachment.label) { preserveFilenameSuffix(attachment.label) }
+            Column(
+                modifier = modifier.padding(horizontal = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_description),
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().semantics {
+                            contentDescription = attachment.label
+                        },
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        if (filename.leading.isNotEmpty()) {
+                            Text(
+                                filename.leading,
+                                modifier = Modifier.weight(1f, fill = false),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                        Text(
+                            filename.suffix,
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
             }
         }
     }
@@ -1344,32 +1478,44 @@ private fun DraftLinkPreview(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = WhiteNoiseSpacing.Related, vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
+            .padding(WhiteNoiseSpacing.Related)
+            .testTag("conversation.composer.linkPreview"),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        Row(
-            modifier = Modifier.padding(WhiteNoiseSpacing.Related),
-            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            image?.let { ComposerImage(it, Modifier.size(56.dp).clip(MaterialTheme.shapes.small)) }
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    domain,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    summary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Box {
+            Row(
+                modifier = Modifier.padding(
+                    start = WhiteNoiseSpacing.Related,
+                    top = WhiteNoiseSpacing.Related,
+                    end = 48.dp,
+                    bottom = WhiteNoiseSpacing.Related,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                image?.let { ComposerImage(it, Modifier.size(56.dp).clip(MaterialTheme.shapes.small)) }
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        domain,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        summary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            DraftRemoveButton(onClick = onRemove, description = removeDescription)
+            ComposerAccessoryRemoveButton(
+                onClick = onRemove,
+                description = removeDescription,
+                modifier = Modifier.align(Alignment.TopEnd),
+            )
         }
     }
 }
@@ -1377,37 +1523,21 @@ private fun DraftLinkPreview(
 @Composable
 private fun DraftReplyQuote(author: String, text: String, onCancel: () -> Unit) {
     val cancelDescription = stringResource(R.string.cancel_reply)
-    Surface(
+    ConversationQuoteBlock(
+        author = author,
+        excerpt = text,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        accentColor = MaterialTheme.colorScheme.primary,
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = WhiteNoiseSpacing.Related, vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Row(
-            Modifier.padding(WhiteNoiseSpacing.Related),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-        ) {
-            Box(
-                Modifier
-                    .width(4.dp)
-                    .height(44.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape),
-            )
-            Column(Modifier.weight(1f)) {
-                Text(author, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            DraftRemoveButton(onClick = onCancel, description = cancelDescription)
-        }
-    }
+            .padding(WhiteNoiseSpacing.Related),
+        testTagPrefix = "conversation.composer.quote",
+        cancelDescription = cancelDescription,
+        onCancel = onCancel,
+    )
 }
 
 @Composable
@@ -1909,89 +2039,232 @@ private fun DraftMediaViewer(
                 ) { page ->
                     val attachment = attachments[page]
                     val included = attachment.id in includedIds
+                    val onIncludedChange: (Boolean) -> Unit = { nextIncluded ->
+                        includedIds = if (nextIncluded) {
+                            includedIds + attachment.id
+                        } else {
+                            includedIds - attachment.id
+                        }
+                    }
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        attachment.images.firstOrNull()?.let {
-                            ComposerImage(
-                                image = it,
-                                modifier = Modifier.fillMaxSize().padding(WhiteNoiseSpacing.CompactScreenMargin),
-                                contentScale = ContentScale.Fit,
+                        attachment.images.firstOrNull()?.let { image ->
+                            DraftMediaPreviewImage(
+                                image = image,
+                                page = page,
+                                included = included,
+                                attachmentLabel = attachment.label,
+                                onIncludedChange = onIncludedChange,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(WhiteNoiseSpacing.CompactScreenMargin),
                             )
-                        } ?: Text(attachment.label)
-                        FilterChip(
-                            selected = included,
-                            onClick = {
-                                includedIds = if (included) {
-                                    includedIds - attachment.id
-                                } else {
-                                    includedIds + attachment.id
-                                }
-                            },
-                            label = {
-                                Text(
-                                    stringResource(
-                                        if (included) R.string.media_included else R.string.media_excluded,
-                                    ),
-                                )
-                            },
-                            leadingIcon = if (included) ({
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_check),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }) else null,
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(WhiteNoiseSpacing.Section),
-                        )
+                        } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(attachment.label)
+                            DraftMediaInclusionButton(
+                                included = included,
+                                attachmentLabel = attachment.label,
+                                onIncludedChange = onIncludedChange,
+                                modifier = Modifier.align(Alignment.BottomEnd),
+                            )
+                        }
                     }
                 }
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth().height(88.dp),
-                    contentPadding = PaddingValues(
-                        horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                        vertical = WhiteNoiseSpacing.Related,
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    itemsIndexed(attachments, key = { _, item -> item.id }) { index, attachment ->
-                        val selected = pagerState.currentPage == index
-                        val positionDescription = stringResource(
-                            R.string.media_item_position,
-                            index + 1,
-                            attachments.size,
-                        )
-                        Surface(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .semantics { contentDescription = positionDescription }
-                                .clickable {
-                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                            shape = MaterialTheme.shapes.medium,
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer
-                            },
-                            border = if (selected) {
-                                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                            } else {
-                                null
-                            },
-                        ) {
-                            attachment.images.firstOrNull()?.let {
-                                ComposerImage(
-                                    image = it,
-                                    modifier = Modifier.padding(4.dp).clip(MaterialTheme.shapes.small),
-                                )
-                            } ?: Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    attachment.label,
-                                    maxLines = 2,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
+                if (attachments.size > 1) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().height(88.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                            vertical = WhiteNoiseSpacing.Related,
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                    ) {
+                        itemsIndexed(attachments, key = { _, item -> item.id }) { index, attachment ->
+                            val selected = pagerState.currentPage == index
+                            val positionDescription = stringResource(
+                                R.string.media_item_position,
+                                index + 1,
+                                attachments.size,
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .semantics { contentDescription = positionDescription }
+                                    .clickable(role = Role.Button) {
+                                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                    }
+                                    .testTag("conversation.media.thumbnail.target"),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                val imageModifier = Modifier
+                                    .size(64.dp)
+                                    .then(
+                                        if (selected) {
+                                            Modifier.border(
+                                                2.dp,
+                                                MaterialTheme.colorScheme.onBackground,
+                                                MaterialTheme.shapes.small,
+                                            )
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .clip(MaterialTheme.shapes.small)
+                                    .testTag(
+                                        if (selected) {
+                                            "conversation.media.thumbnail.selected"
+                                        } else {
+                                            "conversation.media.thumbnail.unselected"
+                                        },
+                                    )
+                                attachment.images.firstOrNull()?.let {
+                                    ComposerImage(image = it, modifier = imageModifier)
+                                } ?: Box(
+                                    modifier = imageModifier.background(
+                                        MaterialTheme.colorScheme.surfaceContainer,
+                                    ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        attachment.label,
+                                        maxLines = 2,
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DraftMediaPreviewImage(
+    image: ProfileAvatar,
+    page: Int,
+    included: Boolean,
+    attachmentLabel: String,
+    onIncludedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val aspectRatio = remember(image, context) { draftMediaAspectRatio(context, image) }
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val availableAspectRatio = if (maxHeight.value > 0f) {
+            maxWidth.value / maxHeight.value
+        } else {
+            aspectRatio
+        }
+        val mediaWidth = if (aspectRatio >= availableAspectRatio) maxWidth else maxHeight * aspectRatio
+        val mediaHeight = if (aspectRatio >= availableAspectRatio) maxWidth / aspectRatio else maxHeight
+        Box(
+            modifier = Modifier
+                .width(mediaWidth)
+                .height(mediaHeight)
+                .testTag("conversation.media.preview.image.$page"),
+        ) {
+            ComposerImage(
+                image = image,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+            DraftMediaInclusionButton(
+                included = included,
+                attachmentLabel = attachmentLabel,
+                onIncludedChange = onIncludedChange,
+                modifier = Modifier.align(Alignment.BottomEnd),
+            )
+        }
+    }
+}
+
+private fun draftMediaAspectRatio(context: Context, image: ProfileAvatar): Float {
+    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    when (image) {
+        is ProfileAvatar.DeviceImage -> BitmapFactory.decodeByteArray(
+            image.bytes,
+            0,
+            image.bytes.size,
+            options,
+        )
+        is ProfileAvatar.Asset -> BitmapFactory.decodeResource(
+            context.resources,
+            image.asset.drawableResource,
+            options,
+        )
+        is ProfileAvatar.WebImage -> BitmapFactory.decodeResource(
+            context.resources,
+            image.asset.drawableResource,
+            options,
+        )
+        ProfileAvatar.Monogram -> return 1f
+    }
+    return if (options.outWidth > 0 && options.outHeight > 0) {
+        options.outWidth.toFloat() / options.outHeight
+    } else {
+        1f
+    }
+}
+
+@Composable
+private fun DraftMediaInclusionButton(
+    included: Boolean,
+    attachmentLabel: String,
+    onIncludedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val state = stringResource(if (included) R.string.media_included else R.string.media_excluded)
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .toggleable(
+                value = included,
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Checkbox,
+                onValueChange = onIncludedChange,
+            )
+            .semantics {
+                contentDescription = attachmentLabel
+                stateDescription = state
+            }
+            .testTag("conversation.media.inclusion.target"),
+        contentAlignment = Alignment.BottomEnd,
+    ) {
+        Box(
+            modifier = Modifier.padding(end = 4.dp, bottom = 4.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (included) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                        },
+                    )
+                    .then(
+                        if (included) {
+                            Modifier
+                        } else {
+                            Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                        },
+                    )
+                    .indication(interactionSource, ripple(radius = 11.dp))
+                    .testTag("conversation.media.inclusion.visual"),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (included) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_check),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
                 }
             }
         }

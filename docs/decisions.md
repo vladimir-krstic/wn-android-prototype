@@ -2740,3 +2740,157 @@ transparent host and edge-to-edge timeline remain unchanged.
 Evidence: `WhiteNoiseTheme.kt`, `ConversationComposer.kt`,
 `composer-media-and-speech.md`, `ui-metrics.md`, and `feature-inventory.md`.
 Source: [Compose ColorScheme](https://developer.android.com/reference/kotlin/androidx/compose/material3/ColorScheme).
+
+## WN-ANDROID-0104 — Chat camera capture honors the merged camera permission
+
+- Date: 2026-08-31
+- Status: Implemented in response to reported regression and platform requirement
+
+The external composer camera remains Android's `TakePicture` contract with a
+non-exported FileProvider destination. The merged app now also declares
+`CAMERA` for its approved app-owned QR scanners. Android throws a
+`SecurityException` when an app that declares this permission launches
+`ACTION_IMAGE_CAPTURE` before the permission is granted, so the former
+permissionless composer launch had regressed into the generic attachment
+error.
+
+Selecting **Camera** now requests camera access just in time when needed and
+launches the pending capture immediately after approval. A denial uses the
+accepted **Camera Access Needed** recovery with **Allow Camera**, or **Open
+Settings** after Android no longer offers the permission prompt. Returning
+from Settings resumes the same pending capture only when access was granted;
+Cancel or dismissal clears it. Photo Picker, Files, Contact, ordered draft
+state, FileProvider ownership and image preparation are unchanged, and no
+storage permission is added.
+
+This supersedes WN-ANDROID-0011 and the earlier composer brief only where they
+described the external camera action as permissionless in the merged app.
+
+Evidence: `ConversationComposer.kt`, `strings.xml`,
+`composer-media-and-speech.md`, `feature-inventory.md`, and `README.md`.
+Sources: [MediaStore `ACTION_IMAGE_CAPTURE`](https://developer.android.com/reference/android/provider/MediaStore#ACTION_IMAGE_CAPTURE),
+[minimize permission requests](https://developer.android.com/privacy-and-security/minimize-permission-requests),
+and [`ActivityResultContracts.TakePicture`](https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.TakePicture).
+
+## WN-ANDROID-0105 — Rich composer accessories split minimum targets from visual chrome
+
+- Date: 2026-08-31
+- Status: Implemented from explicit user direction; device visual acceptance pending
+
+Photo, album, GIF, file, contact, link-preview, and reply removal now use one
+shared accessory contract. The semantic/clickable target remains a transparent
+48 × 48 dp square, while its visible control is a 20 × 20 dp circle containing
+a 12 dp close symbol. Equal 6 dp top and end insets align that circle
+concentrically with each card corner. The outer target has no indication; it
+shares an interaction source with a state layer clipped to the visible circle,
+so the accessibility target does not create an oversized halo.
+
+Utility file/contact cards retain their accepted 72 dp height. Contact identity
+uses a 40 dp avatar or monogram plus a visible one-line name. Filename layout
+preserves the extension and final three stem characters while ellipsizing only
+the leading stem. One natural-height quote component now owns both composer and
+timeline replies: a 3 dp adaptive capsule begins 12 dp from the card edge, the
+text follows after 10 dp, and author plus excerpt remain font-scale safe. Its
+content geometry is shared while its container follows the parent: composer
+quotes use an 8 dp inset and 16 dp radius inside the 24 dp composer, and message
+quotes use an 8 dp inset and 8 dp radius inside the 16 dp bubble. Both pairs
+remain concentric; message body content keeps its established 12 dp alignment.
+Composer link previews use the same 8 dp inset and 16 dp radius as composer
+quotes and attachment imagery rather than the former 4 dp vertical inset and
+12 dp radius.
+
+Complete composer mentions retain the shared search renderer's 4 dp rounded
+glyph-run shape, but use the adaptive medium-neutral `outlineVariant` surface
+with `onSurface` text. This explicit user correction replaces the visually
+heavy `primary`/`onPrimary` inversion while preserving legibility in both
+appearances.
+
+Draft review uses 72 dp thumbnail targets containing unframed 64 dp crops. Only
+the selected item receives a 2 dp `onBackground` ring, a single item has no
+rail, and inclusion becomes a 22 dp check inside its own 48 dp target. That
+target anchors to the fitted media rectangle rather than the pager page; its
+visible circle sits inside the image's bottom-end corner with an exact 4 dp
+edge inset. These values translate the user-approved current iOS comparison at
+`wn-ios-prototype@4c25393f0eb6` without repinning the Android baseline and keep
+Android minimum-target and semantic behavior authoritative.
+
+Evidence: `ComposerModels.kt`, `ConversationComposer.kt`,
+`ConversationQuoteBlock.kt`, `ConversationScreen.kt`,
+`ComposerModelsTest`, `ConversationScreenTest`,
+`composer-media-and-speech.md`, `message-interactions-and-search.md`, and
+`feature-inventory.md`. Source: [Compose minimum touch targets](https://developer.android.com/develop/ui/compose/accessibility/api-defaults).
+
+## WN-ANDROID-0106 — Sent media has one exact-frame conversation projection and viewer
+
+- Date: 2026-08-31
+- Status: Implemented from explicit user direction; device visual acceptance pending
+
+Conversation bubbles and Shared Content now consume the same chronological
+photo/video projection. It flattens message order, attachment order, then image
+order; identifies each frame by message, attachment, and image index; carries
+sender, time, source-message, selected-image, and attachment metadata; and
+excludes deleted or unavailable frames. Every visible album tile therefore
+opens its exact frame in a complete chat-wide pager. Sent media deliberately
+has no draft-style thumbnail rail.
+
+Overlay chrome shows sender, sent time, current position, Close and More above,
+with edge-aligned Share and Forward icon actions below. The bottom actions are
+simple 24 dp symbols in transparent 48 dp `IconButton` targets rather than
+wide filled buttons, following the user-provided Signal reference while
+retaining native Android state layers and accessibility names. Media taps
+toggle chrome without changing page geometry; touch exploration keeps named
+actions available. Photos support
+bounded 1×–4× pinch/pan and 1×/2× double-tap, disable pager movement while
+zoomed, reset on page changes, and consume Back to reset before dismissal.
+Named Zoom In, Zoom Out, and Reset actions retain non-gesture access. Existing
+video handoff behavior remains.
+
+Share stages only the exact JPEG/MP4 frame behind the existing FileProvider and
+launches Android Sharesheet with temporary read access. Save uses exact-MIME
+`CreateDocument` contracts and reports preparation/copy failures in place.
+Forward reuses the searchable five-chat picker, accepts optional trimmed text,
+and normalizes one selected album image into one Photo attachment. Go to
+Message closes the viewer and targets the source message; Shared Content
+replaces its information stack with that typed conversation route.
+
+The user-directed forwarding polish applies to media and ordinary message
+forwarding through their shared sheet. Search reuses the established compact
+48 dp contextual field over the sheet's white-equivalent
+`surfaceContainerLowest`; destinations form one 16 dp-inset segmented group
+with 2 dp canvas-tone separators. Native multi-selection semantics stay on
+each whole row, while selection is shown by one trailing check without
+changing the row's positional shape or fill. The fixed title/search region
+uses the sheet canvas at rest and `surfaceContainer` once the destinations
+scroll, preserving the same one-step darker pinned-header cue used elsewhere.
+That state colors Material's full rounded sheet cap and drag-handle area as
+well as the title/search content; a separate `surfaceContainerLow` destination
+canvas prevents the darker tone from leaking into the scrolling list.
+
+For media forwarding, the optional one-to-four-line message and completion
+action now share one chat-matched 48 dp-minimum, 24 dp-radius capsule. The
+48 dp trailing action target contains the same 32 dp filled upward-arrow
+treatment as the conversation composer and owns the selected destination count
+as its accessibility name. This capsule overlays the destination list without
+an opaque footer surface. Bottom content padding combines the measured overlay
+height, relationship spacing, and system bottom safe area with a 24 dp minimum,
+so every row scrolls fully clear of both the capsule and the gesture area.
+The destination viewport does not apply that inset as a layout cutoff: it
+draws through the bottom system area to the physical edge, while the floating
+capsule applies navigation-bar padding independently. The modal content can
+expand to 88% of the available height, preserving Material's rounded cap and
+sheet gestures instead of becoming a full-screen route. Ordinary message
+forwarding retains its direct completion action because it has no
+accompanying-message editor.
+
+This applies the user-approved current iOS capability at
+`wn-ios-prototype@4c25393f0eb6` as scoped evidence without changing the pinned
+baseline, adding storage, networking, permissions, or a third-party runtime.
+
+Evidence: `ChatInfoModels.kt`, `AppViewModel.kt`, `AppRoute.kt`,
+`WhiteNoiseNavHost.kt`, `TimelineMessageContent.kt`, `MediaViewer.kt`,
+`ConversationScreen.kt`, `ChatInfoScreens.kt`, `MessageInteractionsUi.kt`,
+their unit/Compose tests, `message-interactions-and-search.md`,
+`chat-and-group-information.md`, and `feature-inventory.md`. Sources:
+[Compose multitouch transforms](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/multi-touch),
+[Android Sharesheet](https://developer.android.com/training/sharing/send), and
+[`CreateDocument`](https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.CreateDocument).

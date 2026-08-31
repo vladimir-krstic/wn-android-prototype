@@ -41,7 +41,11 @@ sealed interface AppRoute {
     data class GroupSetup(val selectedPersonIds: List<String>) : AppRoute
 
     @Serializable
-    data class Conversation(val chatId: String, val openSearch: Boolean = false) : AppRoute
+    data class Conversation(
+        val chatId: String,
+        val openSearch: Boolean = false,
+        val targetMessageId: String? = null,
+    ) : AppRoute
 
     @Serializable
     data class MessageDetails(val chatId: String, val messageId: String) : AppRoute

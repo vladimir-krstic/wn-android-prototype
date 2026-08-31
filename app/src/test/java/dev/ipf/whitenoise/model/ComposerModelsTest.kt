@@ -90,6 +90,18 @@ class ComposerModelsTest {
     }
 
     @Test
+    fun filenameSuffixPreservationKeepsFinalStemCharactersAndExtension() {
+        assertEquals(
+            PreservedFilename("Project Br", "ief.pdf"),
+            preserveFilenameSuffix("Project Brief.pdf"),
+        )
+        assertEquals(PreservedFilename("archive", "tar.gz"), preserveFilenameSuffix("archivetar.gz"))
+        assertEquals(PreservedFilename("", "a.pdf"), preserveFilenameSuffix("a.pdf"))
+        assertEquals(PreservedFilename("read", "me!"), preserveFilenameSuffix("readme!"))
+        assertEquals(PreservedFilename("", ""), preserveFilenameSuffix("  "))
+    }
+
+    @Test
     fun voiceReducerCoversRecordingReviewTranscriptionPlaybackAndRestore() {
         var state: ComposerVoiceState = ComposerVoiceReducer.start(ComposerVoiceState.Idle)
         repeat(17) { state = ComposerVoiceReducer.tick(state) }

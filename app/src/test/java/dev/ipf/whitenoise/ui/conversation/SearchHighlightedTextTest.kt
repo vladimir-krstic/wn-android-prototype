@@ -19,4 +19,16 @@ class SearchHighlightedTextTest {
         assertEquals(1f, conversationSearchMessageAlpha(true, "", false))
         assertEquals(1f, conversationSearchMessageAlpha(false, "out", false))
     }
+
+    @Test
+    fun mentionRangesMatchCompleteNamesWithoutStylingEmbeddedText() {
+        assertEquals(
+            listOf(0..9, 15..24),
+            mentionRanges(
+                text = "@Maya Chen and @maya chen",
+                mentionNames = listOf("Maya Chen", "Maya"),
+            ),
+        )
+        assertEquals(emptyList<IntRange>(), mentionRanges("email@Maya Chen", listOf("Maya Chen")))
+    }
 }

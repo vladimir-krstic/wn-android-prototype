@@ -73,6 +73,16 @@ active pane.
   transparent horizontal breathing room remains inside each target. Large
   text may grow the visible pill and target instead of clipping.
   Transcribe uses one 8 dp icon/label relationship with no additional spacer.
+  Complete member mentions inside the editor use the adaptive medium-neutral
+  `outlineVariant` surface with `onSurface` text and the shared
+  search-highlight glyph renderer's 4 dp corner radius; do not use Compose's
+  square span background. Composer reply and link-preview surfaces
+  use an 8 dp inset and 16 dp radius inside the 24 dp composer. Timeline reply
+  surfaces use an 8 dp inset and 8 dp radius inside 16 dp message bubbles,
+  while non-quote message content retains its 12 dp horizontal inset. In draft
+  media review, the 48 dp inclusion target anchors to the fitted image's
+  bottom-end corner; its 22 dp visible check sits inside the image with 4 dp
+  from both edges.
 - App-owned single-choice dialogs place direct 56 dp-minimum selectable rows in
   the dialog content slot. The row starts at the dialog-owned content edge,
   lets `RadioButton` retain its native touch-target inset, and keeps 16 dp
@@ -276,6 +286,10 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   4 dp radius around exact per-line glyph bounds with no horizontal inset.
   Every matching message remains at full contrast; nonmatches use 38% alpha.
   This selected-flow color is not added to the app's general Material scheme.
+- The sent-media viewer's bottom Share and Forward actions are transparent
+  native 48 dp `IconButton` targets with 24 dp symbols, aligned to opposite
+  edges above navigation-bar clearance. Do not expand them into labeled or
+  filled equal-width buttons.
 - Chats toolbar and row avatars have 40 dp and 52 dp visible diameters. Their
   leading artwork edges share the 16 dp content margin inside the same capped
   680 dp pane. The toolbar uses an 8 dp relationship inset in addition to its
@@ -407,6 +421,26 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   use trailing native IconButtons (48 dp targets), not a leading imitation of
   an iOS sheet control. Task sheets with Close/Done retain a native app bar,
   matching the sheet color, with zero repeated window insets.
+- Forwarding uses the shared 48 dp-minimum compact search and one 16 dp-inset
+  destination group. Its rows use positional segmented shapes and the
+  established 2 dp sheet-canvas separator. Selection preserves each row's
+  shape/fill and adds one trailing 24 dp check while the whole row retains
+  Checkbox semantics. The fixed title/search region uses
+  `surfaceContainerLow` at rest and the one-step-darker `surfaceContainer`
+  after the destination list scrolls; this color is applied to Material's
+  rounded sheet cap and drag-handle area as well as the title/search content,
+  while the destination canvas remains `surfaceContainerLow`. Media
+  forwarding places its optional one-to-four-line message in a chat-matched
+  48 dp-minimum, 24 dp-radius capsule with a trailing 48 dp action target and
+  32 dp filled arrow. The capsule overlays the scrolling list without a footer
+  surface. End padding includes its measured height, its relationship spacing,
+  and the system bottom inset with a 24 dp minimum, keeping the final
+  destination fully clear of the capsule and gesture area. The destination
+  viewport itself excludes only horizontal/top safe drawing insets, so its
+  canvas and scrolling rows reach the physical bottom edge; the floating
+  capsule independently applies navigation-bar padding. Forwarding may expand
+  to a high 88%-of-available-height modal state while retaining Material's
+  rounded sheet cap rather than becoming a full-screen destination.
 - Chats and Chat Info share a native immediate-choice Mute alert dialog with
   scrollable duration rows and Cancel. Ordinary short choices no longer need
   a large separate mute sheet. Specialized camera/media and system UI are

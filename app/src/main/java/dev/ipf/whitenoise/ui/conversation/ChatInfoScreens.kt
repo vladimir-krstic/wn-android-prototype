@@ -71,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -86,6 +87,9 @@ import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatMembership
+import dev.ipf.whitenoise.model.ConversationMediaKey
+import dev.ipf.whitenoise.model.ConversationMediaProjection
+import dev.ipf.whitenoise.model.ConversationMediaSelection
 import dev.ipf.whitenoise.model.DisappearingDuration
 import dev.ipf.whitenoise.model.GroupRole
 import dev.ipf.whitenoise.model.MuteDuration
@@ -636,11 +640,17 @@ fun SharedContentScreen(
     chat: Chat,
     category: SharedContentCategory,
     onBack: () -> Unit,
+    onForwardMedia: (ConversationMediaKey, List<String>, String) -> Boolean = { _, _, _ -> false },
+    onGoToMessage: (String) -> Unit = {},
 ) {
     val content = remember(chat.timeline, category) {
         SharedContentProjection.items(chat, profile, category)
     }
-    var viewerAttachmentIndex by remember { mutableStateOf<Int?>(null) }
+    val media = remember(chat.timeline, profile.people) {
+        ConversationMediaProjection.items(chat, profile)
+    }
+    var viewerSelection by remember { mutableStateOf<ConversationMediaSelection?>(null) }
+    var forwardMediaKey by remember { mutableStateOf<ConversationMediaKey?>(null) }
     val title = when (category) {
         SharedContentCategory.Media -> stringResource(R.string.photos_and_videos)
         SharedContentCategory.Links -> stringResource(R.string.links)
@@ -670,19 +680,20 @@ fun SharedContentScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         items(
-                            count = content.size,
-                            key = { index -> content[index].id },
+                            count = media.size,
+                            key = { index -> media[index].key.stableId },
                         ) { index ->
-                            val item = content[index]
+                            val item = media[index]
                             Box(
                                 modifier = Modifier
                                     .aspectRatio(1f)
+                                    .testTag("conversation.shared.media.${item.key.stableId}")
                                     .clickable(role = Role.Button) {
-                                        viewerAttachmentIndex = index
+                                        viewerSelection = ConversationMediaSelection(media, item.key)
                                     },
                                 contentAlignment = Alignment.BottomStart,
                             ) {
-                                item.attachment.images.firstOrNull()?.let { image ->
+                                item.image?.let { image ->
                                     ComposerImage(image, Modifier.fillMaxSize())
                                 }
                                 Surface(
@@ -731,11 +742,29 @@ fun SharedContentScreen(
             }
         }
     }
-    viewerAttachmentIndex?.let { selectedIndex ->
+    viewerSelection?.let { selection ->
         ReadOnlyMediaViewer(
-            attachments = content.map { it.attachment },
-            onDismiss = { viewerAttachmentIndex = null },
-            initialAttachmentIndex = selectedIndex,
+            selection = selection,
+            onDismiss = { viewerSelection = null },
+            onForward = { item ->
+                forwardMediaKey = item.key
+                viewerSelection = null
+            },
+            onGoToMessage = { item ->
+                viewerSelection = null
+                onGoToMessage(item.message.id)
+            },
+        )
+    }
+    forwardMediaKey?.let { key ->
+        ForwardMessagesSheet(
+            profile = profile,
+            sourceChatId = chat.id,
+            onDismiss = { forwardMediaKey = null },
+            allowsAccompanyingMessage = true,
+            onForward = { targets, message ->
+                if (onForwardMedia(key, targets, message)) forwardMediaKey = null
+            },
         )
     }
 }

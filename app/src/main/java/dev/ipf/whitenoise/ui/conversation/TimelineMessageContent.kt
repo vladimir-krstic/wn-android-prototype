@@ -16,30 +16,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,8 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -64,12 +55,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.MediaLayout
+import dev.ipf.whitenoise.model.ConversationMediaKey
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
 import dev.ipf.whitenoise.model.ProfileAvatar
@@ -82,21 +72,24 @@ import java.util.Locale
 private data class VisualFrame(
     val attachment: MessageAttachment,
     val image: ProfileAvatar?,
+    val imageIndex: Int,
 )
 
 @Composable
 internal fun TimelineAttachmentContent(
     attachments: List<MessageAttachment>,
     outgoing: Boolean,
-    onOpenMedia: (List<MessageAttachment>) -> Unit,
+    messageId: String? = null,
+    onOpenMedia: (ConversationMediaKey) -> Unit,
     searchQuery: String = "",
 ) {
     if (attachments.isEmpty()) return
     val visualAttachments = attachments.filter(MessageAttachment::isVisual)
     if (visualAttachments.isNotEmpty()) {
         TimelineMediaGrid(
+            messageId = messageId,
             attachments = visualAttachments,
-            onClick = { onOpenMedia(visualAttachments) },
+            onClick = onOpenMedia,
             searchQuery = searchQuery,
         )
     }
@@ -114,13 +107,14 @@ internal fun TimelineAttachmentContent(
 
 @Composable
 private fun TimelineMediaGrid(
+    messageId: String?,
     attachments: List<MessageAttachment>,
-    onClick: () -> Unit,
+    onClick: (ConversationMediaKey) -> Unit,
     searchQuery: String,
 ) {
     val frames = attachments.flatMap { attachment ->
-        if (attachment.images.isEmpty()) listOf(VisualFrame(attachment, null))
-        else attachment.images.map { VisualFrame(attachment, it) }
+        if (attachment.images.isEmpty()) listOf(VisualFrame(attachment, null, 0))
+        else attachment.images.mapIndexed { index, image -> VisualFrame(attachment, image, index) }
     }
     val visible = frames.take(MediaLayout.visibleCount(frames.size))
     val overflow = MediaLayout.overflowCount(frames.size)
@@ -129,13 +123,12 @@ private fun TimelineMediaGrid(
         frames.size,
         frames.size,
     )
-    // Material count layouts preserve reading order and share one viewer target.
+    // The grid owns the group count while every visible tile preserves its exact viewer frame.
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
-            .semantics { contentDescription = attachmentCountDescription }
-            .clickable(onClick = onClick),
+            .semantics { contentDescription = attachmentCountDescription },
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         when (MediaLayout.forCount(frames.size)) {
@@ -143,21 +136,55 @@ private fun TimelineMediaGrid(
                 visible.first(),
                 Modifier.fillMaxWidth().height(220.dp),
                 searchQuery = searchQuery,
+                onClick = { frame ->
+                    messageId?.let { onClick(ConversationMediaKey(it, frame.attachment.id, frame.imageIndex)) }
+                },
             )
             dev.ipf.whitenoise.model.MediaGridLayout.Two -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                visible.forEach { MediaTile(it, Modifier.weight(1f).aspectRatio(1f), searchQuery = searchQuery) }
+                visible.forEach { frame ->
+                    MediaTile(
+                        frame,
+                        Modifier.weight(1f).aspectRatio(1f),
+                        searchQuery = searchQuery,
+                        onClick = {
+                            messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
+                        },
+                    )
+                }
             }
             dev.ipf.whitenoise.model.MediaGridLayout.Three -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                MediaTile(visible[0], Modifier.weight(1f).height(210.dp), searchQuery = searchQuery)
+                MediaTile(
+                    visible[0],
+                    Modifier.weight(1f).height(210.dp),
+                    searchQuery = searchQuery,
+                    onClick = { frame ->
+                        messageId?.let { onClick(ConversationMediaKey(it, frame.attachment.id, frame.imageIndex)) }
+                    },
+                )
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    MediaTile(visible[1], Modifier.fillMaxWidth().height(104.dp), searchQuery = searchQuery)
-                    MediaTile(visible[2], Modifier.fillMaxWidth().height(104.dp), searchQuery = searchQuery)
+                    visible.drop(1).forEach { frame ->
+                        MediaTile(
+                            frame,
+                            Modifier.fillMaxWidth().height(104.dp),
+                            searchQuery = searchQuery,
+                            onClick = {
+                                messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
+                            },
+                        )
+                    }
                 }
             }
             else -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    visible.take(2).forEach {
-                        MediaTile(it, Modifier.weight(1f).aspectRatio(1.35f), searchQuery = searchQuery)
+                    visible.take(2).forEach { frame ->
+                        MediaTile(
+                            frame,
+                            Modifier.weight(1f).aspectRatio(1.35f),
+                            searchQuery = searchQuery,
+                            onClick = {
+                                messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
+                            },
+                        )
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -167,6 +194,9 @@ private fun TimelineMediaGrid(
                             Modifier.weight(1f).aspectRatio(1f),
                             overflow = if (index == visible.drop(2).lastIndex) overflow else 0,
                             searchQuery = searchQuery,
+                            onClick = {
+                                messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
+                            },
                         )
                     }
                 }
@@ -181,8 +211,26 @@ private fun MediaTile(
     modifier: Modifier,
     overflow: Int = 0,
     searchQuery: String,
+    onClick: (VisualFrame) -> Unit,
 ) {
-    Box(modifier.clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.surfaceContainer)) {
+    val opensViewer = frame.attachment.kind == MessageAttachmentKind.Photo ||
+        frame.attachment.kind == MessageAttachmentKind.Photos ||
+        frame.attachment.kind == MessageAttachmentKind.Video
+    Box(
+        modifier
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .testTag("conversation.media.tile.${frame.attachment.id}.${frame.imageIndex}")
+            .then(
+                if (opensViewer) {
+                    Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button) {
+                        onClick(frame)
+                    }
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
         frame.image?.let { ComposerImage(it, Modifier.fillMaxSize()) }
             ?: SearchHighlightedText(
                 text = frame.attachment.label,
@@ -612,98 +660,7 @@ internal fun ReadAloudAction(messageId: String, text: String, controller: ReadAl
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ReadOnlyMediaViewer(
-    attachments: List<MessageAttachment>,
-    onDismiss: () -> Unit,
-    initialAttachmentIndex: Int = 0,
-) {
-    val visualAttachments = attachments.filter(MessageAttachment::isVisual)
-    val frames = visualAttachments.flatMap { attachment ->
-        if (attachment.images.isEmpty()) listOf(VisualFrame(attachment, null))
-        else attachment.images.map { VisualFrame(attachment, it) }
-    }
-    if (frames.isEmpty()) return
-    val safeAttachmentIndex = initialAttachmentIndex.coerceIn(0, visualAttachments.lastIndex)
-    val initialPage = visualAttachments.take(safeAttachmentIndex).sumOf { attachment ->
-        maxOf(attachment.images.size, 1)
-    }
-    val pagerState = rememberPagerState(initialPage = initialPage) { frames.size }
-    val context = LocalContext.current
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.background,
-            contentWindowInsets = WindowInsets.safeDrawing,
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.media_viewer)) },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_close),
-                                contentDescription = stringResource(R.string.close),
-                            )
-                        }
-                    },
-                    actions = {
-                        Text(
-                            "${pagerState.currentPage + 1}/${frames.size}",
-                            modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                    ),
-                )
-            },
-        ) { contentPadding ->
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize().padding(contentPadding),
-                pageSpacing = WhiteNoiseSpacing.Section,
-            ) { index ->
-                    val frame = frames[index]
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        frame.image?.let {
-                            ComposerImage(
-                                image = it,
-                                modifier = Modifier.fillMaxSize().padding(WhiteNoiseSpacing.CompactScreenMargin),
-                                contentScale = ContentScale.Fit,
-                            )
-                        }
-                            ?: Text(frame.attachment.label)
-                        if (frame.attachment.kind == MessageAttachmentKind.Video) {
-                            Button(
-                                onClick = {
-                                    val uri = frame.attachment.externalUri
-                                    if (uri?.startsWith("content:") == true) {
-                                        openContentUri(context, uri)
-                                    } else {
-                                        openBundledResource(
-                                            context,
-                                            R.raw.chat_trail_clip,
-                                            "chat-trail-clip.mp4",
-                                            "video/mp4",
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.align(Alignment.BottomCenter).padding(WhiteNoiseSpacing.Section),
-                            ) { Text(stringResource(R.string.open_video)) }
-                        }
-                    }
-                }
-        }
-    }
-}
-
-private fun openContentUri(context: Context, value: String) {
+internal fun openContentUri(context: Context, value: String) {
     runCatching {
         context.startActivity(
             Intent(Intent.ACTION_VIEW, value.toUri()).apply {
@@ -725,7 +682,7 @@ private fun bundledResource(label: String): Triple<Int, String, String>? = when 
     else -> null
 }
 
-private fun openBundledResource(context: Context, resourceId: Int, fileName: String, mimeType: String) {
+internal fun openBundledResource(context: Context, resourceId: Int, fileName: String, mimeType: String) {
     runCatching {
         val directory = File(context.cacheDir, "shared").apply { mkdirs() }
         val file = File(directory, fileName)

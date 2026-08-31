@@ -527,6 +527,9 @@ fun WhiteNoiseNavHost(
                     onQuickReactionsChanged = appViewModel::setQuickReactions,
                     onDeleteMessages = { ids, scope -> appViewModel.deleteMessages(chat.id, ids, scope) },
                     onForwardMessages = { ids, targets -> appViewModel.forwardMessages(chat.id, ids, targets) },
+                    onForwardMedia = { key, targets, message ->
+                        appViewModel.forwardMediaFrame(chat.id, key, targets, message)
+                    },
                     onOpenMessageDetails = { messageId ->
                         navController.navigate(AppRoute.MessageDetails(chat.id, messageId))
                     },
@@ -537,6 +540,7 @@ fun WhiteNoiseNavHost(
                         null
                     },
                     initialSearch = route.openSearch,
+                    initialMessageId = route.targetMessageId,
                 )
             }
         }
@@ -575,7 +579,23 @@ fun WhiteNoiseNavHost(
             val chat = appViewModel.chat(route.chatId)
             val category = runCatching { SharedContentCategory.valueOf(route.category) }.getOrNull()
             if (profile != null && chat != null && category != null) {
-                SharedContentScreen(profile, chat, category, onBack = { navController.popBackStack() })
+                SharedContentScreen(
+                    profile = profile,
+                    chat = chat,
+                    category = category,
+                    onBack = { navController.popBackStack() },
+                    onForwardMedia = { key, targets, message ->
+                        appViewModel.forwardMediaFrame(chat.id, key, targets, message)
+                    },
+                    onGoToMessage = { messageId ->
+                        navController.navigate(
+                            AppRoute.Conversation(chat.id, targetMessageId = messageId),
+                        ) {
+                            popUpTo<AppRoute.Conversation> { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
             }
         }
         composable<AppRoute.EditGroup> { entry ->

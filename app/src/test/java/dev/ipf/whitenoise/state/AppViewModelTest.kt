@@ -7,6 +7,7 @@ import dev.ipf.whitenoise.model.ChatScope
 import dev.ipf.whitenoise.model.ChatMembership
 import dev.ipf.whitenoise.model.ChatTimelineEntry
 import dev.ipf.whitenoise.model.ComposerAvailability
+import dev.ipf.whitenoise.model.ConversationMediaProjection
 import dev.ipf.whitenoise.model.GroupRole
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.MessageDeliveryState
@@ -419,6 +420,43 @@ class AppViewModelTest {
         }
         assertFalse(viewModel.forwardMessages("catalog-direct-text", sourceIds, listOf("maya-chen", "fiatjaf", "weekend-walks", "theo-grant", "aisha-rahman", "nora-bennett")))
         assertFalse(viewModel.forwardMessages("catalog-direct-text", sourceIds, listOf("catalog-direct-text")))
+    }
+
+    @Test
+    fun forwardingOneAlbumFrameNormalizesItToOnePhotoAndTrimsOptionalText() {
+        val viewModel = signedInMarmota()
+        val profile = viewModel.uiState.activeProfile!!
+        val source = viewModel.chat("catalog-media-gallery")!!
+        val selected = ConversationMediaProjection.items(source, profile).first {
+            it.attachment.kind == MessageAttachmentKind.Photos && it.key.imageIndex == 1
+        }
+        val targetId = "maya-chen"
+        val before = viewModel.chat(targetId)!!.timeline.size
+
+        assertTrue(
+            viewModel.forwardMediaFrame(
+                sourceChatId = source.id,
+                mediaKey = selected.key,
+                targetChatIds = listOf(targetId),
+                accompanyingText = "  Take a look  ",
+            ),
+        )
+
+        val forwarded = (viewModel.chat(targetId)!!.timeline.drop(before).single() as ChatTimelineEntry.Message).message
+        assertEquals("Take a look", forwarded.text)
+        assertEquals(1, forwarded.attachments.size)
+        assertEquals(MessageAttachmentKind.Photo, forwarded.attachments.single().kind)
+        assertEquals("Photo", forwarded.attachments.single().label)
+        assertEquals(listOfNotNull(selected.image), forwarded.attachments.single().images)
+        assertFalse(viewModel.forwardMediaFrame(source.id, selected.key, listOf(source.id)))
+        assertFalse(viewModel.forwardMediaFrame(source.id, selected.key, emptyList()))
+        assertFalse(
+            viewModel.forwardMediaFrame(
+                source.id,
+                selected.key.copy(attachmentId = "missing"),
+                listOf(targetId),
+            ),
+        )
     }
 
     @Test

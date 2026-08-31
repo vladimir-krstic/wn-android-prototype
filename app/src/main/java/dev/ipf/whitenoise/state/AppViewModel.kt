@@ -31,6 +31,8 @@ import dev.ipf.whitenoise.model.RelayRole
 import dev.ipf.whitenoise.model.RelayConnectionStatus
 import dev.ipf.whitenoise.model.ConversationDebugPolicy
 import dev.ipf.whitenoise.model.ConversationDebugSnapshot
+import dev.ipf.whitenoise.model.ConversationMediaKey
+import dev.ipf.whitenoise.model.ConversationMediaProjection
 import dev.ipf.whitenoise.model.DiagnosticEvent
 import dev.ipf.whitenoise.model.KeyPackage
 import dev.ipf.whitenoise.model.ProfileExitDestination
@@ -787,6 +789,68 @@ class AppViewModel : ViewModel() {
                     preview = latest.text.ifBlank { latest.attachments.firstOrNull()?.label.orEmpty() },
                     previewAuthor = "You",
                     attachmentPreview = attachmentPreview(latest.attachments),
+                    timestamp = "Now",
+                )
+            })
+        }
+        return true
+    }
+
+    fun forwardMediaFrame(
+        sourceChatId: String,
+        mediaKey: ConversationMediaKey,
+        targetChatIds: List<String>,
+        accompanyingText: String = "",
+    ): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        val source = profile.chats.firstOrNull { it.id == sourceChatId } ?: return false
+        val media = ConversationMediaProjection.items(source, profile).firstOrNull {
+            it.key == mediaKey
+        } ?: return false
+        val targets = targetChatIds.distinct()
+        if (targets.isEmpty() || targets.size > 5 || sourceChatId in targets) return false
+        val eligibleTargets = profile.chats.filter { target ->
+            target.id in targets && target.composerAvailability(profile) == ComposerAvailability.Available
+        }
+        if (eligibleTargets.size != targets.size) return false
+        val text = accompanyingText.trim()
+
+        updateActiveProfile { active ->
+            active.copy(chats = active.chats.map { target ->
+                if (target.id !in targets) return@map target
+                val (day, minute) = nextTimelinePosition(target)
+                createdChatSequence += 1
+                val sequence = createdChatSequence
+                val attachment = media.attachment.copy(
+                    id = "${target.id}-media-$sequence",
+                    kind = if (media.attachment.kind == MessageAttachmentKind.Video) {
+                        MessageAttachmentKind.Video
+                    } else {
+                        MessageAttachmentKind.Photo
+                    },
+                    label = if (media.attachment.kind == MessageAttachmentKind.Photos) {
+                        "Photo"
+                    } else {
+                        media.attachment.label
+                    },
+                    images = listOfNotNull(media.image),
+                )
+                val forwarded = ChatMessage(
+                    id = "${target.id}-forward-media-$sequence",
+                    authorId = active.id,
+                    dayOrdinal = day,
+                    dayLabel = "Today",
+                    minuteOfDay = minute,
+                    timeLabel = "Now",
+                    text = text,
+                    attachments = listOf(attachment),
+                    deliveryState = MessageDeliveryState.Sent,
+                )
+                target.copy(
+                    timeline = target.timeline + ChatTimelineEntry.Message(forwarded),
+                    preview = text.ifBlank { attachment.label },
+                    previewAuthor = "You",
+                    attachmentPreview = attachmentPreview(listOf(attachment)),
                     timestamp = "Now",
                 )
             })
