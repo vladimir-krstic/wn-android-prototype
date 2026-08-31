@@ -333,11 +333,12 @@ class ChatsScreenTest {
         composeRule.onNodeWithTag("group_setup.photoAction").assertHeightIsEqualTo(40.dp)
         composeRule.onNodeWithText("?").assertDoesNotExist()
         composeRule.onNodeWithText("Group Details").assertDoesNotExist()
-        composeRule.onNodeWithText("Create Group").assertIsNotEnabled()
+        val createGroup = composeRule.onNodeWithTag("creation.primaryAction")
+        createGroup.assertIsNotEnabled()
         val groupName = composeRule.onNodeWithText("Group Name")
         groupName.performTextReplacement("Night Owls")
         groupName.assertTextContains("Night Owls")
-        composeRule.onNodeWithText("Create Group").assertIsEnabled().performClick()
+        createGroup.assertIsEnabled().performClick()
         composeRule.runOnIdle {
             check(createdName == "Night Owls") {
                 "Expected the normalized group name, got $createdName"

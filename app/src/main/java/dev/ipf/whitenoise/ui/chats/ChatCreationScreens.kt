@@ -1359,7 +1359,8 @@ private fun CreationBottomAction(
             enabled = enabled,
             modifier = Modifier
                 .widthIn(max = 520.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .testTag("creation.primaryAction"),
         ) {
             icon?.let {
                 Icon(
