@@ -234,6 +234,7 @@
     <string name="share_contact">Share Contact</string>
     <string name="name_or_public_key">Name or Public Key</string>
     <string name="attachment_error">Couldn’t add that attachment. Try another item.</string>
+    <string name="attachment_open_error">Couldn’t open that attachment. Try again or use another app.</string>
     <string name="preparing_attachment">Preparing attachment…</string>
     <string name="transcript">Transcript</string>
     <string name="cancel_media_changes">Cancel Media Changes</string>

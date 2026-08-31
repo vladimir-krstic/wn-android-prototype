@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -709,7 +710,7 @@ private fun openContentUri(context: Context, value: String) {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             },
         )
-    }
+    }.onFailure { showAttachmentOpenFailure(context) }
 }
 
 private fun bundledResource(label: String): Triple<Int, String, String>? = when {
@@ -740,5 +741,9 @@ private fun openBundledResource(context: Context, resourceId: Int, fileName: Str
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             },
         )
-    }
+    }.onFailure { showAttachmentOpenFailure(context) }
+}
+
+private fun showAttachmentOpenFailure(context: Context) {
+    Toast.makeText(context, R.string.attachment_open_error, Toast.LENGTH_LONG).show()
 }
