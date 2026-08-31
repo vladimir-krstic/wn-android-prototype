@@ -5,10 +5,23 @@ enum class MessageAction {
     Reply,
     Forward,
     Copy,
+    ReadAloud,
+    StopReading,
+    Transcribe,
+    ShowTranscript,
+    HideTranscript,
+    CopyTranscript,
     Select,
     Info,
     Delete,
 }
+
+data class MessageSpeechActionState(
+    val transcriptAvailable: Boolean = false,
+    val transcriptVisible: Boolean = false,
+    val reading: Boolean = false,
+    val canReadAloud: Boolean = true,
+)
 
 enum class MessageDeletionScope {
     ForMe,
@@ -16,15 +29,45 @@ enum class MessageDeletionScope {
 }
 
 object MessageActionPolicy {
-    fun available(message: ChatMessage, profileId: String): List<MessageAction> {
+    fun available(
+        message: ChatMessage,
+        profileId: String,
+        speech: MessageSpeechActionState = MessageSpeechActionState(
+            transcriptAvailable = message.attachments
+                .firstOrNull { it.kind == MessageAttachmentKind.Voice }
+                ?.transcript != null,
+        ),
+    ): List<MessageAction> {
         if (message.isDeleted) return emptyList()
+        val hasVoice = message.attachments.any { it.kind == MessageAttachmentKind.Voice }
+        val incoming = message.authorId != profileId
         return buildList {
             if (message.authorId == profileId && message.deliveryState == MessageDeliveryState.Failed) {
                 add(MessageAction.RetrySend)
             }
             add(MessageAction.Reply)
             add(MessageAction.Forward)
-            if (message.text.isNotBlank()) add(MessageAction.Copy)
+            if (message.text.isNotBlank()) {
+                add(if (hasVoice) MessageAction.CopyTranscript else MessageAction.Copy)
+            }
+            if (incoming) {
+                if (hasVoice && message.text.isBlank()) {
+                    if (speech.transcriptAvailable) {
+                        add(
+                            if (speech.transcriptVisible) {
+                                MessageAction.HideTranscript
+                            } else {
+                                MessageAction.ShowTranscript
+                            },
+                        )
+                        if (speech.transcriptVisible) add(MessageAction.CopyTranscript)
+                    } else {
+                        add(MessageAction.Transcribe)
+                    }
+                } else if (message.text.isNotBlank() && speech.canReadAloud) {
+                    add(if (speech.reading) MessageAction.StopReading else MessageAction.ReadAloud)
+                }
+            }
             add(MessageAction.Select)
             add(MessageAction.Info)
             add(MessageAction.Delete)
@@ -39,6 +82,13 @@ object MessageActionPolicy {
 }
 
 object ReactionCatalog {
+    data class SummaryItem(
+        val emoji: String?,
+        val personCount: Int,
+        val selected: Boolean,
+        val omittedTypeCount: Int = 0,
+    )
+
     val defaults = listOf("❤", "🤘", "🔥", "😂", "🦫", "🚀")
     val categories: LinkedHashMap<String, List<String>> = linkedMapOf(
         "Recent" to defaults,
@@ -56,6 +106,37 @@ object ReactionCatalog {
 
     fun quickStrip(profileQuick: List<String>, selected: String?): List<String> =
         (profileQuick.take(6) + listOfNotNull(selected?.takeUnless(profileQuick::contains))).distinct()
+
+    fun summary(
+        reactions: List<MessageReaction>,
+        profileId: String,
+        maximumReactionPills: Int = 4,
+    ): List<SummaryItem> {
+        require(maximumReactionPills >= 0)
+        if (reactions.size <= maximumReactionPills) {
+            return reactions.map { reaction ->
+                SummaryItem(
+                    emoji = reaction.emoji,
+                    personCount = reaction.personIds.size,
+                    selected = profileId in reaction.personIds,
+                )
+            }
+        }
+        val visible = reactions.take(maximumReactionPills).map { reaction ->
+            SummaryItem(
+                emoji = reaction.emoji,
+                personCount = reaction.personIds.size,
+                selected = profileId in reaction.personIds,
+            )
+        }
+        val omitted = reactions.drop(maximumReactionPills)
+        return visible + SummaryItem(
+            emoji = null,
+            personCount = omitted.sumOf { it.personIds.size },
+            selected = omitted.any { profileId in it.personIds },
+            omittedTypeCount = omitted.size,
+        )
+    }
 
     fun replaceQuick(current: List<String>, index: Int, emoji: String): List<String> {
         if (index !in 0..5 || current.size != 6) return current

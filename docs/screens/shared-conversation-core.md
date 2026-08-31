@@ -1,7 +1,10 @@
 # Shared conversation core
 
-Status: Visual-polish refresh implemented; static verification complete on
-2026-08-21; device acceptance pending
+Status: 2026-08-31 conversation-surface correction implemented. Build, lint,
+unit tests, and instrumentation compilation pass for the latest 23 dp /
+four-plus-overflow refinement. The preceding revision passed the full Pixel 8a
+suite and physical inspection; renewed device execution is pending after the
+wireless device disconnected. User visual acceptance remains separate.
 
 ## Source evidence
 
@@ -15,6 +18,13 @@ Status: Visual-polish refresh implemented; static verification complete on
 - `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/App/PrototypeChatOperations.swift`
 - `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/ConversationView.swift`
 - `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/PrototypeMessageBubble.swift`
+- explicitly requested current-iOS comparison at
+  `wn-ios-prototype@4c25393f0eb6` for bubble metadata, reactions, focused
+  actions, selection, reply swipe, and bottom settling; this does not globally
+  repin the Android baseline
+- Signal Android `879651dc47a7b18b67e7aea52a25197875024680` as native Android
+  interaction evidence only; no code or Signal-specific product policy is
+  imported
 
 ## Android-native adaptation
 
@@ -42,11 +52,15 @@ Status: Visual-polish refresh implemented; static verification complete on
 - Day headers use a pinned tonal capsule and heading semantics. Ordinary
   events stay quiet text while support guidance uses one restrained tonal
   notice surface, so date, event, and notice roles remain visibly distinct.
-- Selection uses a standard checkbox role and state rather than Unicode
-  selected/unselected glyphs. Failed delivery keeps a visible 48 dp retry
-  action with warning icon and error text.
+- Selection uses one stable leading 48 dp Checkbox column for incoming and
+  outgoing messages without changing bubble geometry. Failed delivery keeps a
+  visible 48 dp retry action with warning icon and error text.
+- Incoming group identity belongs to the bubble rather than its metadata: the
+  30 dp avatar ends at the bubble edge and the author label follows the
+  bubble's 12 dp body inset.
 - Android accessibility actions and visible buttons own retry and invitation
-  decisions. Gesture-only message actions remain Batch 5.
+  decisions. Reply swipe and deliberate-hold actions keep named semantics
+  alternatives.
 
 ## Timeline contract
 
@@ -58,14 +72,32 @@ Status: Visual-polish refresh implemented; static verification complete on
 - A cluster contains adjacent messages from the same author on the same day
   no more than five minutes apart. Events and notices break clusters.
 - Direct chats omit transcript author identity. Group chats show an incoming
-  author label at cluster start and avatar at cluster end.
-- Terminal messages show time. Failed outgoing messages show **Not delivered,
-  tap to retry** and retry to Sent. Deleted messages remain as **You deleted
-  this message.** or **This message was deleted.**
+  author label at cluster start and avatar at cluster end, with the avatar
+  bottom aligned to the bubble rather than the reaction/time line.
+- Terminal messages show time. Failed outgoing messages replace that time with
+  **Not delivered, tap to retry** using the same end/right alignment, 12 dp
+  edge inset, 2 dp top gap, 3 dp icon gap, `labelSmall` typography, and 14 dp
+  status footprint; only the warning and label use the error color. Tapping the
+  message retries to Sent. Deleted messages remain as **You deleted this
+  message.** or **This message was deleted.**
 - Reply quotes show the resolved author/body or **Original message
   unavailable** when the target is missing or deleted.
-- Reactions show emoji and counts, with current-profile participation exposed
-  in state semantics. Full reaction interaction remains Batch 5.
+- Reactions occupy one bubble-attached metadata line opposite time. The visible
+  summary never wraps. Emoji-only pills share a 31×23 dp minimum, counted and
+  `+N` pills grow horizontally, and visible pills keep 3 dp gaps. They overlap
+  the bubble bottom by 9 dp while retaining expanded 48 dp minimum interaction
+  targets; the bubble grows with metadata to 340 dp and shows at most four real
+  types plus one `+N` pill, reducing the real set further only when width is
+  exhausted. Rail and timestamp retain 12 dp edge insets. A timestamp without
+  reactions keeps the same directional edge—start/left for incoming and
+  end/right for outgoing in LTR—and begins 2 dp below the bubble. RTL mirrors
+  that relationship with the message. The 2 dp timestamp gap also applies
+  when reactions are present; only pills overlap the bubble. Timestamp text,
+  the Sent fill, and Sending progress use the lighter/lower-emphasis `outline`
+  neutral. Outgoing Sent/Sending state appears beside time with a 14 dp filled
+  status container and 10 dp check artwork.
+  Current-profile participation
+  remains exposed in state semantics.
 - Support guidance is a centered notice, never an incoming message.
 
 ## Lifecycle states
@@ -87,6 +119,24 @@ Status: Visual-polish refresh implemented; static verification complete on
 - Opening clears unread state. Sending nonblank text appends one deterministic
   outgoing message, clears the draft, updates the Chats preview, and scrolls
   to the newest entry.
+- Opening an available conversation waits for the measured compact composer
+  and lazy layout, then settles the newest entry completely above the floating
+  controls. Edge-to-edge content may draw behind the composer only while
+  scrolling.
+- A leading-to-trailing 64 dp reply swipe moves bubble and metadata together,
+  resists beyond the threshold up to 96 dp, mirrors in RTL, yields vertical
+  motion to scrolling, and is unavailable when Reply is unavailable.
+- Deliberate hold presents the real source message in a focused modal overlay,
+  with quick reactions above and ordered actions below, aligned to message
+  direction and shifted within system-safe window bounds. Tall real sources
+  scale proportionally within a 320 dp preview budget. Both focused accessory
+  gaps are 8 dp; the lower gap starts at a visible reaction pill rather than
+  its transparent target edge.
+- Message Details presents every reaction type and the people represented by
+  it; compact transcript/context overflow never hides information there.
+- Recipient Read Aloud, Stop Reading, Transcribe, Show/Hide Transcript, and
+  Copy Transcript commands are conditional focused-message actions. Only
+  active progress or a deliberately revealed transcript is shown inline.
 
 ## Deterministic fixture coverage
 
@@ -106,11 +156,35 @@ Status: Visual-polish refresh implemented; static verification complete on
   resolution, invitation accept/decline, support uniqueness, send/retry,
   list-preview updates, profile isolation, and composer availability.
 - Compose tests for direct, group, invitation, and ended states compile into
-  the instrumentation APK. Focused coverage also verifies the clickable
-  identity, direct relay recovery, named failed-send retry, support notice,
-  and existing 200% font-scale RTL composition. Device execution and visual
-  inspection remain deferred until requested.
-- The clean static gate passes with zero lint issues and no new permission.
+  the instrumentation APK. On 2026-08-31, a focused 12-test slice passed on
+  the physical Pixel 8a, covering bottom settlement, bounded reactions,
+  source-preserving actions, conditional recipient speech commands, stable
+  selection geometry, forwarding/configuration, LTR/RTL reply swipe, and group
+  identity alignment.
+- Physical Pixel 8a inspection covered direct and group transcripts, compact
+  reactions and overflow, focused text and voice actions, tall media preview,
+  selection, failed-message actions, and newest-message/composer clearance.
+  The clean build, lint, unit, and instrumentation-APK gates pass with no new
+  permission.
+- The 2026-08-31 reaction-overlap follow-up passed six focused Pixel 8a tests
+  and physical inspection for 7 dp pill overlap, adaptive bubble growth/`+N`,
+  12 dp timestamp inset, equal focused gaps, exhaustive Message Details, group
+  avatar geometry, source-preserving actions, and the same overlap/gap geometry
+  at 200% type.
+- The subsequent metadata correction passed five focused Pixel 8a tests and
+  physical inspection for consistent 31×25 dp singleton pills, horizontally
+  growing count pills, 3 dp pill gaps, 2 dp below-bubble timestamps on text and
+  media, outgoing delivery state, adaptive overflow, reaction-aware focused
+  spacing, and 200% type.
+- After the correction, all 191 instrumentation tests passed on the physical
+  Pixel 8a, including conversation, media viewer, full-height forwarding,
+  selection, reply, gesture, accessibility, and scaled-type coverage.
+- The latest user-directed density refinement reduces pills to 31×23 dp, caps
+  transcript/focused summaries at four real types plus one `+N`, and reduces
+  Sent state to a 14 dp filled container with 10 dp check artwork. Its follow-up
+  moves visible reaction pills 2 dp farther over the bubble for a 9 dp overlap.
+  Unit, lint, build, and instrumentation compile gates pass; renewed Pixel
+  execution remains pending after disconnection.
 
 ## Current official Android sources
 

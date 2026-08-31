@@ -1,10 +1,10 @@
 # Message interactions and conversation search
 
-Status: Refined static gate passed on 2026-08-30. Search entry, IME-visible
-controls, count/navigation, cyan highlights, result contrast, and close/Back
-behavior passed current Pixel 8a inspection on 2026-08-31. The later shared
-reply/media-viewer refinement has a clean static gate; renewed device inspection
-and user visual acceptance remain pending.
+Status: Search behavior and the 2026-08-31 message-surface correction are
+implemented. Build, lint, unit tests, and instrumentation compilation pass for
+the latest 23 dp / four-plus-overflow refinement. The preceding revision passed
+the full Pixel 8a suite and physical inspection; renewed device execution is
+pending after disconnection. User visual acceptance remains separate.
 
 ## Source evidence
 
@@ -12,9 +12,12 @@ and user visual acceptance remain pending.
 - `wn-ios-prototype@0bd7cba:docs/screens/conversation-search.md`
 - the message-action, forwarding, deletion, reaction, mention, and search cases
   in the pinned chat catalog and iOS tests
-- user-approved current-iOS comparison at `wn-ios-prototype@4c25393f0eb6` for
-  reply presentation and sent-media viewer behavior only; this does not repin
-  the Android baseline
+- explicitly requested current-iOS comparison at
+  `wn-ios-prototype@4c25393f0eb6` for reply presentation, sent-media viewer,
+  bubble metadata, reaction placement, focused actions, selection, reply
+  swipe, and bottom settling; this does not globally repin the Android baseline
+- Signal Android `879651dc47a7b18b67e7aea52a25197875024680` as native Android
+  interaction evidence only
 
 ## Android-native adaptation
 
@@ -22,16 +25,41 @@ and user visual acceptance remain pending.
   hover, and accessibility long-click behavior. Haptic feedback accompanies a
   successful hold. Every command is also exposed as a named custom
   accessibility action, so discovery never depends on a gesture.
-- A Material modal bottom sheet presents the focused message's quick reactions
-  and the ordered Reply, Forward, Copy, Select, Info, Delete commands. Retry is
-  first for a failed outgoing message. Deleted messages expose no actions.
+- A source-preserving modal overlay presents a real rendering of the focused
+  message, quick reactions above it, and the ordered Reply, Forward, Copy,
+  Select, Info, Delete actions below it. Incoming/outgoing alignment and safe-
+  edge shifting retain the message relationship. Retry is first for a failed
+  outgoing message. Conditional Read Aloud/Stop Reading and voice transcript
+  commands occupy the same policy-owned command order. Tall real sources scale
+  within a 320 dp preview budget. Deleted messages expose no actions.
+- The transcript and focused preview share one adaptive metadata layout. Its
+  visible reaction pills use a 31×23 dp singleton minimum, expand horizontally
+  for counts, keep 3 dp gaps, and overlap the bubble bottom by 9 dp. The bubble
+  grows to 340 dp and shows at most four real types plus one `+N` pill, reducing
+  the real set further only when width requires it. The timestamp keeps a 12 dp
+  bubble-edge inset and always follows message direction: incoming start/left,
+  outgoing end/right in LTR, mirrored with the message in RTL. Without
+  reactions, it begins 2 dp below the bubble; that same gap remains when
+  reactions are present, while only pills overlap. Timestamp text, Sent fill,
+  and Sending progress use the lower-emphasis `outline` neutral. Outgoing
+  metadata includes Sent or Sending state; Sent uses a 14 dp filled
+  status container with 10 dp check artwork.
+  Failed delivery replaces time in that same slot with a 14 dp warning and
+  **Not delivered, tap to retry**; geometry and typography stay identical and
+  only the icon/label use the semantic error color.
+  Message Details lists every type and its people.
 - A searchable Material emoji bottom sheet provides deterministic recent and
   standard categories. A profile-owned six-item quick-reaction configuration
   supports replacement, swap, Reset, cancel, and Done without persistence or
   network work.
-- Selection uses a visible 48dp checkbox column and replaces the composer with
-  a Material bottom action bar. Forwarding uses a searchable multi-select sheet
-  capped at five destination chats and appends source-ordered in-memory copies.
+- Selection uses one stable leading 48 dp checkbox column and replaces the
+  composer with a Material bottom action bar. The column does not move with
+  bubble direction. Forwarding uses a searchable multi-select sheet capped at
+  five destination chats and appends source-ordered in-memory copies.
+- A leading-to-trailing reply swipe uses a 64 dp threshold, a 96 dp resisted
+  maximum, threshold haptic, RTL mirroring, and vertical direction locking.
+  It moves the complete bubble/reaction unit and is disabled whenever Reply is
+  unavailable; the named Reply semantics action remains equivalent.
 - Message Details is a typed Navigation Compose destination backed by the real
   chat/message graph. Delete for Me removes local entries; Delete for Everyone
   is available only for nondeleted outgoing selections and leaves a clean
@@ -84,10 +112,25 @@ and user visual acceptance remain pending.
   container follows the message bubble: an 8 dp quote inset and 8 dp quote
   radius sit concentrically inside the bubble's 16 dp radius. The remaining
   message content keeps its established 12 dp horizontal alignment.
-- The long-press sheet now keeps a compact tonal preview of the focused
-  message, a horizontally scrollable quick-reaction strip, a clear **More
-  Reactions** tonal action, and icon-leading Material command rows. Retry stays
-  first and Delete retains the semantic error role.
+- Deliberate hold now keeps the real source message visually focused between a
+  bounded quick-reaction strip and an icon-leading command surface. The
+  composition aligns to bubble direction and shifts within system-safe bounds;
+  scrim tap, Back and Escape dismiss it. Retry stays first and Delete retains
+  the semantic error role. The quick strip and command surface use equal 8 dp
+  gaps; with source reactions, the lower gap begins at the visible pill edge,
+  not the transparent touch-target edge.
+- Reaction summaries attach to the bubble on one nonwrapping metadata line
+  opposite the terminal time with 12 dp edge insets. Each singleton uses a
+  31×23 dp visible minimum; counted and `+N` pills expand horizontally, visible
+  neighbors are 3 dp apart, and single reactions omit a redundant count. The
+  rail overlaps the bubble bottom by 9 dp while retaining expanded minimum
+  pointer targets. The bubble grows to its 340 dp maximum, the summary shows up
+  to four real types plus one `+N`, and adaptive overflow may reduce the real
+  set further when necessary.
+  Normal tap selects/replaces but never removes an already selected reaction;
+  explicit removal remains in focused reaction controls. At scaled type, the
+  visible pill may grow while its 9 dp overlap and the focused visible-edge
+  menu gap remain fixed.
 - The emoji sheet uses a rounded Material search field with named Clear and
   Configure actions, full category labels in a scrollable chip row, and an
   adaptive grid whose emoji targets remain at least 48dp instead of forcing an
@@ -128,13 +171,17 @@ and user visual acceptance remain pending.
   menus and haptic feedback after recognition.
 - Compose semantics and custom actions provide named assistive-technology
   alternatives to gesture-only operations.
-- Material search fields, modal bottom sheets, lists, checkboxes, dialogs, and
-  navigation remain the default platform composition for the bounded flows.
+- Material search fields, lists, checkboxes, dialogs, and navigation remain the
+  default platform composition. Message actions use a custom modal composition
+  because preserving the source-message relationship is the product need;
+  emoji, configuration, forwarding, and confirmation flows keep their Material
+  sheets or dialogs.
 - Sources rechecked for this pass: [tap and press](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press),
   [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics),
   [Material search](https://developer.android.com/develop/ui/compose/components/search-bar),
   [Material app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
   [window insets](https://developer.android.com/develop/ui/compose/system/insets-ui),
+  [drag, swipe, and fling](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/drag-swipe-fling),
   [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
   [multitouch transforms](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/multi-touch),
   [Android Sharesheet](https://developer.android.com/training/sharing/send), and
@@ -142,20 +189,35 @@ and user visual acceptance remain pending.
 
 ## Acceptance gates
 
-2026-08-26 shared-sheet refinement: message actions, emoji selection, reaction
-configuration and forwarding use `WhiteNoiseModalBottomSheet`; titled sheets
-use `WhiteNoiseSheetHeader`. No repeated navigation-bar padding remains inside
-these modals. The reaction configuration scrolls at large font sizes; message
-actions reserve constrained space for their scrollable action list. Ordinary
-rows stay transparent; preview, selection and completion groups retain their
-intentional tones. Message actions still use a sheet; only Chats row commands
-move to an anchored menu. Selection bars and media screens are unchanged.
+WN-ANDROID-0107 supersedes only the 2026-08-26 message-action sheet. Emoji
+selection, reaction configuration and forwarding continue to use
+`WhiteNoiseModalBottomSheet`; confirmations continue to use Material dialogs.
 
 - Unit tests cover action availability, reaction replacement/removal, quick
   configuration, search order/content, reply, forwarding bounds/order,
   deletion scopes, and per-profile isolation.
 - Compose tests for long-click alternatives, selection, forwarding, details,
   emoji configuration, mention suggestions, and in-place search compile.
+- A focused 12-test interaction slice passes on the physical Pixel 8a. It
+  covers real-source hold presentation, bottom settlement, bounded single-line
+  reaction summaries, stable selection columns, LTR/RTL reply swipes,
+  recipient text/voice speech-action placement, group avatar geometry,
+  selection actions, forwarding, and reaction configuration.
+- A five-test reaction-geometry follow-up passes on the physical Pixel 8a for
+  visible overlap, adaptive bubble growth and overflow, timestamp inset,
+  equal reaction-aware focused gaps, exhaustive reaction details, group-avatar
+  alignment, and source-preserving actions.
+- A further five-test metadata correction passes on the physical Pixel 8a for
+  compact singleton/count geometry, 3 dp visible spacing, below-bubble text and
+  media timestamps, outgoing delivery state, overflow, focused spacing, and
+  200% type.
+- The complete 191-test instrumentation suite then passes on the physical
+  Pixel 8a, including the expanded forwarding surface, 48 dp media-viewer
+  actions, selection, reply, search, gestures, accessibility, and scaled type.
+- The latest user-directed density refinement reduces pills to 31×23 dp, caps
+  the shared summary at four real types plus one `+N`, and reduces Sent check
+  artwork to 10 dp. Unit, lint, build, and instrumentation compile gates pass;
+  renewed Pixel execution remains pending after disconnection.
 - Focused tests cover the message context/title, reaction configuration slots,
   selection controls, forwarding limit/search, focused conversation search,
   the shared 48 dp field, named Clear, previous/next/count controls, Back
@@ -172,6 +234,9 @@ move to an anchored menu. Selection bars and media screens are unchanged.
   the 2 dp segmented-list rhythm, one trailing selected check, and count-bearing
   action semantics.
 - The complete clean static gate and permission/export audit pass.
+- Renewed Pixel 8a visual inspection covers direct/group alignment, reaction
+  rails, bottom clearance, focused text/voice/tall-media actions, selection,
+  and failed-message recovery. User visual acceptance remains separate.
 - The rich-media follow-up adds unit coverage for chronological flattening,
   stable exact-frame identity, metadata, unavailable/deleted filtering, MIME
   and filename derivation, and exact-frame forwarding/validation. Compiled

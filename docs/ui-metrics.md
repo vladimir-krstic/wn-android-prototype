@@ -89,6 +89,64 @@ active pane.
   between that target and the label. Do not nest a settings `ListItem` inside
   the already-padded dialog slot; that creates a second horizontal inset.
 
+## Conversation transcript
+
+- Tail-free message bubbles use a 16 dp radius, 12 dp horizontal and 8 dp
+  vertical content inset, and a compact-screen maximum width of 340 dp. Same-
+  author messages use a 2 dp vertical relationship; a new cluster uses 16 dp.
+  Incoming group clusters reserve a 30 dp avatar and 6 dp avatar-to-message
+  gap. Align the avatar's bottom to the bubble, excluding reactions and time;
+  align the author label to the bubble's 12 dp content inset. Direct messages
+  do not reserve hidden identity space.
+- Terminal metadata occupies one nonwrapping line attached to the bubble. A
+  reaction rail sits on the center-facing side and the time/state label on the
+  opposite side. The visible reaction pill is 23 dp high and at least 31 dp
+  wide, with a 1 dp outline, 7 dp horizontal inset, 2 dp emoji/count gap, and
+  no visible count for one. Counted and `+N` pills grow from that compact
+  minimum; neighboring visible pills are 3 dp apart. Keep their horizontal
+  layout compact while retaining the 48 dp minimum vertical target and
+  Compose-expanded minimum pointer target. The visible pill overlaps the
+  bubble bottom by 9 dp. Inset both the center-facing rail and opposite
+  timestamp 12 dp from the bubble edge. Timestamp direction does not change
+  when reactions are absent: incoming time stays on the bubble's start/left
+  edge and outgoing time on its end/right edge in LTR, mirrored with the
+  message in RTL. With or without reactions, place the timestamp 2 dp below
+  the bubble; only the visible reaction pill overlaps its bottom edge. Use the
+  lower-emphasis `outline` neutral for timestamp text, the Sent status fill,
+  and Sending progress. Sent and sending
+  outgoing timestamps include their delivery state; the Sent state uses a
+  14 dp filled status container with 10 dp check artwork, while incoming
+  timestamps reserve no delivery icon. Failed outgoing delivery uses that same
+  end/right placement, 12 dp edge inset, 2 dp top gap, 3 dp icon gap,
+  `labelSmall` typography, and 14 dp status footprint; only the warning icon
+  and **Not delivered, tap to retry** label switch to the semantic error color.
+  Grow the bubble with metadata up to
+  340 dp; within that width show at most four real reaction types followed by
+  one `+N` overflow pill. Progressively reduce the real types further only
+  when the available width requires it. Never wrap reactions into another row.
+- Multi-message selection reserves one 48 dp leading column independent of
+  incoming/outgoing direction. Center the native Checkbox against message
+  content and retain a whole-row toggle target. Selection surfaces must not
+  alter bubble width, alignment, or cluster geometry.
+- Reply swipe follows semantic leading-to-trailing direction: 64 dp readiness,
+  96 dp maximum visible travel, resisted overdrag, one threshold haptic, and a
+  spring/short return. Bubble, metadata, and reactions move as one unit. Keep
+  the named Reply accessibility action.
+- The focused-message overlay keeps a real message rendering between a quick-
+  reaction rail and the ordered command surface. Align these surfaces with
+  bubble direction, preserve 16 dp window margins, and shift the composition
+  within status/navigation/IME safe bounds instead of detaching it into a
+  bottom sheet. Scale exceptionally tall real-message previews proportionally
+  within a 320 dp height budget rather than replacing them with a summary. Keep
+  8 dp above the message and 8 dp below its visible content; when reactions are
+  present, measure the lower gap from the visible pill edge, excluding the
+  remaining transparent interaction-target inset. Preserve that visible-edge
+  relationship when scaled type increases the pill height.
+- The newest timeline item settles fully above the measured compact composer
+  plus system bottom inset. Edge-to-edge drawing behind the floating composer
+  is intentional; a settled message underneath an interactive composer target
+  is not.
+
 ## Settings overview
 
 - The Settings root uses `surfaceContainerLow` for its neutral canvas and

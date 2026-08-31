@@ -16,8 +16,9 @@ device inspection and user visual acceptance remain pending.
 - `wn-ios-prototype@0bd7cba:WhiteNoisePrototype/Screens/Conversation/PrototypeComposerMediaViewer.swift`
 - composer, attachment, media, and voice cases in `PrototypeChatModelTests.swift` and `ChatFlowsUITests.swift`
 - user-approved current-iOS comparison at `wn-ios-prototype@4c25393f0eb6` for
-  rich composer accessories, reply geometry, and draft-media review only; this
-  scoped evidence does not repin the Android baseline
+  rich composer accessories, reply geometry, draft-media review, and recipient
+  speech-action placement; this scoped evidence does not repin the Android
+  baseline
 
 The iOS source establishes product states, ordering, format choices, and
 two-endpoint behavior. Android owns presentation, accessibility, Back, IME,
@@ -168,6 +169,17 @@ pickers, popup placement, focus, motion, and safe-area handling.
 - Expansion endpoint and Review are saveable per chat. Recreation during an
   active simulation converts elapsed recording to Review without sending or
   silently discarding it.
+
+### Recipient speech presentation
+
+- Playback remains the only permanent command inside a received voice bubble.
+  Read Aloud, Stop Reading, Transcribe, Show/Hide Transcript, and Copy
+  Transcript are conditional focused-message actions, matching the product
+  command placement without expanding every bubble.
+- A deliberate Transcribe action creates only view-local transcript state.
+  Show reveals the transcript beneath playback; Hide removes it again; Copy
+  uses the revealed local text. Received text shows only a compact live
+  read-aloud progress row while playback is active.
 
 ## Deterministic catalog and compatibility
 

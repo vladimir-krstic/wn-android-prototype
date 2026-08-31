@@ -1,7 +1,5 @@
 package dev.ipf.whitenoise.ui.conversation
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -14,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,7 +60,6 @@ import dev.ipf.whitenoise.model.ConversationMediaKey
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
 import dev.ipf.whitenoise.model.ProfileAvatar
-import dev.ipf.whitenoise.model.VoiceMessageFixture
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 import java.io.File
@@ -82,6 +78,8 @@ internal fun TimelineAttachmentContent(
     messageId: String? = null,
     onOpenMedia: (ConversationMediaKey) -> Unit,
     searchQuery: String = "",
+    voiceTranscript: String? = null,
+    voiceTranscriptVisible: Boolean = false,
 ) {
     if (attachments.isEmpty()) return
     val visualAttachments = attachments.filter(MessageAttachment::isVisual)
@@ -95,7 +93,12 @@ internal fun TimelineAttachmentContent(
     }
     attachments.filterNot(MessageAttachment::isVisual).forEach { attachment ->
         when (attachment.kind) {
-            MessageAttachmentKind.Voice -> VoiceMessageCard(attachment, outgoing)
+            MessageAttachmentKind.Voice -> VoiceMessageCard(
+                attachment = attachment,
+                outgoing = outgoing,
+                transcript = voiceTranscript ?: attachment.transcript,
+                transcriptVisible = voiceTranscriptVisible,
+            )
             MessageAttachmentKind.Link -> LinkMessageCard(attachment, outgoing, searchQuery)
             MessageAttachmentKind.File,
             MessageAttachmentKind.Contact,
@@ -390,13 +393,15 @@ private fun DocumentOrContactCard(
 }
 
 @Composable
-private fun VoiceMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
+private fun VoiceMessageCard(
+    attachment: MessageAttachment,
+    outgoing: Boolean,
+    transcript: String?,
+    transcriptVisible: Boolean,
+) {
     val duration = attachment.durationSeconds?.coerceAtLeast(1) ?: 8
     var isPlaying by remember(attachment.id) { mutableStateOf(false) }
     var progress by remember(attachment.id) { mutableFloatStateOf(0f) }
-    var transcriptVisible by remember(attachment.id) { mutableStateOf(false) }
-    var localTranscript by remember(attachment.id) { mutableStateOf(attachment.transcript) }
-    val context = LocalContext.current
     LaunchedEffect(isPlaying) {
         if (!isPlaying) return@LaunchedEffect
         while (isPlaying && progress < 1f) {
@@ -455,52 +460,24 @@ private fun VoiceMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
                     color = secondaryContent,
                 )
             }
-            val transcript = localTranscript
-            if (transcript == null) {
-                if (!outgoing) {
-                    TextButton(
-                        onClick = {
-                            localTranscript = VoiceMessageFixture.transcript
-                            transcriptVisible = true
-                        },
-                    ) {
-                        Text(stringResource(R.string.transcribe), color = content)
-                    }
-                }
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { transcriptVisible = !transcriptVisible }) {
+            if (transcriptVisible && transcript != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small,
+                    color = if (outgoing) {
+                        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    },
+                    contentColor = content,
+                ) {
+                    Column(Modifier.padding(WhiteNoiseSpacing.Related)) {
                         Text(
-                            stringResource(
-                                if (transcriptVisible) R.string.hide_transcript else R.string.show_transcript,
-                            ),
-                            color = content,
+                            stringResource(R.string.transcribed),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = secondaryContent,
                         )
-                    }
-                    TextButton(onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Transcript", transcript))
-                    }) { Text(stringResource(R.string.copy_transcript), color = content) }
-                }
-                if (transcriptVisible) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.small,
-                        color = if (outgoing) {
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        },
-                        contentColor = content,
-                    ) {
-                        Column(Modifier.padding(WhiteNoiseSpacing.Related)) {
-                            Text(
-                                stringResource(R.string.transcribed),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = secondaryContent,
-                            )
-                            Text(transcript, style = MaterialTheme.typography.bodyMedium)
-                        }
+                        Text(transcript, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -628,35 +605,32 @@ internal fun rememberReadAloudController(): ReadAloudController {
 }
 
 @Composable
-internal fun ReadAloudAction(messageId: String, text: String, controller: ReadAloudController) {
-    val speaking = controller.activeMessageId == messageId
-    val progress = if (speaking) controller.progress else 0f
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TextButton(
-            onClick = { controller.toggle(messageId, text) },
-            enabled = controller.ready,
-            contentPadding = PaddingValues(horizontal = 0.dp),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_volume_up),
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp).size(18.dp),
-            )
-            Text(stringResource(if (speaking) R.string.stop_reading else R.string.read_aloud))
-        }
-        if (speaking) {
-            val percentage = (progress * 100).toInt()
-            val progressDescription = stringResource(R.string.reading_aloud_progress, percentage)
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics {
-                        contentDescription = progressDescription
-                        liveRegion = LiveRegionMode.Polite
-                    },
-            )
-        }
+internal fun ReadAloudProgress(messageId: String, controller: ReadAloudController) {
+    if (controller.activeMessageId != messageId) return
+    val progress = controller.progress
+    val percentage = (progress * 100).toInt()
+    val progressDescription = stringResource(R.string.reading_aloud_progress, percentage)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp)
+            .testTag("conversation.readAloud.progress.$messageId")
+            .semantics {
+                contentDescription = progressDescription
+                liveRegion = LiveRegionMode.Polite
+            },
+        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_volume_up),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

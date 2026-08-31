@@ -37,7 +37,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -46,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
@@ -56,6 +56,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -92,147 +93,11 @@ import dev.ipf.whitenoise.model.MessageDeliveryState
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ReactionCatalog
 import dev.ipf.whitenoise.model.composerAvailability
-import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseCompactSearchField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun MessageActionsSheet(
-    profile: Profile,
-    message: ChatMessage,
-    onDismiss: () -> Unit,
-    onReaction: (String, Boolean) -> Unit,
-    onMoreReactions: () -> Unit,
-    onAction: (MessageAction) -> Unit,
-) {
-    val selectedReaction = message.reactions.firstOrNull { profile.id in it.personIds }?.emoji
-    val actions = MessageActionPolicy.available(message, profile.id)
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        WhiteNoiseSheetHeader(stringResource(R.string.message_actions))
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 560.dp)
-                    .padding(bottom = WhiteNoiseSpacing.CompactScreenMargin),
-                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-            ) {
-                MessageContextPreview(profile, message)
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    items(
-                        ReactionCatalog.quickStrip(profile.quickReactions, selectedReaction),
-                        key = { it },
-                    ) { emoji ->
-                        FilterChip(
-                            selected = emoji == selectedReaction,
-                            onClick = { onReaction(emoji, emoji == selectedReaction) },
-                            label = {
-                                Text(emoji, style = MaterialTheme.typography.titleMedium)
-                            },
-                            modifier = Modifier.heightIn(min = 48.dp),
-                        )
-                    }
-                    item {
-                        FilledTonalButton(
-                            onClick = onMoreReactions,
-                            modifier = Modifier.heightIn(min = 48.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_add),
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = WhiteNoiseSpacing.Related).size(18.dp),
-                            )
-                            Text(stringResource(R.string.more_reactions))
-                        }
-                    }
-                }
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 420.dp),
-                ) {
-                    items(actions, key = { it.name }) { action ->
-                        val destructive = action == MessageAction.Delete
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    actionLabel(action),
-                                    color = if (destructive) {
-                                        MaterialTheme.colorScheme.error
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
-                                )
-                            },
-                            leadingContent = {
-                                Icon(
-                                    painter = painterResource(actionIcon(action)),
-                                    contentDescription = null,
-                                    tint = if (destructive) {
-                                        MaterialTheme.colorScheme.error
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { onAction(action) },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MessageContextPreview(profile: Profile, message: ChatMessage) {
-    val outgoing = message.authorId == profile.id
-    val person = profile.people.firstOrNull { it.id == message.authorId }
-    val authorName = if (outgoing) stringResource(R.string.you) else person?.name
-        ?: stringResource(R.string.unknown_person)
-    val avatar = if (outgoing) profile.avatar else person?.avatar
-    val summary = message.visibleText(profile.id).ifBlank {
-        message.attachments.firstOrNull()?.label.orEmpty()
-    }
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Row(
-            modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-        ) {
-            avatar?.let {
-                ProfileAvatar(authorName, it, Modifier.size(40.dp), contentDescription = null)
-            }
-            Column(Modifier.weight(1f)) {
-                Text(authorName, style = MaterialTheme.typography.labelLarge)
-                Text(
-                    summary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
 
 @Composable
 internal fun actionLabel(action: MessageAction): String = stringResource(
@@ -241,17 +106,29 @@ internal fun actionLabel(action: MessageAction): String = stringResource(
         MessageAction.Reply -> R.string.reply
         MessageAction.Forward -> R.string.forward
         MessageAction.Copy -> R.string.copy
+        MessageAction.ReadAloud -> R.string.read_aloud
+        MessageAction.StopReading -> R.string.stop_reading
+        MessageAction.Transcribe -> R.string.transcribe
+        MessageAction.ShowTranscript -> R.string.show_transcript
+        MessageAction.HideTranscript -> R.string.hide_transcript
+        MessageAction.CopyTranscript -> R.string.copy_transcript
         MessageAction.Select -> R.string.select
         MessageAction.Info -> R.string.info
         MessageAction.Delete -> R.string.delete
     },
 )
 
-private fun actionIcon(action: MessageAction): Int = when (action) {
+internal fun actionIcon(action: MessageAction): Int = when (action) {
     MessageAction.RetrySend -> R.drawable.ic_refresh
     MessageAction.Reply -> R.drawable.ic_reply
     MessageAction.Forward -> R.drawable.ic_forward
     MessageAction.Copy -> R.drawable.ic_content_copy
+    MessageAction.ReadAloud -> R.drawable.ic_volume_up
+    MessageAction.StopReading -> R.drawable.ic_stop
+    MessageAction.Transcribe -> R.drawable.ic_description
+    MessageAction.ShowTranscript -> R.drawable.ic_visibility
+    MessageAction.HideTranscript -> R.drawable.ic_visibility_off
+    MessageAction.CopyTranscript -> R.drawable.ic_content_copy
     MessageAction.Select -> R.drawable.ic_check
     MessageAction.Info -> R.drawable.ic_info
     MessageAction.Delete -> R.drawable.ic_delete
@@ -445,6 +322,10 @@ internal fun ForwardMessagesSheet(
     allowsAccompanyingMessage: Boolean = false,
     onForward: (List<String>, String) -> Unit,
 ) {
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf(emptySet<String>()) }
     var accompanyingMessage by remember { mutableStateOf("") }
@@ -476,6 +357,7 @@ internal fun ForwardMessagesSheet(
     }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = topContainerColor,
         contentWindowInsets = {
             WindowInsets.safeDrawing.only(
@@ -943,6 +825,12 @@ fun MessageDetailsScreen(
     val outgoing = message.authorId == profile.id
     val sender = profile.people.firstOrNull { it.id == message.authorId }
     val senderName = sender?.name ?: chat.title
+    val unknownPerson = stringResource(R.string.unknown_person)
+    fun reactionPersonName(personId: String): String = when (personId) {
+        profile.id -> profile.name
+        chat.id -> chat.title
+        else -> profile.people.firstOrNull { it.id == personId }?.name ?: unknownPerson
+    }
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -988,6 +876,59 @@ fun MessageDetailsScreen(
                                 messageId = message.id,
                                 onOpenMedia = {},
                             )
+                        }
+                    }
+                }
+                if (message.reactions.isNotEmpty()) {
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        ) {
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.reactions),
+                                    modifier = Modifier.padding(
+                                        start = WhiteNoiseSpacing.CompactScreenMargin,
+                                        top = WhiteNoiseSpacing.CompactScreenMargin,
+                                        end = WhiteNoiseSpacing.CompactScreenMargin,
+                                        bottom = WhiteNoiseSpacing.Related,
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                message.reactions.forEachIndexed { index, reaction ->
+                                    if (index > 0) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(
+                                                horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                                            ),
+                                            color = MaterialTheme.colorScheme.outlineVariant,
+                                        )
+                                    }
+                                    val people = reaction.personIds.distinct()
+                                    ListItem(
+                                        modifier = Modifier.testTag("message.details.reaction.$index"),
+                                        headlineContent = {
+                                            Text(people.joinToString(", ", transform = ::reactionPersonName))
+                                        },
+                                        supportingContent = {
+                                            Text(
+                                                pluralStringResource(
+                                                    R.plurals.people_reacted,
+                                                    people.size,
+                                                    people.size,
+                                                ),
+                                            )
+                                        },
+                                        leadingContent = {
+                                            Text(reaction.emoji, style = MaterialTheme.typography.titleLarge)
+                                        },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    )
+                                }
+                            }
                         }
                     }
                 }

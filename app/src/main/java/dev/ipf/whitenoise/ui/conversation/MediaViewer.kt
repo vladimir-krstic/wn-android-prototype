@@ -420,7 +420,9 @@ private fun MediaViewerBottomChrome(
         ) {
             IconButton(
                 onClick = onShare,
-                modifier = Modifier.testTag("conversation.media.viewer.share"),
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag("conversation.media.viewer.share"),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_share),
@@ -429,7 +431,9 @@ private fun MediaViewerBottomChrome(
             }
             IconButton(
                 onClick = onForward,
-                modifier = Modifier.testTag("conversation.media.viewer.forward"),
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag("conversation.media.viewer.forward"),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_forward),

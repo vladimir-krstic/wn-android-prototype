@@ -208,14 +208,14 @@ one-to-seven media and Voice/Text/Both behavior.
 ## WN-ANDROID-0012 — Android message actions and in-place search
 
 - Date: 2026-08-15
-- Status: Approved by implementation and static verification
+- Status: Context-sheet presentation superseded by WN-ANDROID-0107; named
+  actions, state behavior, and in-place search remain current
 
 Messages use Compose `combinedClickable` with haptic feedback for Android's
-standard deliberate-hold interaction. Material modal sheets own contextual
-commands, reactions, emoji configuration, and forwarding; every gesture-owned
-command is duplicated as a named semantics custom action. This keeps TalkBack,
-keyboard, mouse, and touch access aligned with current Android guidance without
-copying the iOS/Signal custom overlay implementation.
+standard deliberate-hold interaction. Emoji configuration and forwarding use
+Material modal sheets; every gesture-owned command is duplicated as a named
+semantics custom action. WN-ANDROID-0107 replaces only the detached message-
+action sheet with a source-preserving focused overlay.
 
 Selection, reactions, replies, forwarding, deletion, and quick-reaction
 preferences mutate only active-profile state. Message Details is a typed route.
@@ -2894,3 +2894,114 @@ their unit/Compose tests, `message-interactions-and-search.md`,
 [Compose multitouch transforms](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/multi-touch),
 [Android Sharesheet](https://developer.android.com/training/sharing/send), and
 [`CreateDocument`](https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.CreateDocument).
+
+## WN-ANDROID-0107 — Conversation messages form one bottom-settled, source-preserving interaction surface
+
+- Date: 2026-08-31
+- Status: Implemented; build, lint, unit, and instrumentation compilation pass
+  for the latest 23 dp / four-plus-overflow refinement. The preceding revision
+  passed the full 191-test Pixel 8a suite and physical visual verification;
+  renewed device execution is pending after the wireless device disconnected.
+  User visual acceptance remains separate.
+
+The available-composer timeline may draw behind its floating controls, but its
+newest entry must settle fully above the measured compact composer and system
+safe area. Initial positioning therefore waits for the composer measurement
+and final lazy-list layout before resolving the exact chronological end. It is
+not re-run for unrelated recompositions, while a newly sent message explicitly
+settles to the same end. This corrects the race that could leave the last
+message and time underneath the composer while preserving WN-ANDROID-0101's
+edge-to-edge viewport.
+
+Messages retain a full 16 dp tail-free bubble, 12 dp horizontal and 8 dp
+vertical content insets, 2 dp same-cluster separation, and 16 dp cluster
+separation. Direct chats omit identity; incoming group clusters use the
+existing 30 dp avatar and 6 dp relationship gap. The group avatar terminates at
+the bubble edge, excluding reactions and time, while the author label begins at
+the bubble's 12 dp body inset. Selection reserves one stable 48 dp leading
+control column for every direction and centers its Checkbox against message
+content. A restrained whole-row state layer may reinforce the native checked
+state, but message direction no longer moves the control or creates a bubble-
+sized selection island.
+
+Reaction metadata becomes one bubble-attached, nonwrapping line. Its visible
+pill is 23 dp high and at least 31 dp wide, with a one-dp outline, 7 dp
+horizontal content inset, 2 dp emoji/count gap, and no visible count for a
+single reaction. Counted and `+N` pills grow naturally from that minimum and
+neighboring visible pills retain a 3 dp gap. Their horizontal layout remains
+compact while a 48 dp vertical target plus Compose's expanded minimum pointer
+target preserves operability. The visible pill overlaps the bubble's bottom
+edge by 9 dp. The bubble grows with its reaction/time metadata up to the
+established 340 dp compact maximum. Within that width, the summary shows at
+most four real reaction types plus one `+N` overflow pill and progressively
+shortens the real set further only when required. The reaction rail occupies
+the center-facing side and terminal time the opposite side, both inset 12 dp from the
+bubble edge. The timestamp remains on the incoming start/left edge or outgoing
+end/right edge in LTR whether or not reactions exist, and mirrors with the
+message in RTL. Without reactions, time begins 2 dp below the bubble rather
+than overlapping its content. The same 2 dp top gap applies when reactions are
+present; only reaction pills cross the bubble edge. Timestamp text, the Sent
+status fill, and Sending progress use the lower-emphasis `outline` neutral.
+Outgoing terminal metadata includes the Sent check or Sending progress; the Sent state uses a 14 dp filled status container with
+10 dp check artwork, and incoming metadata reserves no delivery icon. Failed
+outgoing delivery reuses the exact timestamp geometry—end/right alignment,
+12 dp edge inset, 2 dp top gap, 3 dp icon gap, `labelSmall`, and a 14 dp status
+footprint—while the warning icon and **Not delivered, tap to retry** label use
+the semantic error color. It never becomes a
+detached wrapping shelf. A normal pill tap selects or replaces the active
+profile's reaction but does not remove
+an already selected reaction; removal remains explicit in the focused quick
+strip or full picker. Message Details lists every reaction type and its people,
+independent of the compact summary.
+
+A deliberate hold keeps Compose recognition and haptic feedback, then lifts a
+real rendering of the source message into a modal focused overlay. The quick
+reaction strip sits above it and the ordered action surface below it, aligned
+to incoming/outgoing direction and shifted within window and system-safe
+bounds when the source is near an edge. An unusually tall source scales as one
+unit to a 320 dp preview budget so the real bubble and complete command surface
+remain available without substituting a generic summary. Scrim tap, system
+Back, Escape, and Close dismiss. The surface retains Reply, Forward, Copy,
+Select, Info and Delete policy, with Retry first when applicable. Conditional
+recipient speech commands remain in this ordered surface: Read Aloud/Stop
+Reading for received text, Transcribe for received voice without a local
+transcript, then Show/Hide and Copy Transcript once available. Ordinary
+bubbles show only active read-aloud progress or a deliberately revealed
+transcript, never permanent speech command buttons. This source-preserving
+composition supersedes WN-ANDROID-0012's message-action bottom sheet; the emoji
+picker, configuration, forwarding, and confirmations remain Material sheets or
+dialogs.
+
+The focused preview uses the same adaptive reaction summary as the transcript.
+Its quick-reaction surface and command surface each keep the shared 8 dp visual
+gap from the focused message. When the source has reactions, the lower gap is
+measured from the visible pill edge rather than from the remaining transparent
+portion of its 48 dp minimum interaction target. Scaled type may grow the
+visible pill, but the 9 dp overlap and visible-edge menu gap remain unchanged.
+
+A horizontal leading-to-trailing swipe invokes Reply at a 64 dp threshold,
+caps the visual displacement at 96 dp with resisted overdrag, provides one
+readiness haptic, and returns the bubble plus reactions as one unit. Layout
+direction mirrors the gesture in RTL. Direction locking leaves vertically
+dominant motion to timeline scrolling. Swipe reply is disabled during
+selection, for deleted or unavailable messages, and whenever Reply is not an
+available action. The existing named Reply accessibility action remains the
+non-gesture equivalent.
+
+This decision preserves product behavior from the pinned iOS baseline and the
+explicitly requested scoped current-iOS comparison at
+`wn-ios-prototype@4c25393f0eb6`. Signal Android at
+`879651dc47a7b18b67e7aea52a25197875024680` is interaction evidence only: its
+bubble-attached bounded reaction summary, source-preserving reaction overlay,
+semantic reply swipe, threshold feedback, resisted motion, and selection-bar
+viewport handling inform the Android translation without copying AGPL code or
+Signal product policy.
+
+Evidence target: `ConversationScreen.kt`, `MessageInteractionsUi.kt`,
+conversation state models, unit and Compose tests,
+`shared-conversation-core.md`, `message-interactions-and-search.md`,
+`ui-metrics.md`, and `feature-inventory.md`. Sources:
+[lazy lists](https://developer.android.com/develop/ui/compose/lists),
+[tap and press](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press),
+[drag, swipe, and fling](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/drag-swipe-fling),
+and [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics).

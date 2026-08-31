@@ -56,6 +56,84 @@ class MessageInteractionModelsTest {
     }
 
     @Test
+    fun reactionSummaryKeepsUpToFourTypesPlusOverflowAndAdaptsToWidth() {
+        val reactions = listOf("❤", "😀", "🔥", "🦫", "🚀").mapIndexed { index, emoji ->
+            MessageReaction(
+                emoji = emoji,
+                personIds = if (index == 3) listOf("me", "other") else listOf("other"),
+            )
+        }
+
+        val full = ReactionCatalog.summary(reactions, "me")
+        val constrained = ReactionCatalog.summary(reactions, "me", maximumReactionPills = 2)
+
+        assertEquals(5, full.size)
+        assertEquals(listOf("❤", "😀", "🔥", "🦫", null), full.map { it.emoji })
+        assertEquals(1, full.last().omittedTypeCount)
+        assertEquals(3, constrained.size)
+        assertEquals(listOf("❤", "😀", null), constrained.map { it.emoji })
+        assertEquals(3, constrained.last().omittedTypeCount)
+        assertEquals(4, constrained.last().personCount)
+        assertTrue(constrained.last().selected)
+
+        val beyondMaximum = ReactionCatalog.summary(
+            (0..8).map { MessageReaction("$it", listOf("other")) },
+            "me",
+        )
+        assertEquals(5, beyondMaximum.size)
+        assertEquals(5, beyondMaximum.last().omittedTypeCount)
+    }
+
+    @Test
+    fun recipientSpeechCommandsLiveInMessageActionsAndFollowTranscriptState() {
+        val incomingText = ChatMessage(
+            "incoming-text",
+            "them",
+            3,
+            "Today",
+            600,
+            "10:00 AM",
+            "Read this",
+        )
+        val incomingVoice = incomingText.copy(
+            id = "incoming-voice",
+            text = "",
+            attachments = listOf(
+                MessageAttachment(
+                    "voice",
+                    MessageAttachmentKind.Voice,
+                    "Voice message",
+                    durationSeconds = 8,
+                ),
+            ),
+        )
+
+        assertTrue(MessageAction.ReadAloud in MessageActionPolicy.available(incomingText, "me"))
+        assertTrue(
+            MessageAction.StopReading in MessageActionPolicy.available(
+                incomingText,
+                "me",
+                MessageSpeechActionState(reading = true),
+            ),
+        )
+        assertTrue(MessageAction.Transcribe in MessageActionPolicy.available(incomingVoice, "me"))
+        assertTrue(
+            MessageAction.ShowTranscript in MessageActionPolicy.available(
+                incomingVoice,
+                "me",
+                MessageSpeechActionState(transcriptAvailable = true),
+            ),
+        )
+        val visible = MessageActionPolicy.available(
+            incomingVoice,
+            "me",
+            MessageSpeechActionState(transcriptAvailable = true, transcriptVisible = true),
+        )
+        assertTrue(MessageAction.HideTranscript in visible)
+        assertTrue(MessageAction.CopyTranscript in visible)
+    }
+
+    @Test
     fun conversationSearchMatchesTextSenderAndAttachmentNewestFirst() {
         val profile = ProfileFixtures.marmota
         val rich = profile.chats.first { it.id == "catalog-media-rich" }
