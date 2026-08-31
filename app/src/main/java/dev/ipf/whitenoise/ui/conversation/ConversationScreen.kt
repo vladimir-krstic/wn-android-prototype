@@ -186,6 +186,7 @@ fun ConversationScreen(
     var composerTravelPx by remember(chat.id) { mutableFloatStateOf(0f) }
     var pushTimelineWithComposer by remember(chat.id) { mutableStateOf(false) }
     val context = LocalContext.current
+    val readAloudController = rememberReadAloudController()
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     val coroutineScope = rememberCoroutineScope()
@@ -408,6 +409,7 @@ fun ConversationScreen(
                                 onShowActions = { focusedMessageId = item.message.id },
                                 onAccessibilityAction = { action -> handleAction(item.message, action) },
                                 onReaction = { emoji -> onReaction(item.message.id, emoji, false) },
+                                readAloudController = readAloudController,
                             )
                         }
                     }
@@ -825,6 +827,7 @@ private fun MessageRow(
     onShowActions: () -> Unit,
     onAccessibilityAction: (MessageAction) -> Unit,
     onReaction: (String) -> Unit,
+    readAloudController: ReadAloudController,
 ) {
     val message = item.message
     val outgoing = message.authorId == profile.id
@@ -921,6 +924,7 @@ private fun MessageRow(
                 authorName = authorName,
                 onOpenMedia = onOpenMedia,
                 searchQuery = searchQuery,
+                readAloudController = readAloudController,
             )
             if (message.reactions.isNotEmpty()) {
                 ReactionRow(
@@ -972,6 +976,7 @@ private fun MessageBubble(
     authorName: String,
     onOpenMedia: (List<MessageAttachment>) -> Unit,
     searchQuery: String,
+    readAloudController: ReadAloudController,
 ) {
     val text = message.visibleText(profile.id)
     val description = buildString {
@@ -1023,7 +1028,7 @@ private fun MessageBubble(
                     )
                 }
                 if (!outgoing && message.deletionState == MessageDeletionState.None) {
-                    ReadAloudAction(text)
+                    ReadAloudAction(message.id, text, readAloudController)
                 }
             }
         }

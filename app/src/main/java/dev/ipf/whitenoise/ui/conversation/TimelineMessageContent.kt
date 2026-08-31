@@ -42,6 +42,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -458,64 +459,133 @@ private fun VoiceMessageCard(attachment: MessageAttachment, outgoing: Boolean) {
     }
 }
 
-@Composable
-internal fun ReadAloudAction(text: String) {
-    val context = LocalContext.current
-    var ready by remember { mutableStateOf(false) }
-    var speaking by remember { mutableStateOf(false) }
-    var progress by remember(text) { mutableFloatStateOf(0f) }
-    val engine = remember {
-        var tts: TextToSpeech? = null
-        tts = TextToSpeech(context.applicationContext) { status ->
-            ready = status == TextToSpeech.SUCCESS
-            if (ready) tts?.language = Locale.getDefault()
+@Stable
+internal class ReadAloudController {
+    var ready by mutableStateOf(false)
+        private set
+    var activeMessageId by mutableStateOf<String?>(null)
+        private set
+    var progress by mutableFloatStateOf(0f)
+        private set
+
+    private var engine: TextToSpeech? = null
+    private var closed = true
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    fun initialize(context: Context) {
+        shutdown()
+        closed = false
+        var created: TextToSpeech? = null
+        created = TextToSpeech(context.applicationContext) { status ->
+            val initialized = created
+            if (closed || initialized == null || engine !== initialized) return@TextToSpeech
+            val languageStatus = if (status == TextToSpeech.SUCCESS) {
+                initialized.setLanguage(Locale.getDefault())
+            } else {
+                TextToSpeech.ERROR
+            }
+            postUpdate { ready = languageStatus >= TextToSpeech.LANG_AVAILABLE }
         }
-        tts
-    }
-    DisposableEffect(engine) {
-        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+        engine = created
+        created.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = postUpdate {
-                speaking = true
-                progress = 0f
+                if (utteranceId == activeMessageId) progress = 0f
             }
 
             override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
-                postUpdate { progress = (end.toFloat() / text.length.coerceAtLeast(1)).coerceIn(0f, 1f) }
+                postUpdate {
+                    if (utteranceId == activeMessageId) {
+                        val spokenTextLength = utteranceId
+                            ?.let(utteranceLengths::get)
+                            ?.coerceAtLeast(1)
+                            ?: 1
+                        progress = (end.toFloat() / spokenTextLength).coerceIn(0f, 1f)
+                    }
+                }
             }
 
-            override fun onDone(utteranceId: String?) = postUpdate {
-                speaking = false
-                progress = 0f
-            }
+            override fun onDone(utteranceId: String?) = finish(utteranceId)
 
             @Deprecated("Platform callback")
-            override fun onError(utteranceId: String?) = postUpdate {
-                speaking = false
-                progress = 0f
-            }
-
-            private fun postUpdate(update: () -> Unit) {
-                Handler(Looper.getMainLooper()).post(update)
-            }
+            override fun onError(utteranceId: String?) = finish(utteranceId)
         })
-        onDispose {
-            engine.stop()
-            engine.shutdown()
+    }
+
+    private val utteranceLengths = mutableMapOf<String, Int>()
+
+    fun toggle(messageId: String, text: String) {
+        if (!ready) return
+        if (activeMessageId == messageId) {
+            stop()
+            return
+        }
+        val currentEngine = engine ?: return
+        utteranceLengths[messageId] = text.length
+        val result = currentEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, messageId)
+        if (result == TextToSpeech.SUCCESS) {
+            activeMessageId = messageId
+            progress = 0f
+        } else {
+            utteranceLengths.remove(messageId)
+            activeMessageId = null
+            progress = 0f
         }
     }
+
+    fun stop() {
+        engine?.stop()
+        activeMessageId?.let(utteranceLengths::remove)
+        activeMessageId = null
+        progress = 0f
+    }
+
+    fun shutdown() {
+        closed = true
+        engine?.stop()
+        engine?.shutdown()
+        engine = null
+        utteranceLengths.clear()
+        ready = false
+        activeMessageId = null
+        progress = 0f
+    }
+
+    private fun finish(utteranceId: String?) = postUpdate {
+        utteranceId?.let(utteranceLengths::remove)
+        if (utteranceId == activeMessageId) {
+            activeMessageId = null
+            progress = 0f
+        }
+    }
+
+    private fun postUpdate(update: () -> Unit) {
+        mainHandler.post {
+            if (!closed) update()
+        }
+    }
+}
+
+@Composable
+internal fun rememberReadAloudController(): ReadAloudController {
+    val context = LocalContext.current
+    val controller = remember { ReadAloudController() }
+    DisposableEffect(context, controller) {
+        controller.initialize(context)
+        onDispose {
+            controller.shutdown()
+        }
+    }
+    return controller
+}
+
+@Composable
+internal fun ReadAloudAction(messageId: String, text: String, controller: ReadAloudController) {
+    val speaking = controller.activeMessageId == messageId
+    val progress = if (speaking) controller.progress else 0f
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TextButton(
-            onClick = {
-                if (speaking) {
-                    engine.stop()
-                    speaking = false
-                    progress = 0f
-                } else {
-                    engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "white-noise-message")
-                    speaking = true
-                }
-            },
-            enabled = ready,
+            onClick = { controller.toggle(messageId, text) },
+            enabled = controller.ready,
             contentPadding = PaddingValues(horizontal = 0.dp),
         ) {
             Icon(
