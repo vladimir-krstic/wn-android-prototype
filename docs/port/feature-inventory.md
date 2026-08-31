@@ -16,6 +16,19 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-08-31 cross-app hardening evidence
+
+The repository-wide hardening pass completed the clean host gate with 139 unit
+tests, both APKs, zero lint errors, and six intentionally retained dependency
+availability warnings. The complete physical Pixel 8a / Android 17 run passed
+all 168 instrumentation tests with no failures, errors, or skips. Direct
+inspection covered selected high-impact chat/composer/search/info/contact/voice,
+Chats/creation, Settings/privacy, dark, 200%-type, Arabic RTL, and forced
+610/838 dp-wide states. These results upgrade engineering verification only;
+they do not mark any screen visually accepted by the user or claim a complete
+manual TalkBack/system-surface pass. Exact findings and commits are recorded in
+`docs/codebase-hardening-audit.md`.
+
 ## Application foundation
 
 | Capability | Accepted parity scope | Android status |
@@ -149,28 +162,23 @@ format menu, editable transcript, duration preservation and exactly one
 outgoing result. Review and expansion restore safely; an interrupted active
 recording restores as Review.
 
-Gate: `./gradlew testDebugUnitTest lintDebug assembleDebug
-assembleDebugAndroidTest` passes after the optical follow-up with 137 unit
-tests, no lint errors, and both APKs. Before that follow-up, focused
-`ConversationScreenTest` passed 30/30 tests on an Android 17 Pixel 10 Pro XL
-emulator, and hands-on captures covered compact/expanded and IME states,
-attachments/menu, live recording, pre/post-transcription review, all three
-formats, dark appearance, 150% text and a wider resizable window. The updated
-instrumentation APK compiles but has not been installed or run; the prior
-captures do not evidence the latest optical adjustments. The repository-wide
-instrumentation command also continues into unrelated legacy test classes
-whose activity harness or historical assertions predate this flow. User visual
-acceptance remains pending.
+The 2026-08-31 hardening gate supersedes the earlier compile-only evidence:
+the current APK participates in the 139-unit and 168-of-168 physical Pixel 8a
+test baseline. Direct inspection of the current build covers compact/expanded
+and IME composer states, attachment and format menus, recording, pre/post-
+transcription review, all three formats, dark appearance, 200% type, Arabic
+RTL, and 610/838 dp-wide windows. User visual acceptance remains pending.
 
 Subsequent user-approved polish gives Add a clear 10 dp popup gap and keeps the
-format popup 2 dp above its target (10 dp from its inset visible pill), with Material's native menu shadow; matches idle
-waveform artwork to the 24 dp Add icon footprint, and replaces the flashing
+format popup 2 dp above its target (10 dp from its inset visible pill), with
+Material's native menu shadow; matches idle waveform artwork to the 24 dp Add
+icon footprint, and replaces the flashing
 sparse live waveform with a dense 24 dp deterministic trailing window. Stop is
 now a red icon-only action; Send uses an upward arrow; Review uses a filled
 Play/Pause circle and light-gray bubble-led Transcribe; contact sharing opens
 an expanded searchable sheet with a white-equivalent grouped directory. Static
-evidence is recorded in the same implementation and tests; the prior device
-captures predate these optical adjustments.
+and current Pixel 8a evidence are recorded in the same implementation, tests,
+and hardening audit; user visual acceptance remains separate.
 
 ## 2026-08-26 Chats, privacy and shared-sheet static verification
 

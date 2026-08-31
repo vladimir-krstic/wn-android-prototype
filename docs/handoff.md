@@ -70,6 +70,16 @@ coverage includes model consequences, fixture integrity, navigation values,
 screen entry states, accessibility actions, adaptive width, 200% font scale,
 RTL composition, and packaged resource identities.
 
+The explicitly authorized 2026-08-31 hardening pass ran the complete packaged
+suite on a physical Pixel 8a with Android 17: all 168 instrumentation tests
+passed with zero failures, errors, or skips. The final host gate also passes
+139 unit tests, both APK assemblies, and lint with zero errors plus six
+deliberately retained dependency-version warnings. Direct device inspection
+covered selected high-impact conversation/composer/search/info/contact/voice,
+Chats/creation, Settings/privacy, dark, 200%-type, RTL, and 610/838 dp-wide
+states. This is engineering evidence, not a replacement for user visual
+acceptance or a complete hands-on TalkBack pass.
+
 ## Visual-polish implementation authority
 
 `docs/visual-polish.md` records the approved quiet Material 3 Expressive
@@ -202,9 +212,12 @@ compiled UI tests, no lint issues, both APKs. No device execution or screenshots
 were performed for this batch. Briefs, metrics, source map and decisions
 0035–0039 record the implementation; 0038 retires the old swipe exception.
 
-- Run the packaged instrumentation suite on the chosen reference device/API.
-- Inspect compact/expanded, landscape, gesture/three-button navigation, IME,
-  cutout, 200% font, display scale, dark theme, and RTL states on device.
+- Repeat the complete packaged suite after future product changes; the
+  2026-08-31 Pixel 8a / Android 17 baseline is 168 of 168 passing.
+- Complete user-led visual acceptance and remaining hands-on landscape,
+  three-button navigation, display-scale, cutout, and motion checks; automated
+  and selected direct inspection already cover compact/expanded windows, IME,
+  gesture navigation, 200% type, dark theme, RTL, and wider windows.
 - Walk every flow with TalkBack and keyboard/D-pad focus; confirm switch and
   custom-action announcement quality.
 - Exercise Photo Picker, Files, external camera, Sharesheet, clipboard,

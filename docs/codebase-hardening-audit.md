@@ -1,7 +1,7 @@
 # Codebase hardening audit
 
-Status: Active repository-wide audit started 2026-08-31 on
-`codex/overnight-hardening-20260831`.
+Status: Completed repository-wide audit run on 2026-08-31 on
+`codex/overnight-hardening-20260831`; user visual acceptance remains separate.
 
 This report tracks evidence, bounded fixes, verification, and intentionally
 deferred work. A finding is not considered resolved until its implementation
@@ -61,6 +61,21 @@ decision even when device inspection passes.
 | H-019 | P2 | Support-chat identity | Support creation exposed an unused custom-ID parameter even though navigation, fixtures, debug policy, deduplication and every caller require one canonical support identity. A future custom call could create a support-kind chat that the next call would not recognize. | Fixed | The ambiguous parameter is removed and lookup, ID and direct-chat person identity all use `ChatFixtures.SUPPORT_CHAT_ID`; the existing stable-unique state regression passes |
 | H-020 | P1 | Long-suite action dispatch | The 168-test Pixel runs exposed three order-sensitive assertions: group creation and profile Save had current text plus enabled actions but coordinate-based test clicks did not dispatch while native window/IME work was settling; raw-key export scrolled by duplicated visible text after dismissing its keyboard-owning dialog. A stable tag alone did not remove the race. | Fixed | Callback checks now reacquire the exact enabled control and invoke its ordinary accessibility `OnClick` contract; profile Save and raw export expose durable action tags, and export scrolling targets the tagged row. The affected Chats polish/creation/settings sequence passes all 51 tests in one instrumentation process |
 
+## Final verification
+
+- `./gradlew clean testDebugUnitTest lintDebug assembleDebug
+  assembleDebugAndroidTest` passes.
+- Host unit tests: 139 passed; zero failures, errors, or skips.
+- Lint: zero errors and six intentionally deferred dependency-version
+  warnings covered by H-008.
+- Both debug and instrumentation APKs assemble.
+- `./gradlew connectedDebugAndroidTest` passes all 168 tests on the physical
+  Pixel 8a / Android 17 in one uninterrupted 4m11s run; zero failures, errors,
+  or skips.
+- Direct device inspection evidence is summarized by H-005 and checkpoint 5c.
+  It does not replace user visual acceptance or a complete manual TalkBack and
+  system-surface pass.
+
 ## Checkpoints
 
 | Checkpoint | Scope | Result | Commit |
@@ -87,13 +102,15 @@ decision even when device inspection passes.
 | 5c | High-impact parity and adaptive device inspection | Complete for the selected evidence set; current chat info/search/contact/voice/composer states pass direct Pixel 8a inspection, chats/creation/settings/privacy pass at 200% type in dark appearance, conversation/composer/menu pass with an Arabic app locale and correct RTL mirroring, and forced 610/838 dp-wide windows preserve bounded readable geometry; visual acceptance remains the user's decision | `docs: record high-impact device inspection` |
 | 6a | Canonical support-chat identity | Complete; the only support-creation path uses the shared canonical fixture identity for lookup and creation, eliminating an unused conflicting API path while preserving stable deduplication | `refactor: canonicalize support chat identity` |
 | 6b | Durable long-suite action dispatch | Complete; group creation, profile Save, and raw-key export use freshly queried tagged control semantics for callback assertions, avoiding native coordinate races while preserving separate touch coverage; the exact 51-test predecessor/affected-class sequence passes on Pixel 8a | `test: stabilize long-suite action dispatch` |
+| 7 | Final verification and handoff reconciliation | Complete; current README, handoff, parity ledger, and audit distinguish historical static evidence from the final 139-unit/168-device-test gate and selected device inspection without overstating user acceptance | `docs: finalize hardening evidence` |
 
-## Remaining audit coverage
+## Deliberately deferred or user-owned follow-up
 
-- Final destructive/profile-isolation review and documentation reconciliation.
-- Final uninterrupted static and connected validation after the documentation
-  checkpoint.
-- Remaining screen-specific visual and TalkBack acceptance explicitly retained
-  by the parity ledger; this audit does not convert device inspection into user
-  acceptance.
-- Final documentation and parity-ledger reconciliation.
+- Remaining screen-specific visual acceptance and full hands-on TalkBack,
+  keyboard/D-pad, landscape, three-button-navigation, cutout, display-scale,
+  motion, and real system-surface checks retained by the handoff and parity
+  ledger.
+- Dependency upgrades rejected by this goal under H-008.
+- Design-sensitive Expressive `ListItem` migration deferred under H-003b.
+- Large cohesive UI-file extraction remains evidence-driven under H-007;
+  line count alone is not a safe refactor boundary.

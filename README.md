@@ -74,6 +74,17 @@ performed. `docs/screens/app-menus.md` records implementation evidence and the
 related audit: task-button typography/shape behavior and global motion still
 use baseline choices, so the app is not yet a complete Expressive migration.
 
+The 2026-08-31 repository-wide hardening pass removed lint-proven dead
+resources, repaired lifecycle and restoration boundaries, tightened clipboard
+privacy, canonicalized support and relay identity, corrected search and media
+preparation edge cases, and made the connected-test harness trustworthy. The
+current gate passes with 139 host unit tests, 168 instrumentation tests on a
+Pixel 8a running Android 17, both APKs, zero lint errors, and six intentionally
+deferred dependency-version warnings. Direct inspection also covered the
+highest-impact chat/composer, creation, Settings, dark, 200%-type, RTL, and
+610/838 dp-wide states. See `docs/codebase-hardening-audit.md` for exact
+evidence, bounded decisions, and remaining user-acceptance work.
+
 ## Repository map
 
 - `AGENTS.md` — project authority, platform boundaries, workflow, and
