@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.AttachmentPreview
 import dev.ipf.whitenoise.model.ChatDeliveryState
+import dev.ipf.whitenoise.model.ChatFixtures
 import dev.ipf.whitenoise.model.ChatKind
 import dev.ipf.whitenoise.model.ChatMembership
 import dev.ipf.whitenoise.model.ChatTimelineEntry
@@ -849,14 +850,14 @@ class AppViewModel : ViewModel() {
         return changed
     }
 
-    fun openOrCreateSupportChat(requestedChatId: String = "white-noise-support"): String? {
+    fun openOrCreateSupportChat(): String? {
         val profile = uiState.activeProfile ?: return null
-        profile.chats.firstOrNull { it.id == "white-noise-support" }?.let { return it.id }
+        profile.chats.firstOrNull { it.id == ChatFixtures.SUPPORT_CHAT_ID }?.let { return it.id }
         if (profile.chatRelayUrls.isEmpty()) return null
         val support = Chat(
-            id = requestedChatId,
+            id = ChatFixtures.SUPPORT_CHAT_ID,
             originalOrder = 0,
-            kind = ChatKind.Direct("white-noise-support"),
+            kind = ChatKind.Direct(ChatFixtures.SUPPORT_CHAT_ID),
             title = "White Noise Support",
             preview = "Ask a question, report a problem, or share a suggestion.",
             relayUrls = profile.chatRelayUrls,
