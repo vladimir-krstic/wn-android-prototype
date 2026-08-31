@@ -382,6 +382,7 @@ private fun ComposerLeadingAction(
                 modifier = Modifier.testTag("conversation.attachment.menu"),
                 anchorSpacing = 10.dp,
                 placement = WhiteNoiseMenuPlacement.AboveAnchor,
+                focusable = false,
             )
         }
     }

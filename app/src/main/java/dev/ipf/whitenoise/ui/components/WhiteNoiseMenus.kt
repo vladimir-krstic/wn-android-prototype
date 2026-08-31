@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.components
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import dev.ipf.whitenoise.R
 
 /** Null selection denotes a command; non-null selection denotes a mutually exclusive choice. */
@@ -60,16 +62,19 @@ fun WhiteNoiseDropdownMenu(
     anchorSpacing: Dp = 0.dp,
     placement: WhiteNoiseMenuPlacement = WhiteNoiseMenuPlacement.MaterialAdaptive,
     shadowElevation: Dp = MenuDefaults.ShadowElevation,
+    focusable: Boolean = true,
 ) {
     val popupPositionProvider = when (placement) {
         WhiteNoiseMenuPlacement.MaterialAdaptive ->
             MenuDefaults.rememberDropdownMenuPopupPositionProvider(MenuAnchorPosition.Below)
         WhiteNoiseMenuPlacement.AboveAnchor -> rememberAboveAnchorMenuPositionProvider(anchorSpacing)
     }
+    BackHandler(enabled = expanded && !focusable, onBack = onDismissRequest)
     DropdownMenuPopup(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
         popupPositionProvider = popupPositionProvider,
+        properties = PopupProperties(focusable = focusable),
         modifier = if (placement == WhiteNoiseMenuPlacement.MaterialAdaptive) {
             Modifier.padding(vertical = anchorSpacing)
         } else {

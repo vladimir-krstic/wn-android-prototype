@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -39,6 +40,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import dev.ipf.whitenoise.model.ChatTimelineEntry
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.ProfileFixtures
@@ -199,6 +202,20 @@ class ConversationScreenTest {
         val expectedGap = 10.dp.value * composeRule.density.density
         val actualGap = add.positionOnScreen.y - menu.positionOnScreen.y - menu.size.height
         assertTrue(abs(actualGap - expectedGap) < 1.5f)
+    }
+
+    @Test
+    fun composerAttachmentMenuKeepsEditorFocusAndKeyboard() {
+        setConversation("fiatjaf")
+
+        composeRule.onNodeWithTag("conversation.composer.editor").performClick().assertIsFocused()
+        composeRule.waitUntil(timeoutMillis = 5_000) { isImeVisible() }
+
+        composeRule.onNodeWithContentDescription("Add Attachment").performClick()
+
+        composeRule.onNodeWithTag("conversation.composer.editor").assertIsFocused()
+        composeRule.onNodeWithTag("conversation.attachment.menu").assertIsDisplayed()
+        composeRule.waitUntil(timeoutMillis = 5_000) { isImeVisible() }
     }
 
     @Test
@@ -675,4 +692,8 @@ class ConversationScreenTest {
             }
         }
     }
+
+    private fun isImeVisible(): Boolean = ViewCompat.getRootWindowInsets(
+        composeRule.activity.window.decorView,
+    )?.isVisible(WindowInsetsCompat.Type.ime()) == true
 }
