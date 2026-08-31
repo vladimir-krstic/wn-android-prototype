@@ -1,6 +1,9 @@
 # Message interactions and conversation search
 
-Status: Refined static gate passed on 2026-08-30; device acceptance pending
+Status: Refined static gate passed on 2026-08-30. Search entry, IME-visible
+controls, count/navigation, cyan highlights, result contrast, and close/Back
+behavior passed current Pixel 8a inspection on 2026-08-31; user visual
+acceptance remains separate.
 
 ## Source evidence
 

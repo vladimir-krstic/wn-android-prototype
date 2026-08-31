@@ -1,6 +1,8 @@
 # Chat and group information
 
-Status: Refined static gate passed on 2026-08-30; device acceptance pending
+Status: Refined static gate passed on 2026-08-30. Direct Chat Info and its
+Search handoff passed current Pixel 8a inspection on 2026-08-31; Group Info
+retains compiled coverage and user visual acceptance remains pending.
 
 ## Source evidence
 

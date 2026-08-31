@@ -2,8 +2,10 @@
 
 Status: Chats controls and shared Material-sheet follow-up implemented on
 2026-08-26; New Message, Person Profile, New Group, and Set Up Group hierarchy
-refined on 2026-08-30. Static verification is recorded in the parity ledger;
-device/visual acceptance remains pending.
+refined on 2026-08-30. Populated Chats, New Message, New Group selection, and
+group setup passed current Pixel 8a inspection on 2026-08-31 at 200% type in
+dark appearance, including IME-visible and forced wider-window states; user
+visual acceptance remains separate.
 
 ## Approved controls follow-up
 

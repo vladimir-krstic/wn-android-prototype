@@ -99,9 +99,11 @@ badges capped at 99+, and a pinned Add Profile action.
 Diagnostics and destructive-task sheets use the same shared presentation;
 their profile ownership and dismissal/confirmation behavior are unchanged.
 
-Status: Main Settings/profile switching statically verified on 2026-08-26;
-consumer detail destinations remain at their 2026-08-21 static gate and device
-acceptance is pending
+Status: Main Settings/profile switching statically verified on 2026-08-26.
+The Settings hub and Privacy & Security passed current Pixel 8a inspection on
+2026-08-31, including 200% type and dark appearance; uninspected consumer
+detail destinations remain at their recorded static gates and user visual
+acceptance remains separate.
 
 2026-08-30 Relays follow-up: the profile relay list uses separated Material
 name/URL rows with compact semantic connection indicators and an in-list Add

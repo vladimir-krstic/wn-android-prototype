@@ -1,6 +1,9 @@
 # Composer, attachments, media, and speech
 
-Status: Post-polish static gate passed on 2026-08-30; the earlier focused Pixel device gate predates the latest optical changes; user visual acceptance pending
+Status: Current Pixel 8a device inspection passed on 2026-08-31 for compact,
+IME-visible, attachment-menu, recording, review, transcription, format-menu,
+200%-type dark, RTL, and forced wider-window states. Automated static and
+connected gates pass; user visual acceptance remains separate.
 
 ## Source evidence
 

@@ -1,7 +1,9 @@
 # Privacy & Security
 
 Status: User-selected polish implemented on 2026-08-29. Static verification
-is recorded in the parity ledger; device visual acceptance remains pending.
+is recorded in the parity ledger. The full route, destructive section,
+light/dark appearance, and 200% type passed current Pixel 8a inspection on
+2026-08-31; user visual acceptance remains separate.
 
 ## Purpose and scope
 
