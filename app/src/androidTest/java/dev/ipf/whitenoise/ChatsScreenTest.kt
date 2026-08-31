@@ -5,6 +5,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
@@ -28,6 +29,7 @@ import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
@@ -333,12 +335,14 @@ class ChatsScreenTest {
         composeRule.onNodeWithTag("group_setup.photoAction").assertHeightIsEqualTo(40.dp)
         composeRule.onNodeWithText("?").assertDoesNotExist()
         composeRule.onNodeWithText("Group Details").assertDoesNotExist()
-        val createGroup = composeRule.onNodeWithTag("creation.primaryAction")
-        createGroup.assertIsNotEnabled()
+        composeRule.onNodeWithTag("creation.primaryAction").assertIsNotEnabled()
         val groupName = composeRule.onNodeWithText("Group Name")
         groupName.performTextReplacement("Night Owls")
         groupName.assertTextContains("Night Owls")
-        createGroup.assertIsEnabled().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("creation.primaryAction")
+            .assertIsEnabled()
+            .performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle {
             check(createdName == "Night Owls") {
                 "Expected the normalized group name, got $createdName"

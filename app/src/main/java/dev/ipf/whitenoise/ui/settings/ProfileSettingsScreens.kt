@@ -746,7 +746,9 @@ fun EditProfileScreen(
                         enabled = nameValue.isNotBlank() &&
                             ProfileSettingsPolicy.isValidNostrAddress(addressValue) &&
                             !isPreparingPhoto,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("profile.save"),
                     ) { Text("Save") }
                 }
             }
@@ -1041,6 +1043,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
                     SettingsAction(
                         title = "Export Private Key",
                         onClick = { rawExportDialog = true },
+                        modifier = Modifier.testTag("profile_keys.export_raw"),
                         leading = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_download),

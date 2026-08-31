@@ -30,8 +30,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.AppearancePreference
@@ -363,7 +365,10 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("profile.about_field").assertIsEnabled()
         composeRule.onNodeWithText("Change Photo").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("profile.name_field").performTextReplacement("Marmota Updated")
-        composeRule.onNodeWithText("Save").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("profile.save")
+            .assertIsEnabled()
+            .performSemanticsAction(SemanticsActions.OnClick)
 
         composeRule.runOnIdle { check(savedName == "Marmota Updated") }
         composeRule.onNodeWithText("Edit").assertIsDisplayed()
@@ -411,8 +416,10 @@ class SettingsScreenTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag("settings.list")
-            .performScrollToNode(hasText("Export Private Key"))
-        composeRule.onNodeWithText("Export Private Key").assertIsDisplayed().performClick()
+            .performScrollToNode(hasTestTag("profile_keys.export_raw"))
+        composeRule.onNodeWithTag("profile_keys.export_raw")
+            .assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.OnClick)
         composeRule.onNodeWithText("Keep Your Private Key Safe").assertIsDisplayed()
         composeRule.onNodeWithText(
             "Store this file somewhere secure. The encrypted export or a trusted password manager is safer.",

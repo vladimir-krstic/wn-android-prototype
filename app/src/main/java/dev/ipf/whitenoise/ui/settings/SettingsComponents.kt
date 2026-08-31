@@ -314,6 +314,7 @@ internal fun SettingsChoice(
 internal fun SettingsAction(
     title: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     subtitle: String? = null,
     enabled: Boolean = true,
     destructive: Boolean = false,
@@ -338,7 +339,7 @@ internal fun SettingsAction(
         },
         leadingContent = leading,
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick)
             .semantics {
