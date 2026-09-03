@@ -486,4 +486,25 @@
         <item quantity="one">Make %1$s an admin in this group? Admins can manage people and group settings.</item>
         <item quantity="other">Make %1$s an admin in %2$d groups? Admins can manage people and group settings.</item>
     </plurals>
+    <string name="profile_banner">Profile banner</string>
+    <string name="profile_add_banner">Add banner</string>
+    <string name="profile_change_banner">Change banner</string>
+    <string name="profile_remove_banner">Remove banner</string>
+    <string name="profile_choose_photos">Choose photos</string>
+    <string name="profile_choose_files">Choose files</string>
+    <string name="profile_preparing_banner">Preparing banner…</string>
+    <string name="profile_preparing_photo">Preparing photo…</string>
+    <string name="profile_image_failed">This image could not be loaded. Choose another image or try again.</string>
+    <string name="profile_view_photo">View profile photo</string>
+    <string name="profile_edit">Edit profile</string>
+    <string name="profile_suggest_name">Suggest name</string>
+    <string name="profile_lightning_address">Lightning address</string>
+    <string name="profile_lightning_hint">Optional. Use a name@domain address.</string>
+    <string name="profile_lightning_invalid">Enter a valid name@domain Lightning address.</string>
+    <string name="profile_lightning_checking">Checking address…</string>
+    <string name="profile_lightning_unresolved">Address could not be verified. Check your Lightning address or try again.</string>
+    <string name="profile_save_no_connection">No connection. Your changes have not been saved. Try again when connected.</string>
+    <string name="profile_publish_failed">Your profile could not be saved. Check your details and try again.</string>
+    <string name="profile_saving">Saving profile…</string>
+    <string name="profile_lightning_display">Lightning: %1$s</string>
 </resources>

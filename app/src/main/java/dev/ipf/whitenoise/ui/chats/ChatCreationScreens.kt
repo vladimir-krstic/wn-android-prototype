@@ -104,6 +104,8 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.onboarding.AvatarWebImagePicker
+import dev.ipf.whitenoise.ui.settings.ProfileBanner
+import dev.ipf.whitenoise.ui.settings.ProfileImageViewer
 import dev.ipf.whitenoise.ui.settings.IdentifierCopyCapsule
 import dev.ipf.whitenoise.ui.settings.SettingsAction
 import dev.ipf.whitenoise.ui.settings.SettingsBottomAction
@@ -866,18 +868,24 @@ internal fun PersonIdentityHeader(
     onCopy: () -> Unit,
     testTagPrefix: String = "person_profile",
 ) {
+    var viewing by remember(person.id, person.avatar, person.banner) { mutableStateOf<ProfileAvatar?>(null) }
+    viewing?.let { ProfileImageViewer(person.id, person.displayName, it, onDismiss = { viewing = null }) }
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val avatarSize = (maxWidth * 0.32f).coerceIn(104.dp, 152.dp)
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            person.banner?.let { image ->
+                ProfileBanner(image, onOpen = { viewing = image }, modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin).padding(bottom = WhiteNoiseSpacing.FormField))
+            }
             ProfileAvatar(
                 name = person.displayName,
                 avatar = person.avatar,
                 modifier = Modifier
                     .size(avatarSize)
-                    .testTag("$testTagPrefix.avatar"),
+                    .testTag("$testTagPrefix.avatar")
+                    .then(if (person.avatar != ProfileAvatar.Monogram) Modifier.clickable(onClickLabel = stringResource(R.string.profile_view_photo), role = Role.Button) { viewing = person.avatar } else Modifier),
                 contentDescription = stringResource(R.string.profile_photo_for, person.displayName),
             )
             Text(
@@ -921,6 +929,11 @@ private fun PersonIdentityValues(
         if (person.nostrAddress.isNotBlank()) {
             VerifiedPersonAddress(person)
         }
+        if (person.lightningAddress.isNotBlank()) Text(
+            stringResource(R.string.profile_lightning_display, person.lightningAddress),
+            modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related).testTag("person_profile.lightning"),
+            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+        )
         IdentifierCopyCapsule(
             value = person.publicKey,
             copied = copied,

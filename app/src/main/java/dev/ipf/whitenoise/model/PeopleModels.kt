@@ -30,7 +30,7 @@ data class PeopleSearchResult(val people: List<PeopleResult>, val status: People
 
 object PeopleDiscovery {
     val directory = listOf(
-        Person("river-song", "River Song", about = "Open conversations and quiet places.", nostrAddress = "river@whitenoise.example", isFollowing = false),
+        Person("river-song", "River Song", about = "Open conversations and quiet places.", nostrAddress = "river@whitenoise.example", isFollowing = false, lightningAddress = "river@payments.example", banner = ProfileAvatar.Asset(AvatarAsset.GardenClub)),
         Person("sam-green", "Sam Green", about = "Building things together.", nostrAddress = "sam@whitenoise.example", isFollowing = false),
     )
     fun local(profile: Profile, query: String): List<PeopleResult> = profile.people

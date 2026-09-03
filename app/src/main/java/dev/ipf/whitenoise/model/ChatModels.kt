@@ -273,6 +273,8 @@ data class Person(
     val isBlocked: Boolean = false,
     val nickname: String = "",
     val privateNotes: String = "",
+    val banner: ProfileAvatar? = null,
+    val lightningAddress: String = "",
 ) {
     val displayName: String get() = nickname.ifBlank { name }
 

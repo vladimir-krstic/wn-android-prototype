@@ -37,6 +37,14 @@ manual TalkBack/system-surface pass. Exact findings and commits are recorded in
 
 ## Onboarding and profiles
 
+2026-09-04 production B04: C016–C018 are implemented and host-verified.
+Profile banner/URL selection and retry, full-size image viewing, optional
+Lightning validation with atomic profile saves and draft-only name suggestions
+extend the accepted Profile and Person Profile surfaces. See
+[`profile-media-and-lightning.md`](../screens/profile-media-and-lightning.md).
+The clean gate passed 244 unit tests, both APKs and zero lint errors; seven new
+UI cases compile. Device/visual acceptance remains pending.
+
 2026-09-04 production B03: C013, C014, C019 and C021 are implemented and
 host-verified. Search result/retry states, private nickname/notes, canonical
 created-chat opening and profile-to-group invitation/admin selection extend the

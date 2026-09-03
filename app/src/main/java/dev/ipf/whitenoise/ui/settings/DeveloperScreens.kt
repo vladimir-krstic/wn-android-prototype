@@ -73,6 +73,10 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
+    profileSaveScenario: dev.ipf.whitenoise.model.ProfileSaveScenario = dev.ipf.whitenoise.model.ProfileSaveScenario.Success,
+    onProfileSaveScenario: (dev.ipf.whitenoise.model.ProfileSaveScenario) -> Unit = {},
+    profileImageFails: Boolean = false,
+    onProfileImageFails: (Boolean) -> Unit = {},
     peopleSearchScenario: dev.ipf.whitenoise.model.PeopleSearchScenario = dev.ipf.whitenoise.model.PeopleSearchScenario.Success,
     onPeopleSearchScenario: (dev.ipf.whitenoise.model.PeopleSearchScenario) -> Unit = {},
     groupContactScenario: dev.ipf.whitenoise.model.GroupContactScenario = dev.ipf.whitenoise.model.GroupContactScenario.Success,
@@ -90,6 +94,9 @@ fun DeveloperToolsScreen(
     val tools = profile.developerTools
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var profileSaveScenariosOpen by remember { mutableStateOf(false) }
+    if (profileSaveScenariosOpen) ScenarioChoiceDialog("Profile save", dev.ipf.whitenoise.model.ProfileSaveScenario.entries,
+        profileSaveScenario, { it.developerLabel }, onProfileSaveScenario, { profileSaveScenariosOpen = false })
     var peopleScenariosOpen by remember { mutableStateOf(false) }
     var groupScenariosOpen by remember { mutableStateOf(false) }
     if (peopleScenariosOpen) ScenarioChoiceDialog("People search", dev.ipf.whitenoise.model.PeopleSearchScenario.entries,
@@ -147,6 +154,10 @@ fun DeveloperToolsScreen(
                 item { SettingsSection("Access testing") }
                 item {
                     SettingsGroup {
+                        SettingsLink("Profile save scenarios", profileSaveScenario.developerLabel, { profileSaveScenariosOpen = true })
+                        SettingsDivider()
+                        SettingsSwitch("Next profile image fails", profileImageFails, onProfileImageFails)
+                        SettingsDivider()
                         SettingsLink("People search scenarios", peopleSearchScenario.developerLabel, { peopleScenariosOpen = true })
                         SettingsDivider()
                         SettingsLink("Group contact scenarios", groupContactScenario.developerLabel, { groupScenariosOpen = true })

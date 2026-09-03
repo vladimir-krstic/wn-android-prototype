@@ -11,7 +11,9 @@ staged sign-out/wipe to `docs/screens/keys-and-profile-exit.md`; the established
 remains authoritative. Production is read-only evidence and does not replace
 the accepted iOS scope or prototype-only features below. B03 maps discovery,
 private contact details, created-chat recovery and profile-to-group actions to
-`docs/screens/people-discovery-and-private-details.md`.
+`docs/screens/people-discovery-and-private-details.md`. B04 maps profile banner,
+avatar viewing, Lightning validation and generated name drafts to
+`docs/screens/profile-media-and-lightning.md`.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)

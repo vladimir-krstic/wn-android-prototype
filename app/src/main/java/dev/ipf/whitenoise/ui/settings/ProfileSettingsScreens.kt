@@ -110,6 +110,7 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.onboarding.AvatarWebImagePicker
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -649,241 +650,111 @@ fun EditProfileScreen(
     onBack: () -> Unit,
     onSave: (String, String, ProfileAvatar) -> Boolean,
     onSaveAddress: (String) -> Boolean,
+    onSaveDraft: ((dev.ipf.whitenoise.model.ProfileEditDraft) -> Boolean)? = null,
+    saveAttempt: dev.ipf.whitenoise.model.ProfileSaveAttempt? = null,
+    onAdvanceSave: (Long, dev.ipf.whitenoise.model.ProfileSavePhase) -> Boolean = { _, _ -> false },
+    onCancelSave: () -> Unit = {},
+    consumeImageFailure: () -> Boolean = { false },
+    retainedImages: dev.ipf.whitenoise.model.ProfileImageDraft? = null,
+    onRetainImages: (ProfileAvatar, ProfileAvatar?) -> Unit = { _, _ -> },
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val name = rememberSaveable(profile.id, saver = TextFieldState.Saver) {
-        TextFieldState(initialText = profile.name)
-    }
-    val about = rememberSaveable(profile.id, saver = TextFieldState.Saver) {
-        TextFieldState(initialText = profile.about)
-    }
-    val address = rememberSaveable(profile.id, saver = TextFieldState.Saver) {
-        TextFieldState(initialText = profile.nostrAddress)
-    }
-    val nameValue = name.text.toString()
-    val aboutValue = about.text.toString()
-    val addressValue = address.text.toString()
-    var avatar by remember(profile.id) { mutableStateOf(profile.avatar) }
-    var isEditing by rememberSaveable(profile.id) { mutableStateOf(false) }
-    var photoMenu by remember { mutableStateOf(false) }
-    var webPicker by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var isPreparingPhoto by remember { mutableStateOf(false) }
-    var preparationJob by remember { mutableStateOf<Job?>(null) }
-    var preparationGeneration by remember { mutableIntStateOf(0) }
-    fun prepare(uri: Uri) {
-        val generation = ++preparationGeneration
-        preparationJob?.cancel()
-        preparationJob = scope.launch {
-            isPreparingPhoto = true
-            error = null
-            try {
-                val bytes = AvatarImageProcessor.prepare(context.contentResolver, uri)
-                if (generation != preparationGeneration) return@launch
-                if (bytes == null) {
-                    error = "This image could not be prepared."
-                } else {
-                    avatar = ProfileAvatar.DeviceImage(bytes)
-                }
-            } finally {
-                if (generation == preparationGeneration) isPreparingPhoto = false
-            }
-        }
-    }
-    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { it?.let(::prepare) }
-    val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(::prepare) }
-    DisposableEffect(Unit) { onDispose { preparationJob?.cancel() } }
-
+    val startingDraft = saveAttempt?.draft ?: dev.ipf.whitenoise.model.ProfileEditDraft.from(profile)
+    val name = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState(startingDraft.name) }
+    val about = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState(startingDraft.about) }
+    val address = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState(startingDraft.nostrAddress) }
+    val lightning = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState(startingDraft.lightningAddress) }
+    var avatar by remember(profile.id) { mutableStateOf(retainedImages?.avatar ?: startingDraft.avatar) }
+    var banner by remember(profile.id) { mutableStateOf(if (retainedImages != null) retainedImages.banner else startingDraft.banner) }
+    var isEditing by rememberSaveable(profile.id) { mutableStateOf(saveAttempt != null) }
+    var suggestionIndex by rememberSaveable(profile.id) { mutableIntStateOf(0) }
+    var imageBusy by remember(profile.id) { mutableStateOf(emptySet<String>()) }
+    var error by remember(profile.id) { mutableStateOf(false) }
+    var viewing by remember(profile.id) { mutableStateOf<ProfileAvatar?>(null) }
+    val busy = saveAttempt?.isBusy == true
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     fun resetDraft() {
-        preparationGeneration += 1
-        preparationJob?.cancel()
-        preparationJob = null
-        isPreparingPhoto = false
         name.edit { replace(0, length, profile.name) }
         about.edit { replace(0, length, profile.about) }
         address.edit { replace(0, length, profile.nostrAddress) }
+        lightning.edit { replace(0, length, profile.lightningAddress) }
         avatar = profile.avatar
-        photoMenu = false
-        webPicker = false
-        error = null
+        banner = profile.banner
+        error = false
     }
-
-    fun stopEditing() {
-        resetDraft()
-        isEditing = false
-    }
-
-    fun handleBack() {
-        if (isEditing) stopEditing() else onBack()
-    }
-
-    BackHandler(enabled = isEditing) { stopEditing() }
-
-    SettingsScaffold(
-        title = "Profile",
-        onBack = ::handleBack,
-        topBarActions = {
-            if (!isEditing) {
-                TextButton(
-                    onClick = {
-                        resetDraft()
-                        isEditing = true
-                    },
-                ) {
-                    Text("Edit")
-                }
-            }
-        },
-        bottomBar = {
-            if (isEditing) {
-                SettingsBottomAction(tonalElevation = 0.dp) {
-                    WhiteNoiseButton(
-                        onClick = {
-                            val normalizedName = nameValue.trim()
-                            val normalizedAbout = aboutValue.trim()
-                            val normalizedAddress = addressValue.trim()
-                            val detailsChanged = normalizedName != profile.name ||
-                                normalizedAbout != profile.about ||
-                                avatar != profile.avatar
-                            val addressChanged = normalizedAddress != profile.nostrAddress
-                            val detailsSaved = !detailsChanged ||
-                                onSave(normalizedName, normalizedAbout, avatar)
-                            val addressSaved = !addressChanged || onSaveAddress(normalizedAddress)
-                            if (detailsSaved && addressSaved) {
-                                error = null
-                                isEditing = false
-                            } else {
-                                error = "Enter a name and a valid address."
-                            }
-                        },
-                        enabled = nameValue.isNotBlank() &&
-                            ProfileSettingsPolicy.isValidNostrAddress(addressValue) &&
-                            !isPreparingPhoto,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("profile.save"),
-                    ) { Text("Save") }
-                }
-            }
-        },
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .whiteNoiseVerticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                    vertical = WhiteNoiseSpacing.Section,
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
-        ) {
-            ProfileAvatar(nameValue, avatar, Modifier.size(120.dp))
-            if (isEditing) {
-                Box {
-                    AvatarPhotoButton(
-                        hasPhoto = avatar != ProfileAvatar.Monogram,
-                        onClick = { photoMenu = true },
-                        enabled = !isPreparingPhoto,
-                    )
-                    WhiteNoiseDropdownMenu(
-                        expanded = photoMenu,
-                        onDismissRequest = { photoMenu = false },
-                        items = buildList {
-                            add(WhiteNoiseMenuItem("Choose photos", icon = R.drawable.ic_image, onClick = {
-                                photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                            }))
-                            add(WhiteNoiseMenuItem("Choose files", icon = R.drawable.ic_description, onClick = {
-                                files.launch(arrayOf("image/*"))
-                            }))
-                            add(WhiteNoiseMenuItem("Find web image", icon = R.drawable.ic_search, onClick = {
-                                webPicker = true
-                            }))
-                            if (avatar != ProfileAvatar.Monogram) {
-                                add(WhiteNoiseMenuItem(
-                                    "Remove photo", icon = R.drawable.ic_delete, destructive = true,
-                                    onClick = { avatar = ProfileAvatar.Monogram },
-                                ))
-                            }
-                        },
-                    )
-                }
-            }
-            if (isEditing && isPreparingPhoto) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text("Preparing photo")
-                }
-            }
-            WhiteNoiseTextField(
-                state = name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("profile.name_field"),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                readOnly = !isEditing,
-                label = { Text("Name") },
-                lineLimits = TextFieldLineLimits.SingleLine,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next,
-                ),
-            )
-            WhiteNoiseTextField(
-                state = address,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("profile.address_field"),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                readOnly = !isEditing,
-                label = { Text("Verified Nostr Address") },
-                trailingIcon = if (
-                    profile.isNostrAddressVerified && addressValue == profile.nostrAddress
-                ) {
-                    {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_verified_filled),
-                            contentDescription = "Verified",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                } else {
-                    null
-                },
-                lineLimits = TextFieldLineLimits.SingleLine,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next,
-                ),
-            )
-            WhiteNoiseTextField(
-                state = about,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("profile.about_field"),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                readOnly = !isEditing,
-                label = { Text("About") },
-                placeholder = { Text("A little about you") },
-                lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6),
-            )
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    fun beginEditing() { onCancelSave(); resetDraft(); isEditing = true }
+    fun stopEditing() { onCancelSave(); resetDraft(); isEditing = false }
+    fun handleBack() { if (isEditing) stopEditing() else onBack() }
+    BackHandler(enabled = isEditing && viewing == null) { stopEditing() }
+    LaunchedEffect(profile, isEditing) { if (!isEditing) resetDraft() }
+    LaunchedEffect(saveAttempt?.id, saveAttempt?.phase, lifecycle) {
+        val attempt = saveAttempt ?: return@LaunchedEffect
+        if (attempt.isBusy) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(600)
+            if (onAdvanceSave(attempt.id, attempt.phase)) { isEditing = false; error = false }
         }
     }
-    if (webPicker && isEditing) {
-        AvatarWebImagePicker(
-            currentChoiceId = (avatar as? ProfileAvatar.WebImage)?.choiceId,
-            onDismiss = { webPicker = false },
-            onUseImage = {
-                avatar = ProfileAvatar.WebImage(it.asset, it.id)
-                webPicker = false
-            },
-        )
+    val lightningValid = dev.ipf.whitenoise.model.LightningAddress.normalize(lightning.text.toString()) != null
+    val saveFailure = saveAttempt?.failure
+    val failureRes = when (saveFailure) {
+        dev.ipf.whitenoise.model.ProfileSaveFailure.UnresolvedLightning -> R.string.profile_lightning_unresolved
+        dev.ipf.whitenoise.model.ProfileSaveFailure.NoConnection -> R.string.profile_save_no_connection
+        dev.ipf.whitenoise.model.ProfileSaveFailure.PublishFailed -> R.string.profile_publish_failed
+        null -> null
     }
+    SettingsScaffold(title = "Profile", onBack = ::handleBack, topBarActions = {
+        if (!isEditing) TextButton(onClick = ::beginEditing) { Text("Edit") }
+    }, bottomBar = {
+        if (isEditing) SettingsBottomAction(tonalElevation = 0.dp) {
+            WhiteNoiseButton(onClick = {
+                val draft = dev.ipf.whitenoise.model.ProfileEditDraft(name.text.toString(), about.text.toString(), avatar, banner, address.text.toString(), lightning.text.toString())
+                if (onSaveDraft != null) error = !onSaveDraft(draft) else {
+                    val normalized = draft.normalized()
+                    val detailsSaved = normalized != null && (normalized.name == profile.name && normalized.about == profile.about && avatar == profile.avatar || onSave(normalized.name, normalized.about, avatar))
+                    val addressSaved = normalized != null && (normalized.nostrAddress == profile.nostrAddress || onSaveAddress(normalized.nostrAddress))
+                    if (detailsSaved && addressSaved) isEditing = false else error = true
+                }
+            }, enabled = name.text.isNotBlank() && ProfileSettingsPolicy.isValidNostrAddress(address.text.toString()) && lightningValid && imageBusy.isEmpty() && !busy,
+                loading = busy, loadingLabel = if (saveAttempt?.phase == dev.ipf.whitenoise.model.ProfileSavePhase.CheckingLightning) stringResource(R.string.profile_lightning_checking) else stringResource(R.string.profile_saving),
+                modifier = Modifier.fillMaxWidth().testTag("profile.save"),
+            ) { Text(if (saveFailure != null) stringResource(R.string.people_retry) else "Save") }
+        }
+    }) {
+        Column(Modifier.fillMaxSize().whiteNoiseVerticalScroll(rememberScrollState()).padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Section),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField)) {
+            banner?.let { ProfileBanner(it, onOpen = { viewing = it }) }
+            if (isEditing) ProfileImageActions(profile.id, banner, isBanner = true, enabled = !busy,
+                onChange = { banner = it; onRetainImages(avatar, it) },
+                onBusyChanged = { imageBusy = if (it) imageBusy + "banner" else imageBusy - "banner" }, consumeFailure = consumeImageFailure)
+            Box(Modifier.size(120.dp).then(if (avatar != ProfileAvatar.Monogram) Modifier.clickable(onClickLabel = stringResource(R.string.profile_view_photo), role = Role.Button) { viewing = avatar } else Modifier).testTag("profile.avatar")) {
+                ProfileAvatar(name.text.toString(), avatar, Modifier.fillMaxSize())
+            }
+            if (isEditing) ProfileImageActions(profile.id, avatar, isBanner = false, enabled = !busy,
+                onChange = { avatar = it ?: ProfileAvatar.Monogram; onRetainImages(avatar, banner) },
+                onBusyChanged = { imageBusy = if (it) imageBusy + "avatar" else imageBusy - "avatar" }, consumeFailure = consumeImageFailure)
+            WhiteNoiseTextField(name, Modifier.fillMaxWidth().testTag("profile.name_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                enabled = !busy, readOnly = !isEditing, label = { Text("Name") }, lineLimits = TextFieldLineLimits.SingleLine,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next))
+            if (isEditing) TextButton(onClick = {
+                val suggestion = dev.ipf.whitenoise.model.ProfileNameSuggestions.next(name.text.toString(), suggestionIndex++)
+                name.edit { replace(0, length, suggestion) }
+            }, enabled = !busy, modifier = Modifier.testTag("profile.suggest_name")) { Text(stringResource(R.string.profile_suggest_name)) }
+            WhiteNoiseTextField(address, Modifier.fillMaxWidth().testTag("profile.address_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                enabled = !busy, readOnly = !isEditing, label = { Text("Verified Nostr Address") },
+                trailingIcon = if (profile.isNostrAddressVerified && address.text.toString() == profile.nostrAddress) {
+                    { Icon(painterResource(R.drawable.ic_verified_filled), "Verified", tint = MaterialTheme.colorScheme.onSurface) }
+                } else null, lineLimits = TextFieldLineLimits.SingleLine, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next))
+            WhiteNoiseTextField(lightning, Modifier.fillMaxWidth().testTag("profile.lightning_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                enabled = !busy, readOnly = !isEditing, label = { Text(stringResource(R.string.profile_lightning_address)) },
+                isError = !lightningValid, errorMessage = stringResource(R.string.profile_lightning_invalid),
+                supportingText = { Text(stringResource(if (!lightningValid) R.string.profile_lightning_invalid else R.string.profile_lightning_hint)) },
+                lineLimits = TextFieldLineLimits.SingleLine, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next))
+            WhiteNoiseTextField(about, Modifier.fillMaxWidth().testTag("profile.about_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                enabled = !busy, readOnly = !isEditing, label = { Text("About") }, placeholder = { Text("A little about you") },
+                lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6))
+            if (error || failureRes != null) Text(stringResource(failureRes ?: R.string.profile_publish_failed), color = MaterialTheme.colorScheme.error)
+        }
+    }
+    viewing?.let { image -> ProfileImageViewer(profile.id, profile.name, image, onDismiss = { viewing = null }, onEdit = if (busy) null else { { viewing = null; if (!isEditing) beginEditing() } }) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

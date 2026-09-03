@@ -84,6 +84,8 @@ data class Profile(
     val signingMode: ProfileSigningMode = ProfileSigningMode.LocalKey,
     val localKeyAvailable: Boolean = true,
     val connectionInformationPublished: Boolean = true,
+    val banner: ProfileAvatar? = null,
+    val lightningAddress: String = "",
 ) {
     val initial: String
         get() = name.trim().firstOrNull()?.uppercase() ?: "?"

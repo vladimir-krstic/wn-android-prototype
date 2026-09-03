@@ -83,7 +83,9 @@ fun WhiteNoiseNavHost(
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
 
     LaunchedEffect(uiState.activeProfileId, currentBackStackEntry?.id) {
-        appViewModel.reconcileCreatedChatOrigin(currentBackStackEntry?.id)
+        val entry = currentBackStackEntry ?: return@LaunchedEffect
+        appViewModel.reconcileCreatedChatOrigin(entry.id)
+        if (entry.destination.route != AppRoute.EditProfile::class.qualifiedName) appViewModel.cancelProfileSave()
     }
     LaunchedEffect(uiState.activeProfileId, currentBackStackEntry?.destination?.route) {
         val destination = currentBackStackEntry?.destination ?: return@LaunchedEffect
@@ -319,6 +321,13 @@ fun WhiteNoiseNavHost(
                     onBack = { navController.popBackStack() },
                     onSave = appViewModel::updateActiveProfileDetails,
                     onSaveAddress = appViewModel::updateNostrAddress,
+                    onSaveDraft = { appViewModel.beginProfileSave(profile.id, it) },
+                    saveAttempt = appViewModel.profileSaveAttempt,
+                    onAdvanceSave = appViewModel::advanceProfileSave,
+                    onCancelSave = { appViewModel.cancelProfileSave(profile.id) },
+                    consumeImageFailure = { appViewModel.consumeProfileImageFailure(profile.id) },
+                    retainedImages = appViewModel.profileImageDraft,
+                    onRetainImages = { avatar, banner -> appViewModel.retainProfileImages(profile.id, avatar, banner) },
                 )
             }
         }
@@ -455,6 +464,10 @@ fun WhiteNoiseNavHost(
                     onGroupContactScenario = appViewModel::selectGroupContactScenario,
                     createdChatUnavailable = appViewModel.nextCreatedChatUnavailable,
                     onCreatedChatUnavailable = appViewModel::setCreatedChatUnavailable,
+                    profileSaveScenario = appViewModel.nextProfileSaveScenario,
+                    onProfileSaveScenario = appViewModel::selectProfileSaveScenario,
+                    profileImageFails = appViewModel.nextProfileImageFails,
+                    onProfileImageFails = appViewModel::selectProfileImageFailure,
                     exitScenario = appViewModel.nextProfileExitScenario,
                     onExitScenario = appViewModel::selectProfileExitScenario,
                     onLocalKeyAvailable = appViewModel::setLocalKeyAvailable,

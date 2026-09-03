@@ -30,6 +30,12 @@ import dev.ipf.whitenoise.model.GroupContactResult
 import dev.ipf.whitenoise.model.PrivateContactDetails
 import dev.ipf.whitenoise.model.CreatedChatOpen
 import dev.ipf.whitenoise.model.Profile
+import dev.ipf.whitenoise.model.ProfileEditDraft
+import dev.ipf.whitenoise.model.ProfileSaveAttempt
+import dev.ipf.whitenoise.model.ProfileSavePhase
+import dev.ipf.whitenoise.model.ProfileSaveFailure
+import dev.ipf.whitenoise.model.ProfileSaveScenario
+import dev.ipf.whitenoise.model.ProfileSettingsPolicy
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.model.ProfileRelayFixtures
@@ -148,6 +154,7 @@ class AppViewModel(
         cancelAccess()
         profileExitAttempt = null
         cancelCreatedChatOpen()
+        cancelProfileSave()
         uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
     }
 
@@ -273,6 +280,68 @@ class AppViewModel(
         cancelAccess()
         uiState = uiState.copy(activeProfileId = null, signedInProfileIds = emptySet(), pendingDiagnosticsProfileId = null)
         startupState = startupState.copy(phase = StartupPhase.Ready)
+    }
+
+    var profileImageDraft by mutableStateOf<dev.ipf.whitenoise.model.ProfileImageDraft?>(null)
+        private set
+    fun retainProfileImages(profileId: String, avatar: ProfileAvatar, banner: ProfileAvatar?) {
+        if (uiState.activeProfileId == profileId) profileImageDraft = dev.ipf.whitenoise.model.ProfileImageDraft(profileId, avatar, banner)
+    }
+    var profileSaveAttempt by mutableStateOf<ProfileSaveAttempt?>(null)
+        private set
+    var nextProfileSaveScenario by mutableStateOf(ProfileSaveScenario.Success)
+        private set
+    var nextProfileImageFails by mutableStateOf(false)
+        private set
+    private var profileSaveGeneration = 0L
+
+    fun selectProfileSaveScenario(scenario: ProfileSaveScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextProfileSaveScenario = scenario
+    }
+    fun selectProfileImageFailure(fails: Boolean) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextProfileImageFails = fails
+    }
+    fun consumeProfileImageFailure(profileId: String): Boolean {
+        if (uiState.activeProfileId != profileId) return true
+        return nextProfileImageFails.also { nextProfileImageFails = false }
+    }
+    fun beginProfileSave(profileId: String, draft: ProfileEditDraft): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return false
+        if (profileSaveAttempt?.isBusy == true || !ProfileSettingsPolicy.canPublishProfile(profile.settings)) return false
+        val normalized = draft.normalized() ?: return false
+        val checksLightning = normalized.lightningAddress.isNotBlank() && normalized.lightningAddress != profile.lightningAddress
+        profileSaveAttempt = ProfileSaveAttempt(++profileSaveGeneration, profileId, normalized,
+            if (checksLightning) ProfileSavePhase.CheckingLightning else ProfileSavePhase.Publishing, nextProfileSaveScenario)
+        nextProfileSaveScenario = ProfileSaveScenario.Success
+        return true
+    }
+    fun advanceProfileSave(requestId: Long, phase: ProfileSavePhase): Boolean {
+        val request = profileSaveAttempt ?: return false
+        val profile = uiState.activeProfile ?: return false
+        if (request.id != requestId || request.phase != phase || !request.isBusy || request.profileId != profile.id) return false
+        val failure = when {
+            request.scenario == ProfileSaveScenario.NoConnection || !ProfileSettingsPolicy.canPublishProfile(profile.settings) -> ProfileSaveFailure.NoConnection
+            phase == ProfileSavePhase.CheckingLightning && request.scenario == ProfileSaveScenario.UnresolvedLightning -> ProfileSaveFailure.UnresolvedLightning
+            phase == ProfileSavePhase.Publishing && request.scenario == ProfileSaveScenario.PublishFailure -> ProfileSaveFailure.PublishFailed
+            else -> null
+        }
+        if (failure != null) { profileSaveAttempt = request.copy(phase = ProfileSavePhase.Failed, failure = failure); return false }
+        if (phase == ProfileSavePhase.CheckingLightning) { profileSaveAttempt = request.copy(phase = ProfileSavePhase.Publishing); return false }
+        val draft = request.draft
+        updateActiveProfile { current -> current.copy(
+            name = draft.name, about = draft.about, avatar = draft.avatar, banner = draft.banner,
+            nostrAddress = draft.nostrAddress,
+            isNostrAddressVerified = if (draft.nostrAddress == current.nostrAddress) current.isNostrAddressVerified else draft.nostrAddress.isNotBlank(),
+            lightningAddress = draft.lightningAddress,
+            diagnostics = current.diagnostics.copy(records = current.diagnostics.records.map { it.copy(profileName = draft.name) }),
+        ) }
+        profileSaveAttempt = null
+        profileImageDraft = null
+        return true
+    }
+    fun cancelProfileSave(profileId: String? = null) {
+        if (profileId == null || profileSaveAttempt?.profileId == profileId) profileSaveAttempt = null
+        if (profileId == null || profileImageDraft?.profileId == profileId) profileImageDraft = null
     }
 
     fun updateActiveProfileDetails(
@@ -491,6 +560,7 @@ class AppViewModel(
     fun signOutActiveProfile(wipeData: Boolean): ProfileExitDestination? {
         val activeId = uiState.activeProfileId ?: return null
         cancelCreatedChatOpen()
+        cancelProfileSave()
         cancelAccess()
         val signedIn = uiState.signedInProfileIds - activeId
         val profiles = if (wipeData) uiState.profiles.filterNot { it.id == activeId } else uiState.profiles
@@ -549,6 +619,7 @@ class AppViewModel(
         profileExitReport = next.takeIf { it.hasIncompleteWork }
         profileExitAttempt = null
         cancelCreatedChatOpen()
+        cancelProfileSave()
         return destination
     }
 
@@ -601,7 +672,10 @@ class AppViewModel(
         peopleSearchScenario = PeopleSearchScenario.Success
         groupContactScenario = GroupContactScenario.Success
         nextCreatedChatUnavailable = false
+        nextProfileSaveScenario = ProfileSaveScenario.Success
+        nextProfileImageFails = false
         cancelCreatedChatOpen()
+        cancelProfileSave()
         uiState = AppUiState()
         createdChatSequence = 0
         return true
@@ -1552,6 +1626,7 @@ class AppViewModel(
 
     private fun activate(profile: Profile, updatesStoredProfile: Boolean) {
         cancelCreatedChatOpen()
+        cancelProfileSave()
         val profiles = uiState.profiles.toMutableList()
         val index = profiles.indexOfFirst { it.id == profile.id }
         if (index >= 0) {

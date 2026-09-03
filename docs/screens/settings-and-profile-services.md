@@ -1,5 +1,10 @@
 # Settings and profile services
 
+2026-09-04: B04 extends Profile with banners, full-size images, Lightning address
+validation and draft-only name suggestions. [profile-media-and-lightning.md](profile-media-and-lightning.md)
+records atomic saving and lifecycle behavior; the prior separate field-save
+implementation is superseded. Read/edit hierarchy and system surfaces remain.
+
 2026-09-04: production B02 extends keys/sign-out/wipe behavior as recorded in
 [keys-and-profile-exit.md](keys-and-profile-exit.md). Its lifecycle and staged
 outcome contract supersedes earlier immediate-success descriptions here; the

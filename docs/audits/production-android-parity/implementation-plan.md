@@ -7,7 +7,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B01: implemented and host-verified 2026-09-04; 202 unit tests, zero lint errors, both APKs, six new compiled UI cases. [Selected brief and evidence](../../screens/access-and-recovery.md). Commit title: `B01: Add access recovery and retained-profile sign-in`.
 - B02: implemented and host-verified 2026-09-04; 216 unit tests, zero lint errors, both APKs, five new compiled UI cases. [Selected brief and evidence](../../screens/keys-and-profile-exit.md). Q05 preserves the approved checked wipe default. Commit title: `B02: Add staged profile exit and temporary key exports`.
 - B03: implemented and host-verified 2026-09-04; 231 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/people-discovery-and-private-details.md). Commit title: `B03: Add people discovery and private contact flows`.
-- B04–B32: pending; linked decisions apply only to their named slices.
+- B04: implemented and host-verified 2026-09-04; 244 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/profile-media-and-lightning.md). Commit title: `B04: Add profile media and Lightning address editing`.
+- B05–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
