@@ -46,12 +46,23 @@ import dev.ipf.whitenoise.model.MessageDeletionScope
 import dev.ipf.whitenoise.model.composerAvailability
 import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.navigation.OnboardingOrigin
+import dev.ipf.whitenoise.model.AccessAttempt
+import dev.ipf.whitenoise.model.AccessFailure
+import dev.ipf.whitenoise.model.AccessMethod
+import dev.ipf.whitenoise.model.AccessPhase
+import dev.ipf.whitenoise.model.AccessScenario
+import dev.ipf.whitenoise.model.PrivateKeyState
+import dev.ipf.whitenoise.model.PrivateKeyValidator
+import dev.ipf.whitenoise.model.ProfileSigningMode
+import dev.ipf.whitenoise.model.StartupPhase
+import dev.ipf.whitenoise.model.StartupState
 
 data class AppUiState(
     val profiles: List<Profile> = emptyList(),
     val activeProfileId: String? = null,
     val signedInProfileIds: Set<String> = emptySet(),
     val pendingDiagnosticsProfileId: String? = null,
+    val lastRetainedProfileId: String? = null,
 ) {
     val activeProfile: Profile?
         get() = profiles.firstOrNull { it.id == activeProfileId }
@@ -59,18 +70,35 @@ data class AppUiState(
     val signedInProfiles: List<Profile>
         get() = profiles.filter { it.id in signedInProfileIds }
 
+    val retainedProfiles: List<Profile>
+        get() = profiles.filterNot { it.id in signedInProfileIds }
+            .sortedBy { if (it.id == lastRetainedProfileId) 0 else 1 }
+
     fun diagnosticsPromptProfile(chatsResumed: Boolean): Profile? = activeProfile?.takeIf {
         chatsResumed && it.id == pendingDiagnosticsProfileId && !it.diagnostics.hasSeenPrompt
     }
 }
 
-class AppViewModel : ViewModel() {
+class AppViewModel(
+    initialAccessScenario: AccessScenario = AccessScenario.Success,
+    startupFails: Boolean = false,
+) : ViewModel() {
     private var createdChatSequence = 0
+    private var accessGeneration = 0L
+
+    var accessAttempt by mutableStateOf<AccessAttempt?>(null)
+        private set
+    var nextAccessScenario by mutableStateOf(initialAccessScenario)
+        private set
+    var startupState by mutableStateOf(StartupState(fails = startupFails))
+        private set
 
     var uiState by mutableStateOf(AppUiState())
         private set
 
     fun completeSignIn(origin: OnboardingOrigin) {
+        cancelAccess()
+        startupState = startupState.copy(phase = StartupPhase.Ready)
         val profile = when (origin) {
             OnboardingOrigin.Initial -> ProfileFixtures.marmota
             OnboardingOrigin.AddProfile -> ProfileFixtures.openCircuit
@@ -85,6 +113,8 @@ class AppViewModel : ViewModel() {
         about: String,
         avatar: ProfileAvatar?,
     ) {
+        cancelAccess()
+        startupState = startupState.copy(phase = StartupPhase.Ready)
         val profile = when (origin) {
             OnboardingOrigin.Initial -> ProfileFixtures.initialSignUp(name, about, avatar)
             OnboardingOrigin.AddProfile -> ProfileFixtures.addedSignUp(name, about, avatar)
@@ -96,7 +126,132 @@ class AppViewModel : ViewModel() {
     fun selectProfile(profileId: String) {
         if (profileId !in uiState.signedInProfileIds) return
         if (uiState.profiles.none { it.id == profileId }) return
+        cancelAccess()
         uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
+    }
+
+    fun beginPrivateKeySignIn(origin: OnboardingOrigin, key: String): Boolean {
+        if (PrivateKeyValidator.state(key) != PrivateKeyState.Valid) return false
+        val candidate = if (origin == OnboardingOrigin.Initial) ProfileFixtures.marmota else ProfileFixtures.openCircuit
+        return beginAccess(origin, candidate, AccessMethod.PrivateKey)
+    }
+
+    fun beginAmberSignIn(origin: OnboardingOrigin): Boolean = beginAccess(
+        origin,
+        ProfileFixtures.openCircuit.copy(
+            id = "amber-open-circuit",
+            publicKey = "npub1" + "z".repeat(58),
+            signingMode = ProfileSigningMode.Amber,
+        ),
+        AccessMethod.Amber,
+    )
+
+    fun beginProfileCreation(origin: OnboardingOrigin, name: String, about: String, avatar: ProfileAvatar?): Boolean {
+        val candidate = when (origin) {
+            OnboardingOrigin.Initial -> ProfileFixtures.initialSignUp(name, about, avatar)
+            OnboardingOrigin.AddProfile -> ProfileFixtures.addedSignUp(name, about, avatar)
+        }
+        return beginAccess(origin, candidate, AccessMethod.CreateProfile)
+    }
+
+    fun beginRetainedSignIn(origin: OnboardingOrigin, profileId: String): Boolean {
+        val candidate = uiState.retainedProfiles.firstOrNull { it.id == profileId } ?: return false
+        return beginAccess(origin, candidate, AccessMethod.Retained)
+    }
+
+    private fun beginAccess(origin: OnboardingOrigin, candidate: Profile, method: AccessMethod): Boolean {
+        if (accessAttempt?.phase?.isBusy == true || accessAttempt?.phase == AccessPhase.RecoveryConsent) return false
+        if ((origin == OnboardingOrigin.Initial) != (uiState.activeProfileId == null)) return false
+        val scenario = nextAccessScenario
+        nextAccessScenario = AccessScenario.Success
+        val attempt = AccessAttempt(
+            id = ++accessGeneration,
+            origin = origin,
+            ownerProfileId = uiState.activeProfileId,
+            candidate = candidate,
+            method = method,
+            phase = AccessPhase.SigningIn,
+            scenario = scenario,
+        )
+        accessAttempt = attempt.copy(phase = attempt.startingPhase())
+        return true
+    }
+
+    fun advanceAccess(requestId: Long, phase: AccessPhase): Boolean {
+        val attempt = accessAttempt ?: return false
+        if (attempt.id != requestId || attempt.phase != phase || !phase.isBusy) return false
+        if (!ownsAccess(attempt)) {
+            cancelAccess()
+            return false
+        }
+        val next = attempt.advance()
+        if (next != null) {
+            accessAttempt = next
+            return false
+        }
+        val stored = uiState.profiles.firstOrNull { it.id == attempt.candidate.id }
+        if (stored != null && stored.signingMode != attempt.candidate.signingMode) {
+            accessAttempt = attempt.copy(phase = AccessPhase.Failed, failure = AccessFailure.AmberMismatch)
+            return false
+        }
+        activate(attempt.candidate, updatesStoredProfile = attempt.method == AccessMethod.CreateProfile)
+        if (attempt.origin == OnboardingOrigin.AddProfile && attempt.method != AccessMethod.Retained) addShowcaseProfiles()
+        accessAttempt = null
+        return true
+    }
+
+    fun confirmAccessRecovery(requestId: Long) {
+        val attempt = accessAttempt ?: return
+        if (attempt.id != requestId || attempt.phase != AccessPhase.RecoveryConsent || !ownsAccess(attempt)) return
+        accessAttempt = attempt.copy(phase = AccessPhase.Recovering, recoveryAcknowledged = true)
+    }
+
+    fun retryAccess(requestId: Long) {
+        val attempt = accessAttempt ?: return
+        if (attempt.id != requestId || attempt.phase != AccessPhase.Failed || !ownsAccess(attempt)) return
+        accessAttempt = attempt.copy(
+            id = ++accessGeneration,
+            phase = attempt.startingPhase(),
+            scenario = AccessScenario.Success,
+            failure = null,
+        )
+    }
+
+    fun cancelAccess() {
+        accessGeneration++
+        accessAttempt = null
+    }
+
+    private fun ownsAccess(attempt: AccessAttempt): Boolean =
+        uiState.activeProfileId == attempt.ownerProfileId &&
+            (attempt.method != AccessMethod.Retained || uiState.retainedProfiles.any { it.id == attempt.candidate.id })
+
+    fun selectAccessScenario(scenario: AccessScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled != true) return
+        nextAccessScenario = scenario
+    }
+
+    fun previewStartupFailure() {
+        if (uiState.activeProfile?.developerTools?.isEnabled != true) return
+        cancelAccess()
+        startupState = StartupState(generation = startupState.generation + 1, fails = true)
+    }
+
+    fun advanceStartup(generation: Long) {
+        if (startupState.generation != generation || startupState.phase != StartupPhase.Loading) return
+        startupState = startupState.copy(phase = if (startupState.fails) StartupPhase.Failed else StartupPhase.Ready)
+    }
+
+    fun retryStartup() {
+        if (startupState.phase != StartupPhase.Failed) return
+        startupState = StartupState(generation = startupState.generation + 1)
+    }
+
+    fun recoverStartupProfiles() {
+        if (startupState.phase != StartupPhase.Failed || uiState.profiles.isEmpty()) return
+        cancelAccess()
+        uiState = uiState.copy(activeProfileId = null, signedInProfileIds = emptySet(), pendingDiagnosticsProfileId = null)
+        startupState = startupState.copy(phase = StartupPhase.Ready)
     }
 
     fun updateActiveProfileDetails(
@@ -308,6 +463,7 @@ class AppViewModel : ViewModel() {
 
     fun signOutActiveProfile(wipeData: Boolean): ProfileExitDestination? {
         val activeId = uiState.activeProfileId ?: return null
+        cancelAccess()
         val signedIn = uiState.signedInProfileIds - activeId
         val profiles = if (wipeData) uiState.profiles.filterNot { it.id == activeId } else uiState.profiles
         val nextActiveId = profiles.firstOrNull { it.id in signedIn }?.id
@@ -315,6 +471,7 @@ class AppViewModel : ViewModel() {
             profiles = profiles,
             activeProfileId = nextActiveId,
             signedInProfileIds = signedIn,
+            lastRetainedProfileId = activeId.takeUnless { wipeData },
         )
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
@@ -324,6 +481,7 @@ class AppViewModel : ViewModel() {
         if (profile.id == uiState.activeProfileId || !WipeConfirmationPhrase.matches(confirmation, profile.name)) {
             return false
         }
+        if (accessAttempt?.candidate?.id == profileId) cancelAccess()
         uiState = uiState.copy(
             profiles = uiState.profiles.filterNot { it.id == profileId },
             signedInProfileIds = uiState.signedInProfileIds - profileId,
@@ -334,6 +492,8 @@ class AppViewModel : ViewModel() {
     fun eraseAppData(confirmation: String): Boolean {
         val expected = WipeConfirmationPhrase.make(uiState.profiles.map(Profile::id))
         if (!WipeConfirmationPhrase.matches(confirmation, expected)) return false
+        cancelAccess()
+        nextAccessScenario = AccessScenario.Success
         uiState = AppUiState()
         createdChatSequence = 0
         return true

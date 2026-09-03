@@ -13,6 +13,7 @@ Current briefs:
 - `app-foundation.md`
 - `app-menus.md`
 - `onboarding-and-profiles.md`
+- `access-and-recovery.md`
 - `diagnostics-and-improvements.md`
 - `chats-and-chat-creation.md`
 - `shared-conversation-core.md`

@@ -37,6 +37,18 @@ manual TalkBack/system-surface pass. Exact findings and commits are recorded in
 
 ## Onboarding and profiles
 
+2026-09-04 production B01: C001, C003, C004, C005 and C011 are implemented
+within the deterministic boundary. `AccessModels`, `AppViewModel`,
+`OnboardingValidation`, `AccessUi` and onboarding navigation now cover
+key/link shape and type errors, Amber identity/proof outcomes, consent-gated
+setup recovery and partial results, retained-profile re-entry and startup
+retry. Profile-owned chats/drafts/settings survive retained re-entry; stale
+callbacks cannot activate a profile. Amber profiles cannot expose a local
+secret/export. The clean README gate passed 202 unit tests, both APKs and zero
+lint errors; six new UI cases compile. Existing lint warnings remain, and no
+new device or visual acceptance is claimed. See
+[`access-and-recovery.md`](../screens/access-and-recovery.md).
+
 | Capability | Accepted parity scope | Android status |
 | --- | --- | --- |
 | Welcome | White Noise mark, first-launch entry, Sign In, and Sign Up | Static gate passed 2026-08-26 — initial and Add Profile routes center a proportional 50%-width mark between system-safe top/app bar and Sign In, cap it at 260 dp, and shrink it in short windows; outgoing IME insets no longer move the mark or actions. Safe-area centering, expanded-width, short-window large-text/RTL, and keyboard-inset regressions compile; renewed device visual acceptance pending |

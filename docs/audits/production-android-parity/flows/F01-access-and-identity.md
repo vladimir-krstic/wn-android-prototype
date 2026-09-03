@@ -16,17 +16,17 @@ These labels are the audit recommendation and follow current prototype terminolo
 
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
-| C001 · Welcome, new profile, and private-key sign-in | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add rejected public/encrypted key, normalized scan/paste, unavailable network and action-specific setup failures. Prototype currently accepts every nsec prefix; keep deterministic keys, not real login. |
+| C001 · Welcome, new profile, and private-key sign-in | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Add rejected public/encrypted key, normalized scan/paste, unavailable network and action-specific setup failures. Prototype currently accepts every nsec prefix; keep deterministic keys, not real login. |
 | C002 · Profile creation form | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C003 · Sign in with Amber / external signer | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add installed/unavailable, identity approval, proof approval, cancellation, rejection and signer-owned identity states. No real signer calls in this prototype batch. |
-| C004 · Incomplete identity setup retry and recovery consent | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Distinguish safe resume, uncertain prior key-package publication, explicit recovery consent, declined, partial and unexpected-state outcomes. |
-| C005 · Retained-profile reactivation from Welcome | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add Continue as and retained-profile picker after non-wiping sign-out, restoring the same profile-owned history and drafts. |
+| C003 · Sign in with Amber / external signer | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Add installed/unavailable, identity approval, proof approval, cancellation, rejection and signer-owned identity states. No real signer calls in this prototype batch. |
+| C004 · Incomplete identity setup retry and recovery consent | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Distinguish safe resume, uncertain prior key-package publication, explicit recovery consent, declined, partial and unexpected-state outcomes. |
+| C005 · Retained-profile reactivation from Welcome | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Add Continue as and retained-profile picker after non-wiping sign-out, restoring the same profile-owned history and drafts. |
 | C006 · Switch profiles and isolated unread state | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
 | C007 · Signer ownership and private-key export availability | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Expose local versus external signing and disable unavailable secret export with a reason. Preserve existing reveal/copy/share safeguards. |
 | C008 · Raw and encrypted private-key backup | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Keep local fake export but add explicit result expiry/background concealment and signer-unavailable state. No cryptography or real keys. |
 | C009 · Sign out with relay cleanup outcomes | Decision required | Trigger its named entry/action; cancel with Back where available | Add delete-key-packages choice and distinguish local sign-out success with incomplete relay cleanup from sign-out failure. Preserve approved wipe default/presentation pending Q05. |
 | C010 · Account wipe progress and partial outcome report | Decision required | Trigger its named entry/action; cancel with Back where available | Represent leave, key-package cleanup and local wipe stages with independent outcomes; do not turn partial loss into generic success. Preserve prototype whole-app erase and inactive-profile removal. |
-| C011 · Bootstrap failure and retry | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add deterministic startup loading, failure, retry and retained-account recovery states without initializing a runtime. |
+| C011 · Bootstrap failure and retry | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Add deterministic startup loading, failure, retry and retained-account recovery states without initializing a runtime. |
 
 ## Production integration seam
 
@@ -46,3 +46,7 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B01, B02. Decisions: Q05. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B01 implementation evidence
+
+C001, C003, C004, C005 and C011 are implemented and host-verified on 2026-09-04. See [the selected brief](../../../screens/access-and-recovery.md#implementation-evidence) for files, 202 passing unit tests, both APKs and six new compiled UI cases. B02 remains pending; the B01 signer-owned export guard is a prerequisite, not completion of B02. Device and visual acceptance remain pending.

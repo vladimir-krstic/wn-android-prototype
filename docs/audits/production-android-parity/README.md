@@ -1,6 +1,6 @@
 # Production Android parity audit
 
-Status: **source audit complete; implementation has not started**
+Status: **B01 implemented and host-verified; B02–B32 pending**
 
 Production source is [`marmot-protocol/whitenoise-android`](https://github.com/marmot-protocol/whitenoise-android) `master` at [`319454889f1c2494dec4a69b5577d98017f44eee`](https://github.com/marmot-protocol/whitenoise-android/commit/319454889f1c2494dec4a69b5577d98017f44eee). The comparison target is this prototype's current dirty working tree based on `4c3f7366bcb738839f4969d762403adfc023b8a3`, reconciled on 2026-09-03 after concurrent local work completed; generated audit files are excluded from its hash manifest.
 
@@ -16,21 +16,21 @@ The [capability matrix](capability-matrix.md) contains **122** user-outcome capa
 
 | Status | Count |
 | --- | ---: |
-| covered | 16 |
-| partial | 41 |
-| missing | 59 |
+| covered | 21 |
+| partial | 39 |
+| missing | 56 |
 | behavioral divergence | 5 |
 | unverified | 0 |
 | excluded with reason | 1 |
 
 
-Of the 122 rows, 105 require implementation work. **82** are ready within the established prototype boundary; **23** require a linked product/platform decision. A decision blocks only the named slice, so other batches can proceed. One covered capability also links to a non-blocking destination decision.
+After B01, 100 of the 122 rows still require implementation work. **77** are ready within the established prototype boundary; **23** require a linked product/platform decision. A decision blocks only the named slice, so other batches can proceed. One covered capability also links to a non-blocking destination decision.
 
 ## Proposed destination changes
 
 New top-level or detail destinations are needed for Folders, Folder editor, global search filters/results, Read Aloud settings, Dictation settings, AI Agents, Help, About & licenses and production-style update state. Existing Conversation, Composer, Chat/Group Info, Shared Content, Profile, Keys, Notifications, Appearance, Device Privacy, Data and Storage, Relays, Key Packages, Diagnostics and onboarding surfaces gain behavior and state.
 
-The first recommended batch is **B01 — Access failures, retained profiles and signer choice**. It adds a reusable deterministic external-capability pattern and closes dangerous ambiguity around key types and incomplete setup before later external routes are introduced. B05–B07 (Chats organization and search) provide the largest visible feature gain after that foundation.
+**B01 — Access failures, retained profiles and signer choice** is implemented and host-verified. It covers typed access results, explicit recovery consent, retained-profile re-entry and startup retry. See [its implementation evidence](../../screens/access-and-recovery.md#implementation-evidence). The next batch is B02; Q05 governs its sign-out default. B05–B07 (Chats organization and search) provide the largest visible feature gain after that foundation.
 
 ## Deliverables
 
@@ -43,6 +43,6 @@ The first recommended batch is **B01 — Access failures, retained profiles and 
 
 ## Limits and verification
 
-Document validation passed: all 122 capability rows map to their flow specifications, all 105 actionable rows map to the 32 batches, and all nine decision scopes agree with the matrix. The pinned archive checksum, 311 production source links, 415 local links and line references, 360 prototype file hashes, and documentation whitespace checks passed.
+At the initial audit on 2026-09-03, document validation passed: all 122 capability rows map to their flow specifications, all 105 actionable rows map to the 32 batches, and all nine decision scopes agree with the matrix. The pinned archive checksum, 311 production source links, 415 local links and line references, 360 prototype file hashes, and documentation whitespace checks passed.
 
-This was a static source audit. No production or prototype build, device, emulator, `adb`, network runtime, external signer, notification, background service, installer or visual inspection was run. Production's Marmot binding artifact and live relay/store behavior were not executed; user-visible states that cross those boundaries are specified as deterministic fixtures and their real integration seams are cited. Source presence and existing tests are evidence of an implemented code path, not proof that it works on every device. Visual acceptance remains a separate user-led gate.
+The initial audit was static; subsequent host verification is tracked in each implementation brief. No device, emulator, `adb`, production network runtime, external signer, notification, background service, installer or visual inspection has been run for this implementation goal. Production's Marmot binding artifact and live relay/store behavior were not executed; user-visible states that cross those boundaries are specified as deterministic fixtures and their real integration seams are cited. Source presence and existing tests are evidence of an implemented code path, not proof that it works on every device. Visual acceptance remains a separate user-led gate.

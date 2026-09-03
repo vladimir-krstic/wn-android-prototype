@@ -1,9 +1,11 @@
 package dev.ipf.whitenoise.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +22,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import dev.ipf.whitenoise.state.AppViewModel
 import dev.ipf.whitenoise.model.GroupRole
+import dev.ipf.whitenoise.model.AccessMethod
+import dev.ipf.whitenoise.model.AccessPhase
+import kotlinx.coroutines.delay
 import dev.ipf.whitenoise.model.SharedContentCategory
 import dev.ipf.whitenoise.model.ProfileExitDestination
 import dev.ipf.whitenoise.model.ConversationDebugPolicy
@@ -79,6 +84,10 @@ fun WhiteNoiseNavHost(
         val destination = currentBackStackEntry?.destination ?: return@LaunchedEffect
         val routeName = destination.route?.substringBefore('/')?.substringBefore('?')
         val isOnboarding = routeName in onboardingRouteNames
+        if (routeName != AppRoute.SignIn::class.qualifiedName) {
+            signInPrivateKey.edit { replace(0, length, "") }
+            scannedPrivateKey = null
+        }
         if (uiState.activeProfile == null && !isOnboarding) {
             navController.navigate(AppRoute.Welcome()) {
                 popUpTo(navController.graph.id) { inclusive = true }
@@ -88,12 +97,16 @@ fun WhiteNoiseNavHost(
     }
 
     fun returnFromOnboardingForm() {
+        appViewModel.cancelAccess()
+        signInPrivateKey.edit { replace(0, length, "") }
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
         navController.popBackStack()
     }
 
     fun showSignedInRoot() {
+        signInPrivateKey.edit { replace(0, length, "") }
+        scannedPrivateKey = null
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
         navController.navigate(AppRoute.SignedIn) {
@@ -121,6 +134,29 @@ fun WhiteNoiseNavHost(
         }
     }
 
+    val accessAttempt = appViewModel.accessAttempt
+    BackHandler(enabled = accessAttempt != null && accessAttempt.phase != AccessPhase.RecoveryConsent) {
+        appViewModel.cancelAccess()
+    }
+    LaunchedEffect(accessAttempt?.id, accessAttempt?.phase, currentBackStackEntry) {
+        val attempt = accessAttempt ?: return@LaunchedEffect
+        val entry = currentBackStackEntry ?: return@LaunchedEffect
+        val expectedRoute = when (attempt.method) {
+            AccessMethod.Retained -> AppRoute.Welcome::class.qualifiedName
+            AccessMethod.CreateProfile -> AppRoute.SignUp::class.qualifiedName
+            AccessMethod.PrivateKey, AccessMethod.Amber -> AppRoute.SignIn::class.qualifiedName
+        }
+        val actualRoute = entry.destination.route?.substringBefore('/')?.substringBefore('?')
+        if (actualRoute != expectedRoute) {
+            appViewModel.cancelAccess()
+            return@LaunchedEffect
+        }
+        if (attempt.phase.isBusy) entry.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(2_000)
+            if (appViewModel.advanceAccess(attempt.id, attempt.phase)) showSignedInRoot()
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = AppRoute.startDestination,
@@ -131,13 +167,20 @@ fun WhiteNoiseNavHost(
             WelcomeScreen(
                 origin = route.origin,
                 onSignIn = {
+                    appViewModel.cancelAccess()
                     signInPrivateKey.edit { replace(0, length, "") }
                     scannedPrivateKey = null
                     scannerUnavailable = false
                     navController.navigate(AppRoute.SignIn(route.origin))
                 },
-                onSignUp = { navController.navigate(AppRoute.SignUp(route.origin)) },
-                onBack = { navController.popBackStack() },
+                onSignUp = { appViewModel.cancelAccess(); navController.navigate(AppRoute.SignUp(route.origin)) },
+                onBack = ::returnFromOnboardingForm,
+                retainedProfiles = uiState.retainedProfiles,
+                attempt = accessAttempt,
+                onContinueProfile = { appViewModel.beginRetainedSignIn(route.origin, it) },
+                onRetry = appViewModel::retryAccess,
+                onRecover = appViewModel::confirmAccessRecovery,
+                onCancel = appViewModel::cancelAccess,
             )
         }
         composable<AppRoute.SignIn> { entry ->
@@ -156,9 +199,13 @@ fun WhiteNoiseNavHost(
                     scannerUnavailable = false
                 },
                 onSignIn = {
-                    appViewModel.completeSignIn(route.origin)
-                    showSignedInRoot()
+                    appViewModel.beginPrivateKeySignIn(route.origin, signInPrivateKey.text.toString())
                 },
+                onAmberSignIn = { appViewModel.beginAmberSignIn(route.origin) },
+                attempt = accessAttempt,
+                onRetry = appViewModel::retryAccess,
+                onRecover = appViewModel::confirmAccessRecovery,
+                onCancel = appViewModel::cancelAccess,
             )
 
             if (scannerOpen) {
@@ -181,9 +228,12 @@ fun WhiteNoiseNavHost(
                 initialName = if (route.origin == OnboardingOrigin.Initial) "Marmota" else "Pebble",
                 onBack = ::returnFromOnboardingForm,
                 onSignUp = { name, about, avatar ->
-                    appViewModel.completeSignUp(route.origin, name, about, avatar)
-                    showSignedInRoot()
+                    appViewModel.beginProfileCreation(route.origin, name, about, avatar)
                 },
+                attempt = accessAttempt,
+                onRetry = appViewModel::retryAccess,
+                onRecover = appViewModel::confirmAccessRecovery,
+                onCancel = appViewModel::cancelAccess,
             )
         }
         composable<AppRoute.SignedIn> { entry ->
@@ -368,6 +418,9 @@ fun WhiteNoiseNavHost(
                     onDebugMode = appViewModel::setDebugMode,
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics()) },
                     onKeyPackages = { navController.navigate(AppRoute.KeyPackages) },
+                    accessScenario = appViewModel.nextAccessScenario,
+                    onAccessScenario = appViewModel::selectAccessScenario,
+                    onStartupFailure = appViewModel::previewStartupFailure,
                 )
             }
         }

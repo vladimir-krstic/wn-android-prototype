@@ -1,5 +1,10 @@
 # Onboarding and profile foundation
 
+2026-09-04 B01 extension: `access-and-recovery.md` governs retained-profile
+Welcome actions, shape/type validation, Amber states, setup consent/recovery,
+startup retry and request ownership. It supersedes the original prefix-only
+key check and two-action Welcome contract where stored profiles are available.
+
 2026-08-26 shared-sheet follow-up: `AvatarWebImagePicker` uses
 `WhiteNoiseModalBottomSheet` for the common surfaceContainer/inset owner.
 Its native Close/Done task app bar already matches that color and uses zero

@@ -73,11 +73,18 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
+    accessScenario: dev.ipf.whitenoise.model.AccessScenario = dev.ipf.whitenoise.model.AccessScenario.Success,
+    onAccessScenario: (dev.ipf.whitenoise.model.AccessScenario) -> Unit = {},
+    onStartupFailure: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val tools = profile.developerTools
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var showAccessScenarios by rememberSaveable(profile.id) { mutableStateOf(false) }
+    if (showAccessScenarios && tools.isEnabled) AccessScenarioDialog(
+        accessScenario, onAccessScenario, onDismiss = { showAccessScenarios = false },
+    )
     val exportLogs = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
@@ -118,6 +125,15 @@ fun DeveloperToolsScreen(
                 SettingsExplainer("Enable technical tools for this profile.")
             }
             if (tools.isEnabled) {
+                item { SettingsSection("Access testing") }
+                item {
+                    SettingsGroup {
+                        SettingsLink("Access scenarios", accessScenario.developerLabel, { showAccessScenarios = true })
+                        SettingsDivider()
+                        SettingsAction("Preview startup failure", onClick = onStartupFailure)
+                    }
+                    SettingsExplainer("Choose a result, then use Add Profile or sign out without wiping to test retained-profile entry.")
+                }
                 item { SettingsSection("Debugging") }
                 item {
                     SettingsGroup {

@@ -1,5 +1,15 @@
 # iOS-to-Android source map
 
+## Production Android extension
+
+The 2026-09-04 all-batch implementation authorization adds production Android
+capability evidence at `marmot-protocol/whitenoise-android@319454889f1c2494dec4a69b5577d98017f44eee`.
+The audit matrix is the permanent source map for those capabilities. B01 maps
+identity input, import/recovery, Amber, retained reactivation and bootstrap to
+`docs/screens/access-and-recovery.md`; the established Android presentation
+remains authoritative. Production is read-only evidence and does not replace
+the accepted iOS scope or prototype-only features below.
+
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)
 repository at the accepted, read-only parity baseline

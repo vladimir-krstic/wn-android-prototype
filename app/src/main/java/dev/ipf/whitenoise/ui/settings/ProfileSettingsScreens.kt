@@ -876,7 +876,8 @@ fun EditProfileScreen(
 @Composable
 fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
     val context = LocalContext.current
-    var showPrivate by rememberSaveable { mutableStateOf(false) }
+    val hasLocalKey = profile.signingMode == dev.ipf.whitenoise.model.ProfileSigningMode.LocalKey
+    var showPrivate by rememberSaveable(profile.id) { mutableStateOf(false) }
     var pendingExport by rememberSaveable(profile.id) { mutableStateOf<ProfileKeyExport?>(null) }
     var passwordDialog by remember { mutableStateOf(false) }
     var rawExportDialog by remember { mutableStateOf(false) }
@@ -888,7 +889,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
     val confirmationValue = confirmation.text.toString()
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         val request = pendingExport
-        if (uri != null && request != null) {
+        if (uri != null && request != null && hasLocalKey) {
             val content = when (request) {
                 ProfileKeyExport.Raw -> ProfileKeyFixtures.rawExport(profile)
                 ProfileKeyExport.Encrypted -> ProfileKeyFixtures.encryptedExport(profile, password.text.toString())
@@ -955,107 +956,112 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
             item {
                 ProfileKeySupportingText("Share this key so people can find and connect with you.")
             }
-            item { SettingsSection("Private key") }
-            item {
-                SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
-                    ProfileKeyValueRow(
-                        value = if (showPrivate) {
-                            ProfileKeyFixtures.PRIVATE_KEY
-                        } else {
-                            "••••••••••••••••••••••••••••••••"
-                        },
-                        overflow = if (showPrivate) {
-                            TextOverflow.MiddleEllipsis
-                        } else {
-                            TextOverflow.Clip
-                        },
-                        valueModifier = Modifier
-                            .testTag("profile_keys.private_key_value")
-                            .clearAndSetSemantics {
-                                contentDescription = if (showPrivate) {
-                                    "Private key revealed. Use the copy action to retrieve it."
-                                } else {
-                                    "Private key hidden"
+            if (!hasLocalKey) {
+                item { SettingsSection(stringResource(R.string.access_signing)) }
+                item { SettingsExplainer(stringResource(R.string.access_amber_owns_key)) }
+            } else {
+                item { SettingsSection("Private key") }
+                item {
+                    SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                        ProfileKeyValueRow(
+                            value = if (showPrivate) {
+                                ProfileKeyFixtures.PRIVATE_KEY
+                            } else {
+                                "••••••••••••••••••••••••••••••••"
+                            },
+                            overflow = if (showPrivate) {
+                                TextOverflow.MiddleEllipsis
+                            } else {
+                                TextOverflow.Clip
+                            },
+                            valueModifier = Modifier
+                                .testTag("profile_keys.private_key_value")
+                                .clearAndSetSemantics {
+                                    contentDescription = if (showPrivate) {
+                                        "Private key revealed. Use the copy action to retrieve it."
+                                    } else {
+                                        "Private key hidden"
+                                    }
+                                },
+                            trailingAction = {
+                                IconButton(onClick = { showPrivate = !showPrivate }) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (showPrivate) {
+                                                R.drawable.ic_visibility_off
+                                            } else {
+                                                R.drawable.ic_visibility
+                                            },
+                                        ),
+                                        contentDescription = if (showPrivate) {
+                                            "Hide private key"
+                                        } else {
+                                            "Show private key"
+                                        },
+                                    )
                                 }
                             },
-                        trailingAction = {
-                            IconButton(onClick = { showPrivate = !showPrivate }) {
+                        )
+                        SettingsDivider()
+                        SettingsAction(
+                            title = "Copy Private Key",
+                            onClick = {
+                                copyToClipboard(
+                                    context = context,
+                                    label = "Private key",
+                                    text = ProfileKeyFixtures.PRIVATE_KEY,
+                                    isSensitive = true,
+                                )
+                                copiedKey = CopiedProfileKey.Private
+                            },
+                            leading = {
+                                val copied = copiedKey == CopiedProfileKey.Private
                                 Icon(
                                     painter = painterResource(
-                                        if (showPrivate) {
-                                            R.drawable.ic_visibility_off
-                                        } else {
-                                            R.drawable.ic_visibility
-                                        },
+                                        if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
                                     ),
-                                    contentDescription = if (showPrivate) {
-                                        "Hide private key"
-                                    } else {
-                                        "Show private key"
-                                    },
+                                    contentDescription = null,
                                 )
-                            }
-                        },
-                    )
-                    SettingsDivider()
-                    SettingsAction(
-                        title = "Copy Private Key",
-                        onClick = {
-                            copyToClipboard(
-                                context = context,
-                                label = "Private key",
-                                text = ProfileKeyFixtures.PRIVATE_KEY,
-                                isSensitive = true,
-                            )
-                            copiedKey = CopiedProfileKey.Private
-                        },
-                        leading = {
-                            val copied = copiedKey == CopiedProfileKey.Private
-                            Icon(
-                                painter = painterResource(
-                                    if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
-                                ),
-                                contentDescription = null,
-                            )
-                        },
+                            },
+                        )
+                    }
+                }
+                item {
+                    ProfileKeySupportingText(
+                        "Keep this key private. Anyone with it can use your profile, and White Noise can’t recover it.",
                     )
                 }
-            }
-            item {
-                ProfileKeySupportingText(
-                    "Keep this key private. Anyone with it can use your profile, and White Noise can’t recover it.",
-                )
-            }
-            item { SettingsSection("Export") }
-            item {
-                SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
-                    SettingsAction(
-                        title = "Export Encrypted Private Key",
-                        onClick = { passwordDialog = true },
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_lock),
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                    SettingsDivider()
-                    SettingsAction(
-                        title = "Export Private Key",
-                        onClick = { rawExportDialog = true },
-                        modifier = Modifier.testTag("profile_keys.export_raw"),
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_download),
-                                contentDescription = null,
-                            )
-                        },
-                    )
+                item { SettingsSection("Export") }
+                item {
+                    SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                        SettingsAction(
+                            title = "Export Encrypted Private Key",
+                            onClick = { passwordDialog = true },
+                            leading = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_lock),
+                                    contentDescription = null,
+                                )
+                            },
+                        )
+                        SettingsDivider()
+                        SettingsAction(
+                            title = "Export Private Key",
+                            onClick = { rawExportDialog = true },
+                            modifier = Modifier.testTag("profile_keys.export_raw"),
+                            leading = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_download),
+                                    contentDescription = null,
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }
     }
-    if (rawExportDialog) {
+    if (rawExportDialog && hasLocalKey) {
         AlertDialog(
             onDismissRequest = { rawExportDialog = false },
             title = { Text("Keep Your Private Key Safe") },
@@ -1084,7 +1090,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit) {
             dismissButton = { TextButton(onClick = { rawExportDialog = false }) { Text("Cancel") } },
         )
     }
-    if (passwordDialog) {
+    if (passwordDialog && hasLocalKey) {
         AlertDialog(
             onDismissRequest = {
                 passwordDialog = false

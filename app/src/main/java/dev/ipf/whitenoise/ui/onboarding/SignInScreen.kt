@@ -43,15 +43,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.LoginPrototypeData
+import dev.ipf.whitenoise.model.AccessAttempt
 import dev.ipf.whitenoise.model.PrivateKeyState
 import dev.ipf.whitenoise.model.PrivateKeyValidator
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButtonDefaults
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSecureTextField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
-import kotlinx.coroutines.delay
 
 private enum class ScannerDialog {
     WrongContent,
@@ -68,15 +69,27 @@ fun SignInScreen(
     onScannedPrivateKeyConsumed: () -> Unit,
     onScannerUnavailableConsumed: () -> Unit,
     onSignIn: () -> Unit,
+    onAmberSignIn: () -> Unit,
+    attempt: AccessAttempt?,
+    onRetry: (Long) -> Unit,
+    onRecover: (Long) -> Unit,
+    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val normalizedKey = PrivateKeyValidator.normalize(privateKey.text.toString())
     val keyState = PrivateKeyValidator.state(normalizedKey)
-    var isSigningIn by remember { mutableStateOf(false) }
+    val isSigningIn = attempt?.phase?.isBusy == true
+    val keyErrorRes = when (keyState) {
+        PrivateKeyState.PublicKey -> R.string.private_key_public_error
+        PrivateKeyState.EncryptedKey -> R.string.private_key_encrypted_error
+        else -> R.string.private_key_invalid
+    }
+    val hasKeyError = keyState !in setOf(PrivateKeyState.Valid, PrivateKeyState.Empty)
+    var previousKey by remember { mutableStateOf(normalizedKey) }
     var scannerDialog by remember { mutableStateOf<ScannerDialog?>(null) }
 
     fun beginSignIn() {
-        if (keyState == PrivateKeyState.Valid && !isSigningIn) isSigningIn = true
+        if (keyState == PrivateKeyState.Valid && attempt == null) onSignIn()
     }
 
     fun beginScan() {
@@ -84,17 +97,17 @@ fun SignInScreen(
         onScan()
     }
 
-    LaunchedEffect(isSigningIn) {
-        if (!isSigningIn) return@LaunchedEffect
-        delay(2_000)
-        isSigningIn = false
-        onSignIn()
+    LaunchedEffect(normalizedKey) {
+        if (previousKey != normalizedKey) {
+            previousKey = normalizedKey
+            if (!isSigningIn) onCancel()
+        }
     }
 
     LaunchedEffect(scannedPrivateKey, scannerUnavailable) {
         scannedPrivateKey?.let { rawPayload ->
-            val payload = rawPayload.trim()
-            if (PrivateKeyValidator.state(payload) == PrivateKeyState.Valid) {
+            val payload = PrivateKeyValidator.scannedValue(rawPayload)
+            if (payload != null) {
                 privateKey.edit { replace(0, length, payload) }
             } else {
                 scannerDialog = ScannerDialog.WrongContent
@@ -127,9 +140,9 @@ fun SignInScreen(
             ) {
                 WhiteNoiseButton(
                     onClick = ::beginSignIn,
-                    enabled = keyState == PrivateKeyState.Valid,
+                    enabled = keyState == PrivateKeyState.Valid && (attempt == null || isSigningIn),
                     loading = isSigningIn,
-                    loadingLabel = stringResource(R.string.signing_in),
+                    loadingLabel = stringResource(accessProgressLabel(attempt?.phase)),
                     modifier = Modifier
                         .widthIn(max = 520.dp)
                         .fillMaxWidth()
@@ -204,16 +217,16 @@ fun SignInScreen(
                         supportingText = {
                             Text(
                                 text = stringResource(
-                                    if (keyState == PrivateKeyState.Invalid) {
-                                        R.string.private_key_invalid
+                                    if (hasKeyError) {
+                                        keyErrorRes
                                     } else {
                                         R.string.private_key_help
                                     },
                                 ),
                             )
                         },
-                        isError = keyState == PrivateKeyState.Invalid,
-                        errorMessage = stringResource(R.string.private_key_invalid),
+                        isError = hasKeyError,
+                        errorMessage = stringResource(keyErrorRes),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Go,
@@ -232,6 +245,14 @@ fun SignInScreen(
                         )
                     }
                 }
+                WhiteNoiseOutlinedButton(
+                    onClick = onAmberSignIn,
+                    enabled = attempt == null,
+                    modifier = Modifier.fillMaxWidth().padding(top = WhiteNoiseSpacing.FormField),
+                ) {
+                    Text(stringResource(R.string.sign_in_with_amber))
+                }
+                AccessFeedback(attempt, onRetry, onRecover, onCancel)
             }
         }
     }

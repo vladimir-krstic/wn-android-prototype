@@ -1,6 +1,12 @@
 # Ordered implementation plan
 
-The order follows state ownership and user dependencies. A later batch may be selected early only when all named dependencies already exist. Each batch is one bounded implementation goal; update its linked screen brief just in time. No duration estimates are inferred.
+The order follows state ownership and user dependencies. A later batch may be selected early only when all named dependencies already exist. The user authorized one goal for all 32 batches on 2026-09-04, executed as bounded batches with just-in-time briefs. Commit each completed, verified batch as `B01: <description>` using its batch number. No duration estimates are inferred.
+
+## Implementation progress
+
+- B01: implemented and host-verified 2026-09-04; 202 unit tests, zero lint errors, both APKs, six new compiled UI cases. [Selected brief and evidence](../../screens/access-and-recovery.md). Commit title: `B01: Add access recovery and retained-profile sign-in`.
+- B02–B32: pending; linked decisions apply only to their named slices.
+- Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
 

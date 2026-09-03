@@ -31,7 +31,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.ProfileAvatar
+import dev.ipf.whitenoise.model.AccessAttempt
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.AvatarPhotoButton
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
@@ -64,7 +64,6 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,6 +73,10 @@ fun SignUpScreen(
     onBack: () -> Unit,
     onSignUp: (name: String, about: String, avatar: ProfileAvatar?) -> Unit,
     modifier: Modifier = Modifier,
+    attempt: AccessAttempt? = null,
+    onRetry: (Long) -> Unit = {},
+    onRecover: (Long) -> Unit = {},
+    onCancel: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -88,7 +91,7 @@ fun SignUpScreen(
     var isWebPickerOpen by remember { mutableStateOf(false) }
     var isPreparingPhoto by remember { mutableStateOf(false) }
     var photoError by remember { mutableStateOf<String?>(null) }
-    var isSigningUp by remember { mutableStateOf(false) }
+    val isSigningUp = attempt?.phase?.isBusy == true
     var preparationJob by remember { mutableStateOf<Job?>(null) }
     var preparationGeneration by remember { mutableIntStateOf(0) }
 
@@ -128,13 +131,6 @@ fun SignUpScreen(
         onDispose { preparationJob?.cancel() }
     }
 
-    LaunchedEffect(isSigningUp) {
-        if (!isSigningUp) return@LaunchedEffect
-        delay(2_000)
-        isSigningUp = false
-        onSignUp(name.text.toString().trim(), about.text.toString(), avatar)
-    }
-
     Scaffold(
         modifier = modifier
             .fillMaxSize(),
@@ -172,8 +168,8 @@ fun SignUpScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 WhiteNoiseButton(
-                    onClick = { isSigningUp = true },
-                    enabled = !isPreparingPhoto,
+                    onClick = { onSignUp(name.text.toString().trim(), about.text.toString(), avatar) },
+                    enabled = !isPreparingPhoto && (attempt == null || isSigningUp),
                     loading = isSigningUp,
                     loadingLabel = stringResource(R.string.creating_profile),
                     modifier = Modifier
@@ -218,7 +214,7 @@ fun SignUpScreen(
                         AvatarPhotoButton(
                             hasPhoto = avatar != null,
                             onClick = { isPhotoMenuOpen = true },
-                            enabled = !isPreparingPhoto && !isSigningUp,
+                            enabled = !isPreparingPhoto && attempt == null,
                         )
                         WhiteNoiseDropdownMenu(
                             expanded = isPhotoMenuOpen,
@@ -299,7 +295,7 @@ fun SignUpScreen(
                     WhiteNoiseTextField(
                         state = name,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isSigningUp,
+                        enabled = attempt == null,
                         label = { Text(stringResource(R.string.name)) },
                         lineLimits = TextFieldLineLimits.SingleLine,
                         keyboardOptions = KeyboardOptions(
@@ -310,7 +306,7 @@ fun SignUpScreen(
                     WhiteNoiseTextField(
                         state = about,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isSigningUp,
+                        enabled = attempt == null,
                         label = { Text(stringResource(R.string.about)) },
                         placeholder = { Text(stringResource(R.string.about_prompt)) },
                         lineLimits = TextFieldLineLimits.MultiLine(
@@ -319,7 +315,7 @@ fun SignUpScreen(
                         ),
                     )
                 }
-
+                AccessFeedback(attempt, onRetry, onRecover, onCancel)
             }
         }
     }
