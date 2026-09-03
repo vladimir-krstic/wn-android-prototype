@@ -94,39 +94,32 @@ data class SingleMediaSize(
     val heightDp: Int,
 )
 
-/** Deterministic transcript sizing for single media, including extreme and tiny sources. */
+/** Fills the media height, limiting the frame width for horizontal-only cropping. */
 object SingleMediaLayout {
     const val MaximumExtentDp = 256
-    const val MinimumWidthDp = 192
-    const val PracticalSmallSourceExtentPx = 150
-    const val MinimumAspectRatio = 0.35f
-    const val MaximumAspectRatio = 1f / MinimumAspectRatio
+    private const val SmallSourceDisplayExtentDp = 192
 
-    fun size(attachment: MessageAttachment): SingleMediaSize {
-        val sourceWidth = attachment.pixelWidth?.takeIf { it > 0 }
-        val sourceHeight = attachment.pixelHeight?.takeIf { it > 0 }
+    fun size(attachment: MessageAttachment): SingleMediaSize =
+        size(attachment.pixelWidth, attachment.pixelHeight)
+
+    fun size(pixelWidth: Int?, pixelHeight: Int?): SingleMediaSize {
+        val sourceWidth = pixelWidth?.takeIf { it > 0 }
+        val sourceHeight = pixelHeight?.takeIf { it > 0 }
         if (sourceWidth == null || sourceHeight == null) {
             return SingleMediaSize(MaximumExtentDp, MaximumExtentDp)
         }
 
-        val ratio = (sourceWidth.toFloat() / sourceHeight)
-            .coerceIn(MinimumAspectRatio, MaximumAspectRatio)
-        var width = MaximumExtentDp * ratio
         var height = MaximumExtentDp.toFloat()
-        width = width.coerceAtLeast(MinimumWidthDp.toFloat())
-        if (width > MaximumExtentDp) {
-            width = MaximumExtentDp.toFloat()
-            height = MaximumExtentDp / ratio
-        }
+        var width = (height * sourceWidth / sourceHeight).coerceAtMost(MaximumExtentDp.toFloat())
 
         val destinationShortExtent = minOf(width, height)
         val sourceShortExtent = minOf(sourceWidth, sourceHeight).toFloat()
-        if (destinationShortExtent > MinimumWidthDp && destinationShortExtent > sourceShortExtent) {
-            val scale = MinimumWidthDp / destinationShortExtent
+        if (destinationShortExtent > SmallSourceDisplayExtentDp && destinationShortExtent > sourceShortExtent) {
+            val scale = SmallSourceDisplayExtentDp / destinationShortExtent
             width *= scale
             height *= scale
         }
-        return SingleMediaSize(width.toInt(), height.toInt())
+        return SingleMediaSize(width.roundToInt().coerceAtLeast(1), height.roundToInt().coerceAtLeast(1))
     }
 }
 

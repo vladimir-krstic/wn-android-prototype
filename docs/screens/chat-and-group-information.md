@@ -1,10 +1,9 @@
 # Chat and group information
 
-Status: Refined static gate passed on 2026-08-30. Direct Chat Info and its
-Search handoff passed current Pixel 8a inspection on 2026-08-31; Group Info
-retains compiled coverage. The later unified Shared Content media-viewer pass
-has a clean static gate; renewed device inspection and user visual acceptance
-remain pending.
+Status: Info-screen redesign passed the host gate on 2026-09-03: 186 unit
+tests, lint without errors, app assembly, and instrumentation-test APK
+compilation. Current-build visual inspection and user acceptance remain
+pending. The earlier Chat Info/Search device evidence predates this redesign.
 
 ## Source evidence
 
@@ -12,8 +11,42 @@ remain pending.
   `conversation-search.md`, and `disappearing-message-indicators.md`
 - `ChatInfoView.swift` and authoritative iOS chat-model tests
 - user-approved current-iOS comparison at `wn-ios-prototype@4c25393f0eb6` for
-  Shared Content/media-viewer capability only; this scoped evidence does not
-  repin the Android baseline
+  Shared Content/media-viewer capability, plus the explicitly requested
+  2026-09-03 Chat/Group Info hierarchy comparison in
+  `WhiteNoisePrototype/Screens/Conversation/ChatInfoView.swift`; these scoped
+  comparisons do not repin the Android baseline
+
+## 2026-09-03 info-screen refinement
+
+- Use the supplied Google Messages reference for presentation: a neutral
+  `surfaceContainerLow` canvas, back-only Material app bar, centered identity,
+  equal-width tonal pill actions with captions, and white-equivalent
+  `surfaceContainerLowest` segmented rows. Keep the accessible Chat Info or
+  Group Info pane name and standard system Back behavior.
+- Reuse Person Profile's 32%-of-pane avatar clamp (104–152 dp), semibold
+  `headlineSmall` name, verified address, and full-value copyable public-key
+  capsule. Group identity uses the same avatar/name scale, then description,
+  member count, and any membership status.
+- Direct order: identity; About, Mute/Unmute, Disappearing, Search; Shared in
+  Chat (Photos & Videos, Links, Documents); Chat Actions (Relays, Developer
+  Tools, Archive/Unarchive, active-only Leave Chat).
+- Group order: identity; Mute/Unmute, Disappearing, Search; Shared in Chat;
+  Advanced (Relays, Developer Tools); Members in model order; a separate
+  active-admin-only Edit Group/Add People group; Archive/Unarchive and
+  active-only Leave Group. Developer Tools opens the existing per-chat debug
+  destination and preserves its profile-owned enablement gate.
+- Rows use the current interactive Material ListItem API, positional rounded
+  shapes, native measurement/state layers, 16 dp outer margins and 2 dp gaps.
+  Headings follow the 32 dp content line; independent groups remain 24 dp
+  apart. Member avatars stay 48 dp. Quick controls fill their equal-width
+  slot at the established 56 dp height; captions wrap with font scaling.
+- Preserve every existing state transition, confirmation, admin/sole-admin
+  rule, route, clipboard behavior, and shared-content count. Expanded layouts
+  retain AdaptiveContent; long names/descriptions wrap and rows grow with text.
+  This pass does not add Google's reference-specific chat settings.
+- Acceptance: host build/lint/unit tests and compiled UI coverage for copy,
+  action navigation, section order, member/admin states, and enlarged text.
+  Current-build device inspection and user visual acceptance remain separate.
 
 ## Android-native adaptation
 
@@ -41,14 +74,14 @@ remain pending.
   scale for the avatar and title. Compact Verified Nostr Address, public-key,
   description, member-count, and ended-membership treatment use semantic
   supporting roles instead of an enclosing hero card.
-- About, Mute/Unmute, Disappearing, and Search use equal 56dp filled-tonal icon
+- About, Mute/Unmute, Disappearing, and Search use equal-width, 56dp-tall filled-tonal icon
   controls with visible captions and one concise accessibility name. Group
   Info retains the same system without reserving an empty About position.
   Search is retained as a working root quick action for both direct and group
   information; it replaces the Chat Info route with the same conversation and
   opens the shared focused in-place search without mutating the draft.
-- Shared content, members, administration, and chat actions use restrained
-  `surfaceContainerLow` groups, transparent Material list items, standard
+- Shared content, members, administration, and chat actions use
+  `surfaceContainerLowest` segmented Material list items, standard
   symbols, and disclosure chevrons only for routes. Archive and destructive
   leave actions no longer pretend to navigate.
 - Disappearing-message selection uses a radio-button group; Add People uses
@@ -105,6 +138,9 @@ remain pending.
   states, selected duration treatment, role-aware member profiles, group
   editing, add people, the working Search quick action, and normal/empty chat
   relays compile.
+- The 2026-09-03 compiled regressions cover full public-key copying, the
+  Developer Tools callback, complete group section order, self/member
+  navigation semantics, and ended-group action gating with dark 200% RTL text.
 - Clean build, lint, tests, APKs, and permission/export audits pass.
 - The unified media projection has unit coverage for frame order, stable keys,
   exact initial selection, album order, metadata, and filtering. Compiled

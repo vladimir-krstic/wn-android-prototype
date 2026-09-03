@@ -30,6 +30,8 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 - CameraX: 1.6.1 for the app-owned Private Key and Share &amp; Connect scanners
 - Bundled ML Kit Barcode Scanning: 17.3.0 for offline QR analysis
 - AndroidX ExifInterface: 1.4.2
+- AndroidX Media3: 1.11.0 for local video playback and standard Material 3
+  player controls inside the sent-media viewer
 - ZXing core: 3.5.4 for local QR encoding
 - One `app` module and one launcher activity
 

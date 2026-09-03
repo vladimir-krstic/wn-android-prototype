@@ -836,11 +836,12 @@ fun GroupSetupScreen(
 }
 
 @Composable
-private fun PersonIdentityHeader(
+internal fun PersonIdentityHeader(
     person: Person,
     copied: Boolean,
     showIdentityValues: Boolean,
     onCopy: () -> Unit,
+    testTagPrefix: String = "person_profile",
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val avatarSize = (maxWidth * 0.32f).coerceIn(104.dp, 152.dp)
@@ -853,7 +854,7 @@ private fun PersonIdentityHeader(
                 avatar = person.avatar,
                 modifier = Modifier
                     .size(avatarSize)
-                    .testTag("person_profile.avatar"),
+                    .testTag("$testTagPrefix.avatar"),
                 contentDescription = stringResource(R.string.profile_photo_for, person.name),
             )
             Text(
@@ -864,7 +865,7 @@ private fun PersonIdentityHeader(
                         top = WhiteNoiseSpacing.FormField,
                         end = WhiteNoiseSpacing.CompactScreenMargin,
                     )
-                    .testTag("person_profile.name"),
+                    .testTag("$testTagPrefix.name"),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -874,6 +875,7 @@ private fun PersonIdentityHeader(
                     person = person,
                     copied = copied,
                     onCopy = onCopy,
+                    testTagPrefix = testTagPrefix,
                 )
             }
         }
@@ -886,6 +888,7 @@ private fun PersonIdentityValues(
     copied: Boolean,
     onCopy: () -> Unit,
     modifier: Modifier = Modifier,
+    testTagPrefix: String = "person_profile",
 ) {
     val copyState = stringResource(if (copied) R.string.copied else R.string.not_copied)
     Column(
@@ -903,8 +906,8 @@ private fun PersonIdentityValues(
             copiedContentDescription = stringResource(R.string.copied),
             notCopiedStateDescription = copyState,
             copiedStateDescription = copyState,
-            targetTestTag = "person_profile.copy_public_key",
-            visualTestTag = "person_profile.copy_public_key.visual",
+            targetTestTag = "$testTagPrefix.copy_public_key",
+            visualTestTag = "$testTagPrefix.copy_public_key.visual",
             modifier = Modifier.padding(top = 4.dp),
         )
     }

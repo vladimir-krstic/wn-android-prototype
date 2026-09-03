@@ -250,7 +250,8 @@
     <string name="read_aloud">Read Aloud</string>
     <string name="stop_reading">Stop Reading</string>
     <string name="media_viewer">Media Viewer</string>
-    <string name="open_video">Open Video</string>
+    <string name="video_playback_position">Playback Position</string>
+    <string name="video_playback_speed">Playback Speed</string>
     <string name="show_message_actions">Show Message Actions</string>
     <string name="message_actions">Message Actions</string>
     <string name="reply">Reply</string>
@@ -334,6 +335,7 @@
     <string name="links">Links</string>
     <string name="documents">Documents</string>
     <string name="chat_actions">Chat Actions</string>
+    <string name="developer_tools">Developer Tools</string>
     <string name="advanced">Advanced</string>
     <string name="relays">Relays</string>
     <string name="leave_chat">Leave Chat</string>

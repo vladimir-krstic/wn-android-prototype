@@ -2805,12 +2805,15 @@ with `onSurface` text. This explicit user correction replaces the visually
 heavy `primary`/`onPrimary` inversion while preserving legibility in both
 appearances.
 
-Draft review uses 72 dp thumbnail targets containing unframed 64 dp crops. Only
-the selected item receives a 2 dp `onBackground` ring, a single item has no
+After the user's 2026-09-03 size correction, draft review uses adjacent 56 dp
+thumbnail targets containing unframed 48 dp crops, leaving an 8 dp visible gap.
+Only the selected item receives a 1 dp `onBackground` ring, a single item has no
 rail, and inclusion becomes a 22 dp check inside its own 48 dp target. That
 target anchors to the fitted media rectangle rather than the pager page; its
-visible circle sits inside the image's bottom-end corner with an exact 4 dp
-edge inset. These values translate the user-approved current iOS comparison at
+visible circle sits inside the image's bottom-end corner with a 6 dp
+edge inset, increased by 50% at the user's request on 2026-09-03. Draft media
+has no added image margin, matching the sent viewer. The remaining values
+translate the user-approved current iOS comparison at
 `wn-ios-prototype@4c25393f0eb6` without repinning the Android baseline and keep
 Android minimum-target and semantic behavior authoritative.
 
@@ -3247,8 +3250,7 @@ host-side boundary and does not authorize running them.
 ## WN-ANDROID-0114 — Focused actions use a restrained translucent-black backdrop
 
 - Date: 2026-09-01
-- Status: Implemented; host compilation and static checks pass. Device and
-  visual verification remain unclaimed until explicitly requested.
+- Status: Superseded on 2026-09-03 by WN-ANDROID-0121.
 
 The 80% `surfaceContainerHigh` wash left insufficient separation between an
 incoming light message bubble and the blurred conversation behind it. The
@@ -3270,8 +3272,7 @@ Evidence: `ConversationScreen.kt`, `ConversationScreenTest.kt`,
 ## WN-ANDROID-0115 — Focused message timestamps use full-emphasis contrast
 
 - Date: 2026-09-01
-- Status: Implemented; host compilation and static checks pass. Device and
-  visual verification remain unclaimed until explicitly requested.
+- Status: Superseded on 2026-09-03 by WN-ANDROID-0121.
 
 The transcript keeps the accepted lower-emphasis `outline` neutral for time,
 Sent fill, and Sending progress. When the real message is lifted into the
@@ -3440,3 +3441,233 @@ Evidence: pinned iOS `conversation-shared.md`,
 and `feature-inventory.md`. Android sources:
 [Compose constraints and modifier order](https://developer.android.com/develop/ui/compose/layouts/constraints-modifiers)
 and [Material Card containers](https://developer.android.com/develop/ui/compose/components/card).
+
+
+## WN-ANDROID-0121 — Focused actions restore the light material backdrop and ordinary timestamps
+
+- Date: 2026-09-03
+- Status: Implemented from explicit user direction; host gate passes, device acceptance pending.
+
+The focused conversation retains its 24 dp blur and uses an 88%
+`surfaceContainerLowest` veil: translucent white in light appearance and
+adaptive near-black in dark appearance. The user's same-day refinement lowers
+the white opacity slightly so underlying content reads as faint blurred shapes.
+Dialog dimming stays disabled. Time,
+Sent fill, and Sending progress use the same `outline` role as the ordinary
+chat screen; the focused-only `onSurface` override is removed. Failed delivery
+retains its semantic error color. Dismissal, reaction/menu placement, metadata
+geometry, and the earlier-Android veil fallback remain unchanged.
+
+Evidence: `ConversationScreen.kt`, `message-interactions-and-search.md`, and
+`ui-metrics.md`. Unit tests, lint, app assembly, and instrumentation-test APK
+compilation pass; no current-build device inspection was performed.
+
+## WN-ANDROID-0122 — Single media fills height and crops only horizontal overflow
+
+- Date: 2026-09-03
+- Status: Implemented from explicit user direction; host gate passes, device acceptance pending.
+
+A single photo or video thumbnail uses decoded image dimensions before stored
+catalog dimensions. The media height is 256 dp, and width follows the source
+ratio up to the 256 dp canvas maximum. Compose `ContentScale.FillHeight`
+preserves the complete vertical image extent while a clipped frame removes
+only centered horizontal overflow. A narrower parent caps width without
+shrinking height. The tiny-source safeguard can reduce both dimensions.
+Captions share that frame width. Albums retain their existing tile crops and
+GIFs retain their fixed frame.
+
+The pinned iOS baseline uses the same former clamp/crop policy, including
+synthetic panorama dimensions. This is an explicit Android presentation
+correction following the user's explicit full-height, side-crop rule;
+the deterministic fixture records and content remain intact.
+
+Evidence: `SingleMediaLayout`, `ConversationMessageMetrics.kt`,
+`TimelineMessageContent.kt`, `TimelineMessageContentTest`, and
+`ConversationFixtureParityTest`. Unit tests, lint, app assembly, and
+instrumentation-test APK compilation pass; device visual acceptance is pending.
+Source: [Compose image scaling](https://developer.android.com/develop/ui/compose/graphics/images/customize).
+
+## WN-ANDROID-0123 — Embedded video playback with Google's Material player controls
+
+- Date: 2026-09-03
+- Status: Implemented from explicit user direction; host gate passes, device acceptance pending.
+
+The sent-media viewer replaces its external Open Video action with Media3
+ExoPlayer and `media3-ui-compose-material3` 1.11.0, the current stable release
+verified in Google's release notes. Google's `Player`, `PlayerDefaults`, and
+control components own video fitting, play/pause/replay, backward/forward
+seeking, the progress slider, elapsed/total time, mute, playback speed, and
+error/retry state. The surrounding gallery still owns paging and its existing
+Share, Forward, Save, and Go to Message actions. The slider and speed control
+receive explicit accessible names. In compact-height windows, play/seek move
+into the bottom control row so they cannot overlap the tracker. Measured
+toolbar clearance and safe horizontal insets protect the controls.
+
+The user's subsequent playback-track direction removes the fixed end dot
+across voice, Read Aloud, and video. Voice/text progress uses Material's empty
+stop-indicator callback. Video connects Media3's progress state to a Material
+Slider with the stop indicator disabled, preserving the seek thumb and native
+interaction because Media3's slider wrapper does not expose its track slot.
+
+Only a settled foreground video owns a player. Entry is paused; paging away,
+closing, or leaving the foreground releases playback. Position, volume, and
+speed survive a return within the viewer, with playback paused. Media3 owns
+audio focus and headphone-disconnection handling; `keepScreenOn` applies only
+while playing. Sources stay limited to granted device content URIs and the
+existing bundled clip. The inherited Media3 wake-lock permission is removed,
+as no background playback or wake lock is used. No network permission, service,
+or durable media state is introduced. Existing minimum API 23 and Material
+version pins remain valid.
+
+This explicitly supersedes the earlier sent-viewer video handoff exception.
+Signal's media-preview control source was inspected as behavioral reference;
+its bottom seek/time controls and omission of previous/next track buttons
+support this composition. No Signal playback implementation is imported.
+
+Evidence: `MediaViewerVideo.kt`, `MediaViewer.kt`, the version catalog,
+`MediaViewerVideoTest`, and the permission regression in
+`AppResourceIntegrityTest`. `testDebugUnitTest lintDebug assembleDebug
+assembleDebugAndroidTest` passes with 174 unit tests, no lint errors, and both
+APKs; existing unrelated lint warnings remain. The merged manifest adds no
+media permission. Current-build playback and visual acceptance
+require a user-requested device run; instrumentation compilation alone does
+not establish them.
+
+Sources: [Media3 Compose UI](https://developer.android.com/media/media3/ui/compose),
+[stable releases](https://developer.android.com/jetpack/androidx/releases/media3),
+[ExoPlayer lifecycle](https://developer.android.com/media/media3/exoplayer/hello-world),
+and [Signal media-preview controls](https://github.com/signalapp/Signal-Android/blob/879651dc47a7b18b67e7aea52a25197875024680/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewPlayerControlView.kt).
+
+## WN-ANDROID-0124 — Gallery clipping and downward dismissal
+
+- Date: 2026-09-03
+- Status: Implemented from explicit user direction; host gate passes, device reproduction pending.
+
+Both sent and composer galleries now use a shared, downward-only dismissal
+gesture. The first deliberate direction decides ownership: horizontal paging
+and already-consumed child controls win, and multi-touch cancels dismissal.
+Zoomed photos keep vertical panning. A short pull springs back; a pull past
+the documented travel/velocity threshold closes the viewer using Material's
+fast spatial motion. In the composer this is cancellation, so only Done applies
+staged exclusions. Close and Android Back keep their existing behavior.
+This is the user's explicit gallery-gesture exception to the general policy
+against importing platform-specific gestures. The pinned iOS composer provides
+the separate cancel/confirm semantics; the new gesture is directly authorized
+by the user rather than inferred from newer upstream source.
+
+The Android source investigation found default horizontal-pager clipping leaves
+cross-axis drawing space for effects; its stretch renderer uses an expanded
+rendering layer. Gallery pagers, pages, and the draft thumbnail rail now clip
+strictly, with edge stretching disabled. A stationary opaque backdrop remains
+behind the translated content, preventing drawing outside the media viewport
+from exposing adjacent content. Inactive video pages also stop creating
+Media3 rendering surfaces: they render only a poster. Active video uses the
+recommended SurfaceView on API 24+ and TextureView on API 23 for synchronized
+drag animation. The exact reported rendering artifact still requires a
+user-authorized current-build device reproduction; source inspection and host
+tests do not establish visual acceptance.
+
+Evidence: `GalleryDismissGesture.kt`, both viewer integrations,
+`MediaViewerVideo.kt`, `GalleryDismissPolicyTest`, and compiled gesture cases
+in `ConversationScreenTest` / `MediaViewerVideoTest`. The host gate passes with
+179 unit tests, no lint errors, app assembly, and instrumentation-test APK
+compilation; existing unrelated lint warnings remain. No new dependency,
+permission, or product-state mutation is introduced.
+
+Sources: [Compose gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures),
+[drag/swipe handling](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/drag-swipe-fling),
+[pager](https://developer.android.com/develop/ui/compose/layouts/pager), and
+[Media3 surfaces](https://developer.android.com/media/media3/ui/surface).
+The resolved Foundation 1.12.0 `ClipScrollableContainer` and Android overscroll
+source jars provide the clipping/expanded-layer evidence.
+
+## WN-ANDROID-0125 — Message photo detail and opaque gallery chrome
+
+- Date: 2026-09-03
+- Status: Implemented from user direction; host gate passes, device acceptance pending.
+
+Picked/camera message photos no longer use the avatar's 512 px import policy.
+`ConversationImageProcessor` configures the existing orientation-aware decoder
+for a 4096 px long edge, lossless PNG/alpha, and JPEG quality 95 otherwise.
+Avatar callers retain 512 px/JPEG 88. Encoded image bytes remain in the existing
+in-memory attachment model through sending; no new storage or permission is
+introduced. `DeviceMediaImage` samples decoded bitmaps to their displayed
+bounds off the main thread, so thumbnails do not allocate full photo bitmaps.
+Already-reduced imports need reselection; missing source pixels cannot be
+recovered from their stored bytes.
+
+Both sent-viewer chrome surfaces use the opaque gallery background instead of
+94% alpha. Tall images can no longer show through the title and action bars.
+The selected image's own content is preserved, including embedded UI when the
+person selects a screenshot; no screen capture is used in the import path.
+
+Evidence: 183 unit tests, lint without errors, and both APK builds pass.
+`MediaImageSamplingTest` exercises display-size sampling; compiled
+`ConversationImageImportTest` covers exact screenshot pixels, independent
+avatar sizing, orientation/large-image bounds, and import failure. No device
+execution or current-build visual acceptance is claimed.
+
+Sources: [Android bitmap decoding](https://developer.android.com/topic/performance/graphics/load-bitmap)
+and [Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker).
+
+## WN-ANDROID-0126 — Read Aloud for authored text in both directions
+
+- Date: 2026-09-03
+- Status: Implemented from user direction; host gate passes, device speech verification pending.
+
+Messages with authored text and no voice attachment offer Read Aloud regardless
+of sender, including replies and media/file captions. The action follows Copy
+and changes to Stop Reading while the existing speech/progress controller is
+active. Empty/deleted messages remain ineligible; received voice/transcript
+behavior is preserved. This explicitly extends the pinned iOS recipient-only
+eligibility under the user's current request.
+
+The manifest now includes Android's TTS service query, which was missing and
+could prevent installed-engine discovery on Android 11+. Start still requires
+successful engine/language initialization; an active Stop Reading command
+remains available independently. No permission or dependency is added.
+
+Evidence: 186 unit tests, lint without errors, app assembly, and
+instrumentation-test APK compilation pass. Model tests cover direction,
+captions/replies, exclusions, and readiness/stop transitions. The sent-text
+start/progress/stop UI case compiles. The packaged manifest contains the query
+and continues to omit Internet/microphone permissions. Device execution and
+audible speech verification remain pending.
+
+Source: [Android TextToSpeech](https://developer.android.com/reference/android/speech/tts/TextToSpeech).
+
+## WN-ANDROID-0127 — Google-style information screens with iOS content order
+
+- Date: 2026-09-03
+- Status: Implemented from user reference; host gate passes, device acceptance pending.
+
+Chat Info and Group Info use the supplied Google Messages presentation:
+neutral gray canvas, back-only Material app bar, centered identity, wide
+tonal pill actions, and white-equivalent native segmented list rows. The
+accessible pane title remains Chat Info/Group Info. Avatar sizing follows
+the established Person Profile/Share & Connect 32% pane clamp (104–152 dp),
+not the reference screenshot's avatar. Direct identity reuses the verified
+address and full public-key copy capsule; group description precedes count.
+
+The explicitly authorized read-only iOS comparison at `4c25393f0eb6` supplies
+product order. Direct chats place Shared in Chat before Chat Actions with
+Relays, Developer Tools, Archive/Unarchive and active-only Leave Chat. Groups
+place Shared in Chat, Advanced, Members, active-admin Edit Group/Add People,
+then Archive/Unarchive and active-only Leave Group. Developer Tools opens
+the existing Conversation Debug destination with its original enablement
+gate. Existing search handoff, membership consequences and role rules remain.
+
+The current Material ListItem API owns row sizing, positional shapes and
+interaction states; groups retain 16 dp margins and 2 dp gaps, headings follow
+the 32 dp content line, and member avatars stay 48 dp. Quick actions retain
+56 dp height while filling equal-width slots. No new dependency is needed.
+
+Evidence: 186 unit tests and lint without errors; app and instrumentation-test
+APKs assemble. Compiled UI regressions cover full-key clipboard data, debug
+navigation callbacks, group section order, self/member semantics, and ended
+groups with dark 200% RTL text. No device execution or visual acceptance is
+claimed for this build.
+
+Sources: [Android icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button),
+[lists and grids](https://developer.android.com/develop/ui/compose/lists), and
+the pinned Material 3 source archive's `ListItemDefaults.segmentedShapes`.

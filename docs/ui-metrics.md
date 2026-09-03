@@ -100,8 +100,20 @@ active pane.
   surfaces participate in the shared rich-message geometry below rather than
   owning a separate inset/radius rule. In draft
   media review, the 48 dp inclusion target anchors to the fitted image's
-  bottom-end corner; its 22 dp visible check sits inside the image with 4 dp
+  bottom-end corner; its 22 dp visible check sits inside the image with 6 dp
   from both edges.
+- Draft gallery thumbnails are 48 dp squares centered in adjacent 56 dp touch
+  targets, giving an 8 dp visible image gap. The selected outline is 1 dp;
+  unselected images have no outline. The 72 dp rail includes 8 dp top/bottom
+  padding and retains the 16 dp outer horizontal inset.
+- Both gallery viewports clip the pager and each page to their exact bounds,
+  disable pager edge stretching, and translate only the pager content over a
+  stationary opaque background for downward dismissal. The draft thumbnail
+  rail also clips and disables stretching. Dismissal requires the lesser of
+  120 dp or 20% of the media viewport height, or a downward flick of at least
+  1250 dp/s after 32 dp travel. A strong upward reversal cancels. Material's
+  fast spatial motion settles the pull. Horizontal paging, multi-touch zoom,
+  and scrubbing retain priority; zoomed-photo vertical movement remains pan.
 - App-owned single-choice dialogs place direct 56 dp-minimum selectable rows in
   the dialog content slot. The row starts at the dialog-owned content edge,
   lets `RadioButton` retain its native touch-target inset, and keeps 16 dp
@@ -110,6 +122,10 @@ active pane.
 
 ## Conversation transcript
 
+- Audio and video playback trackers omit Material's fixed terminal stop dot,
+  per the user's 2026-09-03 direction. This includes voice bubbles, Read Aloud,
+  and the gallery video slider. Preserve the actual seek thumb and standard
+  track geometry, colors, semantics, and interaction.
 - Each day boundary is ordinary centered `labelMedium` system text using
   `onSurfaceVariant`, 12 dp horizontal and 3 dp vertical label padding, and the
   shared 16 dp form-field relationship above and below. It has no pill, card,
@@ -136,8 +152,12 @@ active pane.
   stacked rich sections and 2 dp between gallery tiles; clip a gallery once at
   its outer 10 dp outline instead of rounding each tile. Rich cards use 6 dp
   internal content padding. A lone photo or video is the only canvas-width
-  exception: preserve the accepted aspect-derived width up to 256 dp and wrap
-  its caption to that same width. Albums, GIFs, reply quotes, files, contacts,
+  exception: use a 256 dp media height, derive width from the actual ratio,
+  and cap the frame at 256 dp wide. Preserve the full image height and crop
+  only centered horizontal overflow; constrained parents reduce width without
+  changing height. The tiny-source safeguard can reduce both frame dimensions.
+  Captions wrap to that same width. Decoded dimensions precede catalog metadata.
+  Albums, GIFs, reply quotes, files, contacts,
   links, voice, and stacked combinations use a 256 dp inner canvas. Mixed text
   adds 6 dp horizontal and 2 dp bottom inside that canvas, restoring the same
   12 dp horizontal and 8 dp bottom visual text inset without moving the rich
@@ -160,10 +180,9 @@ active pane.
   message in RTL. With or without reactions, place the timestamp 2 dp below
   the bubble; only the visible reaction pill overlaps its bottom edge. Use the
   lower-emphasis `outline` neutral for timestamp text, the Sent status fill,
-  and Sending progress in the transcript. When the real message is lifted into
-  the focused context-menu overlay, switch those same non-error metadata
-  elements to full-emphasis `onSurface` (black in the light theme) so they stay
-  legible over the translucent-black blurred backdrop. Sent and sending
+  and Sending progress in both the transcript and focused context-menu overlay.
+  Focused metadata retains the ordinary chat colors over the light, translucent
+  blurred backdrop. Sent and sending
   outgoing timestamps include their delivery state; the Sent state uses a
   14 dp filled status container with 10 dp check artwork, while incoming
   timestamps reserve no delivery icon. Failed outgoing delivery uses that same
@@ -211,10 +230,11 @@ active pane.
   present, measure the lower gap from the visible pill edge, excluding the
   remaining transparent interaction-target inset. Preserve that visible-edge
   relationship when scaled type increases the pill height. Its backdrop blurs
-  the underlying conversation by 24 dp and applies a 24% translucent black
-  veil. Disable the Dialog window's additional platform dim so the layers do
+  the underlying conversation by 24 dp and applies an 88% `surfaceContainerLowest`
+  veil, white in light appearance and adaptive near-black in dark appearance.
+  Disable the Dialog window's additional platform dim so the layers do
   not compound into a harsh scrim. On Android 11 and earlier, where Compose
-  blur is unavailable, retain the same translucent-black veil as the graceful
+  blur is unavailable, retain the same translucent surface veil as the graceful
   fallback.
   The full-window dismiss target owns every visually empty point. Consume taps
   only inside the visible reaction rail, rendered message-plus-metadata bounds,
@@ -446,6 +466,9 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   native 48 dp `IconButton` targets with 24 dp symbols, aligned to opposite
   edges above navigation-bar clearance. Do not expand them into labeled or
   filled equal-width buttons.
+- Media-viewer top and bottom chrome share the opaque gallery `background`
+  color. Their background extends through system-bar padding so full-height
+  media cannot ghost through titles or controls.
 - Chats toolbar and row avatars have 40 dp and 52 dp visible diameters. Their
   leading artwork edges share the 16 dp content margin inside the same capped
   680 dp pane. The toolbar uses an 8 dp relationship inset in addition to its
@@ -764,6 +787,25 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   three-step Material progress indicator. Material still owns secure editing,
   focus, IME behavior, state animation, and error semantics; no local dialog
   dimensions or iOS sheet metrics are introduced.
+
+## Chat and Group Info
+
+- Root info screens share the Settings `surfaceContainerLow` canvas and a
+  back-only Material app bar. Chat Info/Group Info remains the accessible pane
+  name. Expanded panes retain the existing AdaptiveContent bound.
+- Identity reuses Person Profile's 32%-of-pane avatar clamp (104–152 dp),
+  `headlineSmall` semibold name and 16 dp avatar/name relationship. Direct
+  identity shares its verified-address and full-key copy components. Group
+  description precedes member count, with 8 dp related spacing.
+- Tonal quick actions fill equal-width slots at the established 56 dp height,
+  with 8 dp between controls and before wrapping `labelLarge` captions. The
+  row keeps 16 dp outer margins and native button states/touch semantics.
+- SettingsSection supplies 32 dp heading alignment and 24/8 dp section
+  spacing. Native interactive ListItem rows use `surfaceContainerLowest`,
+  positional segmented shapes, 2 dp canvas gaps and 16 dp group margins.
+  Member rows remain lazy and use the established 48 dp avatar. Management
+  and final lifecycle groups have 24 dp separation. These metrics do not
+  change Edit Group or Chat Relays.
 
 ## Governing Android sources
 

@@ -38,6 +38,16 @@ Android contracts are in `docs/screens/chats-and-chat-creation.md`,
 `docs/screens/settings-and-profile-services.md`. No other upstream drift is
 implicitly accepted.
 
+## Scoped 2026-09-03 info-screen authorization
+
+The user's Google-style Chat/Group Info redesign explicitly requests the iOS
+content hierarchy. Read-only comparison uses
+`4c25393f0eb694fc5838d3a451e17db9a6abbcbe:WhiteNoisePrototype/Screens/Conversation/ChatInfoView.swift`.
+Direct identity/quick actions precede Shared in Chat and Chat Actions. Groups
+place Advanced before Members, followed by separate admin management and
+lifecycle actions. Developer Tools is retained through Android's existing
+gated Conversation Debug route. The global baseline remains unchanged.
+
 Use this map to select evidence, not to derive Android package names or port
 Swift types one-for-one.
 

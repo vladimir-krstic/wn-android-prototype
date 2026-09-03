@@ -46,7 +46,6 @@ unrelated icons are unchanged.
 | `ic_expand_more` | [expand_more](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/expand_more/default/24px.xml) | `d24a57bf297ea4a5e7e5fa044bfb882e741dbb223500b8f99df91323f6ecec8d` |
 | `ic_filter_list` | [filter_list](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/filter_list/default/24px.xml) | `0872a25bf48975634483796b2fd33269243d933f1722f95b2394daad29ac3372` |
 | `ic_settings_favorite_border` | [favorite_border](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/favorite_border/default/24px.xml) | `13970bc3e26652bc31f9a3660837cf78e80ccce6b55cb1d9f319271b79cba344` |
-| `ic_forward` | [forward](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/forward/default/24px.xml) | `6f7c8f6a423f404b5f16237d0d0708240a997bc170692b442536df3e8ea5fe83` |
 | `ic_settings_front_hand` | [front_hand](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/front_hand/default/24px.xml) | `9e877d2a4fd0e1f5562f086414e48d76ea58f27362d93055c4a5a7d3477dc2a1` |
 | `ic_settings_handyman` | [handyman](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/handyman/default/24px.xml) | `0d205666dfc208bc8fde0148270764f3eefac6860361e66b797e10142df20c60` |
 | `ic_settings_hard_drive` | [hard_drive](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/hard_drive/default/24px.xml) | `82a08f67129496e16c214156f1b8a80c4dcbcc709c666c1037ca4913345fc64b` |
@@ -75,6 +74,10 @@ unrelated icons are unchanged.
 | `ic_visibility` | [visibility](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/visibility/default/24px.xml) | `ce2dbf813e55a7bae1924fb27eaf5a59d522d7e2e89a8e48c877f4b3245afbee` |
 | `ic_visibility_off` | [visibility_off](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/visibility_off/default/24px.xml) | `364471e99875ae33bc770c42ad571522a6f8412ef599e31c7c60e642aecc82d1` |
 | `ic_warning` | [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/24px.xml) | `965f7c2cdde8923bf6f6b005445903ac4fd7848a93ba28a46f569fc306142a15` |
+
+The user-directed 2026-09-03 Forward correction replaces `ic_forward` with
+Signal's outlined right-turn arrow; its pinned source and hash are recorded in
+[`signal-interface-assets.md`](signal-interface-assets.md).
 
 `ic_error` retains its native 80..880 circular bounds in a 960-unit viewport.
 Chat status composition scales the artwork by 1.2× inside the common badge

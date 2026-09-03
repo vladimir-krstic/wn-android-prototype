@@ -134,6 +134,57 @@ class MessageInteractionModelsTest {
     }
 
     @Test
+    fun sentAndReceivedTextWithoutVoiceOfferReadAloudIncludingCaptionsAndReplies() {
+        val plain = ChatMessage("text", "me", 3, "Today", 600, "10:00 AM", "Read this")
+        val caption = plain.copy(
+            attachments = listOf(MessageAttachment("photo", MessageAttachmentKind.Photo, "Photo")),
+        )
+        val reply = plain.copy(replyToMessageId = "original")
+        for (author in listOf("me", "them")) {
+            for (message in listOf(plain, caption, reply)) {
+                val actions = MessageActionPolicy.available(message.copy(authorId = author), "me")
+                assertTrue(MessageAction.ReadAloud in actions)
+                assertEquals(actions.indexOf(MessageAction.Copy) + 1, actions.indexOf(MessageAction.ReadAloud))
+                assertFalse(MessageAction.Transcribe in actions)
+            }
+        }
+    }
+
+    @Test
+    fun speechReadinessGatesStartingButActiveReadingAlwaysOffersStop() {
+        val message = ChatMessage("text", "me", 3, "Today", 600, "10:00 AM", "Read this")
+        val unavailable = MessageActionPolicy.available(
+            message, "me", MessageSpeechActionState(canReadAloud = false),
+        )
+        assertFalse(MessageAction.ReadAloud in unavailable)
+        assertFalse(MessageAction.StopReading in unavailable)
+        val reading = MessageActionPolicy.available(
+            message, "me", MessageSpeechActionState(reading = true, canReadAloud = false),
+        )
+        assertTrue(MessageAction.StopReading in reading)
+        assertFalse(MessageAction.ReadAloud in reading)
+    }
+
+    @Test
+    fun emptyDeletedAndSentVoiceMessagesDoNotGainTextReadAloud() {
+        val text = ChatMessage("text", "me", 3, "Today", 600, "10:00 AM", "Read this")
+        val voice = text.copy(
+            attachments = listOf(MessageAttachment("voice", MessageAttachmentKind.Voice, "Voice message")),
+        )
+        val excluded = listOf(
+            text.copy(text = "  \n"),
+            text.copy(deletionState = MessageDeletionState.DeletedByCurrentProfile),
+            voice,
+            voice.copy(text = ""),
+            voice.copy(authorId = "them", text = ""),
+        )
+        excluded.forEach { message ->
+            assertFalse(MessageAction.ReadAloud in MessageActionPolicy.available(message, "me"))
+        }
+        assertTrue(MessageAction.ReadAloud in MessageActionPolicy.available(voice.copy(authorId = "them"), "me"))
+    }
+
+    @Test
     fun conversationSearchMatchesTextSenderAndAttachmentNewestFirst() {
         val profile = ProfileFixtures.marmota
         val rich = profile.chats.first { it.id == "catalog-media-rich" }

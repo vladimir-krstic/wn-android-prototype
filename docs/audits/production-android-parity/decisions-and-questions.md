@@ -1,0 +1,82 @@
+# Decisions and questions
+
+These questions affect only the linked capability slices. The recommendation is first. Independent ready batches may proceed while they are open.
+
+<a id="q01"></a>
+
+### Q01 — Color customization versus monochrome identity
+
+- **Conflict:** C102 exposes production full-spectrum accent and per-side/global/per-chat bubble colors; the approved prototype identity is monochrome.
+- **Recommendation:** Preserve monochrome defaults and app chrome. If full capability is required, allow optional bubble/content customization and a restrained semantic action accent without changing neutral surfaces; verify contrast per chosen color.
+- **Blocks:** the color-customization slice of B26, not AMOLED, input or other typography work.
+- **User decision:** Whether full-spectrum action chrome is required, bubble colors only are sufficient, or the production feature should remain documented for later migration.
+
+<a id="q02"></a>
+
+### Q02 — Screenshot blocking as a separate privacy control
+
+- **Conflict:** C097 production labels one secure-window control as blocking screenshots and hiding Recents; the prototype deliberately promises only Recents snapshot privacy.
+- **Recommendation:** Keep **Hide Screen in Recents** and add **Block screenshots in chats** as a separate setting with an exact scope and non-color state.
+- **Blocks:** only secure-window behavior in B24.
+
+<a id="q03"></a>
+
+### Q03 — Retroactive disappearing-message deletion
+
+- **Conflict:** C082 production reloads after changing retention because older plaintext may be pruned immediately, while its help also says messages disappear after being seen. The prototype currently only changes a timer fixture.
+- **Recommendation:** Treat the production controller consequence as authoritative for timer changes, show a destructive confirmation when existing content will be removed, and use separate copy for the countdown anchor. Confirm this before writing final copy.
+- **Blocks:** destructive mutation details in B20; timer UI and expiry fixtures can proceed.
+
+<a id="q04"></a>
+
+### Q04 — Relay and key-package information architecture
+
+- **Conflict:** C080, C108 and C110 expose technical group/relay inspection, managed posting/inbox relay lists and Key Packages at Settings root; the prototype places key packages in Developer Tools and supports broad secure URLs with Profile/Inbox/Chat Messages roles.
+- **Recommendation:** Preserve the prototype relay capabilities and developer-only protocol language. Add production publication/readiness states. Keep Key Packages in Developer Tools unless ordinary users have a recovery task that requires the raw package list.
+- **Blocks:** moving Key Packages to the consumer Settings root and narrowing relay editing; state coverage can proceed.
+
+<a id="q05"></a>
+
+### Q05 — Sign-out default and cleanup choices
+
+- **Conflict:** C009–C010 production distinguishes non-wiping sign-out, optional relay key-package cleanup and staged wipe; the accepted prototype sign-out flow defaults to wiping local data.
+- **Recommendation:** Keep both outcomes and the prototype's consequence language, but make the safe default an explicit product choice in the selected brief. Never conflate failed relay cleanup with local sign-out failure.
+- **Blocks:** default selection/copy in B02, not the added outcome states.
+
+<a id="q06"></a>
+
+### Q06 — Real Android platform capabilities in the prototype
+
+- **Scope:** C049, C058, C059, C066, C070, C084, C086, C090, C094, C095 and C121 touch media permissions, location/maps, background services, shortcuts/share targets, notification delivery/actions, app authentication, or APK installation.
+- **Recommendation:** First implement deterministic app-owned states and launch contracts where already approved. Keep networking/services/installers off. Approve each real permission or service only with its bounded implementation batch; prefer permissionless system surfaces.
+- **Blocks:** device-executed capability, not the audit specs or deterministic UI/state implementations.
+
+<a id="q07"></a>
+
+### Q07 — Media save destination
+
+- **Conflict:** C053 production often writes to gallery/media storage, while the prototype uses Android document creation for explicit placement.
+- **Recommendation:** Preserve the prototype's system-owned save flow until the selected media brief establishes that gallery placement is part of the outcome. Keep Save and Share available in the viewer either way.
+- **Blocks:** no current batch; record the choice when B11 is selected.
+
+<a id="q08"></a>
+
+### Q08 — Forensic audit logs versus sanitized diagnostics
+
+- **Conflict:** C098 production audit files may contain identities, messages and device details; prototype diagnostic export promises sanitization.
+- **Recommendation:** Treat them as two features. Keep sanitized diagnostics and add a developer-only forensic log control with explicit recording state, sensitive-export consent and Delete.
+- **Blocks:** ordinary-settings placement in B24, not deterministic sensitive-log states.
+
+<a id="q09"></a>
+
+### Q09 — Font assets, defaults and localization scope
+
+- **Conflict:** C101/C104 production offers multiple bundled families and additional languages; the prototype has an approved typography system and different language list.
+- **Recommendation:** Keep the existing typeface/scale and language default. Add optional choices only after verifying font licensing/resources, and preserve every current language while adding production languages with real translated resources in separate bounded work.
+- **Blocks:** font-family asset import and claiming translated language coverage in B26. Font-scale behavior and selector states can proceed.
+
+## Nonblocking evidence uncertainties
+
+- Live Marmot/SQLite, relay, push and crypto results were not exercised. The selected implementation agent must use fixed fixtures for their visible states and preserve cited production integration seams.
+- Production test and screenshot files were inventoried but not run. A capability's source status is not a runtime or visual acceptance claim.
+- Production includes `Coming soon` fallbacks when an attachment callback is absent. The matrix classifies only wired Gallery/Camera/Document/Location/User/Contact entry paths; it does not count an unavailable placeholder as a separate feature.

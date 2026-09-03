@@ -249,10 +249,10 @@ class ConversationFixtureParityTest {
     }
 
     @Test
-    fun singleMediaSizingClampsExtremeRatiosWithoutUpscalingTinySourcesPastThePolicy() {
-        assertEquals(SingleMediaSize(256, 89), SingleMediaLayout.size(message("catalog-media-single", "MED-SINGLE-04").attachments.single()))
-        assertEquals(SingleMediaSize(192, 256), SingleMediaLayout.size(message("catalog-media-single", "MED-SINGLE-05").attachments.single()))
-        assertEquals(SingleMediaSize(256, 170), SingleMediaLayout.size(message("catalog-media-single", "MED-SINGLE-06").attachments.single()))
+    fun singleMediaFallbackFillsHeightAndCapsOnlyTheWidth() {
+        assertEquals(SingleMediaSize(256, 256), SingleMediaLayout.size(message("catalog-media-single", "MED-SINGLE-04").attachments.single()))
+        assertEquals(SingleMediaSize(60, 256), SingleMediaLayout.size(message("catalog-media-single", "MED-SINGLE-05").attachments.single()))
+        assertEquals(SingleMediaSize(192, 192), SingleMediaLayout.size(message("catalog-media-single", "MED-SINGLE-06").attachments.single()))
     }
 
     private fun assertIds(chatId: String, vararg expected: String) {

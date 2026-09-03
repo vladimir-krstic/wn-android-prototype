@@ -46,6 +46,8 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.swipe
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -192,14 +194,14 @@ class ConversationScreenTest {
             "conversation.media.thumbnail.target",
             useUnmergedTree = true,
         )[0]
-            .assertWidthIsEqualTo(72.dp)
-            .assertHeightIsEqualTo(72.dp)
+            .assertWidthIsEqualTo(56.dp)
+            .assertHeightIsEqualTo(56.dp)
         composeRule.onAllNodesWithTag(
             "conversation.media.thumbnail.unselected",
             useUnmergedTree = true,
         )[0]
-            .assertWidthIsEqualTo(64.dp)
-            .assertHeightIsEqualTo(64.dp)
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
     }
 
     @Test
@@ -355,13 +357,73 @@ class ConversationScreenTest {
             .assertWidthIsEqualTo(22.dp)
             .assertHeightIsEqualTo(22.dp)
             .fetchSemanticsNode().boundsInRoot
-        val fourDp = with(composeRule.density) { 4.dp.toPx() }
+        val sixDp = with(composeRule.density) { 6.dp.toPx() }
 
         assertTrue(abs(target.right - image.right) < 1f)
         assertTrue(abs(target.bottom - image.bottom) < 1f)
-        assertTrue(abs(image.right - visual.right - fourDp) < 1f)
-        assertTrue(abs(image.bottom - visual.bottom - fourDp) < 1f)
+        assertTrue(abs(image.right - visual.right - sixDp) < 1f)
+        assertTrue(abs(image.bottom - visual.bottom - sixDp) < 1f)
         composeRule.onNodeWithTag("conversation.media.thumbnail.target").assertDoesNotExist()
+    }
+
+    @Test
+    fun sentGalleryReturnsFromShortPullKeepsPagingAndProtectsZoomBeforeDownDismissal() {
+        setConversation("catalog-media-viewer")
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.MED-VIEW-02"))
+        composeRule.onNodeWithTag("conversation.media.tile.MED-VIEW-02-photo.0").performClick()
+        val pager = composeRule.onNodeWithTag("conversation.media.viewer.pager")
+        val shortPull = with(composeRule.density) { 24.dp.toPx() }
+        pager.performTouchInput {
+            swipe(Offset(centerX, height * 0.35f), Offset(centerX, height * 0.35f + shortPull), 500)
+        }
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertTextContains("2 of 5", substring = true)
+        pager.performTouchInput { swipeLeft() }
+        composeRule.onNodeWithTag("conversation.media.viewer.position")
+            .assertTextContains("3 of 5", substring = true)
+
+        val zoomIn = composeRule.onNodeWithTag("conversation.media.viewer.page.2", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.CustomActions].first { it.label == "Zoom In" }
+        composeRule.runOnIdle { assertTrue(zoomIn.action()) }
+        pager.performTouchInput {
+            swipe(Offset(centerX, height * 0.35f), Offset(centerX, height * 0.8f), 400)
+        }
+        pager.assertIsDisplayed()
+        composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        pager.performTouchInput {
+            swipe(Offset(centerX, height * 0.35f), Offset(centerX, height * 0.8f), 400)
+        }
+        pager.assertDoesNotExist()
+    }
+
+    @Test
+    fun composerGalleryDownDismissalCancelsStagedExclusionAndRetainsHorizontalPaging() {
+        setConversation("catalog-composer-photo-album")
+        composeRule.onNodeWithContentDescription("Marmot on a rock").performClick()
+        val pager = composeRule.onNodeWithTag("conversation.media.preview.pager")
+        val shortPull = with(composeRule.density) { 24.dp.toPx() }
+        pager.performTouchInput {
+            swipe(Offset(centerX, height * 0.35f), Offset(centerX, height * 0.35f + shortPull), 500)
+        }
+        pager.assertIsDisplayed()
+        pager.performTouchInput { swipeLeft() }
+        composeRule.onNodeWithTag("conversation.media.preview.image.1", useUnmergedTree = true)
+            .assertIsDisplayed()
+        pager.performTouchInput { swipeRight() }
+        composeRule.onNodeWithTag("conversation.media.inclusion.target").performClick()
+        composeRule.onNodeWithTag("conversation.media.inclusion.target").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off),
+        )
+        pager.performTouchInput {
+            swipe(Offset(centerX, height * 0.35f), Offset(centerX, height * 0.8f), 400)
+        }
+        pager.assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Marmot on a rock").performClick()
+        composeRule.onNodeWithTag("conversation.media.inclusion.target").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On),
+        )
+        composeRule.onNodeWithContentDescription("Cancel Media Changes").performClick()
     }
 
     @Test
@@ -1597,7 +1659,31 @@ class ConversationScreenTest {
         composeRule.onNodeWithText("Read Aloud").assertDoesNotExist()
         composeRule.onNodeWithTag("conversation.message.fiatjaf-8")
             .performSemanticsAction(SemanticsActions.OnLongClick)
+        composeRule.waitUntil(10_000) {
+            composeRule.onAllNodesWithText("Read Aloud").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("Read Aloud").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentTextOffersReadAloudAndStopReadingWithProgress() {
+        setConversation("catalog-direct-reactions")
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.ACT-02"))
+        composeRule.onNodeWithText("Read Aloud").assertDoesNotExist()
+        val message = composeRule.onNodeWithTag("conversation.message.ACT-02")
+        message.performSemanticsAction(SemanticsActions.OnLongClick)
+        composeRule.waitUntil(10_000) {
+            composeRule.onAllNodesWithText("Read Aloud").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Read Aloud").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("message.actions.overlay").assertDoesNotExist()
+        composeRule.onNodeWithTag("conversation.readAloud.progress.ACT-02").assertIsDisplayed()
+
+        message.performSemanticsAction(SemanticsActions.OnLongClick)
+        composeRule.onNodeWithText("Read Aloud").assertDoesNotExist()
+        composeRule.onNodeWithText("Stop Reading").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("conversation.readAloud.progress.ACT-02").assertDoesNotExist()
     }
 
     @Test

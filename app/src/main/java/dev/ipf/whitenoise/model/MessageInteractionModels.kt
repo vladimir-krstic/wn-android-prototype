@@ -50,23 +50,23 @@ object MessageActionPolicy {
             if (message.text.isNotBlank()) {
                 add(if (hasVoice) MessageAction.CopyTranscript else MessageAction.Copy)
             }
-            if (incoming) {
-                if (hasVoice && message.text.isBlank()) {
-                    if (speech.transcriptAvailable) {
-                        add(
-                            if (speech.transcriptVisible) {
-                                MessageAction.HideTranscript
-                            } else {
-                                MessageAction.ShowTranscript
-                            },
-                        )
-                        if (speech.transcriptVisible) add(MessageAction.CopyTranscript)
-                    } else {
-                        add(MessageAction.Transcribe)
-                    }
-                } else if (message.text.isNotBlank() && speech.canReadAloud) {
-                    add(if (speech.reading) MessageAction.StopReading else MessageAction.ReadAloud)
+            if (incoming && hasVoice && message.text.isBlank()) {
+                if (speech.transcriptAvailable) {
+                    add(
+                        if (speech.transcriptVisible) {
+                            MessageAction.HideTranscript
+                        } else {
+                            MessageAction.ShowTranscript
+                        },
+                    )
+                    if (speech.transcriptVisible) add(MessageAction.CopyTranscript)
+                } else {
+                    add(MessageAction.Transcribe)
                 }
+            } else if (message.text.isNotBlank() && (incoming || !hasVoice) &&
+                (speech.reading || speech.canReadAloud)
+            ) {
+                add(if (speech.reading) MessageAction.StopReading else MessageAction.ReadAloud)
             }
             add(MessageAction.Select)
             add(MessageAction.Info)

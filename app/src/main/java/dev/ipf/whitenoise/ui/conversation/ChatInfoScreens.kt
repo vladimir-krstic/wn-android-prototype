@@ -9,6 +9,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -30,6 +32,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import dev.ipf.whitenoise.ui.components.trackWhiteNoiseHeader
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
@@ -60,6 +63,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -79,7 +83,10 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,6 +99,7 @@ import dev.ipf.whitenoise.model.ConversationMediaProjection
 import dev.ipf.whitenoise.model.ConversationMediaSelection
 import dev.ipf.whitenoise.model.DisappearingDuration
 import dev.ipf.whitenoise.model.GroupRole
+import dev.ipf.whitenoise.model.GroupMember
 import dev.ipf.whitenoise.model.MuteDuration
 import dev.ipf.whitenoise.model.Person
 import dev.ipf.whitenoise.model.Profile
@@ -99,14 +107,18 @@ import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.SharedContentCategory
 import dev.ipf.whitenoise.model.SharedContentProjection
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
+import dev.ipf.whitenoise.ui.chats.PersonIdentityHeader
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTopBar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
+import dev.ipf.whitenoise.ui.settings.SettingsSection
+import dev.ipf.whitenoise.ui.settings.copyToClipboard
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,6 +138,7 @@ fun ChatInfoScreen(
     onDisappearing: (DisappearingDuration) -> Unit,
     onArchive: () -> Unit,
     onLeave: () -> Boolean,
+    onDeveloperTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var muteSheet by remember { mutableStateOf(false) }
@@ -139,26 +152,67 @@ fun ChatInfoScreen(
         activeRole == GroupRole.Admin &&
         chat.membership == ChatMembership.Active
     val counts = remember(chat.timeline) { SharedContentProjection.counts(chat, profile) }
+    val title = stringResource(if (chat.isGroup) R.string.group_info else R.string.chat_info)
+    val technicalActions = listOf(
+        ChatInfoAction(
+            title = stringResource(R.string.relays),
+            subtitle = pluralStringResource(
+                R.plurals.chat_relay_count,
+                chat.relayUrls.size,
+                chat.relayUrls.size,
+            ),
+            icon = R.drawable.ic_tune,
+            onClick = onRelays,
+        ),
+        ChatInfoAction(
+            title = stringResource(R.string.developer_tools),
+            icon = R.drawable.ic_bug_report,
+            onClick = onDeveloperTools,
+        ),
+    )
+    val lifecycleActions = buildList {
+        add(
+            ChatInfoAction(
+                title = stringResource(if (chat.isArchived) R.string.unarchive else R.string.archive),
+                icon = R.drawable.ic_archive,
+                showChevron = false,
+                onClick = onArchive,
+            ),
+        )
+        if (chat.membership == ChatMembership.Active) {
+            add(
+                ChatInfoAction(
+                    title = stringResource(if (chat.isGroup) R.string.leave_group else R.string.leave_chat),
+                    icon = R.drawable.ic_logout,
+                    destructive = true,
+                    showChevron = false,
+                    onClick = { leaveConfirmation = true },
+                ),
+            )
+        }
+    }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().semantics { paneTitle = title },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             WhiteNoiseTopBar(
-                stringResource(if (chat.isGroup) R.string.group_info else R.string.chat_info),
-                onBack,
+                title = "",
+                onBack = onBack,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             )
         },
     ) { padding ->
         AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().testTag("chat_info.list"),
                 contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
             ) {
-                item {
-                    ChatInfoIdentity(profile = profile, chat = chat, directPerson = directPerson)
+                item(key = "identity") {
+                    ChatInfoIdentity(chat = chat, directPerson = directPerson)
                 }
-                item {
+                item(key = "quick_actions") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -191,6 +245,7 @@ fun ChatInfoScreen(
                         QuickInfoAction(
                             label = stringResource(R.string.disappearing),
                             icon = R.drawable.ic_timer,
+                            state = chat.disappearingDuration.label,
                             modifier = Modifier.weight(1f),
                             onClick = { disappearingSheet = true },
                         )
@@ -202,143 +257,76 @@ fun ChatInfoScreen(
                         )
                     }
                 }
-                item { InfoSectionLabel(stringResource(R.string.shared_in_chat)) }
-                item {
-                    InfoGroup {
-                        SharedContentCategory.entries.forEach { category ->
-                            val label = when (category) {
-                                SharedContentCategory.Media -> stringResource(R.string.photos_and_videos)
-                                SharedContentCategory.Links -> stringResource(R.string.links)
-                                SharedContentCategory.Documents -> stringResource(R.string.documents)
-                            }
-                            val icon = when (category) {
-                                SharedContentCategory.Media -> R.drawable.ic_image
-                                SharedContentCategory.Links -> R.drawable.ic_link
-                                SharedContentCategory.Documents -> R.drawable.ic_description
-                            }
-                            InfoActionRow(
-                                title = label,
+                item(key = "shared_heading") { SettingsSection(stringResource(R.string.shared_in_chat)) }
+                item(key = "shared_content") {
+                    ChatInfoActionGroup(
+                        actions = SharedContentCategory.entries.map { category ->
+                            ChatInfoAction(
+                                title = stringResource(
+                                    when (category) {
+                                        SharedContentCategory.Media -> R.string.photos_and_videos
+                                        SharedContentCategory.Links -> R.string.links
+                                        SharedContentCategory.Documents -> R.string.documents
+                                    },
+                                ),
                                 subtitle = pluralStringResource(
                                     R.plurals.shared_item_count,
                                     counts.getValue(category),
                                     counts.getValue(category),
                                 ),
-                                icon = icon,
+                                icon = when (category) {
+                                    SharedContentCategory.Media -> R.drawable.ic_image
+                                    SharedContentCategory.Links -> R.drawable.ic_link
+                                    SharedContentCategory.Documents -> R.drawable.ic_description
+                                },
                                 onClick = { onSharedContent(category) },
                             )
-                        }
-                    }
-                }
-                if (chat.isGroup) {
-                    item { InfoSectionLabel(stringResource(R.string.members)) }
-                    item {
-                        InfoGroup {
-                            if (canAdmin) {
-                                InfoActionRow(
-                                    title = stringResource(R.string.edit_group),
-                                    icon = R.drawable.ic_edit,
-                                    onClick = onEditGroup,
-                                )
-                                InfoActionRow(
-                                    title = stringResource(R.string.add_people),
-                                    icon = R.drawable.ic_group_add,
-                                    onClick = onAddPeople,
-                                )
-                            }
-                            chat.members.forEach { member ->
-                                val isSelf = member.personId == profile.id
-                                val person = if (isSelf) null else {
-                                    profile.people.firstOrNull { it.id == member.personId }
-                                }
-                                val name = when {
-                                    isSelf -> stringResource(R.string.you)
-                                    person != null -> person.name
-                                    else -> member.personId
-                                }
-                                ListItem(
-                                    headlineContent = {
-                                        Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    },
-                                    supportingContent = {
-                                        Text(
-                                            stringResource(
-                                                if (member.role == GroupRole.Admin) {
-                                                    R.string.admin
-                                                } else {
-                                                    R.string.member
-                                                },
-                                            ),
-                                        )
-                                    },
-                                    leadingContent = {
-                                        ProfileAvatar(
-                                            name,
-                                            person?.avatar ?: profile.avatar,
-                                            Modifier.size(48.dp),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    trailingContent = if (person == null) {
-                                        null
-                                    } else {
-                                        {
-                                            Icon(
-                                                painterResource(R.drawable.ic_chevron_right),
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    },
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .then(
-                                            if (person == null) {
-                                                Modifier
-                                            } else {
-                                                Modifier.clickable(
-                                                    role = Role.Button,
-                                                    onClick = { onMember(person.id) },
-                                                )
-                                            },
-                                        ),
-                                )
-                            }
-                        }
-                    }
-                }
-                item {
-                    InfoSectionLabel(
-                        stringResource(if (chat.isGroup) R.string.advanced else R.string.chat_actions),
+                        },
                     )
                 }
-                item {
-                    InfoGroup {
-                        InfoActionRow(
-                            title = stringResource(R.string.relays),
-                            subtitle = pluralStringResource(
-                                R.plurals.chat_relay_count,
-                                chat.relayUrls.size,
-                                chat.relayUrls.size,
-                            ),
-                            icon = R.drawable.ic_tune,
-                            onClick = onRelays,
+                item(key = "actions_heading") {
+                    SettingsSection(stringResource(if (chat.isGroup) R.string.advanced else R.string.chat_actions))
+                }
+                item(key = "technical_actions") {
+                    ChatInfoActionGroup(
+                        actions = if (chat.isGroup) technicalActions else technicalActions + lifecycleActions,
+                    )
+                }
+                if (chat.isGroup) {
+                    item(key = "members_heading") { SettingsSection(stringResource(R.string.members)) }
+                    itemsIndexed(chat.members, key = { _, member -> "member.${member.personId}" }) { index, member ->
+                        ChatInfoMemberRow(
+                            profile = profile,
+                            member = member,
+                            index = index,
+                            count = chat.members.size,
+                            onMember = onMember,
                         )
-                        InfoActionRow(
-                            title = stringResource(if (chat.isArchived) R.string.unarchive else R.string.archive),
-                            icon = R.drawable.ic_archive,
-                            showChevron = false,
-                            onClick = onArchive,
-                        )
-                        if (chat.membership == ChatMembership.Active) {
-                            InfoActionRow(
-                                title = stringResource(if (chat.isGroup) R.string.leave_group else R.string.leave_chat),
-                                icon = R.drawable.ic_logout,
-                                destructive = true,
-                                showChevron = false,
-                                onClick = { leaveConfirmation = true },
+                    }
+                    if (canAdmin) {
+                        item(key = "management") {
+                            ChatInfoActionGroup(
+                                actions = listOf(
+                                    ChatInfoAction(
+                                        title = stringResource(R.string.edit_group),
+                                        icon = R.drawable.ic_edit,
+                                        onClick = onEditGroup,
+                                    ),
+                                    ChatInfoAction(
+                                        title = stringResource(R.string.add_people),
+                                        icon = R.drawable.ic_group_add,
+                                        onClick = onAddPeople,
+                                    ),
+                                ),
+                                modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                             )
                         }
+                    }
+                    item(key = "lifecycle") {
+                        ChatInfoActionGroup(
+                            actions = lifecycleActions,
+                            modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
+                        )
                     }
                 }
             }
@@ -429,68 +417,74 @@ fun ChatInfoScreen(
 }
 
 @Composable
-private fun ChatInfoIdentity(profile: Profile, chat: Chat, directPerson: Person?) {
+private fun ChatInfoIdentity(chat: Chat, directPerson: Person?) {
+    val context = LocalContext.current
+    var copied by rememberSaveable(chat.id, directPerson?.id) { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(2_000)
+            copied = false
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(
-                start = WhiteNoiseSpacing.CompactScreenMargin,
-                end = WhiteNoiseSpacing.CompactScreenMargin,
-                top = WhiteNoiseSpacing.Section,
-                bottom = WhiteNoiseSpacing.FormField,
-            ),
+            .padding(top = WhiteNoiseSpacing.Section, bottom = WhiteNoiseSpacing.FormField),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
     ) {
-        ProfileAvatar(chat.title, chat.avatar, Modifier.size(120.dp))
-        Text(
-            text = chat.title,
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-        )
-        if (chat.isGroup) {
-            Text(
-                pluralStringResource(
-                    R.plurals.group_member_count,
-                    chat.members.size,
-                    chat.members.size,
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge,
+        if (directPerson != null && !chat.isGroup) {
+            PersonIdentityHeader(
+                person = directPerson,
+                copied = copied,
+                showIdentityValues = true,
+                onCopy = {
+                    copyToClipboard(context, "Public key", directPerson.publicKey)
+                    copied = true
+                },
+                testTagPrefix = "chat_info",
             )
-            if (chat.description.isNotBlank()) {
-                Text(
-                    text = chat.description,
-                    modifier = Modifier.widthIn(max = 440.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
         } else {
-            directPerson?.nostrAddress?.takeIf(String::isNotBlank)?.let { address ->
-                Text(
-                    address,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            directPerson?.let { person ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    shape = MaterialTheme.shapes.extraLarge,
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val avatarSize = (maxWidth * 0.32f).coerceIn(104.dp, 152.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        text = person.shortPublicKey,
-                        modifier = Modifier.padding(
-                            horizontal = WhiteNoiseSpacing.FormField,
-                            vertical = WhiteNoiseSpacing.Related,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.MiddleEllipsis,
+                    ProfileAvatar(
+                        name = chat.title,
+                        avatar = chat.avatar,
+                        modifier = Modifier.size(avatarSize).testTag("chat_info.avatar"),
+                        contentDescription = stringResource(R.string.profile_photo_for, chat.title),
                     )
+                    Text(
+                        text = chat.title,
+                        modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField).testTag("chat_info.name"),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                    )
+                    if (chat.description.isNotBlank()) {
+                        Text(
+                            text = chat.description,
+                            modifier = Modifier.widthIn(max = 440.dp).padding(top = WhiteNoiseSpacing.Related),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    if (chat.isGroup) {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.group_member_count,
+                                chat.members.size,
+                                chat.members.size,
+                            ),
+                            modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
         }
@@ -527,15 +521,18 @@ private fun QuickInfoAction(
     @DrawableRes icon: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    state: String? = null,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
     ) {
         FilledTonalIconButton(
             onClick = onClick,
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp).semantics {
+                state?.let { stateDescription = it }
+            },
         ) {
             Icon(
                 painter = painterResource(icon),
@@ -547,9 +544,100 @@ private fun QuickInfoAction(
             text = label,
             modifier = Modifier.clearAndSetSemantics { },
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+private data class ChatInfoAction(
+    val title: String,
+    @param:DrawableRes val icon: Int,
+    val onClick: () -> Unit,
+    val subtitle: String? = null,
+    val destructive: Boolean = false,
+    val showChevron: Boolean = true,
+)
+
+@Composable
+private fun ChatInfoActionGroup(actions: List<ChatInfoAction>, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        actions.forEachIndexed { index, action ->
+            val contentColor = if (action.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            ListItem(
+                onClick = action.onClick,
+                content = { Text(action.title) },
+                supportingContent = action.subtitle?.let { { Text(it) } },
+                leadingContent = {
+                    Icon(painterResource(action.icon), contentDescription = null, modifier = Modifier.size(24.dp))
+                },
+                trailingContent = if (action.showChevron) {
+                    { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null) }
+                } else {
+                    null
+                },
+                shapes = ListItemDefaults.segmentedShapes(index, actions.size),
+                colors = ListItemDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    contentColor = contentColor,
+                    leadingContentColor = contentColor,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChatInfoMemberRow(
+    profile: Profile,
+    member: GroupMember,
+    index: Int,
+    count: Int,
+    onMember: (String) -> Unit,
+) {
+    val isSelf = member.personId == profile.id
+    val person = if (isSelf) null else profile.people.firstOrNull { it.id == member.personId }
+    val name = if (isSelf) stringResource(R.string.you) else person?.name ?: member.personId
+    val headline: @Composable () -> Unit = { Text(name) }
+    val supporting: @Composable () -> Unit = {
+        Text(stringResource(if (member.role == GroupRole.Admin) R.string.admin else R.string.member))
+    }
+    val leading: @Composable () -> Unit = {
+        ProfileAvatar(
+            name = name,
+            avatar = if (isSelf) profile.avatar else person?.avatar ?: dev.ipf.whitenoise.model.ProfileAvatar.Monogram,
+            modifier = Modifier.size(48.dp),
+            contentDescription = null,
+        )
+    }
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
+        .padding(bottom = if (index == count - 1) 0.dp else 2.dp)
+        .testTag("chat_info.member.${member.personId}")
+    val shapes = ListItemDefaults.segmentedShapes(index, count)
+    val colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
+    if (person == null) {
+        ListItem(
+            modifier = rowModifier,
+            content = headline,
+            supportingContent = supporting,
+            leadingContent = leading,
+            shapes = shapes,
+            colors = colors,
+        )
+    } else {
+        ListItem(
+            onClick = { onMember(person.id) },
+            modifier = rowModifier,
+            content = headline,
+            supportingContent = supporting,
+            leadingContent = leading,
+            trailingContent = { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null) },
+            shapes = shapes,
+            colors = colors,
         )
     }
 }

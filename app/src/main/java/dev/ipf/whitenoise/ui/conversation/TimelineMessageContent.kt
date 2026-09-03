@@ -39,6 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
@@ -88,8 +90,9 @@ internal fun TimelineAttachmentContent(
 ) {
     if (attachments.isEmpty()) return
     val visualAttachments = attachments.filter(MessageAttachment::isVisual)
+    val singleMediaSize = rememberTimelineSingleMediaSize(attachments.singleOrNull())
     Column(
-        modifier = modifier.width(richContentCanvasWidthDp(attachments).dp),
+        modifier = modifier.width(richContentCanvasWidthDp(attachments, singleMediaSize).dp),
         verticalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.RichContentSpacing),
     ) {
         if (visualAttachments.isNotEmpty()) {
@@ -131,7 +134,7 @@ private fun TimelineMediaGrid(
     }
     val visible = frames.take(MediaLayout.visibleCount(frames.size))
     val overflow = MediaLayout.overflowCount(frames.size)
-    val singleSize = visible.firstOrNull()?.attachment?.let(::timelineSingleMediaSize)
+    val singleSize = rememberTimelineSingleMediaSize(visible.singleOrNull()?.attachment)
     val attachmentCountDescription = pluralStringResource(
         R.plurals.media_attachment_count,
         frames.size,
@@ -149,8 +152,15 @@ private fun TimelineMediaGrid(
         when (MediaLayout.forCount(frames.size)) {
             dev.ipf.whitenoise.model.MediaGridLayout.Single -> MediaTile(
                 visible.first(),
-                Modifier.width(singleSize!!.widthDp.dp).height(singleSize.heightDp.dp),
+                Modifier.width(singleSize!!.widthDp.dp)
+                    .height(singleSize.heightDp.dp)
+                    .clipToBounds(),
                 searchQuery = searchQuery,
+                contentScale = if (visible.first().attachment.kind == MessageAttachmentKind.Gif) {
+                    ContentScale.Crop
+                } else {
+                    ContentScale.FillHeight
+                },
                 onClick = { frame ->
                     messageId?.let { onClick(ConversationMediaKey(it, frame.attachment.id, frame.imageIndex)) }
                 },
@@ -268,6 +278,7 @@ private fun MediaTile(
     modifier: Modifier,
     overflow: Int = 0,
     searchQuery: String,
+    contentScale: ContentScale = ContentScale.Crop,
     onClick: (VisualFrame) -> Unit,
 ) {
     val opensViewer = frame.attachment.isAvailable && (
@@ -289,7 +300,7 @@ private fun MediaTile(
                 },
             ),
     ) {
-        frame.image?.let { ComposerImage(it, Modifier.fillMaxSize()) }
+        frame.image?.let { ComposerImage(it, Modifier.fillMaxSize(), contentScale) }
             ?: SearchHighlightedText(
                 text = frame.attachment.label,
                 query = searchQuery,
@@ -602,6 +613,7 @@ private fun VoiceMessageCard(
                     modifier = Modifier.weight(1f),
                     color = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
                     trackColor = content.copy(alpha = 0.24f),
+                    drawStopIndicator = {},
                 )
                 Text(
                     formatMessageDuration(
@@ -786,6 +798,7 @@ internal fun ReadAloudProgress(messageId: String, controller: ReadAloudControlle
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier.weight(1f),
+            drawStopIndicator = {},
         )
     }
 }

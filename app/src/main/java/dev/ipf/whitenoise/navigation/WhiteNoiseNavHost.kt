@@ -573,6 +573,7 @@ fun WhiteNoiseNavHost(
                     onDisappearing = { appViewModel.setChatDisappearing(chat.id, it) },
                     onArchive = { appViewModel.setChatArchived(chat.id, !chat.isArchived) },
                     onLeave = { appViewModel.leaveChat(chat.id) },
+                    onDeveloperTools = { navController.navigate(AppRoute.ConversationDebug(chat.id)) },
                 )
             }
         }

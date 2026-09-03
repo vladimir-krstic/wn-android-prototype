@@ -70,5 +70,6 @@ class AppResourceIntegrityTest {
         assertFalse(Manifest.permission.INTERNET in permissions)
         assertFalse(Manifest.permission.ACCESS_NETWORK_STATE in permissions)
         assertFalse(Manifest.permission.RECORD_AUDIO in permissions)
+        assertFalse(Manifest.permission.WAKE_LOCK in permissions)
     }
 }

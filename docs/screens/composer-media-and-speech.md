@@ -102,6 +102,13 @@ pickers, popup placement, focus, motion, and safe-area handling.
   transparent 48 × 48 dp semantic target, a 20 × 20 dp visible circle, a 12 dp
   close symbol, and equal 6 dp top/end insets. Its indication is clipped to the
   visible circle while the full target remains operable.
+- Picked and camera photos use a message-media import policy: preserve aspect
+  and EXIF orientation, keep up to 4096 px on the long edge, preserve PNG/alpha
+  losslessly, and encode other photos as JPEG at quality 95. The existing
+  512 px avatar policy remains unchanged. Encoded media stays in memory through
+  review and send; thumbnail bitmaps are sampled to their displayed bounds and
+  decoded off the main thread, while gallery pages use their larger viewport.
+  Earlier 512 px imports have to be selected again to regain source detail.
 - Utility cards keep their accepted 72 dp height without vertical content
   clipping. Contact cards show a 40 dp avatar or monogram and a visible
   single-line name. File cards keep the extension plus the final three stem
@@ -116,12 +123,28 @@ pickers, popup placement, focus, motion, and safe-area handling.
   8 dp radius inside their 16 dp message bubble. Message body content remains
   aligned at 12 dp. Link previews use the composer quote's same 8 dp outer
   inset and 16 dp radius so their card is also concentric with the composer.
-- Draft review shows no rail for one item. Multi-item review uses 72 dp targets
-  containing 64 dp cropped images with no unselected frame; only the selected
-  image receives a 2 dp `onBackground` ring. Inclusion is a 22 dp circular
+- Draft review fits media into the full available pager area without an added
+  image margin, matching the sent-media viewer's full-width treatment while
+  preserving aspect ratio. The review app bar, safe-drawing insets, thumbnail
+  rail, include/exclude staging, Done, and cancellation behavior remain.
+- Draft review shows no rail for one item. Multi-item review uses 56 dp targets
+  containing 48 dp cropped images, with no extra gap between targets so the
+  visible images are 8 dp apart. The rail is 72 dp high including 8 dp padding
+  above and below. Only the selected image receives a 1 dp `onBackground`
+  ring; unselected images have no frame. These smaller thumbnails, tighter gaps,
+  and thinner outline follow the user's 2026-09-03 direction. Inclusion is a 22 dp circular
   check inside a 48 dp target, with explicit inclusion state and hint. The
   target follows the fitted preview image rather than the pager bounds, placing
-  the visible check inside its bottom-end corner with 4 dp from both edges.
+  the visible check inside its bottom-end corner with 6 dp from both edges,
+  a 50% increase requested on 2026-09-03. The 48 dp touch target is unchanged.
+- A single-finger downward swipe in the media area closes Preview with the
+  same cancellation behavior as Close/Back; staged exclusions are discarded.
+  Only Done applies selection changes. Short pulls return with Material motion,
+  and horizontal paging retains priority. Pager pages and the thumbnail rail
+  clip to their bounds and disable edge stretching, so other media cannot draw
+  outside the viewport during a pull. The backdrop remains opaque; thumbnail
+  navigation is disabled while the pull settles. Both gallery variants share
+  this explicit user-requested dismissal gesture.
 - Deterministic link previews appear only for text-only drafts. Adding an
   attachment suppresses the card without losing draft text or the user's
   per-link suppression choice.
@@ -170,16 +193,33 @@ pickers, popup placement, focus, motion, and safe-area handling.
   active simulation converts elapsed recording to Review without sending or
   silently discarding it.
 
-### Recipient speech presentation
+### Message speech presentation
 
 - Playback remains the only permanent command inside a received voice bubble.
   Read Aloud, Stop Reading, Transcribe, Show/Hide Transcript, and Copy
   Transcript are conditional focused-message actions, matching the product
   command placement without expanding every bubble.
+- As requested on 2026-09-03, Read Aloud applies to both sent and received
+  messages with authored text and no voice attachment, including replies,
+  links, and media/file captions. It follows Copy in the focused menu and is
+  also a named accessibility action. Starting speech uses the existing visible
+  plain-text projection; active speech replaces the command with Stop Reading
+  and shows the existing compact progress row. Empty/deleted messages do not
+  offer it. Existing received-voice transcript actions keep their eligibility.
+  This extends the pinned iOS baseline's recipient-only rule under the user's
+  current direction, without repinning other iOS behavior.
+- Android TextToSpeech remains the platform implementation. The manifest
+  declares the required `android.intent.action.TTS_SERVICE` query so Android
+  11+ can discover installed engines. Start is available after successful
+  engine/language initialization; Stop remains available for active speech.
+  No permission or dependency is added.
 - A deliberate Transcribe action creates only view-local transcript state.
   Show reveals the transcript beneath playback; Hide removes it again; Copy
-  uses the revealed local text. Received text shows only a compact live
+  uses the revealed local text. Text messages show only a compact live
   read-aloud progress row while playback is active.
+- Voice playback and Read Aloud progress tracks omit the fixed end dot, as
+  requested on 2026-09-03, using Material's `drawStopIndicator` override.
+  Their progress, duration, and accessibility behavior stay the same.
 
 ## Deterministic catalog and compatibility
 
@@ -193,6 +233,17 @@ pickers, popup placement, focus, motion, and safe-area handling.
 
 ## Acceptance evidence
 
+- The 2026-09-03 import-quality correction passes 183 unit tests, lint, app
+  assembly, and instrumentation-test APK compilation. `MediaImageSamplingTest`
+  covers full-screen detail, thumbnail allocation, panorama crops, and invalid
+  bounds. `ConversationImageImportTest` compiles full-resolution, exact PNG
+  pixels, independent avatar limits, EXIF/large-photo bounds, and invalid-input
+  cases; execution and current-build visual inspection remain pending.
+- The 2026-09-03 draft-preview width correction removes the image's 16 dp
+  margin in `DraftMediaViewer`, retaining aspect-fit rendering and all review
+  interactions. `testDebugUnitTest`, `lintDebug`, `assembleDebug`, and
+  `assembleDebugAndroidTest` pass. Current-build device inspection and user
+  visual acceptance remain pending.
 - `testDebugUnitTest`, `lintDebug`, `assembleDebug`, and
   `assembleDebugAndroidTest` pass on 2026-08-31. The unit suite passes and lint
   reports no errors. Instrumentation sources include
@@ -240,6 +291,8 @@ pickers, popup placement, focus, motion, and safe-area handling.
   inspection of this state remains pending.
 
 Sources: [Compose gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures),
+[image scaling](https://developer.android.com/develop/ui/compose/graphics/images/customize),
+[layout constraints and modifier order](https://developer.android.com/develop/ui/compose/layouts/constraints-modifiers),
 [gesture animation](https://developer.android.com/develop/ui/compose/animation/advanced),
 [window insets](https://developer.android.com/develop/ui/compose/system/insets-ui),
 [Material menus](https://developer.android.com/develop/ui/compose/components/menu),

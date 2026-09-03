@@ -58,6 +58,8 @@ dependencies {
     implementation(libs.androidx.camera.mlkit.vision)
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui.compose.material3)
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)

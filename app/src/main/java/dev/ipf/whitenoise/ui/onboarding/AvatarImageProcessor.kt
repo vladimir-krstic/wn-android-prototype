@@ -22,8 +22,11 @@ object AvatarImageProcessor {
     suspend fun prepare(
         contentResolver: ContentResolver,
         uri: Uri,
+        maximumDimension: Int = MaximumDimension,
+        jpegQuality: Int = 88,
+        preservePng: Boolean = false,
     ): ByteArray? = try {
-        prepareImage(contentResolver, uri)
+        prepareImage(contentResolver, uri, maximumDimension, jpegQuality, preservePng)
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {
@@ -33,7 +36,11 @@ object AvatarImageProcessor {
     private suspend fun prepareImage(
         contentResolver: ContentResolver,
         uri: Uri,
+        maximumDimension: Int,
+        jpegQuality: Int,
+        preservePng: Boolean,
     ): ByteArray? = withContext(Dispatchers.IO) {
+        require(maximumDimension > 0 && jpegQuality in 0..100)
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         val boundsInput = contentResolver.openInputStream(uri) ?: return@withContext null
         boundsInput.use { input ->
@@ -43,7 +50,7 @@ object AvatarImageProcessor {
 
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
         var sampleSize = 1
-        while (max(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= MaximumDimension) {
+        while (max(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= maximumDimension) {
             sampleSize *= 2
         }
 
@@ -66,7 +73,7 @@ object AvatarImageProcessor {
                 )
             } ?: ExifInterface.ORIENTATION_NORMAL,
         )
-        val targetSize = targetSize(oriented.width, oriented.height)
+        val targetSize = targetSize(oriented.width, oriented.height, maximumDimension)
         val prepared = if (
             targetSize.width == oriented.width && targetSize.height == oriented.height
         ) {
@@ -80,7 +87,12 @@ object AvatarImageProcessor {
         }
 
         ByteArrayOutputStream().use { output ->
-            val succeeded = prepared.compress(Bitmap.CompressFormat.JPEG, 88, output)
+            val format = if (preservePng && (bounds.outMimeType == "image/png" || prepared.hasAlpha())) {
+                Bitmap.CompressFormat.PNG
+            } else {
+                Bitmap.CompressFormat.JPEG
+            }
+            val succeeded = prepared.compress(format, jpegQuality, output)
             if (prepared !== oriented) prepared.recycle()
             if (oriented !== decoded) oriented.recycle()
             decoded.recycle()
@@ -88,10 +100,10 @@ object AvatarImageProcessor {
         }
     }
 
-    internal fun targetSize(width: Int, height: Int): ImageSize {
+    internal fun targetSize(width: Int, height: Int, maximumDimension: Int = MaximumDimension): ImageSize {
         val largestDimension = max(width, height)
-        if (largestDimension <= MaximumDimension) return ImageSize(width, height)
-        val scale = MaximumDimension.toFloat() / largestDimension
+        if (largestDimension <= maximumDimension) return ImageSize(width, height)
+        val scale = maximumDimension.toFloat() / largestDimension
         return ImageSize(
             width = (width * scale).roundToInt().coerceAtLeast(1),
             height = (height * scale).roundToInt().coerceAtLeast(1),

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -26,10 +25,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,12 +42,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -66,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.ConversationMediaItem
 import dev.ipf.whitenoise.model.ConversationMediaSelection
@@ -93,6 +93,7 @@ internal fun ReadOnlyMediaViewer(
     if (selection.items.isEmpty()) return
     val pagerState = rememberPagerState(initialPage = selection.initialIndex) { selection.items.size }
     val context = LocalContext.current
+    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val touchExplorationEnabled = remember(context) {
         context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
@@ -103,6 +104,8 @@ internal fun ReadOnlyMediaViewer(
     var offset by remember { mutableStateOf(Offset.Zero) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
     var pendingSave by remember { mutableStateOf<ConversationMediaItem?>(null) }
+    var bottomChromeHeight by remember { mutableStateOf(0.dp) }
+    val dismissState = rememberGalleryDismissState(onDismiss)
 
     fun resetZoom() {
         scale = 1f
@@ -156,17 +159,45 @@ internal fun ReadOnlyMediaViewer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .clipToBounds()
                 .background(MaterialTheme.colorScheme.background),
         ) {
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.fillMaxSize().testTag("conversation.media.viewer.pager"),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .gallerySwipeToDismiss(
+                        dismissState,
+                        enabled = scale <= 1.01f && !pagerState.isScrollInProgress && !moreExpanded,
+                    )
+                    .testTag("conversation.media.viewer.pager"),
                 pageSpacing = WhiteNoiseSpacing.Section,
-                userScrollEnabled = scale <= 1.01f,
+                userScrollEnabled = scale <= 1.01f && !dismissState.isInProgress,
+                overscrollEffect = null,
+                key = { selection.items[it].key.stableId },
             ) { page ->
                 val item = selection.items[page]
                 val isCurrentPage = pagerState.currentPage == page
                 val stillImage = item.attachment.kind != MessageAttachmentKind.Video
+                if (!stillImage) {
+                    MediaViewerVideo(
+                        item = item,
+                        active = pagerState.settledPage == page && !pagerState.isScrollInProgress,
+                        controlsVisible = chromeVisible,
+                        bottomControlsInset = bottomChromeHeight,
+                        onToggleControls = {
+                            if (!touchExplorationEnabled) chromeVisible = !chromeVisible
+                        },
+                        onShowControls = { chromeVisible = true },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clipToBounds()
+                            .background(MaterialTheme.colorScheme.background)
+                            .testTag("conversation.media.viewer.page.$page")
+                            .semantics { contentDescription = item.attachment.label },
+                    )
+                    return@HorizontalPager
+                }
                 val zoomInLabel = stringResource(R.string.zoom_in)
                 val zoomOutLabel = stringResource(R.string.zoom_out)
                 val resetZoomLabel = stringResource(R.string.reset_zoom)
@@ -193,6 +224,8 @@ internal fun ReadOnlyMediaViewer(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .clipToBounds()
+                        .background(MaterialTheme.colorScheme.background)
                         .onSizeChanged { if (isCurrentPage) viewportSize = it }
                         .pointerInput(item.key, canToggleChrome) {
                             detectTapGestures(
@@ -270,19 +303,6 @@ internal fun ReadOnlyMediaViewer(
                             contentScale = ContentScale.Fit,
                         )
                     } ?: Text(item.attachment.label)
-                    if (item.attachment.kind == MessageAttachmentKind.Video) {
-                        Button(
-                            onClick = { openVideo(context, item) },
-                            modifier = Modifier.align(Alignment.Center),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_play_arrow),
-                                contentDescription = null,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.open_video))
-                        }
-                    }
                 }
             }
 
@@ -315,7 +335,9 @@ internal fun ReadOnlyMediaViewer(
                         }
                     },
                     onForward = { onForward(currentItem) },
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .onSizeChanged { bottomChromeHeight = with(density) { it.height.toDp() } },
                 )
             }
         }
@@ -336,7 +358,7 @@ private fun MediaViewerTopChrome(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.94f),
+        color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
         Row(
@@ -407,7 +429,7 @@ private fun MediaViewerBottomChrome(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.94f),
+        color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
         Row(
@@ -498,20 +520,6 @@ private fun fittedMediaContentSize(
     )
 }
 
-private fun openVideo(context: Context, item: ConversationMediaItem) {
-    val uri = item.attachment.externalUri
-    if (uri?.startsWith("content:") == true) {
-        openContentUri(context, uri)
-    } else {
-        openBundledResource(
-            context,
-            R.raw.chat_trail_clip,
-            "chat-trail-clip.mp4",
-            "video/mp4",
-        )
-    }
-}
-
 private suspend fun shareMedia(context: Context, item: ConversationMediaItem): Boolean {
     val uri = withContext(Dispatchers.IO) {
         runCatching {
@@ -536,7 +544,7 @@ private fun copyMedia(context: Context, item: ConversationMediaItem, output: Out
     if (item.attachment.kind == MessageAttachmentKind.Video) {
         val external = item.attachment.externalUri
         val input = if (external?.startsWith("content:") == true) {
-            context.contentResolver.openInputStream(android.net.Uri.parse(external))
+            context.contentResolver.openInputStream(external.toUri())
         } else {
             context.resources.openRawResource(R.raw.chat_trail_clip)
         } ?: error("Media is unavailable")

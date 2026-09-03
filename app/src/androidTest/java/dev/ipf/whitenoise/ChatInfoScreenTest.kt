@@ -3,6 +3,24 @@ package dev.ipf.whitenoise
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.ForcedSize
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextContains
@@ -14,6 +32,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.ipf.whitenoise.model.Chat
+import dev.ipf.whitenoise.model.ChatMembership
 import dev.ipf.whitenoise.model.ConversationMediaProjection
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.model.MuteDuration
@@ -25,6 +45,8 @@ import dev.ipf.whitenoise.ui.conversation.EditGroupScreen
 import dev.ipf.whitenoise.ui.conversation.SharedContentScreen
 import dev.ipf.whitenoise.ui.chats.PersonProfileScreen
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,7 +61,7 @@ class ChatInfoScreenTest {
         val chat = profile.chats.first { it.id == "maya-chen" }.copy(muteDuration = null)
         var chosen: MuteDuration? = null
         composeRule.setContent { WhiteNoiseTheme {
-            ChatInfoScreen(profile, chat, {}, {}, {}, {}, {}, {}, {}, {}, { chosen = it }, {}, {}, { true })
+            ChatInfoScreen(profile, chat, {}, {}, {}, {}, {}, {}, {}, {}, { chosen = it }, {}, {}, { true }, {})
         } }
         composeRule.onNodeWithContentDescription("Mute").performClick()
         composeRule.onNodeWithTag("mute.duration.dialog").assertIsDisplayed()
@@ -72,10 +94,11 @@ class ChatInfoScreenTest {
                     onDisappearing = {},
                     onArchive = {},
                     onLeave = { true },
+                    onDeveloperTools = {},
                 )
             }
         }
-        composeRule.onNodeWithText("Chat Info").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat_info.name").assertTextContains("Maya Chen").assertIsDisplayed()
         composeRule.onNodeWithText("Shared in Chat").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("About").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Search").assertIsDisplayed().performClick()
@@ -103,11 +126,112 @@ class ChatInfoScreenTest {
                     onDisappearing = {},
                     onArchive = {},
                     onLeave = { true },
+                    onDeveloperTools = {},
                 )
             }
         }
+        composeRule.onNodeWithTag("chat_info.list").performScrollToNode(hasText("Edit Group"))
         composeRule.onNodeWithText("Edit Group").assertIsDisplayed()
         composeRule.onNodeWithText("Add People").assertIsDisplayed()
+    }
+
+    @Test
+    fun directIdentityCopiesTheFullKeyAndOpensChatDeveloperTools() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "maya-chen" }
+        val person = profile.people.first { it.id == "maya-chen" }
+        var developerToolsOpened = false
+        composeRule.setContent {
+            WhiteNoiseTheme { InfoUnderTest(chat, onDeveloperTools = { developerToolsOpened = true }) }
+        }
+        composeRule.onNodeWithContentDescription("Verified").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat_info.copy_public_key").performClick()
+        composeRule.runOnIdle {
+            val clipboard = composeRule.activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            assertEquals(person.publicKey, clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        }
+        composeRule.onNodeWithTag("chat_info.list").performScrollToNode(hasText("Developer Tools"))
+        composeRule.onNodeWithText("Developer Tools").assertHasClickAction().performClick()
+        composeRule.runOnIdle { assertTrue(developerToolsOpened) }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun groupSectionsKeepIosOrderAndSelfIsNotAProfileAction() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "weekend-walks" }
+        var openedMember: String? = null
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(412.dp, 2400.dp))) {
+                WhiteNoiseTheme { InfoUnderTest(chat, onMember = { openedMember = it }) }
+            }
+        }
+        val expectedOrder = listOf(
+            chat.description, "${chat.members.size} members", "Shared in Chat", "Photos & Videos",
+            "Links", "Documents", "Advanced", "Relays", "Developer Tools", "Members",
+            "Edit Group", "Add People", "Archive", "Leave Group",
+        ).filter(String::isNotBlank)
+        val rowTops = expectedOrder.map { label ->
+            composeRule.onNodeWithText(label).assertIsDisplayed().getUnclippedBoundsInRoot().top
+        }
+        assertTrue("Info sections must retain the iOS product order", rowTops.zipWithNext().all { (a, b) -> a < b })
+        val self = composeRule.onNodeWithTag("chat_info.member.${profile.id}")
+        self.assertHasNoClickAction()
+        val otherMember = chat.members.first { it.personId != profile.id }
+        val memberRow = composeRule.onNodeWithTag("chat_info.member.${otherMember.personId}")
+        assertTrue(memberRow.getUnclippedBoundsInRoot().top < composeRule.onNodeWithText("Edit Group").getUnclippedBoundsInRoot().top)
+        memberRow.assertHasClickAction().performClick()
+        composeRule.runOnIdle { assertEquals(otherMember.personId, openedMember) }
+    }
+
+    @Test
+    fun endedGroupKeepsHistoryActionsWithoutManagementOrLeaveAtLargeRtlText() {
+        val chat = ProfileFixtures.marmota.chats.first { it.id == "weekend-walks" }.copy(
+            membership = ChatMembership.Left,
+            isArchived = true,
+        )
+        var unarchived = false
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density, fontScale = 2f),
+                LocalLayoutDirection provides LayoutDirection.Rtl,
+            ) {
+                WhiteNoiseTheme(appearance = dev.ipf.whitenoise.model.AppearancePreference.Dark) { InfoUnderTest(chat, onArchive = { unarchived = true }) }
+            }
+        }
+        composeRule.onNodeWithTag("chat_info.list").performScrollToNode(hasText("Unarchive"))
+        composeRule.onNodeWithText("Unarchive").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Edit Group").assertDoesNotExist()
+        composeRule.onNodeWithText("Add People").assertDoesNotExist()
+        composeRule.onNodeWithText("Leave Group").assertDoesNotExist()
+        composeRule.runOnIdle { assertTrue(unarchived) }
+    }
+
+    @Composable
+    private fun InfoUnderTest(
+        chat: Chat,
+        onDeveloperTools: () -> Unit = {},
+        onMember: (String) -> Unit = {},
+        onArchive: () -> Unit = {},
+    ) {
+        ChatInfoScreen(
+            profile = ProfileFixtures.marmota,
+            chat = chat,
+            onBack = {},
+            onAbout = {},
+            onMember = onMember,
+            onSharedContent = {},
+            onRelays = {},
+            onSearch = {},
+            onEditGroup = {},
+            onAddPeople = {},
+            onMute = {},
+            onDisappearing = {},
+            onArchive = onArchive,
+            onLeave = { true },
+            onDeveloperTools = onDeveloperTools,
+        )
     }
 
     @Test
@@ -231,6 +355,7 @@ class ChatInfoScreenTest {
                     onDisappearing = {},
                     onArchive = {},
                     onLeave = { true },
+                    onDeveloperTools = {},
                 )
             }
         }
@@ -261,6 +386,7 @@ class ChatInfoScreenTest {
                     onDisappearing = {},
                     onArchive = {},
                     onLeave = { true },
+                    onDeveloperTools = {},
                 )
             }
         }

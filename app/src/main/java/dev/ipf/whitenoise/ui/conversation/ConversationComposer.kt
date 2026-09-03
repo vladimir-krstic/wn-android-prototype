@@ -99,11 +99,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerId
@@ -173,7 +173,6 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuPlacement
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.drawableResource
-import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -526,7 +525,7 @@ fun FullConversationComposer(
                             externalUri = uri.toString(),
                         )
                     } else {
-                        val bytes = AvatarImageProcessor.prepare(context.contentResolver, uri)
+                        val bytes = ConversationImageProcessor.prepare(context.contentResolver, uri)
                         if (bytes == null) {
                             if (generation == preparationGeneration) attachmentError = true
                         } else {
@@ -1997,6 +1996,7 @@ private fun DraftMediaViewer(
     val initialPage = attachments.indexOfFirst { it.id == initialAttachmentId }.coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = initialPage) { attachments.size }
     val coroutineScope = rememberCoroutineScope()
+    val dismissState = rememberGalleryDismissState(onDismiss)
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -2034,8 +2034,15 @@ private fun DraftMediaViewer(
             Column(Modifier.fillMaxSize().padding(contentPadding)) {
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .gallerySwipeToDismiss(dismissState, enabled = !pagerState.isScrollInProgress)
+                        .testTag("conversation.media.preview.pager"),
                     pageSpacing = WhiteNoiseSpacing.Section,
+                    userScrollEnabled = !dismissState.isInProgress,
+                    overscrollEffect = null,
+                    key = { attachments[it].id },
                 ) { page ->
                     val attachment = attachments[page]
                     val included = attachment.id in includedIds
@@ -2046,7 +2053,13 @@ private fun DraftMediaViewer(
                             includedIds - attachment.id
                         }
                     }
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .clipToBounds()
+                            .background(MaterialTheme.colorScheme.background),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         attachment.images.firstOrNull()?.let { image ->
                             DraftMediaPreviewImage(
                                 image = image,
@@ -2054,9 +2067,7 @@ private fun DraftMediaViewer(
                                 included = included,
                                 attachmentLabel = attachment.label,
                                 onIncludedChange = onIncludedChange,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(WhiteNoiseSpacing.CompactScreenMargin),
+                                modifier = Modifier.fillMaxSize(),
                             )
                         } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(attachment.label)
@@ -2071,12 +2082,12 @@ private fun DraftMediaViewer(
                 }
                 if (attachments.size > 1) {
                     LazyRow(
-                        modifier = Modifier.fillMaxWidth().height(88.dp),
+                        modifier = Modifier.fillMaxWidth().height(72.dp).clipToBounds(),
+                        overscrollEffect = null,
                         contentPadding = PaddingValues(
                             horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                             vertical = WhiteNoiseSpacing.Related,
                         ),
-                        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
                     ) {
                         itemsIndexed(attachments, key = { _, item -> item.id }) { index, attachment ->
                             val selected = pagerState.currentPage == index
@@ -2090,12 +2101,13 @@ private fun DraftMediaViewer(
                             )
                             Box(
                                 modifier = Modifier
-                                    .size(72.dp)
+                                    .size(56.dp)
                                     .semantics { contentDescription = positionDescription }
                                     .clickable(
                                         interactionSource = interactionSource,
                                         indication = null,
                                         role = Role.Button,
+                                        enabled = !dismissState.isInProgress,
                                     ) {
                                         coroutineScope.launch {
                                             pagerState.animateScrollToPage(index)
@@ -2105,11 +2117,11 @@ private fun DraftMediaViewer(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 val imageModifier = Modifier
-                                    .size(64.dp)
+                                    .size(48.dp)
                                     .then(
                                         if (selected) {
                                             Modifier.border(
-                                                2.dp,
+                                                1.dp,
                                                 MaterialTheme.colorScheme.onBackground,
                                                 MaterialTheme.shapes.small,
                                             )
@@ -2244,7 +2256,7 @@ private fun DraftMediaInclusionButton(
         contentAlignment = Alignment.BottomEnd,
     ) {
         Box(
-            modifier = Modifier.padding(end = 4.dp, bottom = 4.dp),
+            modifier = Modifier.padding(end = 6.dp, bottom = 6.dp),
         ) {
             Box(
                 modifier = Modifier
@@ -2300,13 +2312,7 @@ internal fun ComposerImage(
             modifier,
             contentScale = contentScale,
         )
-        is ProfileAvatar.DeviceImage -> {
-            val bitmap = remember(image) {
-                BitmapFactory.decodeByteArray(image.bytes, 0, image.bytes.size)?.asImageBitmap()
-            }
-            if (bitmap == null) Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant))
-            else Image(bitmap, null, modifier, contentScale = contentScale)
-        }
+        is ProfileAvatar.DeviceImage -> DeviceMediaImage(image, modifier, contentScale)
         ProfileAvatar.Monogram -> Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant))
     }
 }

@@ -186,7 +186,7 @@ import dev.ipf.whitenoise.ui.components.drawableResource
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 private val FocusedMessageBackdropBlurRadius = 24.dp
-private const val FocusedMessageBackdropBlackAlpha = 0.24f
+private const val FocusedMessageBackdropSurfaceAlpha = 0.88f
 private val FocusedReactionRailInset = 4.dp
 private val FocusedReactionItemSpacing = 4.dp
 private val FocusedReactionStateLayerSize = 40.dp
@@ -1032,7 +1032,9 @@ private fun FocusedMessageActionsOverlay(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        Color.Black.copy(alpha = FocusedMessageBackdropBlackAlpha),
+                        MaterialTheme.colorScheme.surfaceContainerLowest.copy(
+                            alpha = FocusedMessageBackdropSurfaceAlpha,
+                        ),
                     )
                     .testTag("message.actions.backdrop"),
             )
@@ -1876,7 +1878,6 @@ private fun MessageRow(
                             },
                             messageInteractionSource = if (contextPreview) null else messageInteractionSource,
                             trimInvisibleReactionTarget = contextPreview,
-                            timestampHighContrast = contextPreview,
                             onBubblePositioned = { bounds ->
                                 if (rawSwipeDistance == 0f) bubbleBoundsInRoot = bounds
                             },
@@ -1987,7 +1988,6 @@ private fun MessageBubbleWithMetadata(
     onBubbleLongPress: (() -> Unit)?,
     messageInteractionSource: MutableInteractionSource?,
     trimInvisibleReactionTarget: Boolean,
-    timestampHighContrast: Boolean,
     onBubblePositioned: (Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -2057,7 +2057,6 @@ private fun MessageBubbleWithMetadata(
                     fillWidth = false,
                     measurementOnly = true,
                     timestampVerticalOffsetPx = metadataGeometry.timestampVerticalOffsetPx,
-                    timestampHighContrast = timestampHighContrast,
                     onReaction = onReaction,
                     onShowActions = onShowActions,
                     onLongPress = null,
@@ -2105,7 +2104,6 @@ private fun MessageBubbleWithMetadata(
                 summary = summary,
                 fillWidth = true,
                 timestampVerticalOffsetPx = metadataGeometry.timestampVerticalOffsetPx,
-                timestampHighContrast = timestampHighContrast,
                 onReaction = onReaction,
                 onShowActions = onShowActions,
                 onLongPress = onBubbleLongPress,
@@ -2182,7 +2180,8 @@ private fun MessageBubble(
     }
     val hasRichContent = !message.isDeleted &&
         (message.replyToMessageId != null || message.attachments.isNotEmpty())
-    val richCanvasWidth = richContentCanvasWidthDp(message.attachments).dp
+    val singleMediaSize = rememberTimelineSingleMediaSize(message.attachments.singleOrNull())
+    val richCanvasWidth = richContentCanvasWidthDp(message.attachments, singleMediaSize).dp
     Surface(
         shape = bubbleShape,
         color = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -2393,7 +2392,6 @@ private fun MessageMetadataContent(
     fillWidth: Boolean,
     measurementOnly: Boolean = false,
     timestampVerticalOffsetPx: Int,
-    timestampHighContrast: Boolean,
     onReaction: (String) -> Unit,
     onShowActions: () -> Unit,
     onLongPress: (() -> Unit)?,
@@ -2436,7 +2434,6 @@ private fun MessageMetadataContent(
                 deliveryState = deliveryState,
                 testTagEnabled = !measurementOnly,
                 verticalOffsetPx = timestampVerticalOffsetPx,
-                highContrast = timestampHighContrast,
             )
         }
         if (!outgoing && showTime && summary.isNotEmpty()) Spacer(Modifier.width(4.dp))
@@ -2459,7 +2456,6 @@ private fun MessageMetadataContent(
                 deliveryState = deliveryState,
                 testTagEnabled = !measurementOnly,
                 verticalOffsetPx = timestampVerticalOffsetPx,
-                highContrast = timestampHighContrast,
             )
         }
     }
@@ -2473,15 +2469,10 @@ private fun MessageTime(
     deliveryState: MessageDeliveryState,
     testTagEnabled: Boolean,
     verticalOffsetPx: Int,
-    highContrast: Boolean,
 ) {
     val failed = outgoing && deliveryState == MessageDeliveryState.Failed
     val failedLabel = if (failed) stringResource(R.string.not_delivered_retry) else null
-    val timestampColor = if (highContrast) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.outline
-    }
+    val timestampColor = MaterialTheme.colorScheme.outline
     val deliveryLabel = if (outgoing) {
         stringResource(
             when (deliveryState) {

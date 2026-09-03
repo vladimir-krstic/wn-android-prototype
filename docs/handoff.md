@@ -125,8 +125,10 @@ attachment sheets and rich cards use semantic icons; and draft/read-only media
 viewers use safe-area app bars and chronological pagers. Voice review and
 received speech use code-native waveforms, standard playback controls,
 transcript provenance, and accessible progress. Photo Picker, Files, external
-camera, document/video handoff, and TextToSpeech remain Android-owned runtime
-boundaries. At that point in the rollout, message actions/search and Chat Info
+camera, document handoff, and TextToSpeech remain Android-owned runtime
+boundaries. Video handoff was subsequently replaced with foreground Media3
+playback inside the gallery on 2026-09-03 (WN-ANDROID-0123). At that point in
+the rollout, message actions/search and Chat Info
 remained later polish batches.
 
 A sixth bounded batch recomposes message interactions and in-conversation
@@ -225,8 +227,10 @@ were performed for this batch. Briefs, metrics, source map and decisions
 - Walk every flow with TalkBack and keyboard/D-pad focus; confirm switch and
   custom-action announcement quality.
 - Exercise Photo Picker, Files, external camera, Sharesheet, clipboard,
-  document/video viewer, TextToSpeech, settings intents, and Code Scanner on
-  real system surfaces.
+  document viewer, TextToSpeech, settings intents, and Code Scanner on real
+  system surfaces. Verify the embedded video player's play/pause, scrubbing,
+  replay, local URI failures, audio focus, page/lifecycle release, and compact
+  landscape controls when the user requests a device run.
 - Capture Android screenshots and compare hierarchy, density, typography,
   rhythm, shape, state color, motion, and empty/error/recovery treatment one
   selected flow at a time.

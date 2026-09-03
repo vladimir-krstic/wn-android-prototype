@@ -91,6 +91,9 @@ published source and compatibility evidence are linked in
 - [Material 3 Expressive button groups](https://m3.material.io/components/button-groups/overview)
 - [Material Button defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonDefaults)
 - [Progress indicators](https://developer.android.com/develop/ui/compose/components/progress)
+- [Bounded bitmap decoding](https://developer.android.com/topic/performance/graphics/load-bitmap)
+- [Progress track stop indicator API](https://developer.android.com/reference/kotlin/androidx/compose/material3/LinearProgressIndicator.composable)
+- [Slider track customization](https://developer.android.com/reference/kotlin/androidx/compose/material3/SliderDefaults)
 - [Focus behavior](https://developer.android.com/develop/ui/compose/touch-input/focus)
 - [Understand Compose gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures)
 - [Tap and press gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press)
@@ -148,8 +151,15 @@ Share & Connect is selected.
 - [Android Camera and Media center](https://developer.android.com/media)
 - [Media3 playback](https://developer.android.com/media/media3/exoplayer/hello-world)
 - [Media3 Player interface](https://developer.android.com/media/media3/session/player)
+- [Media3 Compose UI and Material 3 player controls](https://developer.android.com/media/media3/ui/compose)
+- [Media3 stable releases](https://developer.android.com/jetpack/androidx/releases/media3)
+  — 1.11.0, released 2026-08-05; verified 2026-09-03 for the in-viewer local
+  video player. The existing Compose/Material versions and minimum API 23
+  remain supported by the resolved artifacts.
 - [Audio capture](https://developer.android.com/media/platform/mediarecorder)
 - [TextToSpeech](https://developer.android.com/reference/android/speech/tts/TextToSpeech)
+  — installed-engine discovery requires the `android.intent.action.TTS_SERVICE`
+  manifest query on Android 11+; speech starts after successful initialization.
 - [SpeechRecognizer](https://developer.android.com/reference/android/speech/SpeechRecognizer)
 
 The current prototype uses deterministic voice recording/transcription state.

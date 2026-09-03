@@ -11,6 +11,11 @@ unclaimed until explicitly requested. Earlier physical Pixel 8a suite evidence
 remains historical evidence for the preceding conversation batch. User visual
 acceptance remains separate.
 
+The 2026-09-03 height-based single-media correction passes unit tests, lint,
+app assembly, and instrumentation-test APK compilation. Tests cover actual-image
+dimension precedence, portrait/landscape sizing, invalid dimension fallback,
+and tiny sources. Current-build device visual acceptance remains pending.
+
 ## Source evidence
 
 - `wn-ios-prototype@0bd7cba:docs/screens/conversation-shared.md`
@@ -106,8 +111,17 @@ acceptance remains separate.
   GIFs, files, contacts, links, and voice cards; each child uses a concentric
   10 dp outline inside the 16 dp bubble. Sections keep 6 dp gaps and gallery
   tiles keep 2 dp gaps under one group clip. Albums and rich cards use the
-  fixed 256 dp canvas. A lone photo/video keeps its aspect-derived width and
-  the caption wraps to that same width, preventing text from widening the
+  fixed 256 dp canvas. A lone photo/video uses decoded image proportions,
+  falling back to declared dimensions only when pixels cannot be read. Its
+  media height is 256 dp, with width derived from the actual ratio and capped
+  at the 256 dp canvas maximum. `ContentScale.FillHeight` preserves the full
+  top-to-bottom image, centers any horizontal overflow, and clips only the
+  sides. A narrower parent caps width without reducing the media height.
+  Album tiles retain their count-derived crops.
+  The tiny-source safeguard and unavailable states remain. This user-directed
+  2026-09-03 correction supersedes the pinned iOS clamp/crop presentation;
+  deterministic catalog metadata and labels remain intact. A lone image's
+  caption wraps to that same width, preventing text from widening the
   bubble and leaving unused space beside the media. Mixed text restores the
   ordinary text inset within the shared canvas. Deleted messages do not retain
   hidden attachment/reply layout.

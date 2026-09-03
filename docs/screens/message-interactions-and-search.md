@@ -9,6 +9,10 @@ bubble-attached reply indicator, soft focused-overlay backdrop, and searchable
 sectioned emoji picker with a scroll-synchronized category rail. User visual
 acceptance remains separate.
 
+The 2026-09-03 backdrop, ordinary-timestamp, and Forward-arrow correction
+passes lint, app assembly, and instrumentation-test APK compilation.
+The current changes have not been inspected on a device.
+
 ## Source evidence
 
 - `wn-ios-prototype@0bd7cba:docs/screens/message-actions.md`
@@ -46,12 +50,17 @@ acceptance remains separate.
   Select, Info, Delete actions below it. Incoming/outgoing alignment and safe-
   edge shifting retain the message relationship. Retry is first for a failed
   outgoing message. Conditional Read Aloud/Stop Reading and voice transcript
-  commands occupy the same policy-owned command order. Tall real sources scale
+  commands occupy the same policy-owned command order. Read Aloud follows Copy
+  for sent and received authored text without voice attachments, including
+  captions and replies; active reading replaces it with Stop Reading. Empty or
+  deleted messages do not gain speech actions. Existing received-voice behavior
+  remains. Tall real sources scale
   within a 320 dp preview budget. Its conversation backdrop uses a 24 dp
-  Compose blur plus a 24% translucent black veil, while the custom Dialog
-  suppresses the platform's second dim layer. This is lighter than the former
-  42% black scrim but gives light focused bubbles clearer separation than the
-  superseded pale 80% neutral wash. The veil remains on Android 11 and earlier
+  Compose blur plus an 88% `surfaceContainerLowest` veil: translucent white in
+  light appearance and adaptive near-black in dark appearance. The custom
+  Dialog suppresses the platform's second dim layer. This follows the user's
+  2026-09-03 refinement: the conversation shows through only as faint, softened
+  shapes while the backdrop stays predominantly white. The veil remains on Android 11 and earlier
   as the no-blur fallback. Each quick reaction keeps
   a 48 dp semantic target but renders press feedback only through a centered
   40 dp circle; 4 dp rail insets on every edge and 4 dp inter-target spacing
@@ -73,9 +82,8 @@ acceptance remains separate.
   outgoing end/right in LTR, mirrored with the message in RTL. Without
   reactions, it begins 2 dp below the bubble; that same gap remains when
   reactions are present, while only pills overlap. Timestamp text, Sent fill,
-  and Sending progress use the lower-emphasis `outline` neutral in the normal
-  transcript, then switch to full-emphasis `onSurface` in the focused context
-  preview for contrast against its dark translucent backdrop. Outgoing
+  and Sending progress use the same lower-emphasis `outline` neutral in both
+  the normal transcript and focused context preview. Outgoing
   metadata includes Sent or Sending state; Sent uses a 14 dp filled
   status container with 10 dp check artwork.
   Failed delivery replaces time in that same slot with a 14 dp warning and
@@ -131,13 +139,53 @@ acceptance remains separate.
   toggle unchanged-size chrome containing Close, More, Share, and Forward;
   touch exploration keeps the named actions visible. Share and Forward are
   edge-aligned 24 dp symbols in transparent native 48 dp icon targets, without
-  labels or filled button containers. More owns Save and Go to Message. Go to
+  labels or filled button containers. Forward uses the user-requested broad,
+  outlined right-turn arrow from Signal, shared with the message action menu
+  and selection toolbar. Share retains the standard share icon. The icon-only import is documented in
+  `../references/signal-interface-assets.md`. More owns Save and Go to Message. Go to
   Message closes the overlay and scrolls the typed conversation route to the
   source message.
+- The viewer's top and bottom chrome use the same opaque `background` color
+  as its canvas, including system-bar padding. The previous 94% alpha allowed
+  tall selected media to show through the controls. Picked photos use the same
+  viewer as bundled media and retain the higher-quality bytes prepared by the
+  composer; image pixels are never reconstructed from a screen capture.
 - Still photos support bounded 1×–4× pinch/pan and 1×/2× double-tap. Pager
   swiping is disabled while zoomed, page changes reset zoom, and Back resets
   zoom before dismissal. Named Zoom In, Zoom Out, and Reset actions provide
-  non-gesture alternatives. Video retains its existing handoff behavior.
+  non-gesture alternatives.
+- At normal photo zoom, a single-finger downward swipe now dismisses the
+  gallery, as explicitly requested on 2026-09-03. Short pulls spring back;
+  horizontal paging, video scrubbing, and multi-touch zoom retain priority.
+  The current content translates over an opaque gallery backdrop, with strict
+  pager/page clipping and no pager edge-stretch effect. Zoomed photos keep
+  vertical panning until zoom is reset. Close and system Back remain available.
+- Videos now play inside the same viewer using AndroidX Media3 1.11.0 and
+  its Material 3 `Player`/`PlayerDefaults` controls. The user explicitly
+  replaced the external Open Video handoff with normal play/pause, seek
+  backward/forward, a draggable position tracker, elapsed/total time, mute,
+  and playback speed. The real video frame fits without cropping. Controls
+  follow the same tap-to-toggle chrome and stay exposed for touch exploration.
+  The bottom player controls clear the measured Share/Forward bar and system
+  insets. In short windows, play/seek join the bottom row instead of
+  overlapping the tracker; Material supplies focus, semantics and targets.
+- Playback trackers have no fixed end dot, per the user's 2026-09-03 direction.
+  The video slider retains Material's draggable thumb and Media3 progress/seek
+  state. Media3's `ProgressSlider` has no track slot, so `VideoPlaybackSlider`
+  connects the same state holder to a Material `Slider`, overriding only
+  `SliderDefaults.Track(drawStopIndicator = null)`.
+- Only the settled video page owns a foreground player. Entry and return
+  start paused. Paging, dismissal, and leaving the foreground release the
+  player; returning retains the in-memory position, mute and speed choices.
+  Audio focus and headphone disconnection use Media3, and the screen stays
+  awake only during playback. The player reports actual duration, buffering,
+  and errors, and its Play control handles retry/replay. Device videos use
+  their granted content URI; the catalog uses the existing bundled clip.
+  No external player, background playback, network, or new permission is added.
+  This overrides only the historical video handoff decision.
+- Inactive video pages render only their poster, without allocating a video
+  surface. Active playback keeps Media3's SurfaceView on API 24+; API 23 uses
+  its TextureView option so dragging the player follows the UI correctly.
 - Share sends only the current JPEG/MP4 frame through Android Sharesheet with a
   temporary readable content URI. Save uses type-specific `CreateDocument`
   contracts and reports preparation/copy failures without closing the viewer.
@@ -168,11 +216,10 @@ acceptance remains separate.
   bounded quick-reaction strip and an icon-leading command surface. The
   composition aligns to bubble direction and shifts within system-safe bounds;
   scrim tap, Back and Escape dismiss it. Retry stays first and Delete retains
-  the semantic error role. Instead of the former flat 42% black scrim or the
-  superseded pale neutral wash, a restrained 24% black veil sits over the
-  24 dp-blurred conversation. It leaves only indistinct context behind the
-  sharp focused content while separating light incoming bubbles from the
-  background. The quick strip
+  the semantic error role. An 88% white-equivalent `surfaceContainerLowest`
+  veil sits over the 24 dp-blurred conversation, retaining faint context
+  behind the sharp focused content. Timestamps and non-error delivery states
+  keep their ordinary chat colors. The quick strip
   gives every 48 dp target a concentric 40 dp circular state layer, with an
   equal 4 dp inset around the rail and between targets. The quick strip and
   command surface use equal 8 dp gaps; with source reactions, the lower gap
@@ -239,6 +286,11 @@ acceptance remains separate.
 
 ## Current official Android guidance
 
+- The video viewer uses [Media3 Compose UI](https://developer.android.com/media/media3/ui/compose)
+  and the [ExoPlayer lifecycle contract](https://developer.android.com/media/media3/exoplayer/hello-world).
+  The stable 1.11.0 release was verified on 2026-09-03. `PlayerDefaults` slots
+  preserve the gallery's controls and adapt playback controls to short windows
+  while native Material components own interaction and accessibility behavior.
 - Android Developers' pointer-event model lets a parent observe the Initial
   pass before descendants and consume only after a recognized long press. The
   transcript uses that arbitration because its descendants have independent
@@ -311,7 +363,7 @@ selection, reaction configuration and forwarding continue to use
 - The focused-overlay backdrop regression asserts full-window veil coverage.
   The established coverage test remains compiled; renewed device execution is
   intentionally deferred until the user explicitly requests it. Host
-  compilation confirms the current 24 dp blur plus 24% black veil path without
+  compilation covers the 24 dp blur plus 88% adaptive surface veil path without
   reintroducing platform dimming.
 - Reply motion has a pure resisted-overdrag regression plus physical LTR and
   RTL geometry tests that pause the return spring and prove the indicator stays
@@ -355,3 +407,17 @@ selection, reaction configuration and forwarding continue to use
   sender/position chrome, no sent-media thumbnail rail, 48 dp icon-only Share
   and Forward actions, and targeted message return. The updated overlay has
   not yet received a device visual pass.
+- `MediaViewerVideoTest` adds compiled regressions for in-viewer play/pause,
+  accessible seeking, playback-control clearance above Share/Forward, Back
+  dismissal, and releasing/recreating the player paused with its position and
+  settings retained across page and foreground changes. The permission test
+  also excludes Media3's unused wake-lock permission. These additions have not
+  been executed on a device. The 2026-09-03 host gate passes with 174 unit tests,
+  no lint errors, app assembly, and instrumentation-test APK compilation;
+  existing unrelated lint warnings remain.
+- The downward-dismissal follow-up adds unit coverage for travel/velocity
+  thresholds, compact-height travel, upward reversal, and invalid viewport
+  state. Compiled interaction coverage exercises short-pull return, horizontal
+  paging, zoom protection, normal-photo dismissal, video dismissal, and composer
+  cancellation without applying staged exclusions. Rendering-bleed reproduction
+  and visual acceptance on a current device build remain pending.

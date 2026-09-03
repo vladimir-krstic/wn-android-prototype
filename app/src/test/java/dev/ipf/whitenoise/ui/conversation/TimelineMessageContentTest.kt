@@ -4,6 +4,7 @@ import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.SingleMediaSize
+import dev.ipf.whitenoise.model.SingleMediaLayout
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -26,7 +27,46 @@ class TimelineMessageContentTest {
             pixelHeight = 1_920,
         )
 
-        assertEquals(192, richContentCanvasWidthDp(listOf(portrait)))
+        assertEquals(144, richContentCanvasWidthDp(listOf(portrait)))
+        assertEquals(SingleMediaSize(144, 256), timelineSingleMediaSize(portrait))
+    }
+
+    @Test
+    fun `single media uses actual image dimensions before catalog dimensions`() {
+        val panorama = MessageAttachment(
+            id = "panorama",
+            kind = MessageAttachmentKind.Photo,
+            label = "Ostrich",
+            images = listOf(ProfileAvatar.Monogram),
+            pixelWidth = 3_000,
+            pixelHeight = 700,
+        )
+        val renderedSize = timelineSingleMediaSize(panorama, imageWidth = 512, imageHeight = 342)
+
+        assertEquals(SingleMediaSize(256, 256), renderedSize)
+        assertEquals(256, richContentCanvasWidthDp(listOf(panorama), renderedSize))
+        val portrait = panorama.copy(kind = MessageAttachmentKind.Video)
+        val portraitSize = timelineSingleMediaSize(portrait, imageWidth = 800, imageHeight = 1_200)
+        assertEquals(SingleMediaSize(171, 256), portraitSize)
+        assertEquals(171, richContentCanvasWidthDp(listOf(portrait), portraitSize))
+        assertEquals(SingleMediaSize(256, 256), timelineSingleMediaSize(panorama, -1, -1))
+    }
+
+    @Test
+    fun `wide photos retain full media height when their width reaches the bubble limit`() {
+        listOf(1_200 to 800, 1_920 to 1_080, 3_000 to 700).forEach { (width, height) ->
+            assertEquals(SingleMediaSize(256, 256), SingleMediaLayout.size(width, height))
+        }
+        assertEquals(SingleMediaSize(171, 256), SingleMediaLayout.size(800, 1_200))
+        assertEquals(SingleMediaSize(60, 256), SingleMediaLayout.size(700, 3_000))
+    }
+
+    @Test
+    fun `single media preserves small source protection and safe missing dimensions`() {
+        assertEquals(SingleMediaSize(192, 192), SingleMediaLayout.size(96, 96))
+        assertEquals(SingleMediaSize(192, 192), SingleMediaLayout.size(96, 64))
+        assertEquals(SingleMediaSize(256, 256), SingleMediaLayout.size(null, 100))
+        assertEquals(SingleMediaSize(256, 256), SingleMediaLayout.size(100, 0))
     }
 
     @Test
