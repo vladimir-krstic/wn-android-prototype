@@ -33,6 +33,16 @@ unrelated icons are unchanged.
 | `ic_download` | [download](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/download/default/24px.xml) | `037028bc8020031a6fdeb5e00340ffc2e552106c0eb25bb21ee6d420568e8570` |
 | `ic_edit` | [edit](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/edit/default/24px.xml) | `415dabf523db5039d18fdfbe1eb55ff53a5f01b377e5887076101e53f3670beb` |
 | `ic_error` | [error](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/error/default/24px.xml) | `23cacab40bf4b17fe514f54f959b3f11ac873b67c925a6a0fd4115565aa2e72e` |
+| `ic_emoji_activities` | [sports_soccer](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/sports_soccer/default/24px.xml) | `f22d25c29f8d1dcbb8acdeca30bd86c17a565f187d3561e6015d5ba92aadfa7a` |
+| `ic_emoji_animals` | [pets](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/pets/default/24px.xml) | `9065cbe9a50860d4426866fc518b1c20d949d19c5e38cb40ec5352df13238864` |
+| `ic_emoji_flags` | [flag](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/flag/default/24px.xml) | `3587497137c0004596c306a9cdaf399ea27e2de85023842371e98fa7b9a4a3ed` |
+| `ic_emoji_food` | [ramen_dining](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/ramen_dining/default/24px.xml) | `43a76a410f93ba1f744382b4b754c078ee1f55674959dca89ea2690a4d045db2` |
+| `ic_emoji_objects` | [lightbulb](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/lightbulb/default/24px.xml) | `64987ad88edd96a61b16e8d58b2b92727c6e14aaac59b583eb8e422258ab9e88` |
+| `ic_emoji_recent` | [history](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/history/default/24px.xml) | `2af61ac604b73b3f796e9054c69d59b9b8b2933d5c7f0bd5c7c2a85f5565852a` |
+| `ic_emoji_settings` | [settings](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/settings/default/24px.xml) | `fbeb665598ba181496b7fd79227047a754d3e96f57d3e2f030158a975ae1a8fb` |
+| `ic_emoji_smileys` | [sentiment_satisfied](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/sentiment_satisfied/default/24px.xml) | `d18f77e4477bc57aaad29feb300d9eb914b05c920a63d03a8e58963a0085a871` |
+| `ic_emoji_symbols` | [tag](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/tag/default/24px.xml) | `daa2b4ee670e104043928c00302a42e3c0280de3433c44f4d917d9bf1a226f49` |
+| `ic_emoji_travel` | [flight](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/flight/default/24px.xml) | `dc4eef1687164e5ae62f71a3c31c1d910f8794b527c07e36b8dcb4edf20f0759` |
 | `ic_expand_more` | [expand_more](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/expand_more/default/24px.xml) | `d24a57bf297ea4a5e7e5fa044bfb882e741dbb223500b8f99df91323f6ecec8d` |
 | `ic_filter_list` | [filter_list](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/filter_list/default/24px.xml) | `0872a25bf48975634483796b2fd33269243d933f1722f95b2394daad29ac3372` |
 | `ic_settings_favorite_border` | [favorite_border](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/favorite_border/default/24px.xml) | `13970bc3e26652bc31f9a3660837cf78e80ccce6b55cb1d9f319271b79cba344` |
@@ -47,6 +57,7 @@ unrelated icons are unchanged.
 | `ic_logout` | [logout](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/logout/default/24px.xml) | `1bd3a7a32bbab64736e2a347d09ef22bf51c4a4ad50614f95fd59f8a3db2e570` |
 | `ic_settings_logout` | [logout](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/logout/default/24px.xml) | `1bd3a7a32bbab64736e2a347d09ef22bf51c4a4ad50614f95fd59f8a3db2e570` |
 | `ic_mark_unread` | [mark_email_unread](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/mark_email_unread/default/24px.xml) | `13587579fb598fe00d4a0716524fb22b4ae8d26d9fa5a99b811a6ebcde77fec1` |
+| `ic_more_horiz` | [more_horiz](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/more_horiz/default/24px.xml) | `3654901c8808ac4209d8c0aa820a1cf64fca7dbd3a815a8faa5898881d2bf941` |
 | `ic_notifications_off` | [notifications_off](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/notifications_off/default/24px.xml) | `e45e0c865237f979686833016c15a1a2c9d22ab226f8930b3cff62da2dfc1338` |
 | `ic_person` | [person](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/person/default/24px.xml) | `9e6ff0a4afb1cff45d401a85f08b82c66a3edb71ac7ba766bd949f76178c385d` |
 | `ic_settings_person_add` | [person_add](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/person_add/default/24px.xml) | `d018ce8478530df6a8570b8d8a929ebee2c2f4c8275cd5c7afeb6ec75b24ce13` |

@@ -8,11 +8,11 @@ import org.junit.Test
 
 class ConversationProjectionTest {
     @Test
-    fun fixtureGraphGivesEveryRetainedChatReadableTimelineContent() {
+    fun fixtureGraphKeepsOnlyTheRetainedDraftWithoutSentTimelineContent() {
         val chats = ChatFixtures.populatedChats(ProfileFixtures.MARMOTA_ID)
 
-        assertTrue(chats.all { it.timeline.isNotEmpty() })
-        assertTrue(chats.all { ConversationProjection.items(it).isNotEmpty() })
+        assertEquals(listOf("mina-park"), chats.filter { it.timeline.isEmpty() }.map { it.id })
+        assertEquals(listOf("mina-park"), chats.filter { ConversationProjection.items(it).isEmpty() }.map { it.id })
         assertEquals(8, chats.chat("fiatjaf").timeline.filterIsInstance<ChatTimelineEntry.Message>().size)
         assertEquals(9, chats.chat("catalog-group-colors").timeline.filterIsInstance<ChatTimelineEntry.Message>().size)
     }
@@ -23,7 +23,10 @@ class ConversationProjectionTest {
         val items = ConversationProjection.items(chat)
         val headers = items.filterIsInstance<ConversationItem.DayHeader>()
 
-        assertEquals(listOf("Dec 8, 2025", "Jul 14", "Yesterday", "Today"), headers.map { it.label })
+        assertEquals(
+            listOf("Dec 8, 2025", "Mon, Jul 14", "Wednesday", "Thursday", "Friday", "Saturday", "Yesterday", "Today"),
+            headers.map { it.label },
+        )
         assertEquals("DATE-01", items.filterIsInstance<ConversationItem.MessageItem>().first().message.id)
         assertEquals("DATE-15", items.filterIsInstance<ConversationItem.MessageItem>().last().message.id)
     }
@@ -62,7 +65,7 @@ class ConversationProjectionTest {
         val available = messages.first { it.message.id == "RPL-02" }
         val deleted = messages.first { it.message.id == "RPL-03" }
         val missing = messages.first { it.message.id == "RPL-04" }
-        assertEquals("RPL-01", available.resolvedReply?.id)
+        assertEquals("RPL-02-source", available.resolvedReply?.id)
         assertTrue(deleted.hasUnavailableReply)
         assertTrue(missing.hasUnavailableReply)
     }

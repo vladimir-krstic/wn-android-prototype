@@ -107,9 +107,14 @@ screen brief.
 7. Implement the smallest complete flow with deterministic state.
 8. Run lightweight static checks during iteration and the relevant build and
    tests at the end of a meaningful batch.
-9. Launch an emulator or physical device, install the app, interact with it,
-   or capture screenshots only when the user explicitly requests visual or
-   hands-on inspection. Never claim visual verification without inspecting the
+9. Do not use `adb`, run connected instrumentation, start an emulator, install
+   or launch the app on a device, interact with a device, or capture device
+   screenshots unless the user's current request explicitly asks for device or
+   emulator testing, visual inspection, or hands-on inspection. An earlier
+   request, a connected/tethered phone, a visually oriented change, or a desire
+   for stronger evidence is not standing authorization. If a device-only check
+   would materially help, explain why and wait for the user to request it.
+   Never claim visual verification without an authorized inspection of the
    current build.
 10. Update the parity ledger with exact evidence and remaining gaps.
 
@@ -120,10 +125,16 @@ screen brief.
 - Add unit tests for meaningful state transitions, derivations, and
   regressions. Add Compose UI tests for durable navigation, interaction, and
   accessibility behavior—not merely to inflate coverage.
+- Default agent validation is host-side: compilation, unit tests, lint, APK
+  assembly, and instrumentation-test APK compilation as appropriate. Merely
+  compiling or packaging instrumentation tests does not authorize running them
+  on a connected device or emulator.
 - Exercise Android-specific behavior where relevant: system Back and
   predictive Back, state restoration after recreation, keyboard and insets,
   TalkBack semantics, large font and display sizes, light/dark themes, and at
-  least compact and expanded window widths.
+  least compact and expanded window widths. Run those checks on a device or
+  emulator only after the user explicitly requests device testing in the
+  current request.
 - Preserve unrelated user changes. Do not configure a remote, commit, push,
   or publish unless explicitly requested.
 

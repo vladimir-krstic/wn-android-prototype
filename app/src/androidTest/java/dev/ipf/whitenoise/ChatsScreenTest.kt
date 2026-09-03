@@ -46,6 +46,7 @@ import dev.ipf.whitenoise.ui.chats.NewGroupScreen
 import dev.ipf.whitenoise.ui.chats.PersonProfileScreen
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -209,7 +210,15 @@ class ChatsScreenTest {
         composeRule.onNodeWithText("Maya Chen").performClick()
         composeRule.onNodeWithTag("new_group.list")
             .performScrollToNode(hasTestTag("new_group.selected.maya-chen"))
-        composeRule.onNodeWithTag("new_group.selected.maya-chen").assertIsDisplayed()
+        val target = composeRule.onNodeWithTag("new_group.selected.maya-chen")
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val visual = composeRule.onNodeWithTag(
+            "new_group.selected.visual.maya-chen",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        assertTrue(visual.width < target.width)
+        assertTrue(visual.height < target.height)
         composeRule.onNodeWithText("Continue").assertIsEnabled().performClick()
         composeRule.runOnIdle { check(continuedWith == listOf("maya-chen")) }
     }

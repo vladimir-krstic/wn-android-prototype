@@ -1,10 +1,13 @@
 # Message interactions and conversation search
 
-Status: Search behavior and the 2026-08-31 message-surface correction are
-implemented. Build, lint, unit tests, and instrumentation compilation pass for
-the latest 23 dp / four-plus-overflow refinement. The preceding revision passed
-the full Pixel 8a suite and physical inspection; renewed device execution is
-pending after disconnection. User visual acceptance remains separate.
+Status: Search behavior and the message interaction surface are implemented.
+Build, lint, and unit tests pass. The complete 62-case conversation suite,
+focused quick-reaction geometry, and held mid-swipe LTR/RTL checks pass on the
+physical Pixel 8a; current-build visual inspection confirms the evenly inset
+reaction rail, fixed 28 dp focused Signal emoji artwork without clipping, neutral circular ellipsis,
+bubble-attached reply indicator, soft focused-overlay backdrop, and searchable
+sectioned emoji picker with a scroll-synchronized category rail. User visual
+acceptance remains separate.
 
 ## Source evidence
 
@@ -16,22 +19,51 @@ pending after disconnection. User visual acceptance remains separate.
   `wn-ios-prototype@4c25393f0eb6` for reply presentation, sent-media viewer,
   bubble metadata, reaction placement, focused actions, selection, reply
   swipe, and bottom settling; this does not globally repin the Android baseline
-- Signal Android `879651dc47a7b18b67e7aea52a25197875024680` as native Android
-  interaction evidence only
+- Signal Android `879651dc47a7b18b67e7aea52a25197875024680` for its React With
+  Any Emoji interaction structure and, by explicit user correction, its exact
+  bundled 20-page WebP emoji atlas plus generated metadata. No Signal renderer,
+  updater, database, or product-specific storage code is copied; provenance,
+  hashes, and bundled legal files are in `signal-emoji-assets.md`
 
 ## Android-native adaptation
 
-- Compose `combinedClickable` owns deliberate hold detection, ripple, keyboard,
-  hover, and accessibility long-click behavior. Haptic feedback accompanies a
-  successful hold. Every command is also exposed as a named custom
-  accessibility action, so discovery never depends on a gesture.
+- The clipped 16 dp message bubble owns deliberate hold detection before its
+  descendants receive pointer input. A stationary hold anywhere on text,
+  inline links or mentions, reply quotes, media, files, contacts, link cards,
+  voice playback, or other rich content opens the same source-preserving
+  message actions and consumes the release so the descendant cannot also
+  activate. Motion beyond touch slop cancels the hold and remains available to
+  scrolling or Reply swipe. An ordinary release is never consumed by the
+  bubble: the tapped descendant still opens its gallery, link, profile, file,
+  reply source, or playback action. Haptic feedback accompanies a recognized
+  hold, while named long-click and custom accessibility actions keep the
+  interaction available without relying on touch. Bubble-attached reaction
+  and timestamp metadata uses the same arbitration, so the earlier whole-
+  message hold area remains intact without restoring a transparent full-row
+  target.
 - A source-preserving modal overlay presents a real rendering of the focused
   message, quick reactions above it, and the ordered Reply, Forward, Copy,
   Select, Info, Delete actions below it. Incoming/outgoing alignment and safe-
   edge shifting retain the message relationship. Retry is first for a failed
   outgoing message. Conditional Read Aloud/Stop Reading and voice transcript
   commands occupy the same policy-owned command order. Tall real sources scale
-  within a 320 dp preview budget. Deleted messages expose no actions.
+  within a 320 dp preview budget. Its conversation backdrop uses a 24 dp
+  Compose blur plus a 24% translucent black veil, while the custom Dialog
+  suppresses the platform's second dim layer. This is lighter than the former
+  42% black scrim but gives light focused bubbles clearer separation than the
+  superseded pale 80% neutral wash. The veil remains on Android 11 and earlier
+  as the no-blur fallback. Each quick reaction keeps
+  a 48 dp semantic target but renders press feedback only through a centered
+  40 dp circle; 4 dp rail insets on every edge and 4 dp inter-target spacing
+  keep that circle evenly separated from the container. The emoji visual is a
+  fixed 28 dp square drawn by the app-owned Kotlin renderer from Signal's pinned
+  atlas artwork, including the exact Signal red heart. Image bounds replace
+  font line metrics, preventing ascent/descent clipping. More Reactions replaces the text-like plus with Google's rounded
+  24 dp horizontal ellipsis in a low-emphasis neutral 40 dp circle, while its
+  semantic target remains 48 dp. The quick rail uses the same standard Material
+  menu-group color and Level 2 shadow as the command surface; both retain their
+  complete shadow inside explicit 8 dp top/bottom viewport gutters. Deleted
+  messages expose no actions.
 - The transcript and focused preview share one adaptive metadata layout. Its
   visible reaction pills use a 31×23 dp singleton minimum, expand horizontally
   for counts, keep 3 dp gaps, and overlap the bubble bottom by 9 dp. The bubble
@@ -41,17 +73,33 @@ pending after disconnection. User visual acceptance remains separate.
   outgoing end/right in LTR, mirrored with the message in RTL. Without
   reactions, it begins 2 dp below the bubble; that same gap remains when
   reactions are present, while only pills overlap. Timestamp text, Sent fill,
-  and Sending progress use the lower-emphasis `outline` neutral. Outgoing
+  and Sending progress use the lower-emphasis `outline` neutral in the normal
+  transcript, then switch to full-emphasis `onSurface` in the focused context
+  preview for contrast against its dark translucent backdrop. Outgoing
   metadata includes Sent or Sending state; Sent uses a 14 dp filled
   status container with 10 dp check artwork.
   Failed delivery replaces time in that same slot with a 14 dp warning and
   **Not delivered, tap to retry**; geometry and typography stay identical and
   only the icon/label use the semantic error color.
   Message Details lists every type and its people.
-- A searchable Material emoji bottom sheet provides deterministic recent and
-  standard categories. A profile-owned six-item quick-reaction configuration
-  supports replacement, swap, Reset, cancel, and Done without persistence or
-  network work.
+- A searchable Material emoji bottom sheet presents the complete pinned White
+  Noise catalog as one continuous lazy grid: Recently Used plus Smileys &
+  People, Animals & Nature, Food & Drink, Activities, Travel & Places,
+  Objects, Symbols, and Flags. Search matches category terms, common aliases,
+  or a literal emoji; its named Clear action restores the full catalog. The
+  pinned icon rail follows the visible section, scrolls to a selected section,
+  expands the sheet for navigation, and leaves while an active query owns the
+  surface. Configure Reactions is the leading gear action in that same rail.
+  Every emoji keeps a circular 48 dp Material target around a fixed 32 dp
+  Signal atlas sprite, section headings expose heading semantics, and the
+  88%-height expanded sheet owns Back, swipe dismissal, focus and system
+  insets. Keeping the pinned rail visible at rest takes precedence over
+  Signal's window-level partial-sheet tab implementation. The deterministic
+  catalog is offline and app-owned; exact pinned artwork/data is bundled with
+  Signal's license and notice, while Signal storage, downloads, and renderer
+  code are not used. A profile-owned six-item quick-
+  reaction configuration supports replacement, swap, Reset, cancel, and Done
+  without persistence or network work.
 - Selection uses one stable leading 48 dp checkbox column and replaces the
   composer with a Material bottom action bar. The column does not move with
   bubble direction. Forwarding uses a searchable multi-select sheet capped at
@@ -59,7 +107,11 @@ pending after disconnection. User visual acceptance remains separate.
 - A leading-to-trailing reply swipe uses a 64 dp threshold, a 96 dp resisted
   maximum, threshold haptic, RTL mirroring, and vertical direction locking.
   It moves the complete bubble/reaction unit and is disabled whenever Reply is
-  unavailable; the named Reply semantics action remains equivalent.
+  unavailable. A heavier 24 dp Google rounded Reply glyph sits in a 48 dp
+  target anchored to the resting bubble rather than the row: it fades after
+  5% progress, travels 10 dp, grows from 1.0 to 1.2, pulses to 1.8 at the
+  threshold, and follows the same drag/overdrag/return state as the bubble.
+  The named Reply semantics action remains equivalent.
 - Message Details is a typed Navigation Compose destination backed by the real
   chat/message graph. Delete for Me removes local entries; Delete for Everyone
   is available only for nondeleted outgoing selections and leaves a clean
@@ -116,25 +168,45 @@ pending after disconnection. User visual acceptance remains separate.
   bounded quick-reaction strip and an icon-leading command surface. The
   composition aligns to bubble direction and shifts within system-safe bounds;
   scrim tap, Back and Escape dismiss it. Retry stays first and Delete retains
-  the semantic error role. The quick strip and command surface use equal 8 dp
-  gaps; with source reactions, the lower gap begins at the visible pill edge,
-  not the transparent touch-target edge.
+  the semantic error role. Instead of the former flat 42% black scrim or the
+  superseded pale neutral wash, a restrained 24% black veil sits over the
+  24 dp-blurred conversation. It leaves only indistinct context behind the
+  sharp focused content while separating light incoming bubbles from the
+  background. The quick strip
+  gives every 48 dp target a concentric 40 dp circular state layer, with an
+  equal 4 dp inset around the rail and between targets. The quick strip and
+  command surface use equal 8 dp gaps; with source reactions, the lower gap
+  begins at the visible pill edge, not the transparent touch-target edge.
+  The command surface itself is the shared non-popup Material menu group used
+  by Chats filtering: position-aware rounded state layers, group clipping,
+  native 48 dp minimum targets, 20 dp icons, typography, padding, color and
+  elevation are component-owned. The overlay retains placement and dismissal;
+  no custom full-width pressed row remains. Empty-space dismissal belongs to
+  the full-window backdrop, while only the visible reaction rail, actual
+  message-plus-metadata bounds, and command group consume taps. A transparent
+  full-width alignment column never blocks dismissal.
 - Reaction summaries attach to the bubble on one nonwrapping metadata line
   opposite the terminal time with 12 dp edge insets. Each singleton uses a
   31×23 dp visible minimum; counted and `+N` pills expand horizontally, visible
   neighbors are 3 dp apart, and single reactions omit a redundant count. The
   rail overlaps the bubble bottom by 9 dp while retaining expanded minimum
-  pointer targets. The bubble grows to its 340 dp maximum, the summary shows up
+  pointer targets. Each target suppresses its transparent 48 dp indication and
+  shares interaction state with a ripple clipped to the visible pill. The
+  bubble grows to its 340 dp maximum, the summary shows up
   to four real types plus one `+N`, and adaptive overflow may reduce the real
   set further when necessary.
   Normal tap selects/replaces but never removes an already selected reaction;
   explicit removal remains in focused reaction controls. At scaled type, the
   visible pill may grow while its 9 dp overlap and the focused visible-edge
   menu gap remain fixed.
-- The emoji sheet uses a rounded Material search field with named Clear and
-  Configure actions, full category labels in a scrollable chip row, and an
-  adaptive grid whose emoji targets remain at least 48dp instead of forcing an
-  iPhone-specific eight-column geometry at every Android width.
+- The emoji sheet uses a rounded Material search field and one continuous
+  sectioned adaptive grid rather than making people switch a text chip before
+  they can browse. Its bottom category rail uses official rounded Google
+  symbols, a 36 dp selected circle inside each 48 dp target, a leading
+  Configure gear, horizontal reachability for compact widths, and automatic
+  selected-category tracking while the grid scrolls. The rail is absent while
+  search results are active. Emoji targets remain at least 48 dp and their
+  pinned Signal sprites remain fixed at 32 dp instead of scaling with body text.
 - Reaction configuration uses six named replacement targets with Reset and
   Done hierarchy. Forwarding uses the compact white-equivalent search, native
   checkbox semantics, a visible five-chat limit, a segmented white-equivalent
@@ -167,8 +239,11 @@ pending after disconnection. User visual acceptance remains separate.
 
 ## Current official Android guidance
 
-- Android Developers recommends `combinedClickable` for long-click context
-  menus and haptic feedback after recognition.
+- Android Developers' pointer-event model lets a parent observe the Initial
+  pass before descendants and consume only after a recognized long press. The
+  transcript uses that arbitration because its descendants have independent
+  tap behavior; ordinary single-element long-click targets continue to use
+  `combinedClickable`.
 - Compose semantics and custom actions provide named assistive-technology
   alternatives to gesture-only operations.
 - Material search fields, lists, checkboxes, dialogs, and navigation remain the
@@ -177,7 +252,9 @@ pending after disconnection. User visual acceptance remains separate.
   emoji, configuration, forwarding, and confirmation flows keep their Material
   sheets or dialogs.
 - Sources rechecked for this pass: [tap and press](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press),
+  [handling interactions and shared interaction sources](https://developer.android.com/develop/ui/compose/touch-input/user-interactions/handling-interactions),
   [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics),
+  [Compose `Modifier.blur`](https://developer.android.com/reference/kotlin/androidx/compose/ui/Modifier),
   [Material search](https://developer.android.com/develop/ui/compose/components/search-bar),
   [Material app bars](https://developer.android.com/develop/ui/compose/components/app-bars),
   [window insets](https://developer.android.com/develop/ui/compose/system/insets-ui),
@@ -197,7 +274,11 @@ selection, reaction configuration and forwarding continue to use
   configuration, search order/content, reply, forwarding bounds/order,
   deletion scopes, and per-profile isolation.
 - Compose tests for long-click alternatives, selection, forwarding, details,
-  emoji configuration, mention suggestions, and in-place search compile.
+  emoji configuration, mention suggestions, and in-place search compile. Rich-
+  content regressions physically hold a reply quote, media tile, link card,
+  contact card, and voice-playback control and require message actions without
+  source, gallery, link, profile, or playback activation; their existing short-
+  tap destination tests remain intact.
 - A focused 12-test interaction slice passes on the physical Pixel 8a. It
   covers real-source hold presentation, bottom settlement, bounded single-line
   reaction summaries, stable selection columns, LTR/RTL reply swipes,
@@ -211,13 +292,43 @@ selection, reaction configuration and forwarding continue to use
   compact singleton/count geometry, 3 dp visible spacing, below-bubble text and
   media timestamps, outgoing delivery state, overflow, focused spacing, and
   200% type.
-- The complete 191-test instrumentation suite then passes on the physical
-  Pixel 8a, including the expanded forwarding surface, 48 dp media-viewer
-  actions, selection, reply, search, gestures, accessibility, and scaled type.
+- The current complete 200-test instrumentation audit runs on the physical
+  Pixel 8a: 198 tests pass. Two `ChatInfoScreenTest` shared-media viewer
+  expectations fail again in isolation and do not exercise or depend on the
+  emoji picker changes. The complete 62-case conversation suite is green,
+  including the expanded forwarding surface, 48 dp media-viewer actions,
+  selection, reply, search, gestures, accessibility, and scaled type.
 - The latest user-directed density refinement reduces pills to 31×23 dp, caps
   the shared summary at four real types plus one `+N`, and reduces Sent check
-  artwork to 10 dp. Unit, lint, build, and instrumentation compile gates pass;
-  renewed Pixel execution remains pending after disconnection.
+  artwork to 10 dp. Unit, lint, build, and physical Pixel gates pass in the
+  complete conversation suite.
+- The focused quick-reaction regression proves 48 dp semantic targets contain
+  concentric 40 dp circular state layers, with equal 4 dp rail insets on every
+  side and 4 dp between adjacent targets. It also proves every accepted quick
+  reaction uses 28 dp artwork and the focused viewport reserves 8 dp above and
+  below its elevated surfaces. Targeted checks and idle/held frames pass on the
+  physical Pixel 8a.
+- The focused-overlay backdrop regression asserts full-window veil coverage.
+  The established coverage test remains compiled; renewed device execution is
+  intentionally deferred until the user explicitly requests it. Host
+  compilation confirms the current 24 dp blur plus 24% black veil path without
+  reintroducing platform dimming.
+- Reply motion has a pure resisted-overdrag regression plus physical LTR and
+  RTL geometry tests that pause the return spring and prove the indicator stays
+  between the resting and translated bubble edges while remaining vertically
+  centered on the bubble. The complete 62-case conversation suite passes on
+  the Pixel 8a, and a held mid-swipe frame confirms the weight-600 rounded
+  glyph, reaction coupling, and bubble-relative placement in the current build.
+- The full-picker regression verifies its expanded sheet, 48 dp emoji targets,
+  section headings, named search/Clear behavior, search-time rail dismissal,
+  and category jump navigation. It passes in the complete 62-case physical
+  Pixel conversation suite. Current-build inspection covers the full catalog,
+  IME-visible Beaver search, and the Animals & Nature jump/selected state.
+- Signal-atlas parser tests cover sheet/index decoding, presentation-selector
+  aliases, and multi-code-unit emoji. An on-device asset test proves every
+  accepted catalog emoji resolves to bundled Signal artwork. Current-build
+  Pixel inspection covers the quick strip, a transcript reaction pill, and the
+  full picker; all use the Signal visuals without font-baseline clipping.
 - Focused tests cover the message context/title, reaction configuration slots,
   selection controls, forwarding limit/search, focused conversation search,
   the shared 48 dp field, named Clear, previous/next/count controls, Back

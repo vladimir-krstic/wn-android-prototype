@@ -428,7 +428,7 @@ class AppViewModelTest {
         val profile = viewModel.uiState.activeProfile!!
         val source = viewModel.chat("catalog-media-gallery")!!
         val selected = ConversationMediaProjection.items(source, profile).first {
-            it.attachment.kind == MessageAttachmentKind.Photos && it.key.imageIndex == 1
+            it.key.messageId == "MED-04" && it.key.attachmentId == "MED-04-photo-2"
         }
         val targetId = "maya-chen"
         val before = viewModel.chat(targetId)!!.timeline.size
@@ -446,7 +446,7 @@ class AppViewModelTest {
         assertEquals("Take a look", forwarded.text)
         assertEquals(1, forwarded.attachments.size)
         assertEquals(MessageAttachmentKind.Photo, forwarded.attachments.single().kind)
-        assertEquals("Photo", forwarded.attachments.single().label)
+        assertEquals(selected.attachment.label, forwarded.attachments.single().label)
         assertEquals(listOfNotNull(selected.image), forwarded.attachments.single().images)
         assertFalse(viewModel.forwardMediaFrame(source.id, selected.key, listOf(source.id)))
         assertFalse(viewModel.forwardMediaFrame(source.id, selected.key, emptyList()))
@@ -496,7 +496,7 @@ class AppViewModelTest {
         val before = viewModel.chat(chatId)!!.timeline.size
 
         assertTrue(viewModel.editGroup(chatId, " Weekend Ramblers ", "A new route.", ProfileAvatar.Monogram))
-        assertTrue(viewModel.addGroupMembers(chatId, listOf("mina-park", "mina-park")))
+        assertTrue(viewModel.addGroupMembers(chatId, listOf("theo-grant", "theo-grant")))
         assertTrue(viewModel.setGroupMemberAdmin(chatId, "maya-chen", true))
         assertTrue(viewModel.setGroupMemberAdmin(chatId, "maya-chen", false))
         assertTrue(viewModel.removeGroupMember(chatId, "elias-moreno"))
@@ -504,7 +504,7 @@ class AppViewModelTest {
 
         assertEquals("Weekend Ramblers", chat.title)
         assertEquals("A new route.", chat.description)
-        assertTrue(chat.members.any { it.personId == "mina-park" })
+        assertTrue(chat.members.any { it.personId == "theo-grant" })
         assertTrue(chat.members.none { it.personId == "elias-moreno" })
         assertEquals(GroupRole.Member, chat.members.first { it.personId == "maya-chen" }.role)
         assertEquals(before + 5, chat.timeline.size)

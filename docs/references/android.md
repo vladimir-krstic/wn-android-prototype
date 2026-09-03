@@ -1,6 +1,6 @@
 # Official Android reference index
 
-Last reviewed: 2026-08-30.
+Last reviewed: 2026-09-01.
 
 Use this file as a router. Open only the sources relevant to the selected
 screen, confirm that the guidance is still current, and record material links
@@ -27,6 +27,8 @@ authority; this index does not freeze library versions.
 
 - [Grids and units](https://developer.android.com/design/ui/mobile/guides/layout-and-content/grids-and-units)
 - [Content composition and structure](https://developer.android.com/design/ui/mobile/guides/layout-and-content/content-structure)
+- [Compose constraints and modifier order](https://developer.android.com/develop/ui/compose/layouts/constraints-modifiers)
+- [Material Card containers](https://developer.android.com/develop/ui/compose/components/card)
 - [Adaptive apps](https://developer.android.com/develop/adaptive-apps)
 - [Adaptive do's and don'ts](https://developer.android.com/develop/adaptive-apps/guides/adaptive-dos-and-donts)
 - [Window size classes](https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes)
@@ -93,6 +95,7 @@ published source and compatibility evidence are linked in
 - [Understand Compose gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures)
 - [Tap and press gestures](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press)
 - [Handling interactions and state layers](https://developer.android.com/develop/ui/compose/touch-input/user-interactions/handling-interactions)
+- [Material 3 ripple API](https://developer.android.com/reference/kotlin/androidx/compose/material3/package-summary#ripple(androidx.compose.ui.graphics.Color,kotlin.Boolean,androidx.compose.ui.unit.Dp,androidx.compose.ui.graphics.Shape,kotlin.Boolean,kotlin.Boolean,kotlin.Boolean,kotlin.Boolean))
 - [Save UI state](https://developer.android.com/develop/ui/compose/state-saving)
 - [State holders and UI state](https://developer.android.com/topic/architecture/ui-layer/stateholders)
 - [Lifecycle-aware state collection](https://developer.android.com/develop/ui/compose/state#lifecycles)

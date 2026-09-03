@@ -166,6 +166,6 @@ class ComposerModelsTest {
         assertEquals(4, ComposerFixtures.seed("catalog-composer-photo-album").attachments.size)
         assertEquals(3, ComposerFixtures.seed("catalog-composer-mixed-media").attachments.size)
         assertEquals("https://whitenoise.chat", ComposerFixtures.seed("catalog-composer-link").suppressedLinkUrl)
-        assertEquals("CMP-REPLY-source", ComposerFixtures.seed("catalog-composer-reply").replyMessageId)
+        assertEquals("CMP-REPLY", ComposerFixtures.seed("catalog-composer-reply").replyMessageId)
     }
 }

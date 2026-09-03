@@ -534,6 +534,9 @@ fun WhiteNoiseNavHost(
                         navController.navigate(AppRoute.MessageDetails(chat.id, messageId))
                     },
                     onOpenChatInfo = { navController.navigate(AppRoute.ChatInfo(chat.id)) },
+                    onOpenPersonProfile = { personId ->
+                        navController.navigate(AppRoute.PersonProfile(personId, chat.id))
+                    },
                     onOpenDeveloperTools = if (ConversationDebugPolicy.showsToolbarAction(profile, chat.id)) {
                         { navController.navigate(AppRoute.ConversationDebug(chat.id)) }
                     } else {

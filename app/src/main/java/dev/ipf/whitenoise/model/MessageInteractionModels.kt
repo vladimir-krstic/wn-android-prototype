@@ -89,20 +89,14 @@ object ReactionCatalog {
         val omittedTypeCount: Int = 0,
     )
 
-    val defaults = listOf("❤", "🤘", "🔥", "😂", "🦫", "🚀")
-    val categories: LinkedHashMap<String, List<String>> = linkedMapOf(
-        "Recent" to defaults,
-        "Smileys" to listOf("😀", "😃", "😄", "😁", "😆", "🥹", "😂", "🤣", "😊", "😎", "🤩", "🥳", "😴", "🤔", "🫡", "🤯"),
-        "People" to listOf("👋", "🤚", "🖐", "✋", "🫶", "👏", "🙌", "🤝", "👍", "👎", "✊", "🤘", "👌", "🙏", "💪", "🧠"),
-        "Animals" to listOf("🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐸", "🦫", "🦉", "🦋", "🐝"),
-        "Food" to listOf("🍏", "🍊", "🍋", "🍉", "🍇", "🍓", "🫐", "🥑", "🍕", "🌮", "🍜", "🍪", "🎂", "☕", "🍵", "🥤"),
-        "Activity" to listOf("⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🎱", "🏓", "🥾", "🚲", "🏆", "🎨", "🎸", "🎮", "🧩", "🎯"),
-        "Travel" to listOf("🚗", "🚌", "🚲", "✈", "🚀", "🛶", "⛰", "🏕", "🏖", "🌋", "🌅", "🌌", "🗺", "🧭", "⛺", "🌲"),
-        "Objects" to listOf("⌚", "📱", "💻", "⌨", "📷", "💡", "🔦", "📚", "✏", "🔒", "🔑", "🧰", "🎁", "🔭", "🪴", "🕯"),
-        "Symbols" to listOf("❤", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💯", "✨", "🔥", "✅", "❌", "⚠", "❓", "‼"),
-    )
+    val defaults = listOf("❤️", "🤘", "🔥", "😂", "🦫", "🚀")
+    val sections: List<EmojiSection> = EmojiCatalog.sections
+    val categories: LinkedHashMap<String, List<String>> = LinkedHashMap<String, List<String>>().apply {
+        sections.forEach { put(it.category.title, it.emoji) }
+    }
+    val all: List<String> = EmojiCatalog.all
 
-    val all: List<String> = categories.values.flatten().distinct()
+    fun search(query: String): List<EmojiSection> = EmojiCatalog.search(query)
 
     fun quickStrip(profileQuick: List<String>, selected: String?): List<String> =
         (profileQuick.take(6) + listOfNotNull(selected?.takeUnless(profileQuick::contains))).distinct()
@@ -175,7 +169,7 @@ object ConversationSearch {
     }
 
     private fun ChatMessage.searchableText(profile: Profile): String = buildString {
-        append(text)
+        append(InlineMessageMarkup.plainText(text))
         append(' ')
         append(if (authorId == profile.id) profile.name else profile.people.firstOrNull { it.id == authorId }?.name.orEmpty())
         attachments.forEach { attachment ->

@@ -89,6 +89,47 @@ object MediaLayout {
     fun overflowCount(count: Int): Int = (count - 5).coerceAtLeast(0)
 }
 
+data class SingleMediaSize(
+    val widthDp: Int,
+    val heightDp: Int,
+)
+
+/** Deterministic transcript sizing for single media, including extreme and tiny sources. */
+object SingleMediaLayout {
+    const val MaximumExtentDp = 256
+    const val MinimumWidthDp = 192
+    const val PracticalSmallSourceExtentPx = 150
+    const val MinimumAspectRatio = 0.35f
+    const val MaximumAspectRatio = 1f / MinimumAspectRatio
+
+    fun size(attachment: MessageAttachment): SingleMediaSize {
+        val sourceWidth = attachment.pixelWidth?.takeIf { it > 0 }
+        val sourceHeight = attachment.pixelHeight?.takeIf { it > 0 }
+        if (sourceWidth == null || sourceHeight == null) {
+            return SingleMediaSize(MaximumExtentDp, MaximumExtentDp)
+        }
+
+        val ratio = (sourceWidth.toFloat() / sourceHeight)
+            .coerceIn(MinimumAspectRatio, MaximumAspectRatio)
+        var width = MaximumExtentDp * ratio
+        var height = MaximumExtentDp.toFloat()
+        width = width.coerceAtLeast(MinimumWidthDp.toFloat())
+        if (width > MaximumExtentDp) {
+            width = MaximumExtentDp.toFloat()
+            height = MaximumExtentDp / ratio
+        }
+
+        val destinationShortExtent = minOf(width, height)
+        val sourceShortExtent = minOf(sourceWidth, sourceHeight).toFloat()
+        if (destinationShortExtent > MinimumWidthDp && destinationShortExtent > sourceShortExtent) {
+            val scale = MinimumWidthDp / destinationShortExtent
+            width *= scale
+            height *= scale
+        }
+        return SingleMediaSize(width.toInt(), height.toInt())
+    }
+}
+
 object VoiceMessageFixture {
     const val transcript = "The trail is quiet this morning. Let’s meet by the old bridge at nine."
     const val durationSeconds = 8
@@ -344,7 +385,7 @@ object ComposerFixtures {
         "catalog-direct-new-draft" -> ComposerSeed("STATE-01: Unsent draft")
         "catalog-composer-text" -> ComposerSeed("Here’s the updated plan.")
         "catalog-composer-multiline" -> ComposerSeed(
-            "I pulled together the notes:\n• Confirm the route\n• Pack water\n• Leave by nine",
+            "I pulled together the notes:\n• Confirm the time\n• Share the route\n• Bring a charger",
         )
         "catalog-composer-link" -> ComposerSeed(
             text = "https://whitenoise.chat",
@@ -354,40 +395,43 @@ object ComposerFixtures {
             "Worth a look: https://developer.apple.com/design/human-interface-guidelines",
         )
         "catalog-composer-photo" -> ComposerSeed(
-            attachments = listOf(photo("CMP-PHOTO", AvatarAsset.Marmot, "Photo ready to send")),
+            attachments = listOf(photo("CMP-PHOTO-attachment", AvatarAsset.Fox, "Fox in grass")),
         )
         "catalog-composer-photo-album" -> ComposerSeed(
             text = "A few from today.",
             attachments = listOf(
-                photo("CMP-ALBUM-1", AvatarAsset.Marmot, "Marmot"),
-                photo("CMP-ALBUM-2", AvatarAsset.Badger, "Badger"),
-                photo("CMP-ALBUM-3", AvatarAsset.Fox, "Fox"),
-                photo("CMP-ALBUM-4", AvatarAsset.Sloth, "Sloth"),
+                photo("CMP-PHOTO-ALBUM-1", AvatarAsset.Marmot, "Marmot on a rock"),
+                photo("CMP-PHOTO-ALBUM-2", AvatarAsset.Badger, "Badger in grass"),
+                photo("CMP-PHOTO-ALBUM-3", AvatarAsset.Fox, "Fox in grass"),
+                photo("CMP-PHOTO-ALBUM-4", AvatarAsset.Sloth, "Sloth in a tree"),
             ),
         )
         "catalog-composer-mixed-media" -> ComposerSeed(
             text = "Photos and a short clip from the walk.",
             attachments = listOf(
-                photo("CMP-MIXED-1", AvatarAsset.Marmot, "Trail photo"),
-                photo("CMP-MIXED-2", AvatarAsset.Ostrich, "Walk photo"),
+                photo("CMP-MIXED-photo-1", AvatarAsset.Marmot, "Marmot on a rock"),
                 MessageAttachment(
-                    id = "CMP-MIXED-3",
+                    id = "CMP-MIXED-video",
                     kind = MessageAttachmentKind.Video,
-                    label = "Trail video, 0:12",
+                    label = "Trail video",
                     images = listOf(ProfileAvatar.Asset(AvatarAsset.GardenClub)),
+                    durationSeconds = 8,
+                    pixelWidth = 1_920,
+                    pixelHeight = 1_080,
                 ),
+                photo("CMP-MIXED-photo-2", AvatarAsset.Ostrich, "Ostrich in a field"),
             ),
         )
         "catalog-composer-file" -> ComposerSeed(
             text = "Here’s the brief.",
             attachments = listOf(
-                MessageAttachment("CMP-FILE", MessageAttachmentKind.File, "Project Brief.pdf"),
+                MessageAttachment("CMP-FILE-attachment", MessageAttachmentKind.File, "Project Brief.pdf"),
             ),
         )
         "catalog-composer-gif" -> ComposerSeed(
             attachments = listOf(
                 MessageAttachment(
-                    "CMP-GIF",
+                    "CMP-GIF-attachment",
                     MessageAttachmentKind.Gif,
                     "Marmot looking around",
                     images = listOf(ProfileAvatar.Asset(AvatarAsset.Marmot)),
@@ -397,12 +441,12 @@ object ComposerFixtures {
         "catalog-composer-contact" -> ComposerSeed(
             text = "Maya can help with this.",
             attachments = listOf(
-                MessageAttachment("CMP-CONTACT", MessageAttachmentKind.Contact, "Contact: Maya Chen"),
+                MessageAttachment("CMP-CONTACT-attachment", MessageAttachmentKind.Contact, "Contact: Maya Chen"),
             ),
         )
         "catalog-composer-reply" -> ComposerSeed(
             text = "Yes—Thursday afternoon works for me.",
-            replyMessageId = "CMP-REPLY-source",
+            replyMessageId = "CMP-REPLY",
         )
         "catalog-composer-mention" -> ComposerSeed("@Maya Chen can you take a look?")
         else -> ComposerSeed(text = fallbackText)
@@ -413,5 +457,7 @@ object ComposerFixtures {
         kind = MessageAttachmentKind.Photo,
         label = label,
         images = listOf(ProfileAvatar.Asset(asset)),
+        pixelWidth = 1_200,
+        pixelHeight = 800,
     )
 }

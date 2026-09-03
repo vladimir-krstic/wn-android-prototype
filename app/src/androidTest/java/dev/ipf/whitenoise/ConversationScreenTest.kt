@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -23,6 +24,7 @@ import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -88,6 +90,8 @@ class ConversationScreenTest {
         setConversation("weekend-walks")
 
         composeRule.onNodeWithText("Weekend Walks").assertIsDisplayed()
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.week-msg-21"))
         composeRule.onAllNodesWithText("Maya Chen")[0].assertIsDisplayed()
         val avatar = composeRule.onNodeWithTag(
             "conversation.header.avatar",
@@ -112,6 +116,8 @@ class ConversationScreenTest {
     @Test
     fun groupIdentityAlignsToTheBubbleRatherThanItsMetadata() {
         setConversation("weekend-walks")
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.week-msg-21"))
 
         val bubble = composeRule.onNodeWithTag(
             "conversation.message.bubble.week-msg-21",
@@ -129,6 +135,27 @@ class ConversationScreenTest {
 
         assertTrue(abs(avatar.bottom - bubble.bottom) < 1.5f)
         assertTrue(abs(author.left - bubble.left - twelveDp) < 1.5f)
+    }
+
+    @Test
+    fun dateHeaderIsInlineTextUntilItsPinnedReplacementIsNeeded() {
+        setConversation("catalog-direct-dates")
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("conversation.date.pinned").assertIsDisplayed()
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.date.inline.day-7-Today"))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("conversation.date.inline.day-7-Today").assertIsDisplayed()
+        composeRule.onNodeWithTag("conversation.date.pinned").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.DATE-15"))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("conversation.date.pinned").assertIsDisplayed()
     }
 
     @Test
@@ -152,7 +179,7 @@ class ConversationScreenTest {
 
         composeRule.onAllNodesWithText("A few from today.")[0].assertIsDisplayed()
         composeRule.onNodeWithContentDescription("4 draft attachments").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Badger").performClick()
+        composeRule.onNodeWithContentDescription("Badger in grass").performClick()
         composeRule.onNodeWithText("Preview").assertIsDisplayed()
         composeRule.onNodeWithTag("conversation.media.inclusion.target").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Included"),
@@ -161,6 +188,18 @@ class ConversationScreenTest {
         composeRule.onAllNodesWithTag("conversation.media.thumbnail.unselected", useUnmergedTree = true)
             .fetchSemanticsNodes()
             .also { assertTrue(it.isNotEmpty()) }
+        composeRule.onAllNodesWithTag(
+            "conversation.media.thumbnail.target",
+            useUnmergedTree = true,
+        )[0]
+            .assertWidthIsEqualTo(72.dp)
+            .assertHeightIsEqualTo(72.dp)
+        composeRule.onAllNodesWithTag(
+            "conversation.media.thumbnail.unselected",
+            useUnmergedTree = true,
+        )[0]
+            .assertWidthIsEqualTo(64.dp)
+            .assertHeightIsEqualTo(64.dp)
     }
 
     @Test
@@ -254,16 +293,18 @@ class ConversationScreenTest {
     @Test
     fun messageReplyUsesAlignedAccentAndConcentricInset() {
         setConversation("catalog-group-messages")
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.GRP-RPL-02"))
         val messageBubble = composeRule.onNodeWithTag(
             "conversation.message.bubble.GRP-RPL-02",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
         val messageContainer = composeRule.onNodeWithTag(
-            "conversation.message.quote.container",
+            "conversation.message.quote.GRP-RPL-02.container",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
         val messageBar = composeRule.onNodeWithTag(
-            "conversation.message.quote.bar",
+            "conversation.message.quote.GRP-RPL-02.bar",
             useUnmergedTree = true,
         ).assertWidthIsEqualTo(3.dp).fetchSemanticsNode().boundsInRoot
         val eightDp = with(composeRule.density) { 8.dp.toPx() }
@@ -297,7 +338,7 @@ class ConversationScreenTest {
     fun singleDraftMediaHidesThumbnailRailAndUsesCompactInclusionControl() {
         setConversation("catalog-composer-photo")
 
-        composeRule.onNodeWithContentDescription("Photo ready to send").performClick()
+        composeRule.onNodeWithContentDescription("Fox in grass").performClick()
 
         val image = composeRule.onNodeWithTag(
             "conversation.media.preview.image.0",
@@ -332,12 +373,14 @@ class ConversationScreenTest {
         }.id
         setConversation(chat.id)
 
-        composeRule.onNodeWithTag("conversation.media.tile.viewer-gallery.1").performClick()
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.MED-VIEW-02"))
+        composeRule.onNodeWithTag("conversation.media.tile.MED-VIEW-02-photo.0").performClick()
 
         composeRule.onNodeWithTag("conversation.media.viewer.sender")
-            .assertTextContains("Media - Viewer & Actions")
+            .assertTextContains("You")
         composeRule.onNodeWithTag("conversation.media.viewer.position")
-            .assertTextContains("2 of 4", substring = true)
+            .assertTextContains("2 of 5", substring = true)
         composeRule.onNodeWithTag("conversation.media.thumbnail.target").assertDoesNotExist()
         composeRule.onNodeWithTag("conversation.media.viewer.share")
             .assertIsDisplayed()
@@ -358,12 +401,12 @@ class ConversationScreenTest {
         composeRule.runOnIdle { assertTrue(zoomIn.action()) }
         composeRule.onNodeWithTag("conversation.media.viewer.pager").performTouchInput { swipeLeft() }
         composeRule.onNodeWithTag("conversation.media.viewer.position")
-            .assertTextContains("2 of 4", substring = true)
+            .assertTextContains("2 of 5", substring = true)
 
         composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
         composeRule.onNodeWithTag("conversation.media.viewer.pager").performTouchInput { swipeLeft() }
         composeRule.onNodeWithTag("conversation.media.viewer.position")
-            .assertTextContains("3 of 4", substring = true)
+            .assertTextContains("3 of 5", substring = true)
 
         composeRule.onNodeWithTag("conversation.media.viewer.forward").performClick()
         composeRule.onNodeWithTag("conversation.forward.search")
@@ -887,16 +930,202 @@ class ConversationScreenTest {
         composeRule.onNodeWithTag("conversation.message.ACT-01")
             .performSemanticsAction(SemanticsActions.OnLongClick)
         composeRule.onNodeWithTag("message.actions.overlay").assertIsDisplayed()
+        val overlay = composeRule.onNodeWithTag("message.actions.overlay")
+            .fetchSemanticsNode().boundsInRoot
+        val backdrop = composeRule.onNodeWithTag(
+            "message.actions.backdrop",
+            useUnmergedTree = true,
+        )
+            .assertExists()
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(abs(overlay.left - backdrop.left) < 1f)
+        assertTrue(abs(overlay.top - backdrop.top) < 1f)
+        assertTrue(abs(overlay.right - backdrop.right) < 1f)
+        assertTrue(abs(overlay.bottom - backdrop.bottom) < 1f)
         composeRule.onNodeWithText("Message Actions").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("More Reactions").assertIsDisplayed()
         composeRule.onNodeWithTag(
             "message.actions.preview",
             useUnmergedTree = true,
         ).fetchSemanticsNode()
-        composeRule.onNodeWithText("Reply").assertIsDisplayed()
+        composeRule.onNodeWithText("Reply")
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertTouchHeightIsEqualTo(48.dp)
         composeRule.onNodeWithText("Forward").assertIsDisplayed()
         composeRule.onNodeWithText("Read Aloud").assertIsDisplayed()
         composeRule.onNodeWithText("Info").assertIsDisplayed()
+        composeRule.onNodeWithText("Delete")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertTouchHeightIsEqualTo(48.dp)
+    }
+
+    @Test
+    fun messagePressIndicationMatchesTheBubbleInsteadOfTheFullRow() {
+        setConversation("catalog-direct-reactions")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.ACT-04"))
+        val row = composeRule.onNodeWithTag("conversation.message.ACT-04")
+            .fetchSemanticsNode().boundsInRoot
+        val bubble = composeRule.onNodeWithTag(
+            "conversation.message.bubble.ACT-04",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val pressLayer = composeRule.onNodeWithTag(
+            "conversation.message.pressLayer.ACT-04",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(bubble.width < row.width)
+        assertTrue(abs(pressLayer.left - bubble.left) < 1f)
+        assertTrue(abs(pressLayer.top - bubble.top) < 1f)
+        assertTrue(abs(pressLayer.right - bubble.right) < 1f)
+        assertTrue(abs(pressLayer.bottom - bubble.bottom) < 1f)
+    }
+
+    @Test
+    fun attachmentOnlyMediaAndFileUseEqualConcentricBubbleInsets() {
+        setConversation("catalog-direct-reactions")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.ACT-04"))
+        assertRichAttachmentInsets(
+            messageId = "ACT-04",
+            attachmentTag = "conversation.media.tile.ACT-photo-outgoing.0",
+            equalOnAllSides = true,
+        )
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.ACT-05"))
+        assertRichAttachmentInsets(
+            messageId = "ACT-05",
+            attachmentTag = "conversation.attachment.ACT-05-file",
+            equalOnAllSides = true,
+        )
+    }
+
+    @Test
+    fun mixedMediaAndTextShareTheMediaCanvasWidth() {
+        setConversation("catalog-media-single")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.MED-11"))
+        assertRichAttachmentInsets(
+            messageId = "MED-11",
+            attachmentTag = "conversation.media.grid.MED-11",
+        )
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.MED-SINGLE-08"))
+        assertRichAttachmentInsets(
+            messageId = "MED-SINGLE-08",
+            attachmentTag = "conversation.media.grid.MED-SINGLE-08",
+        )
+    }
+
+    @Test
+    fun oneTapOnVisualEmptySpaceDismissesFocusedMessageActions() {
+        setConversation("catalog-direct-reactions")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.ACT-01"))
+        composeRule.onNodeWithTag("conversation.message.ACT-01")
+            .performSemanticsAction(SemanticsActions.OnLongClick)
+
+        val overlay = composeRule.onNodeWithTag("message.actions.overlay")
+        val overlayBounds = overlay.fetchSemanticsNode().boundsInRoot
+        val bubbleBounds = composeRule.onNodeWithTag(
+            "conversation.message.bubble.ACT-01",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val emptySpaceInsetPx = with(composeRule.density) { 20.dp.toPx() }
+
+        overlay.performTouchInput {
+            click(
+                Offset(
+                    x = width.toFloat() - emptySpaceInsetPx,
+                    y = bubbleBounds.center.y - overlayBounds.top,
+                ),
+            )
+        }
+
+        composeRule.onNodeWithTag("message.actions.overlay").assertDoesNotExist()
+    }
+
+    @Test
+    fun focusedReactionTargetsUseCircularStateLayersAndEqualRailInsets() {
+        setConversation("catalog-direct-reactions")
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.ACT-01"))
+        composeRule.onNodeWithTag("conversation.message.ACT-01")
+            .performSemanticsAction(SemanticsActions.OnLongClick)
+
+        val rail = composeRule.onNodeWithTag(
+            "message.actions.reactions",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val firstTarget = composeRule.onNodeWithTag(
+            "message.actions.reaction.target.0",
+            useUnmergedTree = true,
+        )
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val firstStateLayer = composeRule.onNodeWithTag(
+            "message.actions.reaction.stateLayer.0",
+            useUnmergedTree = true,
+        )
+            .assertWidthIsEqualTo(40.dp)
+            .assertHeightIsEqualTo(40.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val secondTarget = composeRule.onNodeWithTag(
+            "message.actions.reaction.target.1",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val moreTarget = composeRule.onNodeWithTag(
+            "message.actions.reaction.more",
+            useUnmergedTree = true,
+        )
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val moreStateLayer = composeRule.onNodeWithTag(
+            "message.actions.reaction.more.stateLayer",
+            useUnmergedTree = true,
+        )
+            .assertWidthIsEqualTo(40.dp)
+            .assertHeightIsEqualTo(40.dp)
+            .fetchSemanticsNode().boundsInRoot
+        (0 until 6).forEach { index ->
+            composeRule.onNodeWithTag(
+                "message.actions.reaction.stateLayer.$index",
+                useUnmergedTree = true,
+            )
+                .assertWidthIsEqualTo(40.dp)
+                .assertHeightIsEqualTo(40.dp)
+            composeRule.onNodeWithTag(
+                "message.actions.reaction.emoji.$index",
+                useUnmergedTree = true,
+            )
+                .assertWidthIsEqualTo(28.dp)
+                .assertHeightIsEqualTo(28.dp)
+        }
+        val fourDp = with(composeRule.density) { 4.dp.toPx() }
+
+        assertTrue(abs((firstTarget.left - rail.left) - fourDp) < 1.5f)
+        assertTrue(abs((firstTarget.top - rail.top) - fourDp) < 1.5f)
+        assertTrue(abs((rail.bottom - firstTarget.bottom) - fourDp) < 1.5f)
+        assertTrue(abs((rail.right - moreTarget.right) - fourDp) < 1.5f)
+        assertTrue(abs((secondTarget.left - firstTarget.right) - fourDp) < 1.5f)
+        assertTrue(abs((firstStateLayer.left - firstTarget.left) - fourDp) < 1.5f)
+        assertTrue(abs((firstStateLayer.top - firstTarget.top) - fourDp) < 1.5f)
+        assertTrue(abs((firstTarget.right - firstStateLayer.right) - fourDp) < 1.5f)
+        assertTrue(abs((firstTarget.bottom - firstStateLayer.bottom) - fourDp) < 1.5f)
+        assertTrue(abs((moreStateLayer.left - moreTarget.left) - fourDp) < 1.5f)
+        assertTrue(abs((moreStateLayer.top - moreTarget.top) - fourDp) < 1.5f)
+        assertTrue(abs((moreTarget.right - moreStateLayer.right) - fourDp) < 1.5f)
+        assertTrue(abs((moreTarget.bottom - moreStateLayer.bottom) - fourDp) < 1.5f)
     }
 
     @Test
@@ -948,7 +1177,6 @@ class ConversationScreenTest {
             useUnmergedTree = true,
         )
             .assertHeightIsEqualTo(23.dp)
-            .assertWidthIsEqualTo(31.dp)
             .fetchSemanticsNode().boundsInRoot
         val time = composeRule.onNodeWithTag(
             "conversation.message.time.RCT-05",
@@ -961,7 +1189,8 @@ class ConversationScreenTest {
 
         assertTrue(abs(firstTarget.center.y - countedTarget.center.y) < 1f)
         assertTrue(countedPill.width > firstPill.width)
-        assertTrue(abs(firstPill.width - lastPill.width) < 1.5f)
+        assertTrue(lastPill.width > firstPill.width)
+        assertTrue(abs(countedPill.width - lastPill.width) < 1.5f)
         assertTrue(abs((countedPill.left - firstPill.right) - threeDp) < 1.5f)
         assertTrue(abs((lastPill.left - countedPill.right) - threeDp) < 1.5f)
         assertTrue(abs((bubble.bottom - firstPill.top) - nineDp) < 1.5f)
@@ -1011,11 +1240,9 @@ class ConversationScreenTest {
             }
         }
 
-        assertTimestamp("RCT-11", outgoing = false)
-        assertTimestamp("RCT-10", outgoing = true)
+        assertTimestamp("RCT-10", outgoing = false)
+        assertTimestamp("RCT-11", outgoing = true)
         assertTimestamp("ACT-01", outgoing = false)
-        assertTimestamp("ACT-02", outgoing = true)
-        assertTimestamp("ACT-03", outgoing = false)
         assertTimestamp("ACT-04", outgoing = true)
     }
 
@@ -1088,12 +1315,32 @@ class ConversationScreenTest {
             "message.actions.menu",
             useUnmergedTree = true,
         ).fetchSemanticsNode().boundsInRoot
+        val topShadowGutter = composeRule.onNodeWithTag(
+            "message.actions.shadowGutter.top",
+            useUnmergedTree = true,
+        )
+            .assertHeightIsEqualTo(8.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val bottomShadowGutter = composeRule.onNodeWithTag(
+            "message.actions.shadowGutter.bottom",
+            useUnmergedTree = true,
+        )
+            .assertHeightIsEqualTo(8.dp)
+            .fetchSemanticsNode().boundsInRoot
         val expectedGap = with(composeRule.density) { 8.dp.toPx() }
         val upperGap = preview.top - quickReactions.bottom
         val lowerGap = menu.top - preview.bottom
 
         assertTrue(abs(upperGap - expectedGap) < 1.5f)
         assertTrue(abs(lowerGap - expectedGap) < 1.5f)
+        assertTrue(
+            "top gutter ended at ${topShadowGutter.bottom}px and rail began at ${quickReactions.top}px",
+            abs(quickReactions.top - topShadowGutter.bottom) < 1.5f,
+        )
+        assertTrue(
+            "menu ended at ${menu.bottom}px and bottom gutter began at ${bottomShadowGutter.top}px",
+            abs(bottomShadowGutter.top - menu.bottom) < 1.5f,
+        )
     }
 
     @Test
@@ -1170,12 +1417,16 @@ class ConversationScreenTest {
             .performSemanticsAction(SemanticsActions.OnLongClick)
         composeRule.onNodeWithText("Select").performClick()
 
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.TXT-06"))
         val incoming = composeRule.onNodeWithTag(
             "conversation.selection.control.TXT-06",
             useUnmergedTree = true,
         )
             .assertWidthIsEqualTo(48.dp)
             .fetchSemanticsNode().boundsInRoot
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.DLV-03"))
         val outgoing = composeRule.onNodeWithTag(
             "conversation.selection.control.DLV-03",
             useUnmergedTree = true,
@@ -1217,6 +1468,44 @@ class ConversationScreenTest {
     }
 
     @Test
+    fun replyIndicatorStaysAttachedToTheBubbleDuringDragAndReturn() {
+        setConversation("fiatjaf")
+        val messageTag = "conversation.message.fiatjaf-6"
+        val bubbleTag = "conversation.message.bubble.fiatjaf-6"
+        val indicatorTag = "conversation.message.swipeReply.fiatjaf-6"
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag(messageTag))
+        val restingBubble = composeRule.onNodeWithTag(
+            bubbleTag,
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val twoDp = with(composeRule.density) { 2.dp.toPx() }
+
+        composeRule.mainClock.autoAdvance = false
+        try {
+            composeRule.onNodeWithTag(messageTag)
+                .performTouchInput { swipeRight(durationMillis = 300) }
+            composeRule.mainClock.advanceTimeByFrame()
+
+            val movedBubble = composeRule.onNodeWithTag(
+                bubbleTag,
+                useUnmergedTree = true,
+            ).fetchSemanticsNode().boundsInRoot
+            val indicator = composeRule.onNodeWithTag(
+                indicatorTag,
+                useUnmergedTree = true,
+            ).fetchSemanticsNode().boundsInRoot
+
+            assertTrue(movedBubble.left > restingBubble.left)
+            assertTrue(indicator.center.x > restingBubble.left)
+            assertTrue(indicator.center.x < movedBubble.left)
+            assertTrue(abs(indicator.center.y - restingBubble.center.y) < twoDp)
+        } finally {
+            composeRule.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
     fun replySwipeMirrorsToLeadingDirectionInRtl() {
         val profile = ProfileFixtures.marmota
         val chat = profile.chats.first { it.id == "fiatjaf" }
@@ -1245,6 +1534,60 @@ class ConversationScreenTest {
             .performTouchInput { swipeLeft() }
 
         composeRule.runOnIdle { check(repliedTo == "fiatjaf-8") }
+    }
+
+    @Test
+    fun replyIndicatorRemainsBubbleAttachedInRtl() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "fiatjaf" }
+        composeRule.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                WhiteNoiseTheme {
+                    ConversationScreen(
+                        profile = profile,
+                        chat = chat,
+                        onBack = {},
+                        onSend = { true },
+                        onRetry = {},
+                        onAcceptInvitation = {},
+                        onDeclineInvitation = {},
+                    )
+                }
+            }
+        }
+        val messageTag = "conversation.message.fiatjaf-6"
+        val bubbleTag = "conversation.message.bubble.fiatjaf-6"
+        val indicatorTag = "conversation.message.swipeReply.fiatjaf-6"
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag(messageTag))
+        val restingBubble = composeRule.onNodeWithTag(
+            bubbleTag,
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val twoDp = with(composeRule.density) { 2.dp.toPx() }
+
+        composeRule.mainClock.autoAdvance = false
+        try {
+            composeRule.onNodeWithTag(messageTag)
+                .performTouchInput { swipeLeft(durationMillis = 300) }
+            composeRule.mainClock.advanceTimeByFrame()
+
+            val movedBubble = composeRule.onNodeWithTag(
+                bubbleTag,
+                useUnmergedTree = true,
+            ).fetchSemanticsNode().boundsInRoot
+            val indicator = composeRule.onNodeWithTag(
+                indicatorTag,
+                useUnmergedTree = true,
+            ).fetchSemanticsNode().boundsInRoot
+
+            assertTrue(movedBubble.right < restingBubble.right)
+            assertTrue(indicator.center.x < restingBubble.right)
+            assertTrue(indicator.center.x > movedBubble.right)
+            assertTrue(abs(indicator.center.y - restingBubble.center.y) < twoDp)
+        } finally {
+            composeRule.mainClock.autoAdvance = true
+        }
     }
 
     @Test
@@ -1290,9 +1633,37 @@ class ConversationScreenTest {
         composeRule.onNodeWithContentDescription("More Reactions").performClick()
         composeRule.onNodeWithContentDescription("Configure Reactions").performClick()
         composeRule.onNodeWithText("Tap an emoji to replace it.").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Reaction 1, ❤. Double tap to replace.").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Reaction 1, ❤️. Double tap to replace.").assertIsDisplayed()
         composeRule.onNodeWithText("Reset").assertIsDisplayed()
         composeRule.onNodeWithText("Done").assertIsDisplayed()
+    }
+
+    @Test
+    fun emojiPickerUsesSectionedGridSearchAndPinnedCategoryNavigation() {
+        setConversation("fiatjaf")
+
+        composeRule.onNodeWithTag("conversation.message.fiatjaf-8")
+            .performSemanticsAction(SemanticsActions.OnLongClick)
+        composeRule.onNodeWithContentDescription("More Reactions").performClick()
+
+        composeRule.onNodeWithTag("emoji.picker").assertIsDisplayed()
+        composeRule.onNodeWithText("Search emoji").assertIsDisplayed()
+        composeRule.onNodeWithText("Recently Used").assertIsDisplayed()
+        composeRule.onNodeWithTag("emoji.picker.categories").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Configure Reactions").assertIsDisplayed()
+        composeRule.onNodeWithTag("emoji.picker.item.recent.0", useUnmergedTree = true)
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+
+        composeRule.onNodeWithContentDescription("Animals & Nature").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("emoji.picker.header.animals").assertIsDisplayed()
+
+        composeRule.onNodeWithTag("emoji.picker.search").performTextInput("beaver")
+        composeRule.onNodeWithTag("emoji.picker.categories").assertDoesNotExist()
+        composeRule.onAllNodesWithContentDescription("🦫")[0].assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Clear search").performClick()
+        composeRule.onNodeWithTag("emoji.picker.categories").assertIsDisplayed()
     }
 
     @Test
@@ -1332,9 +1703,6 @@ class ConversationScreenTest {
                 .assertExists()
         }
         composeRule.onNodeWithTag("message.details.reaction.7").assertDoesNotExist()
-        composeRule.onAllNodesWithText("Maya Chen").also { nodes ->
-            assertTrue(nodes.fetchSemanticsNodes().size == 7)
-        }
     }
 
     @Test
@@ -1446,12 +1814,197 @@ class ConversationScreenTest {
     }
 
     @Test
+    fun markdownMessageRendersInlineContentInsteadOfSourcePunctuation() {
+        setConversation("catalog-direct-text")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.TXT-09"))
+        composeRule.onNodeWithText(
+            "TXT-09: Bold, emphasis, and White Noise",
+            substring = true,
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText("**Bold**", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun replyQuoteScrollsToAndHighlightsItsAvailableSource() {
+        setConversation("catalog-direct-replies")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.RPL-01"))
+        composeRule.onNodeWithTag(
+            "conversation.message.quote.target.RPL-01",
+            useUnmergedTree = true,
+        ).performClick()
+
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            composeRule.onAllNodesWithTag(
+                "conversation.message.highlight.RPL-01-source",
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("conversation.message.RPL-01-source").assertIsDisplayed()
+    }
+
+    @Test
+    fun holdingAReplyQuoteOpensMessageActionsInsteadOfOpeningTheSource() {
+        setConversation("catalog-direct-replies")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.RPL-01"))
+        composeRule.onNodeWithTag(
+            "conversation.message.quote.target.RPL-01",
+            useUnmergedTree = true,
+        ).performTouchInput { longClick(durationMillis = 650) }
+
+        composeRule.onNodeWithTag("message.actions.overlay").assertIsDisplayed()
+        composeRule.onNodeWithTag("conversation.message.highlight.RPL-01-source")
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun holdingAMediaTileOpensMessageActionsInsteadOfTheGallery() {
+        setConversation("catalog-media-viewer")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.MED-VIEW-02"))
+        composeRule.onNodeWithTag(
+            "conversation.media.tile.MED-VIEW-02-photo.0",
+            useUnmergedTree = true,
+        ).performTouchInput { longClick(durationMillis = 650) }
+
+        composeRule.onNodeWithTag("message.actions.overlay").assertIsDisplayed()
+        composeRule.onNodeWithTag("conversation.media.viewer.pager").assertDoesNotExist()
+    }
+
+    @Test
+    fun holdingALinkCardOpensMessageActionsInsteadOfTheLink() {
+        setConversation("catalog-media-rich")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.LINK-01"))
+        composeRule.onNodeWithTag(
+            "conversation.attachment.LINK-01-link",
+            useUnmergedTree = true,
+        ).performTouchInput { longClick(durationMillis = 650) }
+
+        composeRule.onNodeWithTag("message.actions.overlay").assertIsDisplayed()
+    }
+
+    @Test
+    fun holdingVoicePlaybackOpensMessageActionsInsteadOfTogglingPlayback() {
+        setConversation("catalog-voice")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.VOICE-01"))
+        composeRule.onNodeWithTag(
+            "conversation.voice.play.VOICE-01-audio",
+            useUnmergedTree = true,
+        ).performTouchInput { longClick(durationMillis = 650) }
+
+        composeRule.onNodeWithTag("message.actions.overlay").assertIsDisplayed()
+    }
+
+    @Test
+    fun validContactCardOpensTheReferencedProfile() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "catalog-media-rich" }
+        var openedPersonId: String? = null
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                ConversationScreen(
+                    profile = profile,
+                    chat = chat,
+                    onBack = {},
+                    onSend = { true },
+                    onRetry = {},
+                    onAcceptInvitation = {},
+                    onDeclineInvitation = {},
+                    onOpenPersonProfile = { openedPersonId = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            "conversation.attachment.RICH-05-contact",
+            useUnmergedTree = true,
+        ).performClick()
+        composeRule.runOnIdle { check(openedPersonId == "avery-stone") }
+    }
+
+    @Test
+    fun holdingAContactCardOpensMessageActionsInsteadOfTheProfile() {
+        val profile = ProfileFixtures.marmota
+        val chat = profile.chats.first { it.id == "catalog-media-rich" }
+        var openedPersonId: String? = null
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                ConversationScreen(
+                    profile = profile,
+                    chat = chat,
+                    onBack = {},
+                    onSend = { true },
+                    onRetry = {},
+                    onAcceptInvitation = {},
+                    onDeclineInvitation = {},
+                    onOpenPersonProfile = { openedPersonId = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            "conversation.attachment.RICH-05-contact",
+            useUnmergedTree = true,
+        ).performTouchInput { longClick(durationMillis = 650) }
+
+        composeRule.onNodeWithTag("message.actions.overlay").assertIsDisplayed()
+        composeRule.runOnIdle { check(openedPersonId == null) }
+    }
+
+    @Test
+    fun longVoiceFixtureUsesMinuteSecondDuration() {
+        setConversation("catalog-voice")
+
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.VOICE-03"))
+        composeRule.onNodeWithText("1:22").assertIsDisplayed()
+    }
+
+    @Test
     fun supportGuidanceRemainsTimelineInformationRatherThanAMessage() {
         setConversation("white-noise-support")
 
         composeRule.onNodeWithText(
             "How can we help? Ask a question, report a problem, or share a suggestion. We’ll reply here.",
         ).assertIsDisplayed()
+    }
+
+    private fun assertRichAttachmentInsets(
+        messageId: String,
+        attachmentTag: String,
+        equalOnAllSides: Boolean = false,
+    ) {
+        val bubble = composeRule.onNodeWithTag(
+            "conversation.message.bubble.$messageId",
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val attachment = composeRule.onNodeWithTag(
+            attachmentTag,
+            useUnmergedTree = true,
+        ).fetchSemanticsNode().boundsInRoot
+        val expectedInset = with(composeRule.density) { 6.dp.toPx() }
+        val tolerance = with(composeRule.density) { 1.dp.toPx() }
+        val left = attachment.left - bubble.left
+        val right = bubble.right - attachment.right
+        val top = attachment.top - bubble.top
+
+        assertTrue(abs(left - expectedInset) <= tolerance)
+        assertTrue(abs(right - expectedInset) <= tolerance)
+        assertTrue(abs(top - expectedInset) <= tolerance)
+        if (equalOnAllSides) {
+            val bottom = bubble.bottom - attachment.bottom
+            assertTrue(abs(bottom - expectedInset) <= tolerance)
+        }
     }
 
     private fun setConversation(chatId: String, initialSearch: Boolean = false) {

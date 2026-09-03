@@ -49,7 +49,7 @@ class MessageInteractionModelsTest {
     fun quickReactionReplacementSwapsToRemainUnique() {
         val moved = ReactionCatalog.replaceQuick(ReactionCatalog.defaults, 0, "🔥")
         assertEquals("🔥", moved[0])
-        assertEquals("❤", moved[2])
+        assertEquals("❤️", moved[2])
         assertEquals(6, moved.distinct().size)
         assertEquals(ReactionCatalog.defaults, ReactionCatalog.replaceQuick(ReactionCatalog.defaults, 9, "😀"))
         assertEquals(7, ReactionCatalog.quickStrip(ReactionCatalog.defaults, "😀").size)
@@ -57,7 +57,7 @@ class MessageInteractionModelsTest {
 
     @Test
     fun reactionSummaryKeepsUpToFourTypesPlusOverflowAndAdaptsToWidth() {
-        val reactions = listOf("❤", "😀", "🔥", "🦫", "🚀").mapIndexed { index, emoji ->
+        val reactions = listOf("❤️", "😀", "🔥", "🦫", "🚀").mapIndexed { index, emoji ->
             MessageReaction(
                 emoji = emoji,
                 personIds = if (index == 3) listOf("me", "other") else listOf("other"),
@@ -68,10 +68,10 @@ class MessageInteractionModelsTest {
         val constrained = ReactionCatalog.summary(reactions, "me", maximumReactionPills = 2)
 
         assertEquals(5, full.size)
-        assertEquals(listOf("❤", "😀", "🔥", "🦫", null), full.map { it.emoji })
+        assertEquals(listOf("❤️", "😀", "🔥", "🦫", null), full.map { it.emoji })
         assertEquals(1, full.last().omittedTypeCount)
         assertEquals(3, constrained.size)
-        assertEquals(listOf("❤", "😀", null), constrained.map { it.emoji })
+        assertEquals(listOf("❤️", "😀", null), constrained.map { it.emoji })
         assertEquals(3, constrained.last().omittedTypeCount)
         assertEquals(4, constrained.last().personCount)
         assertTrue(constrained.last().selected)
@@ -137,15 +137,15 @@ class MessageInteractionModelsTest {
     fun conversationSearchMatchesTextSenderAndAttachmentNewestFirst() {
         val profile = ProfileFixtures.marmota
         val rich = profile.chats.first { it.id == "catalog-media-rich" }
-        val text = ConversationSearch.results(rich, profile, "Useful")
-        val sender = ConversationSearch.results(rich, profile, "Maya Chen")
+        val text = ConversationSearch.results(rich, profile, "GIF")
+        val contact = ConversationSearch.results(rich, profile, "Avery Stone")
         val file = ConversationSearch.results(rich, profile, "Project Brief")
-        val link = ConversationSearch.results(rich, profile, "Android Developers")
+        val link = ConversationSearch.results(rich, profile, "Human Interface Guidelines")
 
-        assertEquals(listOf("RICH-02"), text.map { it.messageId })
-        assertTrue(sender.any { it.messageId == "RICH-01" })
-        assertEquals(listOf("RICH-01"), file.map { it.messageId })
-        assertEquals(listOf("RICH-02"), link.map { it.messageId })
+        assertEquals(listOf("RICH-01"), text.map { it.messageId })
+        assertEquals(listOf("RICH-05"), contact.map { it.messageId })
+        assertEquals(listOf("FILE-01"), file.map { it.messageId })
+        assertEquals(listOf("LINK-01"), link.map { it.messageId })
 
         val all = ConversationSearch.results(profile.chats.first { it.id == "fiatjaf" }, profile, "White Noise")
         assertEquals(all.sortedWith(compareByDescending<ConversationSearchResult> { it.dayOrdinal }.thenByDescending { it.minuteOfDay }), all)

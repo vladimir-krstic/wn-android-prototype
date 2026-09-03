@@ -25,9 +25,12 @@ For each batch:
    evidence and remaining gaps.
 8. Continue to the next batch without waiting for a routine prompt.
 
-Do not launch an emulator, install the app, capture screenshots, or claim
-visual verification during this implementation sequence. Those actions belong
-to the later user-directed polish pass.
+Do not use `adb`, run connected instrumentation, launch an emulator, install or
+launch the app, interact with a device, capture device screenshots, or claim
+visual verification during this implementation sequence. Those actions occur
+only when the user's current request explicitly asks for device/emulator
+testing or visual/hands-on inspection; an earlier request is not standing
+authorization for a later polish iteration.
 
 ## Batch 0 — Native project foundation
 

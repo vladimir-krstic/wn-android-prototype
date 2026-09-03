@@ -24,6 +24,25 @@ these values as screen-local magic numbers. Constrained/adaptive panes may add
 outer space at larger widths, but the compact margin remains 16 dp inside the
 active pane.
 
+## Interaction state-layer containment
+
+- A custom press, hover, focus, or ripple indication is bounded and clipped to
+  the visible element by default. A larger transparent semantic/touch target
+  may own input, but it must share its `MutableInteractionSource` with an
+  indication drawn inside the visible element's real shape. Do not draw a
+  rectangular state layer across invisible target padding, alignment space, or
+  a full-width parent when the visible control is smaller.
+- A whole-row indication is correct only when the row itself is the visible
+  interactive element, such as a grouped Material list row or the explicitly
+  accepted conversation selection row. Unbounded or intentionally overflowing
+  indications require a component-specific decision; they are never the
+  default.
+- Material components continue to own their native indication when their
+  component bounds and shape are the intended visible surface. For custom
+  split target/visual compositions, suppress the outer indication and render
+  one bounded Material ripple from the shared interaction source on the inner
+  clipped surface.
+
 ## Forms and actions
 
 - Use the shared Material-based tonal field for ordinary forms. It uses
@@ -78,8 +97,8 @@ active pane.
   search-highlight glyph renderer's 4 dp corner radius; do not use Compose's
   square span background. Composer reply and link-preview surfaces
   use an 8 dp inset and 16 dp radius inside the 24 dp composer. Timeline reply
-  surfaces use an 8 dp inset and 8 dp radius inside 16 dp message bubbles,
-  while non-quote message content retains its 12 dp horizontal inset. In draft
+  surfaces participate in the shared rich-message geometry below rather than
+  owning a separate inset/radius rule. In draft
   media review, the 48 dp inclusion target anchors to the fitted image's
   bottom-end corner; its 22 dp visible check sits inside the image with 4 dp
   from both edges.
@@ -91,6 +110,17 @@ active pane.
 
 ## Conversation transcript
 
+- Each day boundary is ordinary centered `labelMedium` system text using
+  `onSurfaceVariant`, 12 dp horizontal and 3 dp vertical label padding, and the
+  shared 16 dp form-field relationship above and below. It has no pill, card,
+  elevation, or other surface in the transcript. Once the active boundary has
+  left the viewport, a separate top replacement uses the same label metrics in
+  a capsule with `surfaceDim` at 82% alpha and `onSurface` text. Material's
+  dim-surface role keeps the capsule darker in both light and dark appearance,
+  giving it clearer separation from an incoming `surfaceContainerHigh` bubble
+  while remaining translucent. The capsule disappears whenever the matching
+  inline boundary is visible, so the two representations are never shown for
+  the same active day at once.
 - Tail-free message bubbles use a 16 dp radius, 12 dp horizontal and 8 dp
   vertical content inset, and a compact-screen maximum width of 340 dp. Same-
   author messages use a 2 dp vertical relationship; a new cluster uses 16 dp.
@@ -98,11 +128,28 @@ active pane.
   gap. Align the avatar's bottom to the bubble, excluding reactions and time;
   align the author label to the bubble's 12 dp content inset. Direct messages
   do not reserve hidden identity space.
+- A bubble containing a reply quote or attachment changes from the text-only
+  inset to one 6 dp shell inset on all four sides. Every quote, gallery, GIF,
+  link preview, file, contact, and voice surface uses the resulting shared
+  inner canvas and a 10 dp radius: the child radius is the 16 dp bubble radius
+  minus the 6 dp inset, so the outlines remain concentric. Use 6 dp between
+  stacked rich sections and 2 dp between gallery tiles; clip a gallery once at
+  its outer 10 dp outline instead of rounding each tile. Rich cards use 6 dp
+  internal content padding. A lone photo or video is the only canvas-width
+  exception: preserve the accepted aspect-derived width up to 256 dp and wrap
+  its caption to that same width. Albums, GIFs, reply quotes, files, contacts,
+  links, voice, and stacked combinations use a 256 dp inner canvas. Mixed text
+  adds 6 dp horizontal and 2 dp bottom inside that canvas, restoring the same
+  12 dp horizontal and 8 dp bottom visual text inset without moving the rich
+  child away from the 6 dp shell edge. Link artwork fills the canvas above its
+  text; file rows use a bare 24 dp semantic file glyph rather than another
+  nested rounded icon surface.
 - Terminal metadata occupies one nonwrapping line attached to the bubble. A
   reaction rail sits on the center-facing side and the time/state label on the
   opposite side. The visible reaction pill is 23 dp high and at least 31 dp
   wide, with a 1 dp outline, 7 dp horizontal inset, 2 dp emoji/count gap, and
-  no visible count for one. Counted and `+N` pills grow from that compact
+  one 16 dp pinned Signal atlas sprite; show no visible count for one. Counted
+  and `+N` pills grow from that compact
   minimum; neighboring visible pills are 3 dp apart. Keep their horizontal
   layout compact while retaining the 48 dp minimum vertical target and
   Compose-expanded minimum pointer target. The visible pill overlaps the
@@ -113,7 +160,10 @@ active pane.
   message in RTL. With or without reactions, place the timestamp 2 dp below
   the bubble; only the visible reaction pill overlaps its bottom edge. Use the
   lower-emphasis `outline` neutral for timestamp text, the Sent status fill,
-  and Sending progress. Sent and sending
+  and Sending progress in the transcript. When the real message is lifted into
+  the focused context-menu overlay, switch those same non-error metadata
+  elements to full-emphasis `onSurface` (black in the light theme) so they stay
+  legible over the translucent-black blurred backdrop. Sent and sending
   outgoing timestamps include their delivery state; the Sent state uses a
   14 dp filled status container with 10 dp check artwork, while incoming
   timestamps reserve no delivery icon. Failed outgoing delivery uses that same
@@ -130,18 +180,66 @@ active pane.
   alter bubble width, alignment, or cluster geometry.
 - Reply swipe follows semantic leading-to-trailing direction: 64 dp readiness,
   96 dp maximum visible travel, resisted overdrag, one threshold haptic, and a
-  spring/short return. Bubble, metadata, and reactions move as one unit. Keep
-  the named Reply accessibility action.
+  spring/short return. Bubble, metadata, and reactions move as one unit. Anchor
+  a 48 dp indicator target to the resting bubble's semantic start and vertical
+  center, not to the message row edge. Use the 24 dp Google Material Symbols
+  Rounded Reply glyph at weight 600. After 5% progress, fade it in, travel it
+  10 dp with the bubble, scale it from 1.0 to 1.2 by readiness, and pulse it to
+  1.8 over 200 ms when readiness is first crossed. Its fade, travel, scale, and
+  spring return derive from the same swipe state as the bubble. Keep the named
+  Reply accessibility action.
 - The focused-message overlay keeps a real message rendering between a quick-
   reaction rail and the ordered command surface. Align these surfaces with
   bubble direction, preserve 16 dp window margins, and shift the composition
   within status/navigation/IME safe bounds instead of detaching it into a
   bottom sheet. Scale exceptionally tall real-message previews proportionally
-  within a 320 dp height budget rather than replacing them with a summary. Keep
-  8 dp above the message and 8 dp below its visible content; when reactions are
+  within a 320 dp height budget rather than replacing them with a summary.
+  Each quick reaction is a 48 dp semantic target with a centered 40 dp circular
+  Material state layer and a 36 dp selected fill. Render the pinned Signal
+  artwork through the app-owned atlas renderer in a fixed 28 dp square,
+  independent of font scaling, and
+  give the final More Reactions target a 24 dp horizontal-ellipsis glyph inside
+  its own neutral 40 dp circle. The rail owns a 4 dp inset on all four sides and
+  4 dp between targets, so its press feedback has equal breathing room instead
+  of touching an edge or filling a rectangular slot. Use the exact standard
+  Material menu-group container color, Level 0 tonal elevation, and Level 2
+  shadow elevation shared by the command group. Keep an 8 dp shadow-safe
+  gutter at the top and bottom of the focused scroll viewport so those shadows
+  are not clipped; this gutter does not add to the visible 8 dp rail/message or
+  message/menu gaps.
+  Keep 8 dp above the message and 8 dp below its visible content; when reactions are
   present, measure the lower gap from the visible pill edge, excluding the
   remaining transparent interaction-target inset. Preserve that visible-edge
-  relationship when scaled type increases the pill height.
+  relationship when scaled type increases the pill height. Its backdrop blurs
+  the underlying conversation by 24 dp and applies a 24% translucent black
+  veil. Disable the Dialog window's additional platform dim so the layers do
+  not compound into a harsh scrim. On Android 11 and earlier, where Compose
+  blur is unavailable, retain the same translucent-black veil as the graceful
+  fallback.
+  The full-window dismiss target owns every visually empty point. Consume taps
+  only inside the visible reaction rail, rendered message-plus-metadata bounds,
+  and command group; do not attach a no-op click target to their full-width
+  alignment column. One tap beside or between those surfaces dismisses the
+  overlay immediately.
+- The reaction emoji picker uses the shared ordinary Material sheet and one
+  continuous sectioned lazy grid. Its expanded content is capped at 88% of the
+  available height. The picker enables only Expanded and Hidden anchors so its
+  pinned category rail cannot sit below a partially clipped viewport; Material
+  retains the rounded cap, handle, motion, Back, swipe dismissal and inset
+  ownership. Search uses the
+  standard rounded 56 dp field with 16 dp horizontal insets and expands the
+  sheet on focus. Section labels are `labelLarge`, semibold, heading-semantic,
+  and at least 36 dp high. Emoji columns are adaptive with a 48 dp minimum;
+  each cell owns one circular 48 dp Material target and a fixed 32 dp pinned
+  Signal atlas sprite independent of font scale. The sprite renderer crops the
+  one-pixel gutter from each 66 px source tile and scales imagery rather than a
+  text baseline. A bottom 56 dp-minimum rail is
+  pinned below a one-dp divider. Configure is a fixed leading 48 dp gear
+  target. Categories remain horizontally scrollable; every category has a
+  48 dp target, 22 dp official rounded symbol, and 36 dp selected circle. The
+  selected category follows the grid's first visible section and a category
+  tap expands then scrolls the sheet to its header. Hide the category rail for
+  nonblank search results so the IME and results own the available height.
 - The newest timeline item settles fully above the measured compact composer
   plus system bottom inset. Edge-to-edge drawing behind the floating composer
   is intentional; a settled message underneath an interactive composer target
@@ -422,6 +520,12 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   standard selection colors, shapes, radio semantics and a leading check.
   Destructive commands retain `error` text/icon roles; disabled colors remain
   native. Do not apply a global high-surface override to new menus.
+- When a modal already owns placement and dismissal, use the shared
+  `WhiteNoiseMenuGroup` rather than rebuilding menu rows. The focused-message
+  command surface uses this embedded variant, so its index-aware rounded state
+  layers, clipping, 48 dp minimum targets, 20 dp icons, typography, padding,
+  colors and elevation exactly match Chats filtering. Do not add a local
+  `Surface`, row `clickable`, corner radius, icon size or pressed fill there.
 - The popup owns focus/motion/RTL/Back/outside dismissal. The composer-only
   bottom-edge exception uses the popup's public position-provider contract to
   attach the group 2 dp above its trigger and preserve a lower-edge transform

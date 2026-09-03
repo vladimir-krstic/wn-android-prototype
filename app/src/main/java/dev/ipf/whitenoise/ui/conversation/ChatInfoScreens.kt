@@ -724,6 +724,7 @@ fun SharedContentScreen(
                                         attachments = listOf(item.attachment),
                                         outgoing = false,
                                         onOpenMedia = {},
+                                        people = profile.people,
                                     )
                                 },
                                 supportingContent = {

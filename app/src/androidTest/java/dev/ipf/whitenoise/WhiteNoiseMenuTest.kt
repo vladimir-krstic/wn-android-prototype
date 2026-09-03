@@ -34,6 +34,7 @@ import androidx.test.espresso.Espresso.pressBack
 import androidx.test.filters.SdkSuppress
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuGroup
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
 import org.junit.Assert.*
@@ -73,6 +74,33 @@ class WhiteNoiseMenuTest {
         rule.onNodeWithText("Archive").performClick()
         rule.onNodeWithTag("menu").assertDoesNotExist()
         rule.runOnIdle { assertEquals(listOf("dismiss", "archive"), events) }
+    }
+
+    @Test fun inlineGroupsReuseNativeMenuItemsWithoutTakingPopupOwnership() {
+        val events = mutableListOf<String>()
+        rule.setContent {
+            WhiteNoiseTheme {
+                WhiteNoiseMenuGroup(
+                    items = listOf(
+                        WhiteNoiseMenuItem("Reply", { events += "reply" }, R.drawable.ic_reply),
+                        WhiteNoiseMenuItem(
+                            "Delete",
+                            { events += "delete" },
+                            R.drawable.ic_delete,
+                            destructive = true,
+                        ),
+                    ),
+                    modifier = Modifier.widthIn(min = 248.dp).testTag("inline-menu"),
+                )
+            }
+        }
+
+        rule.onNodeWithText("Reply")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertTouchHeightIsEqualTo(48.dp)
+            .performClick()
+        rule.onNodeWithTag("inline-menu").assertExists()
+        rule.runOnIdle { assertEquals(listOf("reply"), events) }
     }
 
     @Test fun menuUsesTheNativeStandardSurfaceInLightAndDarkThemes() {

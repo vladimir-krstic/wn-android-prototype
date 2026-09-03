@@ -40,10 +40,16 @@ description: Build, port, iterate, or review one agreed White Noise native Andro
 10. Add fixed in-memory data and capability wrappers only when the selected
     flow needs them. Keep backend, networking, cryptography, authentication,
     and persistence out of scope unless the user expands it.
-11. Use lightweight static validation during iteration. Build and run relevant
-    tests at the end of a meaningful batch. Do not open an emulator, install,
-    interact, or capture screenshots unless the user explicitly requests
-    inspection.
+11. Use lightweight host-side validation during iteration. Build and run
+    relevant host tests at the end of a meaningful batch. Do not use `adb`, run
+    connected instrumentation, open an emulator, install or launch the app on
+    a device, interact with a device, or capture device screenshots unless the
+    user's current request explicitly asks for device/emulator testing or
+    visual/hands-on inspection. Earlier requests and an already connected phone
+    are not standing authorization. If a device-only check is important,
+    explain the need and wait for the user to request it. Compiling the
+    instrumentation-test APK remains host-side and does not authorize executing
+    it.
 12. Update `docs/port/feature-inventory.md` only with concrete Android
     implementation evidence. Never claim visual verification without
     inspecting the current build.

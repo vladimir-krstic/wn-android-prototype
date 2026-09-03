@@ -13,10 +13,13 @@ class ChatInfoModelsTest {
         val rich = profile.chats.first { it.id == "catalog-media-rich" }
         val gallery = profile.chats.first { it.id == "catalog-media-gallery" }
 
-        assertEquals(listOf("RICH-02"), SharedContentProjection.items(rich, profile, SharedContentCategory.Links).map { it.messageId })
-        assertEquals(listOf("RICH-01"), SharedContentProjection.items(rich, profile, SharedContentCategory.Documents).map { it.messageId })
+        assertEquals(listOf("LINK-01", "LINK-02", "LINK-03"), SharedContentProjection.items(rich, profile, SharedContentCategory.Links).map { it.messageId })
+        assertEquals(
+            listOf("FILE-01", "FILE-02", "FILE-03", "FILE-04", "FILE-05", "FILE-06"),
+            SharedContentProjection.items(rich, profile, SharedContentCategory.Documents).map { it.messageId },
+        )
         val media = SharedContentProjection.items(gallery, profile, SharedContentCategory.Media)
-        assertEquals(27, media.size)
+        assertEquals(40, media.size)
         assertEquals(media.size, media.map { it.id }.distinct().size)
         assertTrue(media.none { it.attachment.kind == MessageAttachmentKind.Gif })
     }

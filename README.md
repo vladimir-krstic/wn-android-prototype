@@ -136,12 +136,19 @@ The complete static batch gate, including a clean rebuild, is:
 ./gradlew clean testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
 ```
 
-Run device tests only when an emulator or physical-device inspection has been
-explicitly requested:
+The commands above are the default agent validation boundary. Run connected
+tests only when the user's current request explicitly asks for device or
+emulator testing; prior inspection requests and an attached phone do not carry
+forward as permission:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
 ```
+
+The connected-test command is documentation, not standing authorization to use
+`adb`, install or launch the app, interact with a tethered phone/emulator, or
+capture device screenshots. If a device-only check is needed, explain why and
+wait for the user to request it.
 
 The debug APK is generated at
 `app/build/outputs/apk/debug/app-debug.apk`. The instrumentation-test APK is
@@ -152,7 +159,7 @@ generated at
 
 Use the foundation-first plan in `docs/visual-polish.md` and the device
 checklist in `docs/handoff.md`. The shared foundation and bounded Chats and
-Settings root batch are implemented at the static gate. Inspect them on the
-agreed Android reference device before treating them as the final visual
-reference, then polish one later screen or tightly related flow at a time
-without regressing model parity.
+Settings root batch are implemented at the static gate. When the user
+explicitly requests a device inspection, use the agreed Android reference
+device before treating the result as a final visual reference. Otherwise keep
+polish iterations within the host-side validation boundary.

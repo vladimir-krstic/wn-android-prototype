@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -27,7 +27,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -59,11 +59,13 @@ import dev.ipf.whitenoise.model.MediaLayout
 import dev.ipf.whitenoise.model.ConversationMediaKey
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
+import dev.ipf.whitenoise.model.Person
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 import java.io.File
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private data class VisualFrame(
     val attachment: MessageAttachment,
@@ -75,35 +77,43 @@ private data class VisualFrame(
 internal fun TimelineAttachmentContent(
     attachments: List<MessageAttachment>,
     outgoing: Boolean,
-    messageId: String? = null,
     onOpenMedia: (ConversationMediaKey) -> Unit,
+    modifier: Modifier = Modifier,
+    messageId: String? = null,
     searchQuery: String = "",
     voiceTranscript: String? = null,
     voiceTranscriptVisible: Boolean = false,
+    people: List<Person> = emptyList(),
+    onOpenPerson: ((String) -> Unit)? = null,
 ) {
     if (attachments.isEmpty()) return
     val visualAttachments = attachments.filter(MessageAttachment::isVisual)
-    if (visualAttachments.isNotEmpty()) {
-        TimelineMediaGrid(
-            messageId = messageId,
-            attachments = visualAttachments,
-            onClick = onOpenMedia,
-            searchQuery = searchQuery,
-        )
-    }
-    attachments.filterNot(MessageAttachment::isVisual).forEach { attachment ->
-        when (attachment.kind) {
-            MessageAttachmentKind.Voice -> VoiceMessageCard(
-                attachment = attachment,
-                outgoing = outgoing,
-                transcript = voiceTranscript ?: attachment.transcript,
-                transcriptVisible = voiceTranscriptVisible,
+    Column(
+        modifier = modifier.width(richContentCanvasWidthDp(attachments).dp),
+        verticalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.RichContentSpacing),
+    ) {
+        if (visualAttachments.isNotEmpty()) {
+            TimelineMediaGrid(
+                messageId = messageId,
+                attachments = visualAttachments,
+                onClick = onOpenMedia,
+                searchQuery = searchQuery,
             )
-            MessageAttachmentKind.Link -> LinkMessageCard(attachment, outgoing, searchQuery)
-            MessageAttachmentKind.File,
-            MessageAttachmentKind.Contact,
-            -> DocumentOrContactCard(attachment, outgoing, searchQuery)
-            else -> Unit
+        }
+        attachments.filterNot(MessageAttachment::isVisual).forEach { attachment ->
+            when (attachment.kind) {
+                MessageAttachmentKind.Voice -> VoiceMessageCard(
+                    attachment = attachment,
+                    outgoing = outgoing,
+                    transcript = voiceTranscript ?: attachment.transcript,
+                    transcriptVisible = voiceTranscriptVisible,
+                )
+                MessageAttachmentKind.Link -> LinkMessageCard(attachment, outgoing, searchQuery)
+                MessageAttachmentKind.File,
+                MessageAttachmentKind.Contact,
+                -> DocumentOrContactCard(attachment, outgoing, searchQuery, people, onOpenPerson)
+                else -> Unit
+            }
         }
     }
 }
@@ -121,6 +131,7 @@ private fun TimelineMediaGrid(
     }
     val visible = frames.take(MediaLayout.visibleCount(frames.size))
     val overflow = MediaLayout.overflowCount(frames.size)
+    val singleSize = visible.firstOrNull()?.attachment?.let(::timelineSingleMediaSize)
     val attachmentCountDescription = pluralStringResource(
         R.plurals.media_attachment_count,
         frames.size,
@@ -130,24 +141,28 @@ private fun TimelineMediaGrid(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 6.dp)
+            .clip(ConversationRichContentShape)
+            .testTag("conversation.media.grid.${messageId ?: attachments.joinToString { it.id }}")
             .semantics { contentDescription = attachmentCountDescription },
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
     ) {
         when (MediaLayout.forCount(frames.size)) {
             dev.ipf.whitenoise.model.MediaGridLayout.Single -> MediaTile(
                 visible.first(),
-                Modifier.fillMaxWidth().height(220.dp),
+                Modifier.width(singleSize!!.widthDp.dp).height(singleSize.heightDp.dp),
                 searchQuery = searchQuery,
                 onClick = { frame ->
                     messageId?.let { onClick(ConversationMediaKey(it, frame.attachment.id, frame.imageIndex)) }
                 },
             )
-            dev.ipf.whitenoise.model.MediaGridLayout.Two -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            dev.ipf.whitenoise.model.MediaGridLayout.Two -> Row(
+                modifier = Modifier.fillMaxWidth().height(127.dp),
+                horizontalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+            ) {
                 visible.forEach { frame ->
                     MediaTile(
                         frame,
-                        Modifier.weight(1f).aspectRatio(1f),
+                        Modifier.weight(1f).fillMaxSize(),
                         searchQuery = searchQuery,
                         onClick = {
                             messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
@@ -155,20 +170,26 @@ private fun TimelineMediaGrid(
                     )
                 }
             }
-            dev.ipf.whitenoise.model.MediaGridLayout.Three -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            dev.ipf.whitenoise.model.MediaGridLayout.Three -> Row(
+                modifier = Modifier.fillMaxWidth().height(170.dp),
+                horizontalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+            ) {
                 MediaTile(
                     visible[0],
-                    Modifier.weight(1f).height(210.dp),
+                    Modifier.width(170.dp).height(170.dp),
                     searchQuery = searchQuery,
                     onClick = { frame ->
                         messageId?.let { onClick(ConversationMediaKey(it, frame.attachment.id, frame.imageIndex)) }
                     },
                 )
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(
+                    Modifier.weight(1f).fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+                ) {
                     visible.drop(1).forEach { frame ->
                         MediaTile(
                             frame,
-                            Modifier.fillMaxWidth().height(104.dp),
+                            Modifier.fillMaxWidth().weight(1f),
                             searchQuery = searchQuery,
                             onClick = {
                                 messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
@@ -177,12 +198,42 @@ private fun TimelineMediaGrid(
                     }
                 }
             }
-            else -> {
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            dev.ipf.whitenoise.model.MediaGridLayout.Four -> Column(
+                modifier = Modifier.fillMaxWidth().height(256.dp),
+                verticalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+            ) {
+                visible.chunked(2).forEach { row ->
+                    Row(
+                        Modifier.fillMaxWidth().weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+                    ) {
+                        row.forEach { frame ->
+                            MediaTile(
+                                frame,
+                                Modifier.weight(1f).fillMaxSize(),
+                                searchQuery = searchQuery,
+                                onClick = {
+                                    messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+            dev.ipf.whitenoise.model.MediaGridLayout.Five,
+            dev.ipf.whitenoise.model.MediaGridLayout.FiveWithOverflow,
+            -> Column(
+                modifier = Modifier.fillMaxWidth().height(213.dp),
+                verticalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+                ) {
                     visible.take(2).forEach { frame ->
                         MediaTile(
                             frame,
-                            Modifier.weight(1f).aspectRatio(1.35f),
+                            Modifier.weight(1f).height(127.dp),
                             searchQuery = searchQuery,
                             onClick = {
                                 messageId?.let { id -> onClick(ConversationMediaKey(id, frame.attachment.id, frame.imageIndex)) }
@@ -190,11 +241,14 @@ private fun TimelineMediaGrid(
                         )
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.GallerySpacing),
+                ) {
                     visible.drop(2).forEachIndexed { index, frame ->
                         MediaTile(
                             frame,
-                            Modifier.weight(1f).aspectRatio(1f),
+                            Modifier.weight(1f).height(84.dp),
                             overflow = if (index == visible.drop(2).lastIndex) overflow else 0,
                             searchQuery = searchQuery,
                             onClick = {
@@ -216,12 +270,13 @@ private fun MediaTile(
     searchQuery: String,
     onClick: (VisualFrame) -> Unit,
 ) {
-    val opensViewer = frame.attachment.kind == MessageAttachmentKind.Photo ||
-        frame.attachment.kind == MessageAttachmentKind.Photos ||
-        frame.attachment.kind == MessageAttachmentKind.Video
+    val opensViewer = frame.attachment.isAvailable && (
+        frame.attachment.kind == MessageAttachmentKind.Photo ||
+            frame.attachment.kind == MessageAttachmentKind.Photos ||
+            frame.attachment.kind == MessageAttachmentKind.Video
+        )
     Box(
         modifier
-            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .testTag("conversation.media.tile.${frame.attachment.id}.${frame.imageIndex}")
             .then(
@@ -240,7 +295,7 @@ private fun MediaTile(
                 query = searchQuery,
                 modifier = Modifier.align(Alignment.Center).padding(8.dp),
             )
-        if (frame.attachment.kind == MessageAttachmentKind.Video) {
+        if (frame.attachment.kind == MessageAttachmentKind.Video && frame.attachment.isAvailable) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
                 shape = CircleShape,
@@ -251,6 +306,34 @@ private fun MediaTile(
                     painter = painterResource(R.drawable.ic_play_arrow),
                     contentDescription = stringResource(R.string.play),
                     modifier = Modifier.padding(10.dp).size(24.dp),
+                )
+            }
+            frame.attachment.durationSeconds?.let { seconds ->
+                Text(
+                    text = "%d:%02d".format(seconds / 60, seconds % 60),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .background(
+                            MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.8f),
+                            MaterialTheme.shapes.extraSmall,
+                        )
+                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+        if (frame.attachment.kind == MessageAttachmentKind.Video && !frame.attachment.isAvailable && overflow == 0) {
+            Box(
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.28f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_warning),
+                    contentDescription = frame.attachment.label,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.inverseOnSurface,
                 )
             }
         }
@@ -265,6 +348,8 @@ private fun MediaTile(
 
 @Composable
 private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean, searchQuery: String) {
+    val uriHandler = LocalUriHandler.current
+    val destination = attachment.externalUri?.takeIf { attachment.isAvailable }
     val container = if (outgoing) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
     } else {
@@ -277,37 +362,54 @@ private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean, se
         MaterialTheme.colorScheme.onSurfaceVariant
     }
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("conversation.attachment.${attachment.id}")
+            .clip(ConversationRichContentShape)
+            .then(
+                if (destination != null) {
+                    Modifier.clickable { runCatching { uriHandler.openUri(destination) } }
+                } else {
+                    Modifier
+                },
+            ),
+        shape = ConversationRichContentShape,
         color = container,
         contentColor = content,
     ) {
-        Row(
-            Modifier.padding(WhiteNoiseSpacing.Related),
-            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-        ) {
+        Column {
             attachment.images.firstOrNull()?.let {
-                ComposerImage(it, Modifier.size(56.dp).clip(MaterialTheme.shapes.small))
-            }
-            Column(Modifier.weight(1f)) {
-                SearchHighlightedText(
-                    text = attachment.linkTitle ?: attachment.label,
-                    query = searchQuery,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                ComposerImage(
+                    it,
+                    Modifier.fillMaxWidth().height(ConversationMessageMetrics.LinkImageHeight),
                 )
+            }
+            Column(
+                Modifier.padding(ConversationMessageMetrics.RichComponentInset),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 attachment.linkDomain?.let {
                     SearchHighlightedText(
                         text = it,
                         query = searchQuery,
                         style = MaterialTheme.typography.labelMedium,
                         color = secondaryContent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
+                SearchHighlightedText(
+                    text = attachment.linkTitle ?: attachment.label,
+                    query = searchQuery,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 attachment.linkSummary?.let {
                     Text(
                         it,
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
                         color = secondaryContent,
@@ -323,12 +425,29 @@ private fun DocumentOrContactCard(
     attachment: MessageAttachment,
     outgoing: Boolean,
     searchQuery: String,
+    people: List<Person>,
+    onOpenPerson: ((String) -> Unit)?,
 ) {
     val context = LocalContext.current
     val bundled = bundledResource(attachment.label)
-    val canOpen = attachment.externalUri?.let {
-        runCatching { it.toUri().scheme == "content" }.getOrDefault(false)
-    } == true || bundled != null
+    val canOpenFile = attachment.kind == MessageAttachmentKind.File && attachment.isAvailable && (
+        attachment.externalUri?.let {
+            runCatching { it.toUri().scheme == "content" }.getOrDefault(false)
+        } == true || bundled != null
+        )
+    val person = attachment.contactPersonId?.let { id -> people.firstOrNull { it.id == id } }
+    val canOpenPerson = attachment.kind == MessageAttachmentKind.Contact && person != null && onOpenPerson != null
+    val openAction: (() -> Unit)? = when {
+        canOpenPerson -> ({ onOpenPerson(person.id) })
+        canOpenFile -> ({
+            if (bundled != null) {
+                openBundledResource(context, bundled.first, bundled.second, bundled.third)
+            } else {
+                openContentUri(context, attachment.externalUri.orEmpty())
+            }
+        })
+        else -> null
+    }
     val container = if (outgoing) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
     } else {
@@ -336,28 +455,23 @@ private fun DocumentOrContactCard(
     }
     val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("conversation.attachment.${attachment.id}")
+            .clip(ConversationRichContentShape)
+            .then(if (openAction != null) Modifier.clickable(onClick = openAction) else Modifier),
+        shape = ConversationRichContentShape,
         color = container,
         contentColor = content,
     ) {
         Row(
-            Modifier.padding(WhiteNoiseSpacing.Related),
+            Modifier.padding(ConversationMessageMetrics.RichComponentInset),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
         ) {
             attachment.images.firstOrNull()?.let {
-                ComposerImage(it, Modifier.size(48.dp).clip(CircleShape))
-            } ?: Surface(
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                color = if (outgoing) {
-                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.14f)
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHighest
-                },
-                contentColor = content,
-            ) {
+                ComposerImage(it, Modifier.size(40.dp).clip(CircleShape))
+            } ?: run {
                 Icon(
                     painter = painterResource(
                         if (attachment.kind == MessageAttachmentKind.File) {
@@ -367,29 +481,59 @@ private fun DocumentOrContactCard(
                         },
                     ),
                     contentDescription = null,
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
-            SearchHighlightedText(
-                text = attachment.label,
-                query = searchQuery,
-                modifier = Modifier.weight(1f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (canOpen) {
-                TextButton(onClick = {
-                    if (bundled != null) {
-                        openBundledResource(context, bundled.first, bundled.second, bundled.third)
-                    } else {
-                        openContentUri(context, attachment.externalUri.orEmpty())
-                    }
-                }) {
-                    Text(stringResource(R.string.open_attachment, attachment.label), color = content)
+            Column(Modifier.weight(1f)) {
+                SearchHighlightedText(
+                    text = person?.name ?: attachment.label.removePrefix("Contact: "),
+                    query = searchQuery,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                val metadata = when {
+                    person != null -> person.shortPublicKey
+                    attachment.kind == MessageAttachmentKind.File -> fileMetadata(attachment)
+                    else -> null
                 }
+                metadata?.let {
+                    Text(
+                        text = it,
+                        color = content.copy(alpha = 0.72f),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            val trailingIcon = when {
+                attachment.kind == MessageAttachmentKind.File && !attachment.isAvailable -> R.drawable.ic_warning
+                openAction != null -> R.drawable.ic_chevron_right
+                else -> null
+            }
+            trailingIcon?.let {
+                Icon(
+                    painter = painterResource(it),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = content.copy(alpha = 0.72f),
+                )
             }
         }
     }
+}
+
+private fun fileMetadata(attachment: MessageAttachment): String {
+    val fileType = attachment.label.substringAfterLast('.', missingDelimiterValue = "").uppercase()
+    val bytes = attachment.fileSizeBytes ?: 0
+    val size = when {
+        bytes >= 1_000_000 -> "${bytes / 1_000_000} MB"
+        bytes >= 1_000 -> "${bytes / 1_000} kB"
+        else -> "$bytes B"
+    }
+    return if (fileType.isBlank()) size else "$fileType • $size"
 }
 
 @Composable
@@ -425,20 +569,25 @@ private fun VoiceMessageCard(
         MaterialTheme.colorScheme.onSurfaceVariant
     }
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("conversation.attachment.${attachment.id}"),
+        shape = ConversationRichContentShape,
         color = container,
         contentColor = content,
     ) {
         Column(
-            Modifier.padding(WhiteNoiseSpacing.Related),
+            Modifier.padding(ConversationMessageMetrics.RichComponentInset),
             verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
-                FilledTonalIconButton(onClick = { isPlaying = !isPlaying }) {
+                FilledTonalIconButton(
+                    onClick = { isPlaying = !isPlaying },
+                    modifier = Modifier.testTag("conversation.voice.play.${attachment.id}"),
+                ) {
                     Icon(
                         painter = painterResource(
                             if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow,
@@ -455,7 +604,9 @@ private fun VoiceMessageCard(
                     trackColor = content.copy(alpha = 0.24f),
                 )
                 Text(
-                    "0:${duration.toString().padStart(2, '0')}",
+                    formatMessageDuration(
+                        if (progress > 0f) (duration * (1f - progress)).roundToInt() else duration,
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = secondaryContent,
                 )
@@ -483,6 +634,11 @@ private fun VoiceMessageCard(
             }
         }
     }
+}
+
+internal fun formatMessageDuration(seconds: Int): String {
+    val total = seconds.coerceAtLeast(0)
+    return "%d:%02d".format(total / 60, total % 60)
 }
 
 @Stable
@@ -653,6 +809,22 @@ private fun bundledResource(label: String): Triple<Int, String, String>? = when 
         Triple(R.raw.trail_plan, "trail-plan.pdf", "application/pdf")
     label.contains("Weekend Notes", ignoreCase = true) ->
         Triple(R.raw.weekend_notes, "weekend-notes.pdf", "application/pdf")
+    label.contains("Review Notes.docx", ignoreCase = true) ->
+        Triple(R.raw.project_notes, "review-notes.pdf", "application/pdf")
+    label.contains("Budget.xlsx", ignoreCase = true) ->
+        Triple(R.raw.weekend_notes, "budget.pdf", "application/pdf")
+    label.contains("Assets.zip", ignoreCase = true) ->
+        Triple(R.raw.trail_plan, "assets.pdf", "application/pdf")
+    label.contains("Read Me.txt", ignoreCase = true) ->
+        Triple(R.raw.project_brief, "read-me.pdf", "application/pdf")
+    label.contains("Conversation Outline.docx", ignoreCase = true) ->
+        Triple(R.raw.project_brief, "conversation-outline.pdf", "application/pdf")
+    label.contains("Launch Checklist.xlsx", ignoreCase = true) ->
+        Triple(R.raw.project_notes, "launch-checklist.pdf", "application/pdf")
+    label.contains("Reference Images.zip", ignoreCase = true) ->
+        Triple(R.raw.trail_plan, "reference-images.pdf", "application/pdf")
+    label.contains("Review Notes.txt", ignoreCase = true) ->
+        Triple(R.raw.weekend_notes, "review-notes.pdf", "application/pdf")
     else -> null
 }
 

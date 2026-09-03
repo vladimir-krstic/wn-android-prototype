@@ -83,6 +83,9 @@ fun ChatMessage.visibleText(currentProfileId: String): String = when (deletionSt
     }
 }
 
+fun ChatMessage.plainVisibleText(currentProfileId: String): String =
+    InlineMessageMarkup.plainText(visibleText(currentProfileId))
+
 enum class ComposerAvailability {
     PendingInvitation,
     Available,

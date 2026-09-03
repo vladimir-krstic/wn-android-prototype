@@ -3,10 +3,11 @@
 ## Purpose and scope
 
 Use Google's current standard-color vertical menus consistently across all six
-app-owned popup entry points: Chats actions, Chats filters, Sign Up photo
+app-owned popup entry points—Chats actions, Chats filters, Sign Up photo
 sources, Set Up Group photo sources, Profile photo sources, and voice-review
-format. This is a behavior-preserving menu migration, not a global Expressive
-theme switch or a redesign of sheets, dialogs, fields, or system pickers.
+format—and the embedded focused-message command surface. This is a behavior-
+preserving menu migration, not a global Expressive theme switch or a redesign
+of sheets, dialogs, fields, or system pickers.
 
 ## Product and state contract
 
@@ -39,6 +40,15 @@ native typography/padding/elevation/motion, and official icon assets sized by
 state and check, not a manually drawn selected background. Destructive commands
 retain semantic error text/icon colors; disabled colors remain Material-owned.
 
+`WhiteNoiseMenuGroup` exposes that same group and item renderer without creating
+a second popup. The focused-message dialog already owns safe-area placement,
+directional alignment, modal dismissal, and the source-preserving message
+preview, so it uses this embedded variant. Its Reply through Delete rows receive
+the same index-aware item shapes and clipped pressed state layers, 48 dp
+minimum targets, 20 dp leading icons, standard colors, typography, padding and
+elevation as the Chats filter menu; it has no local row `clickable`, corner,
+icon, text, padding, height, or state-layer implementation.
+
 The popup owns anchor positioning/focus/RTL/Back/outside dismissal. Its content
 uses a standard Compose vertical scroll inside the rounded group so all
 commands remain reachable in short windows, with the IME, or at 200% font size.
@@ -60,6 +70,8 @@ long-press behavior remains evidence, not the visual component authority.
 ## Verification criteria
 
 - Every app-owned dropdown uses the shared Expressive implementation.
+- The focused-message command surface reuses the shared non-popup group and
+  native menu items while its dialog retains placement and dismissal ownership.
 - Commands retain ordering, destructive safeguards and dismiss-before-dispatch.
 - Scope and voice-format selection expose native selected semantics.
 - Compact/expanded widths, RTL, large fonts, light/dark, keyboard-open layout,
@@ -137,3 +149,23 @@ call sites. Dependency insight confirms Compose UI remains 1.12.0; the merged
 manifest remains minSdk 23 with no network permission. No emulator/device was
 launched, installed, interacted with or captured. Instrumentation execution,
 real TalkBack, gesture behavior and visual acceptance remain pending.
+
+## Focused-message command-surface follow-up — 2026-09-01
+
+The focused-message action surface now uses `WhiteNoiseMenuGroup` and the same
+shared `WhiteNoiseMenuItems` renderer as every popup. This removes its former
+custom `Surface` plus full-width `Row.clickable` implementation, whose pressed
+band could only inherit the group's outer clipping and therefore kept square
+inner corners. The surrounding source-preserving dialog, ordered action policy,
+8 dp message gap, reaction strip, backdrop, and dismiss-before-dispatch action
+handler are unchanged.
+
+`WhiteNoiseMenuTest` executes the embedded group independently and proves
+native Button semantics, a 48 dp target, retained surface ownership after an
+inline command, and dispatch. `ConversationScreenTest` proves the focused Reply
+and Delete items expose those same native semantics/targets; the complete
+62-case class passes on the physical Pixel 8a. Current-build inspection covers
+both the idle menu and a held Reply state: the first item receives its
+position-aware shape and rounded state layer, the group clips it correctly, and standard
+20 dp icons, spacing, surface colors, elevation, and semantic-error Delete are
+visible without moving the focused message or changing the established gap.

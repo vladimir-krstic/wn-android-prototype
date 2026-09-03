@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -29,19 +30,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -58,16 +61,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -76,7 +83,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -86,6 +95,8 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatMessage
 import dev.ipf.whitenoise.model.ComposerAvailability
+import dev.ipf.whitenoise.model.EmojiCategory
+import dev.ipf.whitenoise.model.EmojiSection
 import dev.ipf.whitenoise.model.MessageAction
 import dev.ipf.whitenoise.model.MessageActionPolicy
 import dev.ipf.whitenoise.model.MessageDeletionScope
@@ -95,9 +106,11 @@ import dev.ipf.whitenoise.model.ReactionCatalog
 import dev.ipf.whitenoise.model.composerAvailability
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.SignalEmoji
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseCompactSearchField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun actionLabel(action: MessageAction): String = stringResource(
@@ -141,77 +154,90 @@ internal fun EmojiPickerSheet(
     onEmoji: (String) -> Unit,
     onConfigure: (() -> Unit)? = null,
 ) {
-    var query by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf(ReactionCatalog.categories.keys.first()) }
-    val values = if (query.isBlank()) ReactionCatalog.categories.getValue(category) else ReactionCatalog.all
-    val filtered = values.filter { query.isBlank() || it.contains(query) }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val sections = remember(query) { ReactionCatalog.search(query) }
+    val sectionRanges = remember(sections) { emojiSectionRanges(sections) }
+    val gridState = rememberLazyGridState()
+    val categoryState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(
+            SheetValue.Hidden,
+            SheetValue.Expanded,
+        ),
+    )
+    val activeCategory by remember(gridState, sectionRanges) {
+        derivedStateOf {
+            sectionRanges.lastOrNull { it.firstItemIndex <= gridState.firstVisibleItemIndex }
+                ?.category
+                ?: sections.firstOrNull()?.category
+        }
+    }
+
+    LaunchedEffect(query) {
+        if (sections.isNotEmpty()) gridState.scrollToItem(0)
+    }
+    LaunchedEffect(activeCategory, query) {
+        if (query.isBlank()) {
+            val index = sections.indexOfFirst { it.category == activeCategory }
+            if (index >= 0) categoryState.animateScrollToItem(index)
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 600.dp),
-                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(EmojiPickerExpandedHeightFraction)
+                    .widthIn(max = EmojiPickerMaximumWidth)
+                    .testTag("emoji.picker"),
             ) {
-                Row(
+                TextField(
+                    value = query,
+                    onValueChange = { query = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(R.string.search_emoji)) },
-                        leadingIcon = {
-                            Icon(painterResource(R.drawable.ic_search), contentDescription = null)
-                        },
-                        trailingIcon = if (query.isNotEmpty()) ({
-                            IconButton(onClick = { query = "" }) {
-                                Icon(
-                                    painterResource(R.drawable.ic_close),
-                                    contentDescription = stringResource(R.string.clear_search),
-                                )
+                        .padding(
+                            start = WhiteNoiseSpacing.CompactScreenMargin,
+                            end = WhiteNoiseSpacing.CompactScreenMargin,
+                            bottom = WhiteNoiseSpacing.Related,
+                        )
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                coroutineScope.launch { sheetState.expand() }
                             }
-                        }) else null,
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                    )
-                    onConfigure?.let { configure ->
-                        FilledTonalIconButton(onClick = configure) {
+                        }
+                        .testTag("emoji.picker.search"),
+                    placeholder = { Text(stringResource(R.string.search_emoji)) },
+                    leadingIcon = {
+                        Icon(painterResource(R.drawable.ic_search), contentDescription = null)
+                    },
+                    trailingIcon = if (query.isNotEmpty()) ({
+                        IconButton(onClick = { query = "" }) {
                             Icon(
-                                painterResource(R.drawable.ic_tune),
-                                contentDescription = stringResource(R.string.configure_reactions),
+                                painterResource(R.drawable.ic_close),
+                                contentDescription = stringResource(R.string.clear_search),
                             )
                         }
-                    }
-                }
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    items(ReactionCatalog.categories.keys.toList(), key = { it }) { name ->
-                        FilterChip(
-                            selected = category == name && query.isBlank(),
-                            onClick = {
-                                category = name
-                                query = ""
-                            },
-                            label = { Text(name) },
-                        )
-                    }
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                if (filtered.isEmpty()) {
+                    }) else null,
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                )
+
+                if (sections.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp),
+                        modifier = Modifier.fillMaxWidth().weight(1f),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -221,23 +247,180 @@ internal fun EmojiPickerSheet(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 48.dp),
+                        columns = GridCells.Adaptive(minSize = EmojiPickerMinimumCellSize),
+                        state = gridState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f, fill = false)
-                            .heightIn(min = 160.dp, max = 440.dp),
+                            .weight(1f)
+                            .testTag("emoji.picker.grid"),
                         contentPadding = PaddingValues(
-                            horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                            vertical = WhiteNoiseSpacing.Related,
+                            start = WhiteNoiseSpacing.CompactScreenMargin,
+                            end = WhiteNoiseSpacing.CompactScreenMargin,
+                            bottom = WhiteNoiseSpacing.Related,
                         ),
                     ) {
-                        items(filtered, key = { it }) { emoji ->
-                            TextButton(
-                                onClick = { onEmoji(emoji) },
-                                modifier = Modifier.size(48.dp),
-                                contentPadding = PaddingValues(0.dp),
+                        sections.forEach { section ->
+                            item(
+                                key = "${section.category.id}:header",
+                                span = { GridItemSpan(maxLineSpan) },
                             ) {
-                                Text(emoji, style = MaterialTheme.typography.titleLarge)
+                                Text(
+                                    text = emojiCategoryLabel(section.category),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = EmojiPickerSectionHeaderMinimumHeight)
+                                        .padding(top = WhiteNoiseSpacing.Related)
+                                        .semantics { heading() }
+                                        .testTag("emoji.picker.header.${section.category.id}"),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                            gridItemsIndexed(
+                                items = section.emoji,
+                                key = { index, emoji -> "${section.category.id}:$index:$emoji" },
+                            ) { index, emoji ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(EmojiPickerMinimumCellSize),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Surface(
+                                        onClick = { onEmoji(emoji) },
+                                        modifier = Modifier
+                                            .size(EmojiPickerMinimumCellSize)
+                                            .testTag("emoji.picker.item.${section.category.id}.$index"),
+                                        shape = CircleShape,
+                                        color = Color.Transparent,
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            SignalEmoji(
+                                                emoji = emoji,
+                                                modifier = Modifier.size(EmojiPickerEmojiSize),
+                                                contentDescription = emoji,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (query.isBlank()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    EmojiCategoryBar(
+                        sections = sections,
+                        selected = activeCategory,
+                        state = categoryState,
+                        onConfigure = onConfigure,
+                        onCategory = { category ->
+                            val itemIndex = sectionRanges
+                                .firstOrNull { it.category == category }
+                                ?.firstItemIndex
+                                ?: return@EmojiCategoryBar
+                            coroutineScope.launch {
+                                sheetState.expand()
+                                gridState.animateScrollToItem(itemIndex)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val EmojiPickerExpandedHeightFraction = 0.88f
+private val EmojiPickerMaximumWidth = 600.dp
+private val EmojiPickerMinimumCellSize = 48.dp
+private val EmojiPickerEmojiSize = 32.dp
+private val EmojiPickerSectionHeaderMinimumHeight = 36.dp
+
+private data class EmojiSectionRange(
+    val category: EmojiCategory,
+    val firstItemIndex: Int,
+)
+
+private fun emojiSectionRanges(sections: List<EmojiSection>): List<EmojiSectionRange> {
+    var itemIndex = 0
+    return sections.map { section ->
+        EmojiSectionRange(section.category, itemIndex).also {
+            itemIndex += section.emoji.size + 1
+        }
+    }
+}
+
+@Composable
+private fun EmojiCategoryBar(
+    sections: List<EmojiSection>,
+    selected: EmojiCategory?,
+    state: androidx.compose.foundation.lazy.LazyListState,
+    onConfigure: (() -> Unit)?,
+    onCategory: (EmojiCategory) -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 3.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .testTag("emoji.picker.categories"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            onConfigure?.let { configure ->
+                IconButton(
+                    onClick = configure,
+                    modifier = Modifier
+                        .padding(start = WhiteNoiseSpacing.Related)
+                        .testTag("emoji.picker.configure"),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_emoji_settings),
+                        contentDescription = stringResource(R.string.configure_reactions),
+                    )
+                }
+            }
+            LazyRow(
+                state = state,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(
+                    start = if (onConfigure == null) WhiteNoiseSpacing.Related else 0.dp,
+                    end = WhiteNoiseSpacing.Related,
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items(sections, key = { it.category.id }) { section ->
+                    val category = section.category
+                    val isSelected = selected == category
+                    IconToggleButton(
+                        checked = isSelected,
+                        onCheckedChange = { onCategory(category) },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .semantics { this.selected = isSelected }
+                            .testTag("emoji.picker.category.${category.id}"),
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(36.dp),
+                            shape = CircleShape,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            } else {
+                                Color.Transparent
+                            },
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(emojiCategoryIcon(category)),
+                                    contentDescription = emojiCategoryLabel(category),
+                                    modifier = Modifier.size(22.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -245,6 +428,33 @@ internal fun EmojiPickerSheet(
             }
         }
     }
+}
+
+@Composable
+private fun emojiCategoryLabel(category: EmojiCategory): String = stringResource(
+    when (category) {
+        EmojiCategory.Recent -> R.string.emoji_category_recent
+        EmojiCategory.SmileysAndPeople -> R.string.emoji_category_smileys_people
+        EmojiCategory.AnimalsAndNature -> R.string.emoji_category_animals_nature
+        EmojiCategory.FoodAndDrink -> R.string.emoji_category_food_drink
+        EmojiCategory.Activities -> R.string.emoji_category_activities
+        EmojiCategory.TravelAndPlaces -> R.string.emoji_category_travel_places
+        EmojiCategory.Objects -> R.string.emoji_category_objects
+        EmojiCategory.Symbols -> R.string.emoji_category_symbols
+        EmojiCategory.Flags -> R.string.emoji_category_flags
+    },
+)
+
+private fun emojiCategoryIcon(category: EmojiCategory): Int = when (category) {
+    EmojiCategory.Recent -> R.drawable.ic_emoji_recent
+    EmojiCategory.SmileysAndPeople -> R.drawable.ic_emoji_smileys
+    EmojiCategory.AnimalsAndNature -> R.drawable.ic_emoji_animals
+    EmojiCategory.FoodAndDrink -> R.drawable.ic_emoji_food
+    EmojiCategory.Activities -> R.drawable.ic_emoji_activities
+    EmojiCategory.TravelAndPlaces -> R.drawable.ic_emoji_travel
+    EmojiCategory.Objects -> R.drawable.ic_emoji_objects
+    EmojiCategory.Symbols -> R.drawable.ic_emoji_symbols
+    EmojiCategory.Flags -> R.drawable.ic_emoji_flags
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -286,7 +496,10 @@ internal fun ConfigureReactionsSheet(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(emoji, style = MaterialTheme.typography.titleLarge)
+                                SignalEmoji(
+                                    emoji = emoji,
+                                    modifier = Modifier.size(32.dp),
+                                )
                             }
                         }
                     }
@@ -923,7 +1136,11 @@ fun MessageDetailsScreen(
                                             )
                                         },
                                         leadingContent = {
-                                            Text(reaction.emoji, style = MaterialTheme.typography.titleLarge)
+                                            SignalEmoji(
+                                                emoji = reaction.emoji,
+                                                modifier = Modifier.size(32.dp),
+                                                contentDescription = reaction.emoji,
+                                            )
                                         },
                                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                     )

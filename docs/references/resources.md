@@ -4,6 +4,10 @@ For the current app-control glyph provenance and exact Google XML hashes, see
 [Material Symbol control assets](material-symbols.md). Product images below
 retain their separate pinned iOS provenance.
 
+For the explicitly requested pinned Signal reaction artwork, exact upstream
+commit, bundled legal files, and SHA-256 manifest, see
+[Signal Android emoji asset provenance](signal-emoji-assets.md).
+
 The reusable source material lives in the private `wn-ios-prototype`
 repository at the accepted commit recorded in `ios-prototype.md`, under:
 

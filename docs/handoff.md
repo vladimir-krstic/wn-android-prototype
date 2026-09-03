@@ -65,7 +65,11 @@ The complete static gate is:
 ```
 
 Unit tests execute on the host. Compose instrumentation tests are compiled and
-packaged but are not run without an explicit emulator/device request. Static
+packaged but are not run unless the user's current request explicitly asks for
+device/emulator testing. Prior inspection requests and an attached phone are
+not standing authorization. Do not use `adb`, install or launch the app,
+interact with a device, or capture device screenshots outside that explicit
+request. Static
 coverage includes model consequences, fixture integrity, navigation values,
 screen entry states, accessibility actions, adaptive width, 200% font scale,
 RTL composition, and packaged resource identities.

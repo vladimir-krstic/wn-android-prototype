@@ -88,48 +88,87 @@ fun WhiteNoiseDropdownMenu(
         ) {
             // The new popup supplies placement/motion, but unlike baseline DropdownMenu it does
             // not add scrolling. Keep the scroll inside the group so its corners clip the rows.
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                items.forEachIndexed { index, item ->
-                    val shapes = MenuDefaults.itemShape(index, items.size)
-                    val colors = if (item.destructive) {
-                        MenuDefaults.selectableItemColors(
-                            textColor = MaterialTheme.colorScheme.error,
-                            leadingIconColor = MaterialTheme.colorScheme.error,
-                        )
-                    } else {
-                        MenuDefaults.selectableItemColors()
-                    }
-                    val icon: (@Composable () -> Unit)? = item.icon?.let { resource ->
-                        { MenuIcon(resource) }
-                    }
-                    val onClick = {
-                        onDismissRequest()
-                        item.onClick()
-                    }
-                    if (item.selected == null) {
-                        DropdownMenuItem(
-                            onClick = onClick,
-                            text = { Text(item.label) },
-                            shape = shapes.shape,
-                            modifier = item.modifier,
-                            leadingIcon = icon,
-                            enabled = item.enabled,
-                            colors = colors,
-                        )
-                    } else {
-                        DropdownMenuItem(
-                            selected = item.selected,
-                            onClick = onClick,
-                            text = { Text(item.label) },
-                            shapes = shapes,
-                            modifier = item.modifier,
-                            leadingIcon = icon,
-                            selectedLeadingIcon = { MenuIcon(R.drawable.ic_check) },
-                            enabled = item.enabled,
-                            colors = colors,
-                        )
-                    }
-                }
+            WhiteNoiseMenuItems(
+                items = items,
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                onItemClick = { item ->
+                    onDismissRequest()
+                    item.onClick()
+                },
+            )
+        }
+    }
+}
+
+/**
+ * Google's standard-color Expressive menu group without popup ownership.
+ *
+ * Use this when a surrounding modal already owns positioning and dismissal but its command surface
+ * must retain the exact shapes, state layers, metrics, colors, and semantics used by app dropdowns.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WhiteNoiseMenuGroup(
+    items: List<WhiteNoiseMenuItem>,
+    modifier: Modifier = Modifier,
+    shadowElevation: Dp = MenuDefaults.ShadowElevation,
+) {
+    DropdownMenuGroup(
+        shapes = MenuDefaults.groupShapes(),
+        modifier = modifier,
+        shadowElevation = shadowElevation,
+    ) {
+        WhiteNoiseMenuItems(
+            items = items,
+            onItemClick = { item -> item.onClick() },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WhiteNoiseMenuItems(
+    items: List<WhiteNoiseMenuItem>,
+    modifier: Modifier = Modifier,
+    onItemClick: (WhiteNoiseMenuItem) -> Unit,
+) {
+    Column(modifier) {
+        items.forEachIndexed { index, item ->
+            val shapes = MenuDefaults.itemShape(index, items.size)
+            val colors = if (item.destructive) {
+                MenuDefaults.selectableItemColors(
+                    textColor = MaterialTheme.colorScheme.error,
+                    leadingIconColor = MaterialTheme.colorScheme.error,
+                )
+            } else {
+                MenuDefaults.selectableItemColors()
+            }
+            val icon: (@Composable () -> Unit)? = item.icon?.let { resource ->
+                { MenuIcon(resource) }
+            }
+            val onClick = { onItemClick(item) }
+            if (item.selected == null) {
+                DropdownMenuItem(
+                    onClick = onClick,
+                    text = { Text(item.label) },
+                    shape = shapes.shape,
+                    modifier = item.modifier,
+                    leadingIcon = icon,
+                    enabled = item.enabled,
+                    colors = colors,
+                )
+            } else {
+                DropdownMenuItem(
+                    selected = item.selected,
+                    onClick = onClick,
+                    text = { Text(item.label) },
+                    shapes = shapes,
+                    modifier = item.modifier,
+                    leadingIcon = icon,
+                    selectedLeadingIcon = { MenuIcon(R.drawable.ic_check) },
+                    enabled = item.enabled,
+                    colors = colors,
+                )
             }
         }
     }

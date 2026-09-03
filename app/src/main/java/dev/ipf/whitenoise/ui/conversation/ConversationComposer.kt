@@ -2080,6 +2080,9 @@ private fun DraftMediaViewer(
                     ) {
                         itemsIndexed(attachments, key = { _, item -> item.id }) { index, attachment ->
                             val selected = pagerState.currentPage == index
+                            val interactionSource = remember(attachment.id) {
+                                MutableInteractionSource()
+                            }
                             val positionDescription = stringResource(
                                 R.string.media_item_position,
                                 index + 1,
@@ -2089,8 +2092,14 @@ private fun DraftMediaViewer(
                                 modifier = Modifier
                                     .size(72.dp)
                                     .semantics { contentDescription = positionDescription }
-                                    .clickable(role = Role.Button) {
-                                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                        role = Role.Button,
+                                    ) {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
                                     }
                                     .testTag("conversation.media.thumbnail.target"),
                                 contentAlignment = Alignment.Center,
@@ -2109,6 +2118,7 @@ private fun DraftMediaViewer(
                                         },
                                     )
                                     .clip(MaterialTheme.shapes.small)
+                                    .indication(interactionSource, ripple())
                                     .testTag(
                                         if (selected) {
                                             "conversation.media.thumbnail.selected"

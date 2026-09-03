@@ -2898,11 +2898,13 @@ their unit/Compose tests, `message-interactions-and-search.md`,
 ## WN-ANDROID-0107 — Conversation messages form one bottom-settled, source-preserving interaction surface
 
 - Date: 2026-08-31
-- Status: Implemented; build, lint, unit, and instrumentation compilation pass
-  for the latest 23 dp / four-plus-overflow refinement. The preceding revision
-  passed the full 191-test Pixel 8a suite and physical visual verification;
-  renewed device execution is pending after the wireless device disconnected.
-  User visual acceptance remains separate.
+- Status: Implemented; build, lint, and unit tests pass. The complete 62-case
+  conversation suite, including focused quick-reaction geometry and held-return
+  LTR/RTL reply-indicator geometry, passes on the physical Pixel 8a. Current-
+  build visual inspection confirms the evenly inset quick strip, fixed 28 dp
+  pinned Signal emoji artwork, circular horizontal-ellipsis control, and that the
+  weight-600 reply glyph remains attached to the bubble while reactions travel
+  with it. User visual acceptance remains separate.
 
 The available-composer timeline may draw behind its floating controls, but its
 newest entry must settle fully above the measured compact composer and system
@@ -2973,7 +2975,21 @@ picker, configuration, forwarding, and confirmations remain Material sheets or
 dialogs.
 
 The focused preview uses the same adaptive reaction summary as the transcript.
-Its quick-reaction surface and command surface each keep the shared 8 dp visual
+Each quick reaction retains one 48 dp semantic target, while a shared
+`MutableInteractionSource` sends hover, focus, and press feedback to a centered
+40 dp circular Material state layer rather than painting the target's
+rectangular slot. A 36 dp selected fill remains concentric inside it. The rail
+keeps 4 dp on every outer edge and 4 dp between targets, giving the circular
+state equal breathing room without shrinking accessibility or pointer reach.
+Each emoji uses a fixed 28 dp visual box with the app-owned atlas renderer
+specified by WN-ANDROID-0111 rather than scaling an ordinary typography token.
+Signal's pinned artwork is cropped and scaled as imagery, so glyph font metrics
+cannot clip the visual. The
+final More Reactions target replaces the plus with Google's unmodified 24 dp
+Material Symbols Rounded horizontal ellipsis inside a low-emphasis neutral
+40 dp circle. It retains the same 48 dp semantics, concentric state layer, and
+4 dp relationship to the rail as every reaction target.
+The quick-reaction surface and command surface each keep the shared 8 dp visual
 gap from the focused message. When the source has reactions, the lower gap is
 measured from the visible pill edge rather than from the remaining transparent
 portion of its 48 dp minimum interaction target. Scaled type may grow the
@@ -2986,16 +3002,22 @@ direction mirrors the gesture in RTL. Direction locking leaves vertically
 dominant motion to timeline scrolling. Swipe reply is disabled during
 selection, for deleted or unavailable messages, and whenever Reply is not an
 available action. The existing named Reply accessibility action remains the
-non-gesture equivalent.
+non-gesture equivalent. The indicator uses Google's 24 dp Material Symbols
+Rounded Reply asset at weight 600 inside a 48 dp target anchored to the resting
+bubble's semantic-start edge and vertical center. From the same gesture state,
+it becomes visible after 5% progress, travels 10 dp in the swipe direction,
+scales from 1.0 to 1.2, pulses to 1.8 over 200 ms at readiness, and follows the
+bubble continuously through resisted overdrag and spring return.
 
 This decision preserves product behavior from the pinned iOS baseline and the
 explicitly requested scoped current-iOS comparison at
 `wn-ios-prototype@4c25393f0eb6`. Signal Android at
-`879651dc47a7b18b67e7aea52a25197875024680` is interaction evidence only: its
+`879651dc47a7b18b67e7aea52a25197875024680` supplies interaction evidence: its
 bubble-attached bounded reaction summary, source-preserving reaction overlay,
 semantic reply swipe, threshold feedback, resisted motion, and selection-bar
-viewport handling inform the Android translation without copying AGPL code or
-Signal product policy.
+viewport handling inform the Android translation without copying its renderer
+code or Signal product policy. WN-ANDROID-0111 separately records the user's
+explicitly requested exact emoji-artwork import.
 
 Evidence target: `ConversationScreen.kt`, `MessageInteractionsUi.kt`,
 conversation state models, unit and Compose tests,
@@ -3003,5 +3025,418 @@ conversation state models, unit and Compose tests,
 `ui-metrics.md`, and `feature-inventory.md`. Sources:
 [lazy lists](https://developer.android.com/develop/ui/compose/lists),
 [tap and press](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/tap-and-press),
+[handling interactions](https://developer.android.com/develop/ui/compose/touch-input/user-interactions/handling-interactions),
 [drag, swipe, and fling](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/drag-swipe-fling),
 and [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics).
+
+## WN-ANDROID-0108 — Focused message actions use a soft material backdrop
+
+- Date: 2026-09-01
+- Status: The 24 dp blur and single-layer Dialog ownership remain implemented;
+  the 80% neutral veil is superseded by WN-ANDROID-0114.
+
+The focused-message modal replaces its flat 42% black scrim with a material-
+like neutral backdrop. While the focused message, quick reactions, and command
+surface remain sharp in the modal window, the underlying conversation Scaffold
+receives a 24 dp Compose blur and the modal draws an 80% translucent
+`surfaceContainerHigh` veil across the complete window. The result preserves
+only indistinct conversation structure behind the focused content instead of
+leaving readable dark bubbles under a harsh dim layer.
+
+Because Compose `Dialog` also enables Android window dimming when it owns an
+edge-to-edge floating window, this custom full-screen modal sets that separate
+dim amount to zero. The app-owned veil remains the single contrast layer and
+continues to own scrim taps; system Back, Escape, focus, safe bounds, and the
+source-preserving action composition are unchanged. `Modifier.blur` is
+supported on Android 12 and later. On older supported releases it is ignored by
+Compose, so the translucent semantic-neutral veil remains the deliberate
+graceful fallback rather than adding another rendering dependency or custom
+bitmap pipeline.
+
+This is a user-approved visual translation of current iOS
+`regularMaterial` plus its low-opacity contrast overlay. It preserves the
+material outcome without importing an Apple component or literal light-theme
+color. Evidence: `ConversationScreen.kt`, `ConversationScreenTest.kt`,
+`ui-metrics.md`, `message-interactions-and-search.md`, and
+`feature-inventory.md`. Source: [Compose `Modifier.blur`](https://developer.android.com/reference/kotlin/androidx/compose/ui/Modifier).
+
+## WN-ANDROID-0109 — Focused message commands reuse the app's native Material menu group
+
+- Date: 2026-09-01
+- Status: Implemented; shared-menu and complete conversation tests pass on the
+  physical Pixel 8a. Idle and held-item visual inspection pass. User visual
+  acceptance remains separate.
+
+The focused-message dialog keeps ownership of source-message placement,
+directional alignment, safe bounds, blur/veil, Back and outside dismissal. Its
+command surface must not create a nested popup. It now uses
+`WhiteNoiseMenuGroup`, the non-popup half of the same shared Material component
+used by Chats filtering and all app-owned dropdowns. Both variants render
+through one `WhiteNoiseMenuItems` implementation backed by
+`DropdownMenuGroup`, position-aware `MenuDefaults.itemShape`, and the new
+`DropdownMenuItem` overloads.
+
+This removes the focused surface's custom `Surface` and full-width
+`Row.clickable` rows. Material now owns the per-position item shape, clipped
+pressed state layer, standard `surfaceContainerLow` color,
+typography, horizontal padding, 48 dp minimum target, 20 dp leading icon,
+elevation, enabled semantics, and destructive error colors. The established
+action policy/order and the handler's dismiss-before-dispatch behavior are
+unchanged, as are the quick reactions, real message preview and 8 dp visible-
+edge gaps.
+
+The embedded-group regression verifies native Button semantics and targets
+without popup dismissal ownership. Focused-message coverage verifies the same
+for Reply and Delete, while the complete 62-case conversation class preserves
+reaction-aware spacing, large type, selection, details, forwarding and every
+conditional action. Current-build Pixel 8a inspection covers the idle surface
+and a held Reply frame; the first item's state layer has rounded inner corners
+and correct outer clipping instead of the former square band.
+
+Evidence: `WhiteNoiseMenus.kt`, `ConversationScreen.kt`,
+`WhiteNoiseMenuTest.kt`, `ConversationScreenTest.kt`, `app-menus.md`,
+`message-interactions-and-search.md`, `ui-metrics.md`, and
+`feature-inventory.md`. Sources: [Compose menus](https://developer.android.com/develop/ui/compose/components/menu),
+[Material menu specifications](https://m3.material.io/components/menus/specs),
+and [Menu defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/MenuDefaults).
+
+## WN-ANDROID-0110 — Reaction picking uses a sectioned, navigable emoji surface
+
+- Date: 2026-09-01
+- Status: Implemented; the static gate and complete 62-case conversation suite
+  pass. Physical Pixel 8a inspection covers the full catalog, IME-visible
+  search, and scroll-synchronized category navigation. User visual acceptance
+  remains separate.
+
+The former picker exposed only one 16-item category at a time behind a row of
+text chips. Its search could match only a literal glyph, so it did not preserve
+the accepted iOS catalog or provide a credible full emoji task. The replacement
+keeps the shared Material modal sheet but presents the complete pinned White
+Noise catalog in one continuous Compose lazy grid: deterministic Recently Used,
+Smileys & People, Animals & Nature, Food & Drink, Activities, Travel & Places,
+Objects, Symbols, and Flags.
+
+The sheet uses Material's Expanded and Hidden anchors with content bounded to
+88% height. This keeps the pinned bottom rail inside the visible sheet at rest;
+Signal can pin a separate View tab bar to its dialog window during a partial
+state, while Compose's sheet content would otherwise be clipped below that
+viewport. A pinned bottom rail tracks the first visible section while scrolling
+and scrolls to a tapped category header. Configure Reactions is its fixed leading gear
+action. Categories remain horizontally reachable on compact widths; each uses
+an official 22 dp Material Symbols Rounded glyph, a 48 dp target, and a 36 dp
+selected circle. The rail leaves while a nonblank search query owns the surface.
+Search matches category vocabulary, common reaction aliases, and literal emoji,
+with named Clear and no-results behavior. Section labels are headings. Every
+emoji uses a circular 48 dp Material target around one fixed 32 dp pinned Signal
+sprite, independent of font scale.
+
+Signal Android at `879651dc47a7b18b67e7aea52a25197875024680` confirms the
+Android interaction structure: one sectioned grid, expansion on search/category
+navigation, a scroll-synchronized bottom category recycler, search-time rail
+dismissal, and recent-emoji grouping. WN-ANDROID-0111 separately authorizes the
+exact pinned sprite pages and generated atlas metadata. No Signal renderer,
+downloader, database search index, or persistence implementation is copied.
+The category contents and ordering come from the accepted read-only White Noise
+iOS baseline; parsing, rendering, search, state and Compose UI are app-owned
+Kotlin, and no runtime dependency or network request is added.
+
+Evidence: `EmojiCatalog.kt`, `MessageInteractionModels.kt`,
+`MessageInteractionsUi.kt`, `EmojiCatalogTest.kt`, `ConversationScreenTest.kt`,
+`message-interactions-and-search.md`, `ui-metrics.md`, and
+`feature-inventory.md`. Sources: [Material bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets),
+[Compose lazy grids](https://developer.android.com/develop/ui/compose/lists),
+[Material search](https://developer.android.com/develop/ui/compose/components/search-bar),
+[window insets](https://developer.android.com/develop/ui/compose/system/insets),
+and [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics).
+
+## WN-ANDROID-0111 — Reaction visuals use the pinned Signal Android emoji atlas
+
+- Date: 2026-09-01
+- Status: Implemented; atlas-resolution unit/instrumentation tests pass and
+  current-build physical Pixel 8a inspection confirms the focused strip,
+  transcript pill, and complete picker render the Signal artwork without
+  clipping. The complete 62-case conversation suite and static gate pass.
+
+The user's explicit correction requires the same emoji artwork used by Signal
+Android, not merely the same reaction choices or native-device approximations.
+This supersedes WN-ANDROID-0107 and WN-ANDROID-0110 only where they previously
+selected the device emoji font for reaction presentation.
+
+The app bundles the 20 WebP sprite pages and generated `emoji_data.json` from
+Signal Android commit `879651dc47a7b18b67e7aea52a25197875024680`, unchanged,
+under `app/src/main/assets/signal_emoji/`. Signal's license and notice are
+bundled beside those assets, and exact provenance and hashes are recorded in
+`docs/references/signal-emoji-assets.md`.
+
+Production code does not copy Signal's Java/Kotlin renderer. The app-owned
+Compose implementation parses only the manifest's stable `emoji` object,
+decodes its UTF-16 hexadecimal keys, caches atlas pages, and draws the selected
+tile. It follows the observable atlas geometry used by Signal: 66 px source
+tiles, 16 columns, a one-pixel crop on every edge, bitmap-filtered scaling into
+a square destination. Fixed 28 dp focused quick-reaction boxes, 32 dp picker
+boxes, and 16 dp pill boxes therefore contain image content rather than text
+baselines, removing the font-ascent/descent clipping that produced the rejected result. Missing atlas
+entries retain a defensive native-text fallback, while instrumentation proves
+that every accepted White Noise catalog entry resolves to bundled artwork.
+
+The import adds no Signal runtime, updater, database, network fetch, or
+persistence behavior. White Noise continues to own catalog semantics, recents,
+search, reaction state, accessibility descriptions, targets, pressed states,
+layout, and rendering code.
+
+Evidence: `SignalEmoji.kt`, `SignalEmojiTest.kt`, `SignalEmojiAssetTest.kt`,
+the reaction-surface call sites and Compose tests,
+`signal-emoji-assets.md`, `message-interactions-and-search.md`,
+`ui-metrics.md`, and `feature-inventory.md`.
+
+## WN-ANDROID-0112 — Focused reaction and command surfaces share one menu elevation system
+
+- Date: 2026-09-01
+- Status: Implemented; focused geometry tests pass on the physical Pixel 8a.
+  Current-build idle and held-reaction inspection pass. User visual acceptance
+  remains separate.
+
+The focused quick-reaction rail now uses the exact standard Material menu-group
+container color, Level 0 tonal elevation, and Level 2 shadow elevation already
+owned by the command group below it. This makes the two controls read as one
+interaction family without nesting the reaction choices inside the command
+menu or changing their separate shapes.
+
+Reaction artwork is reduced from 32 dp to 28 dp inside the existing 36 dp
+concentric selected fill and 40 dp circular press layer. The semantic target
+remains 48 dp, the rail inset and inter-target spacing remain 4 dp, and the
+same circle-clipped state layer continues to wrap every quick reaction rather
+than only the visually distinctive rocket. The More Reactions ellipsis retains
+its own neutral 40 dp circle and the same 48 dp target.
+
+The focused composition's scroll viewport now includes explicit 8 dp top and
+bottom shadow-safe gutters. These gutters are outside the visible rail-to-
+message and message-to-command relationships, which remain exactly 8 dp, but
+inside the viewport's clipping boundary. Material's soft shadow can therefore
+finish around both elevated surfaces instead of being cut flat at the top or
+bottom edge when the composition is content-sized or scrolled to an extreme.
+
+Evidence: `ConversationScreen.kt`, `ConversationScreenTest.kt`,
+`message-interactions-and-search.md`, `ui-metrics.md`, and
+`feature-inventory.md`. Sources: pinned Signal Android reaction-overlay layout
+at `879651dc47a7b18b67e7aea52a25197875024680` and Material
+`MenuDefaults`/`DropdownMenuGroup` source for the pinned Compose version.
+
+## WN-ANDROID-0113 — Device testing requires an explicit current user request
+
+- Date: 2026-09-01
+- Status: Approved by explicit user direction
+
+Routine agent validation is host-side: compilation, relevant unit tests, lint,
+debug APK assembly, and instrumentation-test APK compilation as appropriate to
+the change. The presence of a tethered phone does not change that default.
+
+The agent must not use `adb`, execute connected instrumentation, start an
+emulator, install or launch the app on a device, interact with a phone/emulator,
+or capture device screenshots unless the user's current request explicitly
+asks for device/emulator testing or visual/hands-on inspection. Authorization
+from an earlier request does not carry into later implementation or polish
+requests, and a visually oriented change is not by itself authorization.
+
+If evidence can only be obtained on a device, the agent reports what requires
+that check and waits for the user to request it. Device execution and visual
+verification may be claimed only after such an authorized current-build pass.
+Compiling and packaging Compose instrumentation tests remains within the
+host-side boundary and does not authorize running them.
+
+## WN-ANDROID-0114 — Focused actions use a restrained translucent-black backdrop
+
+- Date: 2026-09-01
+- Status: Implemented; host compilation and static checks pass. Device and
+  visual verification remain unclaimed until explicitly requested.
+
+The 80% `surfaceContainerHigh` wash left insufficient separation between an
+incoming light message bubble and the blurred conversation behind it. The
+focused-message overlay now keeps the accepted 24 dp background blur but uses
+a 24% translucent black veil across the complete window. This is substantially
+lighter than the rejected former 42% black scrim while providing a clearer
+neutral contrast boundary around light focused content.
+
+The app-owned veil remains the only contrast layer. Dialog window dimming stays
+disabled, so the 24% value is not compounded by a second platform scrim. The
+focused message, reaction rail, and command menu remain outside the veil and
+therefore sharp. Scrim taps, Back, safe bounds, accessibility ownership, and
+the Android 11-and-earlier no-blur fallback remain unchanged.
+
+Evidence: `ConversationScreen.kt`, `ConversationScreenTest.kt`,
+`message-interactions-and-search.md`, `ui-metrics.md`, and
+`feature-inventory.md`.
+
+## WN-ANDROID-0115 — Focused message timestamps use full-emphasis contrast
+
+- Date: 2026-09-01
+- Status: Implemented; host compilation and static checks pass. Device and
+  visual verification remain unclaimed until explicitly requested.
+
+The transcript keeps the accepted lower-emphasis `outline` neutral for time,
+Sent fill, and Sending progress. When the real message is lifted into the
+focused context-menu overlay, those same non-error metadata elements switch to
+`onSurface`, which is black in the light theme. This restores contrast against
+the translucent-black blurred backdrop without changing timestamp position,
+padding, typography, delivery-icon geometry, or reaction layout. The semantic
+error color continues to own failed delivery in both contexts.
+
+Evidence: `ConversationScreen.kt`, `message-interactions-and-search.md`, and
+`ui-metrics.md`.
+
+## WN-ANDROID-0116 — Focused actions dismiss from every visual empty-space tap
+
+- Date: 2026-09-01
+- Status: Implemented; host compilation and instrumentation-test compilation
+  pass. Device and visual verification remain unclaimed until explicitly
+  requested.
+
+The focused action composition previously placed a no-op click target on its
+full-width alignment column. That invisible target included blank horizontal
+space beside narrow incoming and outgoing messages, so taps there were
+consumed instead of reaching the full-window dismiss action.
+
+The alignment and scroll column no longer consumes taps. Only the visible
+reaction surface, the rendered message-plus-metadata bounds, and the command
+group block backdrop dismissal. Every visually empty point—including space
+beside or between those surfaces—now reaches the single full-window dismiss
+target on the first completed tap. Surface actions, scrim semantics, system
+Back, Escape, placement, and scrolling remain unchanged.
+
+Evidence: `ConversationScreen.kt`, `ConversationScreenTest.kt`,
+`message-interactions-and-search.md`, and `ui-metrics.md`.
+
+## WN-ANDROID-0117 — Custom interaction feedback stays inside visible elements
+
+- Date: 2026-09-01
+- Status: Implemented for the audited custom targets; host Kotlin and
+  instrumentation-test compilation pass. Device and visual verification remain
+  unclaimed until explicitly requested.
+
+Custom White Noise targets may remain larger than their artwork for touch,
+keyboard, and accessibility reach, but their press/hover/focus/ripple feedback
+does not inherit that transparent geometry. The target suppresses its own
+indication, shares one `MutableInteractionSource`, and draws the Material state
+layer on the actual clipped visual shape. Unbounded or intentionally
+overflowing feedback requires an explicit component decision.
+
+The audit corrects the transcript message long-press layer from the full row to
+the 16 dp bubble, reaction feedback from the 48 dp target to the 23 dp pill,
+reply-quote feedback to its rounded quote surface, draft-media feedback from
+the 72 dp target to the 64 dp thumbnail, selected-person removal feedback from
+the 80 dp column to the avatar, and attachment-card feedback to its rounded
+card. Existing compact composer actions, remove/inclusion controls, identity
+copy capsules, focused reactions, menu groups, dialog rows, and diagnostics
+switches already use clipped visual state layers. Material list rows remain
+whole-row because that visible row is the intended element, and conversation
+selection retains its separately approved whole-row state.
+
+Evidence: `ConversationScreen.kt`, `ConversationComposer.kt`,
+`TimelineMessageContent.kt`, `ChatCreationScreens.kt`,
+`ConversationScreenTest.kt`, `ChatsScreenTest.kt`, `ui-metrics.md`, and
+`message-interactions-and-search.md`.
+
+## WN-ANDROID-0118 — Bubble holds outrank rich-child taps without stealing taps
+
+- Date: 2026-09-01
+- Status: Implemented; host Kotlin and instrumentation-test compilation pass.
+  Device and visual verification remain unclaimed until explicitly requested.
+
+Every message bubble is one long-press target even when its descendants own
+ordinary tap actions. The bubble observes touch in Compose's Initial pointer
+pass and waits for the platform long-press timeout without consuming a normal
+press or release. Movement beyond platform touch slop cancels recognition so
+timeline scrolling and Reply swipe retain priority. Once a stationary hold is
+recognized, the bubble performs the long-press haptic, opens the shared message
+action overlay, and consumes subsequent pointer changes through release. This
+prevents a nested link, mention, reply quote, media tile, file, contact, link
+preview, or voice control from firing after the context action appears.
+Bubble-attached reaction and timestamp metadata share the same detector;
+reaction taps remain reaction-owned while timestamp holds continue to reach
+message actions. The transparent width outside the actual message composition
+does not regain hit handling.
+
+An ordinary tap remains descendant-owned and therefore keeps the exact
+destination behavior: gallery, external link, person profile, file opener,
+reply-source navigation, or playback. Selection mode retains its accepted
+whole-row toggle, deleted messages expose no hold, and the focused preview does
+not recursively reopen itself. Named long-click semantics and policy-owned
+custom accessibility actions remain available for keyboard and assistive
+technology.
+
+Evidence: `ConversationScreen.kt`, `ConversationScreenTest.kt`,
+`message-interactions-and-search.md`, and `feature-inventory.md`. Source:
+[Compose gesture propagation](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/understand-gestures).
+
+## WN-ANDROID-0119 — Only the offscreen current day owns a pinned capsule
+
+- Date: 2026-09-01
+- Status: Implemented; host unit/build/static checks pass. Device and visual
+  verification remain unclaimed until explicitly requested.
+
+Every chronological day boundary remains at its source position as ordinary
+centered system text with heading semantics. Inline boundaries do not draw a
+pill, card, shadow, or tonal background. The timeline derives the active day
+from the top visible item and shows a separate top replacement only when that
+day's own inline header has left the viewport. When the matching inline header
+becomes visible—including when it reaches the top replacement while scrolling
+back—the replacement is removed and the boundary remains in place as text.
+
+The replacement uses the established capsule shape, 12 dp horizontal and 3 dp
+vertical label padding, full-emphasis `onSurface` text, and
+`surfaceDim` at 82% alpha. Material defines that semantic role as consistently
+dimmer than the base surface in both light and dark appearance. It therefore
+preserves a clearer boundary when the capsule overlaps an incoming
+`surfaceContainerHigh` bubble while keeping background context visible. It is a
+passive overlay with no tap target; both representations retain heading
+semantics, but the visibility rule avoids duplicating the active heading. This
+preserves the pinned iOS product behavior without making every Android list
+section a sticky surfaced row.
+
+Evidence: pinned iOS
+`WhiteNoisePrototype/Screens/Conversation/ConversationView.swift` at
+`0bd7cbae56c92f07c7639be78b9bb62f8e5297cb`, `ConversationScreen.kt`,
+`ConversationDayHeaderTest.kt`, `ConversationScreenTest.kt`,
+`shared-conversation-core.md`, `ui-metrics.md`, and `feature-inventory.md`.
+Android sources: [Material 3 in Compose](https://developer.android.com/develop/ui/compose/designsystems/material3),
+[Compose lazy lists](https://developer.android.com/develop/ui/compose/lists), and
+[Compose heading semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics#headings).
+
+## WN-ANDROID-0120 — Rich message children share one concentric canvas
+
+- Date: 2026-09-01
+- Status: Implemented; host unit/build/lint and instrumentation-test
+  compilation pass. Device and visual verification remain unclaimed until
+  explicitly requested.
+
+Text-only and deleted bubbles retain the accepted 12 dp horizontal and 8 dp
+vertical inset. A nondeleted message containing a reply or attachment instead
+uses one 6 dp shell inset on all four sides. Its reply quote, media group, GIF,
+link preview, file, contact, and voice card use a 10 dp outline—the 16 dp bubble
+radius less the 6 dp inset—so nested silhouettes are concentric. Stacked rich
+sections keep 6 dp separation; gallery tiles keep 2 dp separation and are
+clipped once as a group. Rich cards own 6 dp internal content padding.
+
+Albums and nonmedia rich content use one 256 dp inner canvas. A lone photo or
+video preserves the accepted aspect-derived width, and any caption wraps to
+that exact width rather than widening the bubble independently. Mixed text
+adds 6 dp horizontal and 2 dp bottom inside the rich canvas, recovering the
+ordinary 12 dp horizontal and 8 dp bottom visual text inset. Link artwork fills
+the canvas above its text, and file rows use a bare semantic glyph rather than
+another nested rounded icon container. Deleted messages render only their
+tombstone instead of retaining attachment or reply geometry.
+
+This translates the pinned iOS product composition rather than its SwiftUI
+structure. Compose `width` constraints establish the single sibling canvas;
+Material `Surface` continues to own semantic colors and the visible child
+container while explicit clipping contains custom state layers.
+
+Evidence: pinned iOS `conversation-shared.md`,
+`PrototypeMessageBubble.swift`, and `MessageBubbleComponents.swift` at
+`0bd7cbae56c92f07c7639be78b9bb62f8e5297cb`;
+`ConversationMessageMetrics.kt`, `ConversationScreen.kt`,
+`TimelineMessageContent.kt`, `TimelineMessageContentTest.kt`,
+`ConversationScreenTest.kt`, `shared-conversation-core.md`, `ui-metrics.md`,
+and `feature-inventory.md`. Android sources:
+[Compose constraints and modifier order](https://developer.android.com/develop/ui/compose/layouts/constraints-modifiers)
+and [Material Card containers](https://developer.android.com/develop/ui/compose/components/card).

@@ -1,10 +1,15 @@
 # Shared conversation core
 
-Status: 2026-08-31 conversation-surface correction implemented. Build, lint,
-unit tests, and instrumentation compilation pass for the latest 23 dp /
-four-plus-overflow refinement. The preceding revision passed the full Pixel 8a
-suite and physical inspection; renewed device execution is pending after the
-wireless device disconnected. User visual acceptance remains separate.
+Status: 2026-09-01 pinned-fixture parity audit and conversation-surface
+correction implemented. The 77-row chat inventory is intact, every specialized
+catalog timeline now carries the complete pinned iOS scenario sequence rather
+than a representative subset, and the retained Maya Chen, Weekend Walks, and
+Fiatjaf histories are complete. The date-marker refinement separates ordinary
+inline day text from the viewport-derived current-day pill and passes the host
+unit/build/static gate; device and visual verification of that refinement remain
+unclaimed until explicitly requested. Earlier physical Pixel 8a suite evidence
+remains historical evidence for the preceding conversation batch. User visual
+acceptance remains separate.
 
 ## Source evidence
 
@@ -36,8 +41,11 @@ wireless device disconnected. User visual acceptance remains separate.
   edge and room for multiple actions; the identity opens the established Chat
   or Group Info destination.
 - The timeline uses a keyed `LazyColumn`, derived chronological day sections,
-  sticky date headers, and programmatic initial/new-message positioning. This
-  follows the current official Android lazy-list guidance:
+  ordinary in-list date headers, a separately derived current-day overlay, and
+  programmatic initial/new-message positioning. The overlay is present only
+  while the active day's own in-list header is outside the viewport; it yields
+  to that ordinary header when the two meet. This follows the current official
+  Android lazy-list state guidance:
   <https://developer.android.com/develop/ui/compose/lists>.
 - The existing multiline/attachment/speech composer remains behaviorally
   intact. Its boundary now shares one low tonal surface with the lifecycle
@@ -49,9 +57,15 @@ wireless device disconnected. User visual acceptance remains separate.
   use `surfaceContainerHigh`. Shared large/medium shapes, compact same-author
   spacing, and a full 16 dp cluster break preserve hierarchy without copying
   Apple Messages geometry.
-- Day headers use a pinned tonal capsule and heading semantics. Ordinary
-  events stay quiet text while support guidance uses one restrained tonal
-  notice surface, so date, event, and notice roles remain visibly distinct.
+- In-transcript day headers use the same quiet centered `labelMedium` system
+  text treatment as ordinary timeline information, with heading semantics and
+  no container. Only the current day whose beginning is no longer visible gets
+  the separate top capsule. That capsule uses an 82% `surfaceDim` neutral with
+  full-emphasis `onSurface` text. Material defines this role as consistently
+  dimmer than the base surface in both appearances, giving it clearer
+  separation from an incoming `surfaceContainerHigh` bubble underneath while
+  retaining background context. Support guidance keeps its restrained tonal
+  notice surface, so date, event, and notice roles remain distinct.
 - Selection uses one stable leading 48 dp Checkbox column for incoming and
   outgoing messages without changing bubble geometry. Failed delivery keeps a
   visible 48 dp retry action with warning icon and error text.
@@ -68,7 +82,11 @@ wireless device disconnected. User visual acceptance remains separate.
   and a visible time where applicable.
 - Messages carry author, text, reply target, reactions, delivery state,
   deletion state, and bounded attachment summaries.
-- Date headers remain in transcript order and pin as the timeline scrolls.
+- Date headers remain as ordinary centered text at their exact transcript day
+  boundaries. The active day gets a pinned replacement only after its inline
+  header leaves the viewport; the replacement disappears as soon as that
+  inline header becomes visible again, including when scrolling back to the
+  boundary between bubbles.
 - A cluster contains adjacent messages from the same author on the same day
   no more than five minutes apart. Events and notices break clusters.
 - Direct chats omit transcript author identity. Group chats show an incoming
@@ -81,7 +99,18 @@ wireless device disconnected. User visual acceptance remains separate.
   message retries to Sent. Deleted messages remain as **You deleted this
   message.** or **This message was deleted.**
 - Reply quotes show the resolved author/body or **Original message
-  unavailable** when the target is missing or deleted.
+  unavailable** when the target is missing or deleted. An available quote is a
+  named target that jumps to and briefly highlights the source message.
+- Rich messages use one content canvas instead of independently measuring each
+  child. A 6 dp bubble inset surrounds reply quotes, single media, galleries,
+  GIFs, files, contacts, links, and voice cards; each child uses a concentric
+  10 dp outline inside the 16 dp bubble. Sections keep 6 dp gaps and gallery
+  tiles keep 2 dp gaps under one group clip. Albums and rich cards use the
+  fixed 256 dp canvas. A lone photo/video keeps its aspect-derived width and
+  the caption wraps to that same width, preventing text from widening the
+  bubble and leaving unused space beside the media. Mixed text restores the
+  ordinary text inset within the shared canvas. Deleted messages do not retain
+  hidden attachment/reply layout.
 - Reactions occupy one bubble-attached metadata line opposite time. The visible
   summary never wraps. Emoji-only pills share a 31×23 dp minimum, counted and
   `+N` pills grow horizontally, and visible pills keep 3 dp gaps. They overlap
@@ -140,13 +169,25 @@ wireless device disconnected. User visual acceptance remains separate.
 
 ## Deterministic fixture coverage
 
-- Maya Chen remains the complete direct reference history.
-- Weekend Walks remains the complete group reference history.
-- Fiatjaf retains the accepted eight-message portable-identity story, reply,
+- Maya Chen carries all 31 pinned direct-history messages, including mixed
+  files, links, contact, reply, reactions, unavailable content, and voice.
+- Weekend Walks carries all 42 pinned entries: 28 messages and 14 group events
+  spanning creation, membership, identity, admin, description, and removal.
+- Fiatjaf retains the exact eight-message portable-identity story, reply,
   reaction, and five-photo attachment summary.
-- Developer catalog chats cover text/delivery, dates, replies/deletion,
-  reactions, group authors/clusters, group events/roles, invitations, ended
-  membership, blocked, missing-relay, and disappearing indicators.
+- The specialized developer timelines are source-ordered and exhaustive:
+  Direct Text 16, Dates 15, Replies 11, Reactions/Actions 21, Single Media 10,
+  Gallery 8, Viewer 7, Rich Content 11, Voice 8, Group Messages 14, Identity
+  Colors 10, and Group Events/Roles 22 entries.
+- All 12 composer fixtures preserve their exact source message, draft text,
+  reply target, link-suppression state, and ordered attachment payloads.
+- Media fixtures retain frame dimensions, duration, availability, gallery
+  counts, and viewer exclusion rules. File fixtures retain type, byte size,
+  availability, and contact identity. Inline Markdown, detected URLs, and
+  mentions render as interactive text while copy/search/read-aloud use the
+  visible plain text.
+- Developer catalog chats also cover invitations, ended membership, blocked,
+  missing-relay, archived, support, and disappearing-message indicators.
 - Every retained row opens a non-crashing shared destination with readable
   deterministic content.
 
@@ -179,12 +220,18 @@ wireless device disconnected. User visual acceptance remains separate.
 - After the correction, all 191 instrumentation tests passed on the physical
   Pixel 8a, including conversation, media viewer, full-height forwarding,
   selection, reply, gesture, accessibility, and scaled-type coverage.
-- The latest user-directed density refinement reduces pills to 31×23 dp, caps
+- The latest user-directed density refinement reduces emoji-only pills to an
+  exact 31×23 dp visual, lets counted and `+N` pills grow horizontally, caps
   transcript/focused summaries at four real types plus one `+N`, and reduces
   Sent state to a 14 dp filled container with 10 dp check artwork. Its follow-up
   moves visible reaction pills 2 dp farther over the bubble for a 9 dp overlap.
-  Unit, lint, build, and instrumentation compile gates pass; renewed Pixel
-  execution remains pending after disconnection.
+  The timestamp is measured independently at a fixed 2 dp bubble gap even at
+  200% type. On 2026-09-01, all 58 `ConversationScreenTest` cases passed on the
+  physical Pixel 8a after rebuilding and reinstalling both APKs.
+- `ConversationFixtureParityTest` guards every specialized source-order ID,
+  composer state, media payload, rich payload, lifecycle branch, retained
+  authored history, and ordinary seed policy. The complete unit suite contains
+  158 passing tests.
 
 ## Current official Android sources
 

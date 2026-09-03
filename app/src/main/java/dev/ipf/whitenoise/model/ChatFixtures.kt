@@ -172,33 +172,7 @@ object ChatFixtures {
             chatId = chat.id,
             fallbackText = chat.preview.takeIf { chat.isDraft }.orEmpty(),
         )
-        val members = when {
-            !chat.isGroup -> emptyList()
-            chat.membership == ChatMembership.Invited -> listOf(
-                GroupMember("maya-chen", GroupRole.Admin),
-                GroupMember("elias-moreno", GroupRole.Member),
-            )
-            chat.id == "catalog-group-sole-admin" -> listOf(
-                GroupMember(profileId, GroupRole.Admin),
-                GroupMember("maya-chen", GroupRole.Member),
-                GroupMember("elias-moreno", GroupRole.Member),
-            )
-            chat.id == "weekend-walks" -> listOf(
-                GroupMember(profileId, GroupRole.Admin),
-                GroupMember("maya-chen", GroupRole.Member),
-                GroupMember("elias-moreno", GroupRole.Member),
-                GroupMember("nora-bennett", GroupRole.Member),
-            )
-            chat.hasEndedMembership -> listOf(
-                GroupMember("maya-chen", GroupRole.Admin),
-                GroupMember("elias-moreno", GroupRole.Member),
-            )
-            else -> listOf(
-                GroupMember(profileId, GroupRole.Member),
-                GroupMember("maya-chen", GroupRole.Admin),
-                GroupMember("elias-moreno", GroupRole.Member),
-            )
-        }
+        val members = membersFor(chat, profileId)
         chat.copy(
             originalOrder = index,
             kind = if (chat.id == "catalog-direct-invitation") {
@@ -209,12 +183,99 @@ object ChatFixtures {
             relayUrls = if (chat.id == "catalog-direct-missing-relays") emptyList() else relayUrls,
             defaultRelayUrls = relayUrls,
             members = members,
+            description = groupDescriptionFor(chat.id).takeIf { chat.isGroup }.orEmpty(),
             timeline = ConversationFixtures.timelineFor(chat, profileId),
             draftText = composerSeed.text,
             draftAttachments = composerSeed.attachments,
             suppressedDraftLinkUrl = composerSeed.suppressedLinkUrl,
             draftReplyMessageId = composerSeed.replyMessageId,
         )
+    }
+
+    private fun membersFor(chat: Chat, profileId: String): List<GroupMember> {
+        if (!chat.isGroup) return emptyList()
+        if (chat.membership == ChatMembership.Invited) {
+            return listOf(
+                GroupMember("maya-chen", GroupRole.Admin),
+                GroupMember("elias-moreno", GroupRole.Member),
+                GroupMember("nora-bennett", GroupRole.Member),
+            )
+        }
+        if (chat.hasEndedMembership) {
+            return listOf(
+                GroupMember("maya-chen", GroupRole.Admin),
+                GroupMember("elias-moreno", GroupRole.Member),
+            )
+        }
+        return when (chat.id) {
+            "catalog-composer-mention" -> listOf(
+                GroupMember(profileId, GroupRole.Member),
+                GroupMember("maya-chen", GroupRole.Admin),
+                GroupMember("elias-moreno", GroupRole.Member),
+            )
+            "catalog-group-messages" -> listOf(
+                GroupMember(profileId, GroupRole.Member),
+                GroupMember("maya-chen", GroupRole.Admin),
+                GroupMember("elias-moreno", GroupRole.Member),
+                GroupMember("nora-bennett", GroupRole.Member),
+                GroupMember("mina-park", GroupRole.Member),
+            )
+            "catalog-group-colors" -> listOf(GroupMember(profileId, GroupRole.Admin)) +
+                listOf(1, 7, 13, 12, 0, 2, 11, 5, 22).map {
+                    GroupMember("identity-color-$it", GroupRole.Member)
+                }
+            "catalog-group-events" -> listOf(
+                GroupMember(profileId, GroupRole.Admin),
+                GroupMember("maya-chen", GroupRole.Member),
+                GroupMember("elias-moreno", GroupRole.Admin),
+                GroupMember("mina-park", GroupRole.Member),
+            )
+            "catalog-group-member" -> listOf(
+                GroupMember(profileId, GroupRole.Member),
+                GroupMember("maya-chen", GroupRole.Admin),
+                GroupMember("elias-moreno", GroupRole.Member),
+            )
+            "catalog-group-sole-admin" -> listOf(
+                GroupMember(profileId, GroupRole.Admin),
+                GroupMember("maya-chen", GroupRole.Member),
+                GroupMember("elias-moreno", GroupRole.Member),
+            )
+            "weekend-walks" -> listOf(
+                GroupMember(profileId, GroupRole.Admin),
+                GroupMember("maya-chen", GroupRole.Member),
+                GroupMember("mina-park", GroupRole.Member),
+                GroupMember("elias-moreno", GroupRole.Member),
+                GroupMember("nora-bennett", GroupRole.Member),
+            )
+            else -> {
+                val currentRole = if (chat.id == "product-circle") GroupRole.Member else GroupRole.Admin
+                val memberIds = buildList {
+                    addAll(listOf("maya-chen", "mina-park", "elias-moreno", "nora-bennett", "leo-martins"))
+                    when (chat.id) {
+                        "nostr-devs" -> addAll(listOf("radia-perlman", "david-chaum"))
+                        "marmots", "project-files" -> add("radia-perlman")
+                    }
+                }
+                listOf(GroupMember(profileId, currentRole)) + memberIds.map { personId ->
+                    GroupMember(
+                        personId,
+                        if (chat.id == "product-circle" && personId == "maya-chen") {
+                            GroupRole.Admin
+                        } else {
+                            GroupRole.Member
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    private fun groupDescriptionFor(id: String): String = when (id) {
+        "catalog-group-events" -> ""
+        "weekend-walks" -> "Plans, routes, and photos from our weekend walks."
+        "product-circle" -> "Notes and decisions from the product circle."
+        "nostr-devs" -> "Building and testing open communication tools."
+        else -> "A shared space for this group."
     }
 
     private fun catalog(
@@ -349,9 +410,13 @@ object ChatFixtures {
     }
 
     private fun aboutFor(id: String): String = when (id) {
-        "maya-chen" -> "Product-minded, privacy-curious, and always carrying a camera."
-        "satoshi-nakamoto" -> "A quiet participant in an open network."
-        "fiatjaf" -> "Portable identity and simple protocols."
-        else -> "Available for a private conversation on White Noise."
+        "catalog-direct-text" -> "Turning complexity into clarity.\nAlways happy to compare notes."
+        "catalog-direct-dates" -> "Planning one good day at a time.\nUsually outside before sunset. 🌤️"
+        "catalog-direct-replies" -> "Making space for thoughtful conversations.\nCollecting useful references.\nLearning something new every day."
+        "catalog-direct-reactions" -> "Here for good questions and honest answers.\nUsually carrying a camera. 📷\nSend the interesting ideas my way.\nTea and long walks help. 🍵"
+        "maya-chen" -> "Designer, careful listener, and collector of useful references."
+        "fiatjaf" -> "Building open tools for portable identity and resilient communication."
+        SUPPORT_CHAT_ID -> "Help with White Noise."
+        else -> "Quietly sharing ideas and keeping in touch."
     }
 }

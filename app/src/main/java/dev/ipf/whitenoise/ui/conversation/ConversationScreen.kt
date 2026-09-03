@@ -7,14 +7,18 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,12 +34,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -44,7 +50,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -55,6 +61,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.ripple
 import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,6 +71,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -70,6 +80,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -78,6 +89,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -85,6 +97,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.SubcomposeLayout
@@ -95,6 +108,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -105,6 +119,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
@@ -112,6 +127,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Constraints
@@ -120,7 +136,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlin.math.roundToInt
 import kotlin.math.min
@@ -154,14 +172,82 @@ import dev.ipf.whitenoise.model.VoiceMessageFormat
 import dev.ipf.whitenoise.model.VoiceDraftSubmission
 import dev.ipf.whitenoise.model.VoiceMessageFixture
 import dev.ipf.whitenoise.model.composerAvailability
+import dev.ipf.whitenoise.model.plainVisibleText
 import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.components.SignalEmoji
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseCompactSearchField
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuGroup
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
 import dev.ipf.whitenoise.ui.components.drawableResource
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+
+private val FocusedMessageBackdropBlurRadius = 24.dp
+private const val FocusedMessageBackdropBlackAlpha = 0.24f
+private val FocusedReactionRailInset = 4.dp
+private val FocusedReactionItemSpacing = 4.dp
+private val FocusedReactionStateLayerSize = 40.dp
+private val FocusedReactionSelectedFillSize = 36.dp
+private val FocusedReactionEmojiSize = 28.dp
+private val FocusedOverlayShadowSafeInset = 8.dp
+private const val PinnedDayHeaderSurfaceAlpha = 0.82f
+private val ReplySwipeThreshold = 64.dp
+private val ReplySwipeMaximum = 96.dp
+private val ReplySwipeIconTravel = 10.dp
+private val ReplySwipeIconTargetSize = 48.dp
+private val ReplySwipeIconSize = 24.dp
+private const val ReplySwipeIconRevealStart = 0.05f
+private const val ReplySwipeIconReadyScale = 1.2f
+private const val ReplySwipeIconPulseScale = 1.5f
+
+private fun Modifier.interceptBubbleLongPress(
+    enabled: Boolean,
+    onLongPress: () -> Unit,
+): Modifier = if (!enabled) {
+    this
+} else {
+    pointerInput(onLongPress) {
+        awaitEachGesture {
+            val pass = PointerEventPass.Initial
+            val down = awaitFirstDown(requireUnconsumed = false, pass = pass)
+            val endedBeforeLongPress = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                while (true) {
+                    val event = awaitPointerEvent(pass)
+                    val change = event.changes.firstOrNull { it.id == down.id }
+                        ?: return@withTimeoutOrNull true
+                    if (!change.pressed) return@withTimeoutOrNull true
+                    if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                        return@withTimeoutOrNull true
+                    }
+                }
+            }
+            if (endedBeforeLongPress == null) {
+                onLongPress()
+                do {
+                    val event = awaitPointerEvent(pass)
+                    event.changes.forEach { it.consume() }
+                } while (event.changes.any { it.pressed })
+            }
+        }
+    }
+}
+
+internal fun resistedReplySwipeDistance(
+    rawDistance: Float,
+    threshold: Float,
+    maximum: Float,
+): Float {
+    val distance = rawDistance.coerceAtLeast(0f)
+    if (distance <= threshold) return distance
+    if (threshold <= 0f || maximum <= threshold) return maximum.coerceAtLeast(0f)
+
+    val overdrag = distance - threshold
+    val resistedRange = maximum - threshold
+    return threshold + (resistedRange * overdrag / (overdrag + threshold))
+}
 
 private fun Modifier.blockPointerInput(enabled: Boolean): Modifier = if (!enabled) {
     this
@@ -201,16 +287,50 @@ fun ConversationScreen(
     onForwardMedia: (ConversationMediaKey, List<String>, String) -> Boolean = { _, _, _ -> false },
     onOpenMessageDetails: (String) -> Unit = {},
     onOpenChatInfo: () -> Unit = {},
+    onOpenPersonProfile: (String) -> Unit = {},
     onOpenDeveloperTools: (() -> Unit)? = null,
     initialSearch: Boolean = false,
     initialMessageId: String? = null,
 ) {
     val items = remember(chat.timeline) { ConversationProjection.items(chat) }
     val listState = rememberLazyListState()
+    val dayHeaderIndices = remember(items) {
+        items.indices.filter { items[it] is ConversationItem.DayHeader }
+    }
+    val pinnedDayHeader by remember(items, dayHeaderIndices, listState) {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
+            var topVisibleItemIndex: Int? = null
+            var topVisibleItemOffset = Int.MAX_VALUE
+            visibleItems.forEach { itemInfo ->
+                if (
+                    itemInfo.offset + itemInfo.size > layoutInfo.viewportStartOffset &&
+                    itemInfo.offset < layoutInfo.viewportEndOffset &&
+                    itemInfo.offset < topVisibleItemOffset
+                ) {
+                    topVisibleItemIndex = itemInfo.index
+                    topVisibleItemOffset = itemInfo.offset
+                }
+            }
+            pinnedConversationDayHeaderIndex(
+                dayHeaderIndices = dayHeaderIndices,
+                topVisibleItemIndex = topVisibleItemIndex,
+                isHeaderVisible = { headerIndex ->
+                    visibleItems.any { itemInfo ->
+                        itemInfo.index == headerIndex &&
+                            itemInfo.offset + itemInfo.size > layoutInfo.viewportStartOffset &&
+                            itemInfo.offset < layoutInfo.viewportEndOffset
+                    }
+                },
+            )?.let { items[it] as? ConversationItem.DayHeader }
+        }
+    }
     var showDeclineConfirmation by remember { mutableStateOf(false) }
     var viewerSelection by remember { mutableStateOf<ConversationMediaSelection?>(null) }
     var forwardMediaKey by remember { mutableStateOf<ConversationMediaKey?>(null) }
     var focusedMessageId by remember { mutableStateOf<String?>(null) }
+    var highlightedMessageId by remember(chat.id) { mutableStateOf<String?>(null) }
     var isSelecting by remember { mutableStateOf(false) }
     var selectedMessageIds by remember { mutableStateOf(emptySet<String>()) }
     var deleteMessageIds by remember { mutableStateOf<Set<String>?>(null) }
@@ -287,6 +407,19 @@ fun ConversationScreen(
         return accepted
     }
 
+    fun openReplyTarget(messageId: String) {
+        val itemIndex = items.indexOfFirst {
+            it is ConversationItem.MessageItem && it.message.id == messageId
+        }
+        if (itemIndex < 0) return
+        coroutineScope.launch {
+            highlightedMessageId = messageId
+            listState.scrollToItem(itemIndex)
+            delay(1_400)
+            if (highlightedMessageId == messageId) highlightedMessageId = null
+        }
+    }
+
     fun resolvedVoiceTranscript(message: ChatMessage): String? =
         message.attachments.firstOrNull { it.kind == MessageAttachmentKind.Voice }?.transcript
             ?: localVoiceTranscripts[message.id]
@@ -312,11 +445,11 @@ fun ConversationScreen(
             MessageAction.Forward -> forwardMessageIds = setOf(message.id)
             MessageAction.Copy -> {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.visibleText(profile.id)))
+                clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.plainVisibleText(profile.id)))
             }
             MessageAction.ReadAloud -> readAloudController.toggle(
                 message.id,
-                message.visibleText(profile.id),
+                message.plainVisibleText(profile.id),
             )
             MessageAction.StopReading -> readAloudController.stop()
             MessageAction.Transcribe -> {
@@ -399,7 +532,15 @@ fun ConversationScreen(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .then(
+                if (focusedMessageId != null) {
+                    Modifier.blur(FocusedMessageBackdropBlurRadius)
+                } else {
+                    Modifier
+                },
+            ),
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             when {
@@ -487,94 +628,120 @@ fun ConversationScreen(
         ) {
             AdaptiveContent(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("conversation.timeline")
-                    .graphicsLayer {
-                        translationY = if (pushTimelineWithComposer) -composerTravelPx else 0f
-                    }
-                    .blockPointerInput(composerPresentationActive)
-                    .then(
-                        if (composerPresentationActive) Modifier.clearAndSetSemantics { } else Modifier,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("conversation.timeline")
+                        .graphicsLayer {
+                            translationY = if (pushTimelineWithComposer) -composerTravelPx else 0f
+                        }
+                        .blockPointerInput(composerPresentationActive)
+                        .then(
+                            if (composerPresentationActive) Modifier.clearAndSetSemantics { } else Modifier,
+                        ),
+                    state = listState,
+                    contentPadding = PaddingValues(
+                        start = WhiteNoiseSpacing.CompactScreenMargin,
+                        top = WhiteNoiseSpacing.Related,
+                        end = WhiteNoiseSpacing.CompactScreenMargin,
+                        bottom = WhiteNoiseSpacing.Related + bottomSafePadding +
+                            with(density) { compactComposerHeightPx.toDp() },
                     ),
-                state = listState,
-                contentPadding = PaddingValues(
-                    start = WhiteNoiseSpacing.CompactScreenMargin,
-                    top = WhiteNoiseSpacing.Related,
-                    end = WhiteNoiseSpacing.CompactScreenMargin,
-                    bottom = WhiteNoiseSpacing.Related + bottomSafePadding +
-                        with(density) { compactComposerHeightPx.toDp() },
-                ),
-                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Bottom),
-                userScrollEnabled = !composerPresentationActive,
-            ) {
-                items.forEach { item ->
-                    when (item) {
-                        is ConversationItem.DayHeader -> stickyHeader(key = item.id) {
-                            DayHeader(item.label, visible = !composerPresentationActive)
-                        }
-                        is ConversationItem.EventItem -> item(key = item.id, contentType = "event") {
-                            TimelineInformation(item.entry.text)
-                        }
-                        is ConversationItem.NoticeItem -> item(key = item.id, contentType = "notice") {
-                            TimelineInformation(item.entry.text, isNotice = true)
-                        }
-                        is ConversationItem.MessageItem -> item(key = item.id, contentType = "message") {
-                            val resultPosition = searchResults.indexOfFirst {
-                                it.messageId == item.message.id
-                            }
-                            val isCurrentSearchResult = isSearching &&
-                                item.message.id == currentSearchMessageId
-                            val searchPosition = resultPosition.takeIf {
-                                isCurrentSearchResult && it >= 0
-                            }?.let {
-                                pluralStringResource(
-                                    R.plurals.match_position,
-                                    searchResults.size,
-                                    it + 1,
-                                    searchResults.size,
+                    verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Bottom),
+                    userScrollEnabled = !composerPresentationActive,
+                ) {
+                    items.forEach { item ->
+                        when (item) {
+                            is ConversationItem.DayHeader -> item(key = item.id, contentType = "day") {
+                                InlineDayHeader(
+                                    label = item.label,
+                                    id = item.id,
+                                    visible = !composerPresentationActive,
                                 )
                             }
-                            MessageRow(
-                                profile = profile,
-                                chat = chat,
-                                item = item,
-                                speechActionState = speechActionState(item.message),
-                                onRetry = { onRetry(item.message.id) },
-                                onOpenMedia = { key ->
-                                    viewerSelection = ConversationMediaProjection.selection(chat, profile, key)
-                                },
-                                isSelectionMode = isSelecting,
-                                selected = item.message.id in selectedMessageIds,
-                                searchAlpha = conversationSearchMessageAlpha(
-                                    isSearching = isSearching,
-                                    query = searchQuery,
-                                    isResult = item.message.id in searchResultMessageIds,
-                                ),
-                                searchQuery = searchQuery.takeIf { isSearching }.orEmpty(),
-                                searchPosition = searchPosition,
-                                onToggleSelection = {
-                                    selectedMessageIds = if (item.message.id in selectedMessageIds) {
-                                        selectedMessageIds - item.message.id
-                                    } else {
-                                        selectedMessageIds + item.message.id
-                                    }
-                                },
-                                onShowActions = { focusedMessageId = item.message.id },
-                                onAccessibilityAction = { action -> handleAction(item.message, action) },
-                                onSwipeReply = { beginReply(item.message.id) },
-                                onReaction = { emoji -> onReaction(item.message.id, emoji, false) },
-                                readAloudController = readAloudController,
-                                onPositioned = { bounds ->
-                                    if (messageBounds[item.message.id] != bounds) {
-                                        messageBounds[item.message.id] = bounds
-                                    }
-                                },
-                            )
+                            is ConversationItem.EventItem -> item(key = item.id, contentType = "event") {
+                                TimelineInformation(item.entry.text)
+                            }
+                            is ConversationItem.NoticeItem -> item(key = item.id, contentType = "notice") {
+                                TimelineInformation(item.entry.text, isNotice = true)
+                            }
+                            is ConversationItem.MessageItem -> item(
+                                key = item.id,
+                                contentType = "message",
+                            ) {
+                                val resultPosition = searchResults.indexOfFirst {
+                                    it.messageId == item.message.id
+                                }
+                                val isCurrentSearchResult = isSearching &&
+                                    item.message.id == currentSearchMessageId
+                                val searchPosition = resultPosition.takeIf {
+                                    isCurrentSearchResult && it >= 0
+                                }?.let {
+                                    pluralStringResource(
+                                        R.plurals.match_position,
+                                        searchResults.size,
+                                        it + 1,
+                                        searchResults.size,
+                                    )
+                                }
+                                MessageRow(
+                                    profile = profile,
+                                    chat = chat,
+                                    item = item,
+                                    speechActionState = speechActionState(item.message),
+                                    onRetry = { onRetry(item.message.id) },
+                                    onOpenMedia = { key ->
+                                        viewerSelection = ConversationMediaProjection.selection(
+                                            chat,
+                                            profile,
+                                            key,
+                                        )
+                                    },
+                                    isSelectionMode = isSelecting,
+                                    selected = item.message.id in selectedMessageIds,
+                                    searchAlpha = conversationSearchMessageAlpha(
+                                        isSearching = isSearching,
+                                        query = searchQuery,
+                                        isResult = item.message.id in searchResultMessageIds,
+                                    ),
+                                    searchQuery = searchQuery.takeIf { isSearching }.orEmpty(),
+                                    searchPosition = searchPosition,
+                                    onToggleSelection = {
+                                        selectedMessageIds = if (item.message.id in selectedMessageIds) {
+                                            selectedMessageIds - item.message.id
+                                        } else {
+                                            selectedMessageIds + item.message.id
+                                        }
+                                    },
+                                    onShowActions = { focusedMessageId = item.message.id },
+                                    onAccessibilityAction = { action ->
+                                        handleAction(item.message, action)
+                                    },
+                                    onSwipeReply = { beginReply(item.message.id) },
+                                    onReaction = { emoji ->
+                                        onReaction(item.message.id, emoji, false)
+                                    },
+                                    onOpenPersonProfile = onOpenPersonProfile,
+                                    sourceHighlighted = highlightedMessageId == item.message.id,
+                                    onOpenReplyTarget = ::openReplyTarget,
+                                    readAloudController = readAloudController,
+                                    onPositioned = { bounds ->
+                                        if (messageBounds[item.message.id] != bounds) {
+                                            messageBounds[item.message.id] = bounds
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
                 }
-            }
+                if (!composerPresentationActive) {
+                    pinnedDayHeader?.let { dayHeader ->
+                        PinnedDayHeader(
+                            label = dayHeader.label,
+                            modifier = Modifier.align(Alignment.TopCenter),
+                        )
+                    }
+                }
             }
             if (showsAvailableComposer) {
                 AdaptiveContent(
@@ -779,6 +946,7 @@ fun ConversationScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FocusedMessageActionsOverlay(
     profile: Profile,
@@ -807,7 +975,8 @@ private fun FocusedMessageActionsOverlay(
     }
     val density = LocalDensity.current
     val dismissInteraction = remember { MutableInteractionSource() }
-    val contentInteraction = remember { MutableInteractionSource() }
+    val reactionRailInteraction = remember { MutableInteractionSource() }
+    val menuInteraction = remember { MutableInteractionSource() }
     var dialogHeightPx by remember { mutableIntStateOf(0) }
     var contentHeightPx by remember { mutableIntStateOf(0) }
     val topInsetPx = WindowInsets.safeDrawing.getTop(density)
@@ -822,7 +991,7 @@ private fun FocusedMessageActionsOverlay(
     val contentTop = desiredTop.coerceIn(minimumTop, maximumTop)
     val previewDescription = buildString {
         append(if (outgoing) profile.name else profile.people.firstOrNull { it.id == message.authorId }?.name ?: chat.title)
-        val visible = message.visibleText(profile.id)
+        val visible = message.plainVisibleText(profile.id)
         if (visible.isNotBlank()) append(", $visible")
         message.attachments.forEach { append(", ${it.label}") }
         append(", ${message.timeLabel}")
@@ -835,11 +1004,14 @@ private fun FocusedMessageActionsOverlay(
             decorFitsSystemWindows = false,
         ),
     ) {
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            dialogWindow?.setDimAmount(0f)
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .onSizeChanged { dialogHeightPx = it.height }
-                .background(Color.Black.copy(alpha = 0.42f))
                 .semantics {
                     paneTitle = messageActionsTitle
                     customActions = listOf(
@@ -856,6 +1028,14 @@ private fun FocusedMessageActionsOverlay(
                 )
                 .testTag("message.actions.overlay"),
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Color.Black.copy(alpha = FocusedMessageBackdropBlackAlpha),
+                    )
+                    .testTag("message.actions.backdrop"),
+            )
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -865,14 +1045,15 @@ private fun FocusedMessageActionsOverlay(
                     .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
                     .heightIn(max = availableHeightDp)
                     .verticalScroll(rememberScrollState())
-                    .onSizeChanged { contentHeightPx = it.height }
-                    .clickable(
-                        interactionSource = contentInteraction,
-                        indication = null,
-                        onClick = {},
-                    ),
-                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                    .onSizeChanged { contentHeightPx = it.height },
+                verticalArrangement = Arrangement.Top,
             ) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(FocusedOverlayShadowSafeInset)
+                        .testTag("message.actions.shadowGutter.top"),
+                )
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
@@ -880,62 +1061,131 @@ private fun FocusedMessageActionsOverlay(
                     Surface(
                         modifier = Modifier
                             .widthIn(max = 392.dp)
+                            .clickable(
+                                interactionSource = reactionRailInteraction,
+                                indication = null,
+                                onClick = {},
+                            )
                             .testTag("message.actions.reactions"),
                         shape = MaterialTheme.shapes.extraLarge,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        tonalElevation = 3.dp,
+                        color = MenuDefaults.groupStandardContainerColor,
+                        tonalElevation = MenuDefaults.TonalElevation,
+                        shadowElevation = MenuDefaults.ShadowElevation,
                     ) {
                         LazyRow(
-                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            contentPadding = PaddingValues(FocusedReactionRailInset),
+                            horizontalArrangement = Arrangement.spacedBy(FocusedReactionItemSpacing),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            items(quickReactions, key = { it }) { emoji ->
+                            itemsIndexed(quickReactions, key = { _, emoji -> emoji }) { index, emoji ->
                                 val selected = emoji == selectedReaction
+                                val interactionSource = remember(emoji) { MutableInteractionSource() }
+                                val pressed by interactionSource.collectIsPressedAsState()
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
-                                        .clickable { onReaction(emoji, selected) }
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null,
+                                            role = Role.Button,
+                                            onClick = { onReaction(emoji, selected) },
+                                        )
                                         .semantics {
                                             contentDescription = emoji
                                             stateDescription = if (selected) selectedDescription else notSelectedDescription
-                                        },
+                                        }
+                                        .testTag("message.actions.reaction.target.$index"),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Surface(
-                                        modifier = Modifier.size(36.dp),
-                                        shape = CircleShape,
-                                        color = if (selected) {
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        } else {
-                                            Color.Transparent
-                                        },
+                                    Box(
+                                        modifier = Modifier
+                                            .size(FocusedReactionStateLayerSize)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (pressed) {
+                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                                } else {
+                                                    Color.Transparent
+                                                },
+                                            )
+                                            .indication(interactionSource, ripple())
+                                            .testTag("message.actions.reaction.stateLayer.$index"),
+                                        contentAlignment = Alignment.Center,
                                     ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Text(emoji, style = MaterialTheme.typography.titleMedium)
+                                        Surface(
+                                            modifier = Modifier.size(FocusedReactionSelectedFillSize),
+                                            shape = CircleShape,
+                                            color = if (selected) {
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            } else {
+                                                Color.Transparent
+                                            },
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                SignalEmoji(
+                                                    emoji = emoji,
+                                                    modifier = Modifier
+                                                        .size(FocusedReactionEmojiSize)
+                                                        .testTag("message.actions.reaction.emoji.$index"),
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                             item {
-                                IconButton(
-                                    onClick = onMoreReactions,
-                                    modifier = Modifier.size(48.dp),
+                                val interactionSource = remember { MutableInteractionSource() }
+                                val pressed by interactionSource.collectIsPressedAsState()
+                                val moreReactionsDescription = stringResource(R.string.more_reactions)
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null,
+                                            role = Role.Button,
+                                            onClick = onMoreReactions,
+                                        )
+                                        .semantics {
+                                            contentDescription = moreReactionsDescription
+                                        }
+                                        .testTag("message.actions.reaction.more"),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_add),
-                                        contentDescription = stringResource(R.string.more_reactions),
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(FocusedReactionStateLayerSize)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                            .background(
+                                                if (pressed) {
+                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                                } else {
+                                                    Color.Transparent
+                                                },
+                                            )
+                                            .indication(interactionSource, ripple())
+                                            .testTag("message.actions.reaction.more.stateLayer"),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_more_horiz),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(WhiteNoiseSpacing.Related))
                 ScaleToFitHeight(
                     maximumHeight = 320.dp,
                     transformOrigin = TransformOrigin(if (outgoing) 1f else 0f, 0f),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .blockPointerInput(true)
                         .testTag("message.actions.preview")
                         .clearAndSetSemantics { contentDescription = previewDescription },
                 ) {
@@ -960,54 +1210,37 @@ private fun FocusedMessageActionsOverlay(
                         contextPreview = true,
                     )
                 }
+                Spacer(modifier = Modifier.height(WhiteNoiseSpacing.Related))
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
                 ) {
-                    Surface(
+                    WhiteNoiseMenuGroup(
+                        items = actions.map { action ->
+                            WhiteNoiseMenuItem(
+                                label = actionLabel(action),
+                                onClick = { onAction(action) },
+                                icon = actionIcon(action),
+                                destructive = action == MessageAction.Delete,
+                            )
+                        },
                         modifier = Modifier
                             .widthIn(min = 248.dp, max = 300.dp)
+                            .clickable(
+                                interactionSource = menuInteraction,
+                                indication = null,
+                                onClick = {},
+                            )
                             .testTag("message.actions.menu"),
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        tonalElevation = 3.dp,
-                    ) {
-                        Column {
-                            actions.forEach { action ->
-                                val destructive = action == MessageAction.Delete
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 48.dp)
-                                        .clickable { onAction(action) }
-                                        .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(actionIcon(action)),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(22.dp),
-                                        tint = if (destructive) {
-                                            MaterialTheme.colorScheme.error
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                    )
-                                    Text(
-                                        text = actionLabel(action),
-                                        color = if (destructive) {
-                                            MaterialTheme.colorScheme.error
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                }
-                            }
-                        }
-                    }
+                        shadowElevation = MenuDefaults.ShadowElevation,
+                    )
                 }
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(FocusedOverlayShadowSafeInset)
+                        .testTag("message.actions.shadowGutter.bottom"),
+                )
             }
         }
     }
@@ -1219,8 +1452,22 @@ private fun ConversationSearchTopBar(
     )
 }
 
+internal inline fun pinnedConversationDayHeaderIndex(
+    dayHeaderIndices: List<Int>,
+    topVisibleItemIndex: Int?,
+    isHeaderVisible: (Int) -> Boolean,
+): Int? {
+    val topIndex = topVisibleItemIndex ?: return null
+    val activeHeaderIndex = dayHeaderIndices.lastOrNull { it <= topIndex } ?: return null
+    return activeHeaderIndex.takeUnless(isHeaderVisible)
+}
+
 @Composable
-private fun DayHeader(label: String, visible: Boolean = true) {
+private fun InlineDayHeader(
+    label: String,
+    id: String,
+    visible: Boolean = true,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1228,16 +1475,43 @@ private fun DayHeader(label: String, visible: Boolean = true) {
             .padding(vertical = WhiteNoiseSpacing.FormField),
         contentAlignment = Alignment.Center,
     ) {
+        Text(
+            label,
+            modifier = Modifier
+                .testTag("conversation.date.inline.$id")
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+                .semantics { heading() },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun PinnedDayHeader(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = WhiteNoiseSpacing.FormField),
+        contentAlignment = Alignment.Center,
+    ) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.semantics { heading() },
+            color = MaterialTheme.colorScheme.surfaceDim.copy(
+                alpha = PinnedDayHeaderSurfaceAlpha,
+            ),
+            modifier = Modifier
+                .testTag("conversation.date.pinned")
+                .semantics { heading() },
         ) {
             Text(
                 label,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 3.dp),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -1297,6 +1571,9 @@ private fun MessageRow(
     onAccessibilityAction: (MessageAction) -> Unit,
     onSwipeReply: () -> Boolean,
     onReaction: (String) -> Unit,
+    onOpenPersonProfile: (String) -> Unit = {},
+    sourceHighlighted: Boolean = false,
+    onOpenReplyTarget: (String) -> Unit = {},
     readAloudController: ReadAloudController,
     onPositioned: (Rect) -> Unit = {},
     contextPreview: Boolean = false,
@@ -1312,12 +1589,22 @@ private fun MessageRow(
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
+    val coroutineScope = rememberCoroutineScope()
     val directionMultiplier = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) 1f else -1f
-    val replyThresholdPx = with(density) { 64.dp.toPx() }
-    val replyMaximumPx = with(density) { 96.dp.toPx() }
+    val replyThresholdPx = with(density) { ReplySwipeThreshold.toPx() }
+    val replyMaximumPx = with(density) { ReplySwipeMaximum.toPx() }
+    val replyIconTravelPx = with(density) { ReplySwipeIconTravel.toPx() }
+    val replyIconTargetSizePx = with(density) { ReplySwipeIconTargetSize.toPx() }
     var rawSwipeDistance by remember(message.id) { mutableFloatStateOf(0f) }
-    var displayedSwipeDistance by remember(message.id) { mutableFloatStateOf(0f) }
     var swipeReady by remember(message.id) { mutableStateOf(false) }
+    val replyPulseScale = remember(message.id) { Animatable(1f) }
+    var rowBoundsInRoot by remember(message.id) { mutableStateOf<Rect?>(null) }
+    var bubbleBoundsInRoot by remember(message.id) { mutableStateOf<Rect?>(null) }
+    val displayedSwipeDistance = resistedReplySwipeDistance(
+        rawDistance = rawSwipeDistance,
+        threshold = replyThresholdPx,
+        maximum = replyMaximumPx,
+    )
     val showTime = item.endsCluster
     val hasMetadata = message.reactions.isNotEmpty() || showTime
     val metadataGeometry = messageMetadataGeometry(
@@ -1342,18 +1629,36 @@ private fun MessageRow(
     val availableActions = MessageActionPolicy.available(message, profile.id, speechActionState)
     val failedOutgoing = outgoing && message.deliveryState == MessageDeliveryState.Failed
     val retryLabel = stringResource(R.string.not_delivered_retry)
+    val messageInteractionSource = remember(message.id) { MutableInteractionSource() }
+    val contextPreviewInteraction = remember(message.id) { MutableInteractionSource() }
+    val showMessageActions = {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        onShowActions()
+    }
     val canSwipeReply = !contextPreview && !isSelectionMode && MessageAction.Reply in availableActions
     val swipeState = rememberDraggableState { physicalDelta ->
         val semanticDelta = physicalDelta * directionMultiplier
         rawSwipeDistance = (rawSwipeDistance + semanticDelta).coerceAtLeast(0f)
-        displayedSwipeDistance = if (rawSwipeDistance <= replyThresholdPx) {
-            rawSwipeDistance
-        } else {
-            replyThresholdPx + (rawSwipeDistance - replyThresholdPx) * 0.25f
-        }.coerceAtMost(replyMaximumPx)
         val nowReady = rawSwipeDistance >= replyThresholdPx
         if (nowReady && !swipeReady) {
             haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+            coroutineScope.launch {
+                replyPulseScale.stop()
+                replyPulseScale.snapTo(1f)
+                replyPulseScale.animateTo(
+                    targetValue = ReplySwipeIconPulseScale,
+                    animationSpec = tween(durationMillis = 100),
+                )
+                replyPulseScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 100),
+                )
+            }
+        } else if (!nowReady && swipeReady) {
+            coroutineScope.launch {
+                replyPulseScale.stop()
+                replyPulseScale.snapTo(1f)
+            }
         }
         swipeReady = nowReady
     }
@@ -1362,17 +1667,19 @@ private fun MessageRow(
         orientation = Orientation.Horizontal,
         enabled = canSwipeReply,
         onDragStopped = {
-            if (swipeReady) onSwipeReply()
-            val returnAnimation = Animatable(displayedSwipeDistance)
+            val shouldReply = swipeReady
+            swipeReady = false
+            if (shouldReply) onSwipeReply()
+            val returnAnimation = Animatable(rawSwipeDistance)
             returnAnimation.animateTo(
                 targetValue = 0f,
                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
             ) {
-                displayedSwipeDistance = value
+                rawSwipeDistance = value.coerceAtLeast(0f)
             }
             rawSwipeDistance = 0f
-            displayedSwipeDistance = 0f
-            swipeReady = false
+            replyPulseScale.stop()
+            replyPulseScale.snapTo(1f)
         },
     )
     val interactionModifier = if (contextPreview) {
@@ -1384,20 +1691,27 @@ private fun MessageRow(
             onValueChange = { onToggleSelection() },
         )
     } else {
-        Modifier.combinedClickable(
-            enabled = !message.isDeleted,
-            onClickLabel = if (failedOutgoing) retryLabel else null,
-            onClick = {
-                if (failedOutgoing) onRetry()
-            },
-            onLongClickLabel = showActionsLabel,
-            onLongClick = {
+        Modifier
+            .then(
+                if (failedOutgoing) {
+                    Modifier.clickable(
+                        interactionSource = messageInteractionSource,
+                        indication = null,
+                        onClickLabel = retryLabel,
+                        onClick = onRetry,
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .semantics {
                 if (!message.isDeleted) {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onShowActions()
+                    onLongClick(showActionsLabel) {
+                        showMessageActions()
+                        true
+                    }
                 }
-            },
-        )
+            }
     }
     Box(
         modifier = Modifier
@@ -1406,38 +1720,70 @@ private fun MessageRow(
             .testTag("conversation.message.${message.id}")
             .padding(top = verticalPadding)
             .background(
-                color = if (isSelectionMode && selected) {
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
-                } else {
-                    Color.Transparent
+                color = when {
+                    isSelectionMode && selected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+                    sourceHighlighted -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
+                    else -> Color.Transparent
                 },
             )
             .then(interactionModifier)
             .then(swipeModifier)
-            .onGloballyPositioned { onPositioned(it.boundsInWindow()) }
+            .onGloballyPositioned {
+                if (rawSwipeDistance == 0f) rowBoundsInRoot = it.boundsInRoot()
+                onPositioned(it.boundsInWindow())
+            }
             .semantics {
                 if (isSelectionMode) stateDescription = selectedState
                 searchPosition?.let { stateDescription = it }
                 customActions = accessibilityActions
             },
     ) {
-        if (canSwipeReply && displayedSwipeDistance > 0f) {
+        if (sourceHighlighted) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .testTag("conversation.message.highlight.${message.id}"),
+            )
+        }
+        val rowBounds = rowBoundsInRoot
+        val bubbleBounds = bubbleBoundsInRoot
+        if (
+            canSwipeReply &&
+            displayedSwipeDistance > 0f &&
+            rowBounds != null &&
+            bubbleBounds != null
+        ) {
+            val iconProgress = (displayedSwipeDistance / replyThresholdPx).coerceIn(0f, 1f)
+            val iconBaseScale = 1f + ((ReplySwipeIconReadyScale - 1f) * iconProgress)
+            val iconStartOffset = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                bubbleBounds.left - rowBounds.left
+            } else {
+                rowBounds.right - bubbleBounds.right
+            }
+            val iconTopOffset = bubbleBounds.center.y - rowBounds.top - (replyIconTargetSizePx / 2f)
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .size(48.dp)
+                    .align(Alignment.TopStart)
+                    .offset {
+                        IntOffset(
+                            x = iconStartOffset.roundToInt(),
+                            y = iconTopOffset.roundToInt(),
+                        )
+                    }
+                    .size(ReplySwipeIconTargetSize)
                     .graphicsLayer {
-                        alpha = (displayedSwipeDistance / replyThresholdPx).coerceIn(0f, 1f)
-                        scaleX = alpha
-                        scaleY = alpha
+                        alpha = if (iconProgress >= ReplySwipeIconRevealStart) iconProgress else 0f
+                        translationX = replyIconTravelPx * iconProgress * directionMultiplier
+                        scaleX = iconBaseScale * replyPulseScale.value
+                        scaleY = iconBaseScale * replyPulseScale.value
                     }
                     .testTag("conversation.message.swipeReply.${message.id}"),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_reply),
+                    painter = painterResource(R.drawable.ic_reply_swipe),
                     contentDescription = null,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(ReplySwipeIconSize),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -1502,6 +1848,11 @@ private fun MessageRow(
                             item = item,
                             authorName = authorName,
                             onOpenMedia = onOpenMedia,
+                            onOpenPersonProfile = onOpenPersonProfile,
+                            onOpenReplyTarget = onOpenReplyTarget,
+                            canOpenReplyTarget = message.replyToMessageId?.let { targetId ->
+                                chat.timeline.any { it.id == targetId }
+                            } == true,
                             searchQuery = searchQuery,
                             readAloudController = readAloudController,
                             voiceTranscript = if (speechActionState.transcriptAvailable) {
@@ -1516,8 +1867,32 @@ private fun MessageRow(
                             showTime = showTime,
                             onReaction = onReaction,
                             onShowActions = onShowActions,
+                            onBubbleLongPress = if (
+                                !contextPreview && !isSelectionMode && !message.isDeleted
+                            ) {
+                                showMessageActions
+                            } else {
+                                null
+                            },
+                            messageInteractionSource = if (contextPreview) null else messageInteractionSource,
                             trimInvisibleReactionTarget = contextPreview,
-                            modifier = Modifier.widthIn(max = 340.dp),
+                            timestampHighContrast = contextPreview,
+                            onBubblePositioned = { bounds ->
+                                if (rawSwipeDistance == 0f) bubbleBoundsInRoot = bounds
+                            },
+                            modifier = Modifier
+                                .widthIn(max = 340.dp)
+                                .then(
+                                    if (contextPreview) {
+                                        Modifier.clickable(
+                                            interactionSource = contextPreviewInteraction,
+                                            indication = null,
+                                            onClick = {},
+                                        )
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                         )
                     }
                 }
@@ -1531,7 +1906,6 @@ private val ReactionPillMinimumHeight = 23.dp
 private val ReactionPillMinimumWidth = 31.dp
 private val ReactionPillSpacing = 3.dp
 private val ReactionContentSpacing = 2.dp
-private val ReactionEmojiFontMetricAllowance = 2.sp
 private val MessageMetadataTargetHeight = 48.dp
 private val TimestampTopGap = 2.dp
 private const val MaximumVisibleReactionTypes = 4
@@ -1561,17 +1935,10 @@ private fun messageMetadataGeometry(
     val timestampVerticalOffsetPx: Int
     if (hasReactions) {
         val minimumPillHeightPx = with(density) { ReactionPillMinimumHeight.roundToPx() }
-        val textHeightPx = with(density) {
-            (
-                MaterialTheme.typography.labelMedium.lineHeight.toPx() +
-                    ReactionEmojiFontMetricAllowance.toPx()
-            ).roundToInt()
-        }
-        val pillHeightPx = maxOf(minimumPillHeightPx, textHeightPx)
+        val pillHeightPx = minimumPillHeightPx
         val targetInsetPx = ((targetHeightPx - pillHeightPx).coerceAtLeast(0)) / 2
         overlapPx = targetInsetPx + with(density) { ReactionVisibleOverlap.roundToPx() }
-        val timestampBaseTopPx = ((targetHeightPx - timestampHeightPx).coerceAtLeast(0)) / 2
-        timestampVerticalOffsetPx = overlapPx + timestampTopGapPx - timestampBaseTopPx
+        timestampVerticalOffsetPx = overlapPx + timestampTopGapPx
         val timestampBottomPx = overlapPx + timestampTopGapPx + timestampHeightPx
         val pillBottomPx = targetInsetPx + pillHeightPx
         val visibleMetadataBottomPx = if (hasTimestamp) {
@@ -1607,6 +1974,9 @@ private fun MessageBubbleWithMetadata(
     item: ConversationItem.MessageItem,
     authorName: String,
     onOpenMedia: (ConversationMediaKey) -> Unit,
+    onOpenPersonProfile: (String) -> Unit,
+    onOpenReplyTarget: (String) -> Unit,
+    canOpenReplyTarget: Boolean,
     searchQuery: String,
     readAloudController: ReadAloudController,
     voiceTranscript: String?,
@@ -1614,7 +1984,11 @@ private fun MessageBubbleWithMetadata(
     showTime: Boolean,
     onReaction: (String) -> Unit,
     onShowActions: () -> Unit,
+    onBubbleLongPress: (() -> Unit)?,
+    messageInteractionSource: MutableInteractionSource?,
     trimInvisibleReactionTarget: Boolean,
+    timestampHighContrast: Boolean,
+    onBubblePositioned: (Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val hasReactions = message.reactions.isNotEmpty()
@@ -1641,10 +2015,16 @@ private fun MessageBubbleWithMetadata(
                     item = item,
                     authorName = authorName,
                     onOpenMedia = onOpenMedia,
+                    onOpenPersonProfile = onOpenPersonProfile,
+                    onOpenReplyTarget = onOpenReplyTarget,
+                    canOpenReplyTarget = canOpenReplyTarget,
                     searchQuery = searchQuery,
                     readAloudController = readAloudController,
                     voiceTranscript = voiceTranscript,
                     voiceTranscriptVisible = voiceTranscriptVisible,
+                    onLongPress = onBubbleLongPress,
+                    messageInteractionSource = messageInteractionSource,
+                    onPositioned = onBubblePositioned,
                 )
             }.single().measure(looseConstraints)
             return@SubcomposeLayout layout(bubble.width, bubble.height) {
@@ -1677,8 +2057,10 @@ private fun MessageBubbleWithMetadata(
                     fillWidth = false,
                     measurementOnly = true,
                     timestampVerticalOffsetPx = metadataGeometry.timestampVerticalOffsetPx,
+                    timestampHighContrast = timestampHighContrast,
                     onReaction = onReaction,
                     onShowActions = onShowActions,
+                    onLongPress = null,
                 )
             }.single().measure(metadataMeasureConstraints)
             selectedLimit = maximumReactionPills
@@ -1695,10 +2077,16 @@ private fun MessageBubbleWithMetadata(
                 item = item,
                 authorName = authorName,
                 onOpenMedia = onOpenMedia,
+                onOpenPersonProfile = onOpenPersonProfile,
+                onOpenReplyTarget = onOpenReplyTarget,
+                canOpenReplyTarget = canOpenReplyTarget,
                 searchQuery = searchQuery,
                 readAloudController = readAloudController,
                 voiceTranscript = voiceTranscript,
                 voiceTranscriptVisible = voiceTranscriptVisible,
+                onLongPress = onBubbleLongPress,
+                messageInteractionSource = messageInteractionSource,
+                onPositioned = onBubblePositioned,
             )
         }.single().measure(
             looseConstraints.copy(
@@ -1717,8 +2105,10 @@ private fun MessageBubbleWithMetadata(
                 summary = summary,
                 fillWidth = true,
                 timestampVerticalOffsetPx = metadataGeometry.timestampVerticalOffsetPx,
+                timestampHighContrast = timestampHighContrast,
                 onReaction = onReaction,
                 onShowActions = onShowActions,
+                onLongPress = onBubbleLongPress,
             )
         }.single().measure(
             Constraints(
@@ -1755,75 +2145,181 @@ private fun MessageBubble(
     item: ConversationItem.MessageItem,
     authorName: String,
     onOpenMedia: (ConversationMediaKey) -> Unit,
+    onOpenPersonProfile: (String) -> Unit,
+    onOpenReplyTarget: (String) -> Unit,
+    canOpenReplyTarget: Boolean,
     searchQuery: String,
     readAloudController: ReadAloudController,
     voiceTranscript: String?,
     voiceTranscriptVisible: Boolean,
+    onLongPress: (() -> Unit)?,
+    messageInteractionSource: MutableInteractionSource?,
+    onPositioned: (Rect) -> Unit,
 ) {
     val text = message.visibleText(profile.id)
+    val plainText = message.plainVisibleText(profile.id)
     val description = buildString {
         append(authorName)
-        if (text.isNotBlank()) append(", $text")
-        message.attachments.forEach { append(", ${it.label}") }
+        if (plainText.isNotBlank()) append(", $plainText")
+        if (!message.isDeleted) {
+            message.attachments.forEach { append(", ${it.label}") }
+        }
         append(", ${message.timeLabel}")
         message.reactions.forEach { append(", ${it.emoji}, ${it.personIds.size}") }
     }
+    val bubbleShape = MaterialTheme.shapes.large
+    val currentLongPress = rememberUpdatedState(onLongPress)
+    val bubbleLongPress = remember(message.id) {
+        {
+            currentLongPress.value?.invoke()
+            Unit
+        }
+    }
+    val bubbleContentColor = if (outgoing) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val hasRichContent = !message.isDeleted &&
+        (message.replyToMessageId != null || message.attachments.isNotEmpty())
+    val richCanvasWidth = richContentCanvasWidthDp(message.attachments).dp
     Surface(
-        shape = MaterialTheme.shapes.large,
+        shape = bubbleShape,
         color = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        contentColor = bubbleContentColor,
         modifier = Modifier
             .testTag("conversation.message.bubble.${message.id}")
+            .interceptBubbleLongPress(
+                enabled = onLongPress != null,
+                onLongPress = bubbleLongPress,
+            )
+            .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
             .semantics(mergeDescendants = true) { contentDescription = description },
     ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-            if (message.replyToMessageId != null) {
-                ReplyQuote(
-                    profile = profile,
-                    item = item,
-                    outgoing = outgoing,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
-            }
-            Column(modifier = Modifier.padding(horizontal = 12.dp)) {
-                TimelineAttachmentContent(
-                    attachments = message.attachments,
-                    outgoing = outgoing,
-                    messageId = message.id,
-                    onOpenMedia = onOpenMedia,
-                    searchQuery = searchQuery,
-                    voiceTranscript = voiceTranscript,
-                    voiceTranscriptVisible = voiceTranscriptVisible,
-                )
-                if (message.attachments.any { it.voiceFormat == VoiceMessageFormat.Both } && text.isNotBlank()) {
-                    Text(
-                        stringResource(R.string.transcribed),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                if (text.isNotBlank()) {
-                    if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
-                        SearchHighlightedText(
-                            text = text,
-                            query = searchQuery,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    } else {
-                        Text(
-                            text = text,
-                            fontStyle = if (message.deletionState == MessageDeletionState.None) {
-                                FontStyle.Normal
-                            } else {
-                                FontStyle.Italic
-                            },
-                            style = MaterialTheme.typography.bodyLarge,
+        Box {
+            if (hasRichContent) {
+                Column(
+                    modifier = Modifier
+                        .padding(ConversationMessageMetrics.RichOuterInset)
+                        .width(richCanvasWidth),
+                    verticalArrangement = Arrangement.spacedBy(
+                        ConversationMessageMetrics.RichContentSpacing,
+                    ),
+                ) {
+                    if (message.replyToMessageId != null) {
+                        ReplyQuote(
+                            profile = profile,
+                            item = item,
+                            outgoing = outgoing,
+                            onOpenReplyTarget = onOpenReplyTarget,
+                            canOpenReplyTarget = canOpenReplyTarget,
                         )
                     }
-                    ReadAloudProgress(message.id, readAloudController)
+                    if (message.attachments.isNotEmpty()) {
+                        TimelineAttachmentContent(
+                            attachments = message.attachments,
+                            outgoing = outgoing,
+                            messageId = message.id,
+                            onOpenMedia = onOpenMedia,
+                            searchQuery = searchQuery,
+                            voiceTranscript = voiceTranscript,
+                            voiceTranscriptVisible = voiceTranscriptVisible,
+                            people = profile.people,
+                            onOpenPerson = onOpenPersonProfile,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (text.isNotBlank()) {
+                        MessageBubbleText(
+                            profile = profile,
+                            message = message,
+                            text = text,
+                            plainText = plainText,
+                            searchQuery = searchQuery,
+                            onOpenPersonProfile = onOpenPersonProfile,
+                            readAloudController = readAloudController,
+                            showTranscriptLabel = message.attachments.any {
+                                it.voiceFormat == VoiceMessageFormat.Both
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = ConversationMessageMetrics.RichTextHorizontalAdjustment,
+                                    end = ConversationMessageMetrics.RichTextHorizontalAdjustment,
+                                    bottom = ConversationMessageMetrics.RichTextBottomAdjustment,
+                                ),
+                        )
+                    }
                 }
+            } else {
+                MessageBubbleText(
+                    profile = profile,
+                    message = message,
+                    text = text,
+                    plainText = plainText,
+                    searchQuery = searchQuery,
+                    onOpenPersonProfile = onOpenPersonProfile,
+                    readAloudController = readAloudController,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+            if (messageInteractionSource != null) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(bubbleShape)
+                        .indication(
+                            messageInteractionSource,
+                            ripple(color = bubbleContentColor),
+                        )
+                        .testTag("conversation.message.pressLayer.${message.id}"),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun MessageBubbleText(
+    profile: Profile,
+    message: ChatMessage,
+    text: String,
+    plainText: String,
+    searchQuery: String,
+    onOpenPersonProfile: (String) -> Unit,
+    readAloudController: ReadAloudController,
+    modifier: Modifier = Modifier,
+    showTranscriptLabel: Boolean = false,
+) {
+    Column(modifier = modifier) {
+        if (showTranscriptLabel) {
+            Text(
+                stringResource(R.string.transcribed),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
+            SearchHighlightedText(
+                text = plainText,
+                query = searchQuery,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        } else if (message.deletionState == MessageDeletionState.None) {
+            InlineMessageText(
+                text = text,
+                people = profile.people,
+                onOpenPerson = onOpenPersonProfile,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        } else {
+            Text(
+                text = text,
+                fontStyle = FontStyle.Italic,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        ReadAloudProgress(message.id, readAloudController)
     }
 }
 
@@ -1832,6 +2328,8 @@ private fun ReplyQuote(
     profile: Profile,
     item: ConversationItem.MessageItem,
     outgoing: Boolean,
+    onOpenReplyTarget: (String) -> Unit,
+    canOpenReplyTarget: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val source = item.resolvedReply
@@ -1843,7 +2341,9 @@ private fun ReplyQuote(
     }
     val body = when {
         item.hasUnavailableReply -> stringResource(R.string.original_message_unavailable)
-        source != null -> source.visibleText(profile.id).ifBlank { source.attachments.firstOrNull()?.label.orEmpty() }
+        source != null -> source.plainVisibleText(profile.id).ifBlank {
+            source.attachments.firstOrNull()?.label.orEmpty()
+        }
         else -> stringResource(R.string.original_message_unavailable)
     }
     val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -1852,6 +2352,7 @@ private fun ReplyQuote(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val quoteShape = ConversationRichContentShape
     ConversationQuoteBlock(
         author = author ?: stringResource(R.string.original_message_unavailable),
         excerpt = body,
@@ -1863,9 +2364,21 @@ private fun ReplyQuote(
         contentColor = content,
         secondaryColor = secondary,
         accentColor = content,
-        shape = MaterialTheme.shapes.small,
-        modifier = modifier.fillMaxWidth().padding(bottom = 6.dp),
-        testTagPrefix = "conversation.message.quote",
+        shape = quoteShape,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(quoteShape)
+            .then(
+                if (canOpenReplyTarget) {
+                    Modifier.clickable(role = Role.Button) {
+                        item.message.replyToMessageId?.let(onOpenReplyTarget)
+                    }
+                } else {
+                    Modifier
+                },
+            )
+            .testTag("conversation.message.quote.target.${item.message.id}"),
+        testTagPrefix = "conversation.message.quote.${item.message.id}",
     )
 }
 
@@ -1880,9 +2393,18 @@ private fun MessageMetadataContent(
     fillWidth: Boolean,
     measurementOnly: Boolean = false,
     timestampVerticalOffsetPx: Int,
+    timestampHighContrast: Boolean,
     onReaction: (String) -> Unit,
     onShowActions: () -> Unit,
+    onLongPress: (() -> Unit)?,
 ) {
+    val currentLongPress = rememberUpdatedState(onLongPress)
+    val metadataLongPress = remember(messageId) {
+        {
+            currentLongPress.value?.invoke()
+            Unit
+        }
+    }
     val widthModifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier
     val arrangement = when {
         summary.isNotEmpty() && showTime -> Arrangement.SpaceBetween
@@ -1892,6 +2414,10 @@ private fun MessageMetadataContent(
     Row(
         modifier = widthModifier
             .padding(horizontal = 12.dp)
+            .interceptBubbleLongPress(
+                enabled = !measurementOnly && onLongPress != null,
+                onLongPress = metadataLongPress,
+            )
             .then(
                 if (measurementOnly) {
                     Modifier.clearAndSetSemantics { }
@@ -1900,7 +2426,7 @@ private fun MessageMetadataContent(
                 },
             ),
         horizontalArrangement = arrangement,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
         if (!outgoing && showTime) {
             MessageTime(
@@ -1910,6 +2436,7 @@ private fun MessageMetadataContent(
                 deliveryState = deliveryState,
                 testTagEnabled = !measurementOnly,
                 verticalOffsetPx = timestampVerticalOffsetPx,
+                highContrast = timestampHighContrast,
             )
         }
         if (!outgoing && showTime && summary.isNotEmpty()) Spacer(Modifier.width(4.dp))
@@ -1920,6 +2447,7 @@ private fun MessageMetadataContent(
                 interactive = !measurementOnly,
                 onReaction = onReaction,
                 onShowActions = onShowActions,
+                onLongPress = metadataLongPress.takeIf { onLongPress != null },
             )
         }
         if (outgoing && showTime && summary.isNotEmpty()) Spacer(Modifier.width(4.dp))
@@ -1931,6 +2459,7 @@ private fun MessageMetadataContent(
                 deliveryState = deliveryState,
                 testTagEnabled = !measurementOnly,
                 verticalOffsetPx = timestampVerticalOffsetPx,
+                highContrast = timestampHighContrast,
             )
         }
     }
@@ -1944,10 +2473,15 @@ private fun MessageTime(
     deliveryState: MessageDeliveryState,
     testTagEnabled: Boolean,
     verticalOffsetPx: Int,
+    highContrast: Boolean,
 ) {
     val failed = outgoing && deliveryState == MessageDeliveryState.Failed
     val failedLabel = if (failed) stringResource(R.string.not_delivered_retry) else null
-    val timestampColor = MaterialTheme.colorScheme.outline
+    val timestampColor = if (highContrast) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.outline
+    }
     val deliveryLabel = if (outgoing) {
         stringResource(
             when (deliveryState) {
@@ -2057,14 +2591,17 @@ private fun ReactionRow(
     interactive: Boolean,
     onReaction: (String) -> Unit,
     onShowActions: () -> Unit,
+    onLongPress: (() -> Unit)?,
 ) {
-    val haptics = LocalHapticFeedback.current
     val showActionsLabel = stringResource(R.string.show_message_actions)
     Row(
         horizontalArrangement = Arrangement.spacedBy(ReactionPillSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         summary.forEachIndexed { index, reaction ->
+            val interactionSource = remember(messageId, index, reaction.emoji) {
+                MutableInteractionSource()
+            }
             val description = if (reaction.emoji != null) {
                 pluralStringResource(
                     R.plurals.reaction_count,
@@ -2090,17 +2627,20 @@ private fun ReactionRow(
                         if (interactive) {
                             Modifier
                                 .testTag("conversation.reaction.$messageId.$index")
-                                .combinedClickable(
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null,
                                     onClick = { reaction.emoji?.let(onReaction) ?: onShowActions() },
-                                    onLongClickLabel = showActionsLabel,
-                                    onLongClick = {
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onShowActions()
-                                    },
                                 )
                                 .semantics {
                                     contentDescription = description
                                     stateDescription = selectedState
+                                    if (onLongPress != null) {
+                                        onLongClick(showActionsLabel) {
+                                            onLongPress()
+                                            true
+                                        }
+                                    }
                                 }
                         } else {
                             Modifier
@@ -2109,17 +2649,27 @@ private fun ReactionRow(
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
-                    modifier = if (interactive) {
-                        Modifier
-                            .heightIn(min = ReactionPillMinimumHeight)
-                            .widthIn(min = ReactionPillMinimumWidth)
-                            .testTag("conversation.reaction.pill.$messageId.$index")
-                    } else {
-                        Modifier
-                            .heightIn(min = ReactionPillMinimumHeight)
-                            .widthIn(min = ReactionPillMinimumWidth)
-                    }
+                    modifier = Modifier
+                        .then(
+                            if (interactive) {
+                                Modifier.testTag("conversation.reaction.pill.$messageId.$index")
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .height(ReactionPillMinimumHeight)
+                        .then(
+                            if (reaction.emoji != null && reaction.personCount == 1) {
+                                Modifier.requiredWidth(ReactionPillMinimumWidth)
+                            } else {
+                                Modifier.widthIn(min = ReactionPillMinimumWidth)
+                            },
+                        )
                         .clip(CircleShape)
+                        .indication(
+                            interactionSource,
+                            ripple(color = MaterialTheme.colorScheme.onSurface),
+                        )
                         .background(
                             if (reaction.selected) {
                                 MaterialTheme.colorScheme.primaryContainer
@@ -2139,19 +2689,34 @@ private fun ReactionRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 7.dp),
+                        modifier = Modifier.padding(
+                            horizontal = if (reaction.emoji != null && reaction.personCount == 1) 3.dp else 7.dp,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(ReactionContentSpacing),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = reaction.emoji ?: "+${reaction.omittedTypeCount}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        if (reaction.emoji != null) {
+                            SignalEmoji(
+                                emoji = reaction.emoji,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        } else {
+                            Text(
+                                text = "+${reaction.omittedTypeCount}",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontSize = 12.sp,
+                                    lineHeight = 14.sp,
+                                ),
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                         if (reaction.emoji != null && reaction.personCount > 1) {
                             Text(
                                 text = reaction.personCount.toString(),
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 11.sp,
+                                    lineHeight = 13.sp,
+                                ),
                                 fontWeight = FontWeight.Bold,
                             )
                         }

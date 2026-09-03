@@ -168,6 +168,11 @@ data class MessageAttachment(
     val transcript: String? = null,
     val durationSeconds: Int? = null,
     val voiceFormat: VoiceMessageFormat? = null,
+    val fileSizeBytes: Int? = null,
+    val contactPersonId: String? = null,
+    val pixelWidth: Int? = null,
+    val pixelHeight: Int? = null,
+    val isAvailable: Boolean = true,
 )
 
 data class MessageReaction(

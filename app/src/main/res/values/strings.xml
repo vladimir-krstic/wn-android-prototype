@@ -274,10 +274,19 @@
         <item quantity="one">%2$d more reaction type</item>
         <item quantity="other">%2$d more reaction types</item>
     </plurals>
-    <string name="search_emoji">Search Emoji</string>
+    <string name="search_emoji">Search emoji</string>
     <string name="no_emoji_found">No emoji found</string>
     <string name="configure_reactions">Configure Reactions</string>
     <string name="configure_reactions_guidance">Tap an emoji to replace it.</string>
+    <string name="emoji_category_recent">Recently Used</string>
+    <string name="emoji_category_smileys_people">Smileys &amp; People</string>
+    <string name="emoji_category_animals_nature">Animals &amp; Nature</string>
+    <string name="emoji_category_food_drink">Food &amp; Drink</string>
+    <string name="emoji_category_activities">Activities</string>
+    <string name="emoji_category_travel_places">Travel &amp; Places</string>
+    <string name="emoji_category_objects">Objects</string>
+    <string name="emoji_category_symbols">Symbols</string>
+    <string name="emoji_category_flags">Flags</string>
     <string name="reaction_slot_description">Reaction %1$d, %2$s. Double tap to replace.</string>
     <string name="reset">Reset</string>
     <string name="message_details">Message Details</string>
