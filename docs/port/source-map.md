@@ -6,7 +6,8 @@ The 2026-09-04 all-batch implementation authorization adds production Android
 capability evidence at `marmot-protocol/whitenoise-android@319454889f1c2494dec4a69b5577d98017f44eee`.
 The audit matrix is the permanent source map for those capabilities. B01 maps
 identity input, import/recovery, Amber, retained reactivation and bootstrap to
-`docs/screens/access-and-recovery.md`; the established Android presentation
+`docs/screens/access-and-recovery.md`. B02 maps key availability/export and
+staged sign-out/wipe to `docs/screens/keys-and-profile-exit.md`; the established Android presentation
 remains authoritative. Production is read-only evidence and does not replace
 the accepted iOS scope or prototype-only features below.
 

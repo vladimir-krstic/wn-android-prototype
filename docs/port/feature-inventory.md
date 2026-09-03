@@ -37,6 +37,14 @@ manual TalkBack/system-surface pass. Exact findings and commits are recorded in
 
 ## Onboarding and profiles
 
+2026-09-04 production B02: C007–C010 are implemented and host-verified.
+Local key availability, temporary reveal/export, optional connection-information
+cleanup, staged wipe, owner guards, retries and partial reports are covered in
+[`keys-and-profile-exit.md`](../screens/keys-and-profile-exit.md). The approved
+checked wipe default and exact-name confirmation remain. The clean gate passed
+216 unit tests and both APKs with zero lint errors; five new UI cases compile.
+The same 14 pre-existing lint warnings remain; device/visual acceptance pending.
+
 2026-09-04 production B01: C001, C003, C004, C005 and C011 are implemented
 within the deterministic boundary. `AccessModels`, `AppViewModel`,
 `OnboardingValidation`, `AccessUi` and onboarding navigation now cover

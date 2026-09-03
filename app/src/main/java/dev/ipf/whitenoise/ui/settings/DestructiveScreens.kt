@@ -45,6 +45,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -58,6 +62,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Profile
+import dev.ipf.whitenoise.model.ProfileExitAttempt
+import dev.ipf.whitenoise.model.ProfileExitStep
+import dev.ipf.whitenoise.model.SignOutOptions
 import dev.ipf.whitenoise.model.WipeConfirmationPhrase
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButtonDefaults
@@ -71,14 +78,18 @@ import kotlinx.coroutines.delay
 fun SignOutSheet(
     profile: Profile,
     onDismiss: () -> Unit,
-    onComplete: (wipeData: Boolean) -> Unit,
+    onComplete: (SignOutOptions) -> Unit,
+    attempt: ProfileExitAttempt? = null,
+    onAdvance: (Long, ProfileExitStep) -> Unit = { _, _ -> },
+    onRetry: (Long) -> Unit = {},
 ) {
     val focusManager = LocalFocusManager.current
-    var wipeData by rememberSaveable { mutableStateOf(true) }
+    var wipeData by rememberSaveable(profile.id) { mutableStateOf(true) }
+    var deleteConnectionInformation by rememberSaveable(profile.id) { mutableStateOf(true) }
     val confirmation = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState() }
     val confirmationValue = confirmation.text.toString()
-    var progress by remember { mutableStateOf<String?>(null) }
-    val dismissEnabled by rememberUpdatedState(progress == null)
+    val busy = attempt?.isRunning == true
+    val dismissEnabled by rememberUpdatedState(!busy)
     val confirmSheetValueChange = remember {
         { target: SheetValue -> target != SheetValue.Hidden || dismissEnabled }
     }
@@ -92,13 +103,16 @@ fun SignOutSheet(
     } else {
         "This profile and its local data will stay on this device."
     }
-    LaunchedEffect(progress) {
-        if (progress == null) return@LaunchedEffect
-        delay(600)
-        onComplete(wipeData)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(attempt?.id, attempt?.currentStep, lifecycle) {
+        val step = attempt?.currentStep ?: return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(600)
+            onAdvance(attempt.id, step)
+        }
     }
     ModalBottomSheet(
-        onDismissRequest = { if (progress == null) onDismiss() },
+        onDismissRequest = { if (!busy) onDismiss() },
         sheetState = sheetState,
         contentWindowInsets = { WindowInsets.safeDrawing },
     ) {
@@ -110,10 +124,19 @@ fun SignOutSheet(
             WhiteNoiseSheetHeader(
                 title = "Sign Out",
                 onClose = onDismiss,
-                closeEnabled = progress == null,
+                closeEnabled = !busy,
             )
-            if (progress != null) {
-                DestructiveProgress(progress!!, Modifier.weight(1f))
+            if (attempt != null) {
+                ProfileExitStatus(attempt, Modifier.weight(1f))
+                if (!busy) SettingsBottomAction {
+                    DestructiveButton(
+                        label = stringResource(R.string.try_again),
+                        onClick = { onRetry(attempt.id) },
+                        enabled = true,
+                        actionDescription = stringResource(R.string.try_again),
+                        unavailableDescription = null,
+                    )
+                }
             } else {
                 Column(
                     modifier = Modifier
@@ -151,8 +174,17 @@ fun SignOutSheet(
                                 }
                             },
                         )
+                        if (!wipeData) {
+                            SettingsDivider()
+                            SettingsSwitch(
+                                title = stringResource(R.string.exit_remove_connection_info),
+                                checked = deleteConnectionInformation,
+                                onCheckedChange = { deleteConnectionInformation = it },
+                            )
+                        }
                     }
                     SettingsExplainer(wipeExplanation)
+                    if (!wipeData) SettingsExplainer(stringResource(R.string.exit_remove_connection_help))
                     if (wipeData) {
                         SettingsSection("Enter Profile Name")
                         WhiteNoiseTextField(
@@ -180,11 +212,8 @@ fun SignOutSheet(
                     DestructiveButton(
                         label = "Sign Out",
                         onClick = {
-                            progress = if (wipeData) {
-                                "Signing out and wiping data…"
-                            } else {
-                                "Signing out…"
-                            }
+                            focusManager.clearFocus()
+                            onComplete(SignOutOptions(wipeData, deleteConnectionInformation, confirmationValue))
                         },
                         enabled = !wipeData || WipeConfirmationPhrase.matches(confirmationValue, profile.name),
                         actionDescription = if (wipeData) "Sign Out and Wipe Data" else "Sign Out",

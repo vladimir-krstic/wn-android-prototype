@@ -76,14 +76,21 @@ fun DeveloperToolsScreen(
     accessScenario: dev.ipf.whitenoise.model.AccessScenario = dev.ipf.whitenoise.model.AccessScenario.Success,
     onAccessScenario: (dev.ipf.whitenoise.model.AccessScenario) -> Unit = {},
     onStartupFailure: () -> Unit = {},
+    exitScenario: dev.ipf.whitenoise.model.ProfileExitScenario = dev.ipf.whitenoise.model.ProfileExitScenario.Success,
+    onExitScenario: (dev.ipf.whitenoise.model.ProfileExitScenario) -> Unit = {},
+    onLocalKeyAvailable: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val tools = profile.developerTools
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
     var showAccessScenarios by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var showExitScenarios by rememberSaveable(profile.id) { mutableStateOf(false) }
     if (showAccessScenarios && tools.isEnabled) AccessScenarioDialog(
         accessScenario, onAccessScenario, onDismiss = { showAccessScenarios = false },
+    )
+    if (showExitScenarios && tools.isEnabled) ProfileExitScenarioDialog(
+        exitScenario, onExitScenario, onDismiss = { showExitScenarios = false },
     )
     val exportLogs = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain"),
@@ -131,6 +138,12 @@ fun DeveloperToolsScreen(
                         SettingsLink("Access scenarios", accessScenario.developerLabel, { showAccessScenarios = true })
                         SettingsDivider()
                         SettingsAction("Preview startup failure", onClick = onStartupFailure)
+                        SettingsDivider()
+                        SettingsLink("Sign-out scenarios", exitScenario.developerLabel, { showExitScenarios = true })
+                        if (profile.signingMode == dev.ipf.whitenoise.model.ProfileSigningMode.LocalKey) {
+                            SettingsDivider()
+                            SettingsSwitch("Local key available", profile.localKeyAvailable, onLocalKeyAvailable)
+                        }
                     }
                     SettingsExplainer("Choose a result, then use Add Profile or sign out without wiping to test retained-profile entry.")
                 }
@@ -419,7 +432,7 @@ fun KeyPackagesScreen(
                             Text(keyPackage.id, fontFamily = FontFamily.Monospace)
                         },
                         supportingContent = {
-                            Text("Published ${keyPackage.published} · ${keyPackage.size}")
+                            Text(if (profile.connectionInformationPublished) "Published ${keyPackage.published} · ${keyPackage.size}" else "Not published · ${keyPackage.size}")
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
@@ -427,7 +440,8 @@ fun KeyPackagesScreen(
             }
             item {
                 SettingsExplainer(
-                    "This profile uses the current package to receive group invitations.",
+                    if (profile.connectionInformationPublished) "This profile uses the current package to receive group invitations."
+                    else "No key package is currently published. Publish one to receive new group invitations.",
                 )
             }
             item {

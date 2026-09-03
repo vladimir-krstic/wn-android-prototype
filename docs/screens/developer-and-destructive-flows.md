@@ -1,5 +1,10 @@
 # Developer and destructive flows
 
+2026-09-04: production B02 extends keys/sign-out/wipe behavior as recorded in
+[keys-and-profile-exit.md](keys-and-profile-exit.md). Its lifecycle and staged
+outcome contract supersedes earlier immediate-success descriptions here; the
+approved presentation and checked wipe default remain.
+
 Status: Implemented and visually refreshed through 2026-08-30; static
 verification complete; device visual acceptance pending
 

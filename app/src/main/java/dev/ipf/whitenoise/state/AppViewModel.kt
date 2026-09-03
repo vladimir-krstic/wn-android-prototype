@@ -56,6 +56,11 @@ import dev.ipf.whitenoise.model.PrivateKeyValidator
 import dev.ipf.whitenoise.model.ProfileSigningMode
 import dev.ipf.whitenoise.model.StartupPhase
 import dev.ipf.whitenoise.model.StartupState
+import dev.ipf.whitenoise.model.ProfileExitAttempt
+import dev.ipf.whitenoise.model.ProfileExitScenario
+import dev.ipf.whitenoise.model.ProfileExitStep
+import dev.ipf.whitenoise.model.ProfileExitStepResult
+import dev.ipf.whitenoise.model.SignOutOptions
 
 data class AppUiState(
     val profiles: List<Profile> = emptyList(),
@@ -92,6 +97,13 @@ class AppViewModel(
         private set
     var startupState by mutableStateOf(StartupState(fails = startupFails))
         private set
+    private var profileExitGeneration = 0L
+    var profileExitAttempt by mutableStateOf<ProfileExitAttempt?>(null)
+        private set
+    var profileExitReport by mutableStateOf<ProfileExitAttempt?>(null)
+        private set
+    var nextProfileExitScenario by mutableStateOf(ProfileExitScenario.Success)
+        private set
 
     var uiState by mutableStateOf(AppUiState())
         private set
@@ -127,6 +139,7 @@ class AppViewModel(
         if (profileId !in uiState.signedInProfileIds) return
         if (uiState.profiles.none { it.id == profileId }) return
         cancelAccess()
+        profileExitAttempt = null
         uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
     }
 
@@ -437,9 +450,15 @@ class AppViewModel(
         return changed
     }
 
-    fun publishKeyPackage(): Boolean = updateDeveloperTools { tools ->
-        if (!tools.isEnabled || tools.keyPackage == KeyPackage.PublishedFixture) tools
-        else tools.copy(keyPackage = KeyPackage.PublishedFixture)
+    fun publishKeyPackage(): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (!profile.developerTools.isEnabled ||
+            (profile.connectionInformationPublished && profile.developerTools.keyPackage == KeyPackage.PublishedFixture)) return false
+        updateActiveProfile { it.copy(
+            connectionInformationPublished = true,
+            developerTools = it.developerTools.copy(keyPackage = KeyPackage.PublishedFixture),
+        ) }
+        return true
     }
 
     fun clearDiagnosticEvents(): Boolean = updateDeveloperTools { tools ->
@@ -476,6 +495,78 @@ class AppViewModel(
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
+    fun beginProfileExit(options: SignOutOptions): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (profileExitAttempt != null) return false
+        if (options.wipeData && !WipeConfirmationPhrase.matches(options.confirmation, profile.name)) return false
+        cancelAccess()
+        profileExitReport = null
+        profileExitAttempt = ProfileExitAttempt(
+            id = ++profileExitGeneration, profileId = profile.id, profileName = profile.name,
+            options = options.copy(deleteConnectionInformation = options.wipeData || options.deleteConnectionInformation),
+            scenario = nextProfileExitScenario,
+        )
+        nextProfileExitScenario = ProfileExitScenario.Success
+        return true
+    }
+
+    fun advanceProfileExit(requestId: Long, step: ProfileExitStep): ProfileExitDestination? {
+        val attempt = profileExitAttempt ?: return null
+        if (attempt.id != requestId || attempt.currentStep != step) return null
+        if (attempt.profileId != uiState.activeProfileId) {
+            profileExitAttempt = null
+            return null
+        }
+        val next = attempt.advance()
+        if (step == ProfileExitStep.RelayCleanup && next.results[step] == ProfileExitStepResult.Done) {
+            updateActiveProfile { it.copy(connectionInformationPublished = false) }
+        }
+        if (step == ProfileExitStep.LeaveGroups && next.results[step] == ProfileExitStepResult.Done) {
+            updateActiveProfile { profile -> profile.copy(chats = profile.chats.map { chat ->
+                if (!chat.isGroup || chat.membership != ChatMembership.Active) chat else chat.copy(
+                    membership = ChatMembership.Left, isPinned = false, unreadCount = 0, isMarkedUnread = false,
+                    members = chat.members.filterNot { it.personId == profile.id },
+                    timeline = chat.timeline + ChatTimelineEntry.Event(
+                        id = "${chat.id}-wipe-exit-${attempt.id}", text = "You left the group.",
+                        dayOrdinal = nextTimelinePosition(chat).first, dayLabel = "Today",
+                        minuteOfDay = nextTimelinePosition(chat).second,
+                    ),
+                )
+            }) }
+        }
+        profileExitAttempt = next
+        if (next.isRunning || !next.localCleanupCompleted) return null
+        val destination = signOutActiveProfile(next.options.wipeData)
+        profileExitReport = next.takeIf { it.hasIncompleteWork }
+        profileExitAttempt = null
+        return destination
+    }
+
+    fun retryProfileExit(requestId: Long) {
+        val attempt = profileExitAttempt ?: return
+        if (attempt.id != requestId || attempt.isRunning || attempt.localCleanupCompleted || attempt.profileId != uiState.activeProfileId) return
+        profileExitAttempt = attempt.retry(++profileExitGeneration)
+    }
+
+    fun dismissProfileExit() {
+        if (profileExitAttempt?.isRunning != true) profileExitAttempt = null
+    }
+
+    fun dismissProfileExitReport() { profileExitReport = null }
+
+    fun selectProfileExitScenario(scenario: ProfileExitScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextProfileExitScenario = scenario
+    }
+
+    fun setLocalKeyAvailable(available: Boolean) {
+        if (uiState.activeProfile?.developerTools?.isEnabled != true) return
+        updateActiveProfile { it.copy(localKeyAvailable = available) }
+    }
+
+    fun retryLocalKeyAccess(profileId: String) {
+        if (uiState.activeProfileId == profileId) updateActiveProfile { it.copy(localKeyAvailable = true) }
+    }
+
     fun removeStoredProfile(profileId: String, confirmation: String): Boolean {
         val profile = uiState.profiles.firstOrNull { it.id == profileId } ?: return false
         if (profile.id == uiState.activeProfileId || !WipeConfirmationPhrase.matches(confirmation, profile.name)) {
@@ -494,6 +585,9 @@ class AppViewModel(
         if (!WipeConfirmationPhrase.matches(confirmation, expected)) return false
         cancelAccess()
         nextAccessScenario = AccessScenario.Success
+        profileExitAttempt = null
+        profileExitReport = null
+        nextProfileExitScenario = ProfileExitScenario.Success
         uiState = AppUiState()
         createdChatSequence = 0
         return true
@@ -1340,6 +1434,9 @@ class AppViewModel(
         } else {
             profiles += profile
         }
+
+        val activatedIndex = profiles.indexOfFirst { it.id == profile.id }
+        profiles[activatedIndex] = profiles[activatedIndex].copy(connectionInformationPublished = true)
 
         uiState = uiState.copy(
             profiles = profiles,

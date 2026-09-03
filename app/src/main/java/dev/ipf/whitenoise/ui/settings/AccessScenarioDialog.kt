@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import dev.ipf.whitenoise.model.AccessScenario
+import dev.ipf.whitenoise.model.ProfileExitScenario
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
@@ -63,6 +64,40 @@ internal fun AccessScenarioDialog(current: AccessScenario, onSelect: (AccessScen
                             RadioButton(selected = selected == scenario, onClick = null)
                             Text(scenario.developerLabel, Modifier.padding(start = WhiteNoiseSpacing.Related))
                         }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSelect(selected); onDismiss() }) { Text("Use scenario") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+internal val ProfileExitScenario.developerLabel: String
+    get() = when (this) {
+        ProfileExitScenario.Success -> "All steps complete"
+        ProfileExitScenario.GroupLeaveFailure -> "Group departure incomplete"
+        ProfileExitScenario.RelayCleanupFailure -> "Relay cleanup incomplete"
+        ProfileExitScenario.LocalCleanupFailure -> "Local cleanup incomplete"
+        ProfileExitScenario.AllCleanupFailure -> "All cleanup incomplete"
+    }
+
+@Composable
+internal fun ProfileExitScenarioDialog(current: ProfileExitScenario, onSelect: (ProfileExitScenario) -> Unit, onDismiss: () -> Unit) {
+    var selected by remember(current) { mutableStateOf(current) }
+    WhiteNoiseAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sign-out scenarios") },
+        text = {
+            LazyColumn {
+                items(ProfileExitScenario.entries, key = { it.name }) { scenario ->
+                    Row(
+                        Modifier.fillMaxWidth().selectable(selected == scenario, role = Role.RadioButton,
+                            onClick = { selected = scenario }).padding(vertical = WhiteNoiseSpacing.Related),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected == scenario, onClick = null)
+                        Text(scenario.developerLabel, Modifier.padding(start = WhiteNoiseSpacing.Related))
                     }
                 }
             }

@@ -22,10 +22,10 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C004 · Incomplete identity setup retry and recovery consent | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Distinguish safe resume, uncertain prior key-package publication, explicit recovery consent, declined, partial and unexpected-state outcomes. |
 | C005 · Retained-profile reactivation from Welcome | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Add Continue as and retained-profile picker after non-wiping sign-out, restoring the same profile-owned history and drafts. |
 | C006 · Switch profiles and isolated unread state | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C007 · Signer ownership and private-key export availability | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Expose local versus external signing and disable unavailable secret export with a reason. Preserve existing reveal/copy/share safeguards. |
-| C008 · Raw and encrypted private-key backup | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Keep local fake export but add explicit result expiry/background concealment and signer-unavailable state. No cryptography or real keys. |
-| C009 · Sign out with relay cleanup outcomes | Decision required | Trigger its named entry/action; cancel with Back where available | Add delete-key-packages choice and distinguish local sign-out success with incomplete relay cleanup from sign-out failure. Preserve approved wipe default/presentation pending Q05. |
-| C010 · Account wipe progress and partial outcome report | Decision required | Trigger its named entry/action; cancel with Back where available | Represent leave, key-package cleanup and local wipe stages with independent outcomes; do not turn partial loss into generic success. Preserve prototype whole-app erase and inactive-profile removal. |
+| C007 · Signer ownership and private-key export availability | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Local/Amber ownership and temporarily unavailable local-key access now have explicit reasons and retry. Secret reveal/copy/export requires an available local key. |
+| C008 · Raw and encrypted private-key backup | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Raw/encrypted fixture output uses a process-local profile-owned request, 30-second expiry and stale-result rejection. Reveal/passwords clear on background and are excluded from saved state. No real cryptography. |
+| C009 · Sign out with relay cleanup outcomes | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Non-wipe sign-out offers connection-information cleanup. Separate remote/local results distinguish partial success from local failure, preserve completed cleanup and retry only unfinished work. Approved wipe default retained; Q05 resolved. |
+| C010 · Account wipe progress and partial outcome report | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Group departure, relay cleanup and local wipe have ordered independent outcomes. Exact-name confirmation and owner guards remain; local failure stays active and remote partial results survive routing after exit. |
 | C011 · Bootstrap failure and retry | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Add deterministic startup loading, failure, retry and retained-account recovery states without initializing a runtime. |
 
 ## Production integration seam
@@ -45,8 +45,12 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B01, B02. Decisions: Q05. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+Batches: B01, B02. Q05 resolved: preserve the approved checked wipe default. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
 
 ## B01 implementation evidence
 
-C001, C003, C004, C005 and C011 are implemented and host-verified on 2026-09-04. See [the selected brief](../../../screens/access-and-recovery.md#implementation-evidence) for files, 202 passing unit tests, both APKs and six new compiled UI cases. B02 remains pending; the B01 signer-owned export guard is a prerequisite, not completion of B02. Device and visual acceptance remain pending.
+C001, C003, C004, C005 and C011 are implemented and host-verified on 2026-09-04. See [the selected brief](../../../screens/access-and-recovery.md#implementation-evidence) for files, 202 passing unit tests, both APKs and six new compiled UI cases. B02 extends the signer-owned export guard with the complete lifecycle and outcome paths below. Device and visual acceptance remain pending.
+
+## B02 implementation evidence
+
+C007–C010 are implemented and host-verified 2026-09-04. See [the selected brief](../../../screens/keys-and-profile-exit.md#implementation-evidence) for key ownership/expiry, optional relay cleanup, staged wipe, retry and partial outcomes. The clean gate passed 216 unit tests, zero lint errors and both APKs; five new UI cases compile. No device or visual acceptance is claimed.

@@ -1,5 +1,10 @@
 # Settings and profile services
 
+2026-09-04: production B02 extends keys/sign-out/wipe behavior as recorded in
+[keys-and-profile-exit.md](keys-and-profile-exit.md). Its lifecycle and staged
+outcome contract supersedes earlier immediate-success descriptions here; the
+approved presentation and checked wipe default remain.
+
 2026-08-29 Appearance follow-up: Appearance keeps the immediate profile-owned
 System default/Light/Dark choice as one accessible Material radio group with
 two-dp canvas-tone separators and no full-row selected fill. Concise theme

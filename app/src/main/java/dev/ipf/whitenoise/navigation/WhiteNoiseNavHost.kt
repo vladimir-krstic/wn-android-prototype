@@ -65,6 +65,7 @@ import dev.ipf.whitenoise.ui.settings.KeyPackagesScreen
 import dev.ipf.whitenoise.ui.settings.ManageProfilesScreen
 import dev.ipf.whitenoise.ui.settings.DiagnosticsImprovementsScreen
 import dev.ipf.whitenoise.ui.settings.DiagnosticsPromptHost
+import dev.ipf.whitenoise.ui.settings.ProfileExitReportDialog
 
 @Composable
 fun WhiteNoiseNavHost(
@@ -157,6 +158,7 @@ fun WhiteNoiseNavHost(
         }
     }
 
+    appViewModel.profileExitReport?.let { ProfileExitReportDialog(it, appViewModel::dismissProfileExitReport) }
     NavHost(
         navController = navController,
         startDestination = AppRoute.startDestination,
@@ -278,9 +280,11 @@ fun WhiteNoiseNavHost(
                 onSupport = { navController.navigate(AppRoute.Support) },
                 onDonate = { navController.navigate(AppRoute.Donate) },
                 onDeveloperTools = { navController.navigate(AppRoute.DeveloperTools) },
-                onSignOut = { wipeData ->
-                    appViewModel.signOutActiveProfile(wipeData)?.let(::finishProfileExit)
-                },
+                onSignOut = { appViewModel.beginProfileExit(it) },
+                exitAttempt = appViewModel.profileExitAttempt,
+                onAdvanceExit = { id, step -> appViewModel.advanceProfileExit(id, step)?.let(::finishProfileExit) },
+                onRetryExit = appViewModel::retryProfileExit,
+                onDismissExit = appViewModel::dismissProfileExit,
                 initiallyShowSwitcher = route.showProfileSwitcher,
             )
         }
@@ -298,7 +302,10 @@ fun WhiteNoiseNavHost(
             }
         }
         composable<AppRoute.ProfileKeys> {
-            uiState.activeProfile?.let { ProfileKeysScreen(it, onBack = { navController.popBackStack() }) }
+            uiState.activeProfile?.let { profile -> ProfileKeysScreen(
+                profile, onBack = { navController.popBackStack() },
+                onRetryKey = { appViewModel.retryLocalKeyAccess(profile.id) },
+            ) }
         }
         composable<AppRoute.Notifications> {
             uiState.activeProfile?.let { profile ->
@@ -421,6 +428,9 @@ fun WhiteNoiseNavHost(
                     accessScenario = appViewModel.nextAccessScenario,
                     onAccessScenario = appViewModel::selectAccessScenario,
                     onStartupFailure = appViewModel::previewStartupFailure,
+                    exitScenario = appViewModel.nextProfileExitScenario,
+                    onExitScenario = appViewModel::selectProfileExitScenario,
+                    onLocalKeyAvailable = appViewModel::setLocalKeyAvailable,
                 )
             }
         }

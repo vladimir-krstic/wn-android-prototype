@@ -82,6 +82,8 @@ data class Profile(
     val developerTools: DeveloperToolsState = DeveloperToolsState(),
     val diagnostics: DiagnosticsState = DiagnosticsState(),
     val signingMode: ProfileSigningMode = ProfileSigningMode.LocalKey,
+    val localKeyAvailable: Boolean = true,
+    val connectionInformationPublished: Boolean = true,
 ) {
     val initial: String
         get() = name.trim().firstOrNull()?.uppercase() ?: "?"

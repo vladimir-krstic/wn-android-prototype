@@ -39,9 +39,15 @@ These questions affect only the linked capability slices. The recommendation is 
 
 ### Q05 — Sign-out default and cleanup choices
 
+Resolved for B02 on 2026-09-04 from the already-approved prototype direction
+in `docs/terminology.md` and `docs/screens/developer-and-destructive-flows.md`:
+retain the checked wipe default and exact-name confirmation; add the separate
+cleanup choice and independent results. This changes neither the approved
+default nor the scope of real external operations.
+
 - **Conflict:** C009–C010 production distinguishes non-wiping sign-out, optional relay key-package cleanup and staged wipe; the accepted prototype sign-out flow defaults to wiping local data.
 - **Recommendation:** Keep both outcomes and the prototype's consequence language, but make the safe default an explicit product choice in the selected brief. Never conflate failed relay cleanup with local sign-out failure.
-- **Blocks:** default selection/copy in B02, not the added outcome states.
+- **Blocks:** none; the existing approved default governs B02.
 
 <a id="q06"></a>
 

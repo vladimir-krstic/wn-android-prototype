@@ -1,6 +1,6 @@
 # Production Android parity audit
 
-Status: **B01 implemented and host-verified; B02–B32 pending**
+Status: **B01–B02 implemented and host-verified; B03–B32 pending**
 
 Production source is [`marmot-protocol/whitenoise-android`](https://github.com/marmot-protocol/whitenoise-android) `master` at [`319454889f1c2494dec4a69b5577d98017f44eee`](https://github.com/marmot-protocol/whitenoise-android/commit/319454889f1c2494dec4a69b5577d98017f44eee). The comparison target is this prototype's current dirty working tree based on `4c3f7366bcb738839f4969d762403adfc023b8a3`, reconciled on 2026-09-03 after concurrent local work completed; generated audit files are excluded from its hash manifest.
 
@@ -16,21 +16,21 @@ The [capability matrix](capability-matrix.md) contains **122** user-outcome capa
 
 | Status | Count |
 | --- | ---: |
-| covered | 21 |
-| partial | 39 |
+| covered | 25 |
+| partial | 35 |
 | missing | 56 |
 | behavioral divergence | 5 |
 | unverified | 0 |
 | excluded with reason | 1 |
 
 
-After B01, 100 of the 122 rows still require implementation work. **77** are ready within the established prototype boundary; **23** require a linked product/platform decision. A decision blocks only the named slice, so other batches can proceed. One covered capability also links to a non-blocking destination decision.
+After B02, 96 of the 122 rows still require implementation work. **76** are ready within the established prototype boundary; **20** require a linked product/platform decision. A decision blocks only the named slice, so other batches can proceed. One covered capability also links to a non-blocking destination decision.
 
 ## Proposed destination changes
 
 New top-level or detail destinations are needed for Folders, Folder editor, global search filters/results, Read Aloud settings, Dictation settings, AI Agents, Help, About & licenses and production-style update state. Existing Conversation, Composer, Chat/Group Info, Shared Content, Profile, Keys, Notifications, Appearance, Device Privacy, Data and Storage, Relays, Key Packages, Diagnostics and onboarding surfaces gain behavior and state.
 
-**B01 — Access failures, retained profiles and signer choice** is implemented and host-verified. It covers typed access results, explicit recovery consent, retained-profile re-entry and startup retry. See [its implementation evidence](../../screens/access-and-recovery.md#implementation-evidence). The next batch is B02; Q05 governs its sign-out default. B05–B07 (Chats organization and search) provide the largest visible feature gain after that foundation.
+**B01 — Access failures, retained profiles and signer choice** is implemented and host-verified. It covers typed access results, explicit recovery consent, retained-profile re-entry and startup retry. See [its implementation evidence](../../screens/access-and-recovery.md#implementation-evidence). B02 adds temporary key exports and staged profile exit; [its evidence](../../screens/keys-and-profile-exit.md#implementation-evidence) records 216 passing unit tests. Q05 is resolved by the approved wipe default. The next batch is B03. B05–B07 (Chats organization and search) provide the largest visible feature gain after that foundation.
 
 ## Deliverables
 

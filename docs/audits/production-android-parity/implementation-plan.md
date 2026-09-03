@@ -5,7 +5,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 ## Implementation progress
 
 - B01: implemented and host-verified 2026-09-04; 202 unit tests, zero lint errors, both APKs, six new compiled UI cases. [Selected brief and evidence](../../screens/access-and-recovery.md). Commit title: `B01: Add access recovery and retained-profile sign-in`.
-- B02–B32: pending; linked decisions apply only to their named slices.
+- B02: implemented and host-verified 2026-09-04; 216 unit tests, zero lint errors, both APKs, five new compiled UI cases. [Selected brief and evidence](../../screens/keys-and-profile-exit.md). Q05 preserves the approved checked wipe default. Commit title: `B02: Add staged profile exit and temporary key exports`.
+- B03–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -13,7 +14,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | Batch | Outcome | Capability IDs | Depends on | Decision state |
 | --- | --- | --- | --- | --- |
 | **B01** | Access failures, retained profiles and signer choice | C001, C003, C004, C005, C011 | None | Ready |
-| **B02** | Keys, sign-out and staged wipe outcomes | C007, C008, C009, C010 | B01 | Blocked slices: Q05 |
+| **B02** | Keys, sign-out and staged wipe outcomes | C007, C008, C009, C010 | B01 | Resolved: approved wipe default retained |
 | **B03** | People discovery and private contact data | C013, C014, C019, C021 | B01 | Ready |
 | **B04** | Profile banner, avatar viewing and Lightning field | C016, C017, C018 | B03 | Ready |
 | **B05** | Chat-list selection, order and connection recovery | C024, C025, C026, C030 | B01 | Ready |
@@ -65,7 +66,7 @@ Capabilities: C001, C003, C004, C005, C011. Dependencies: None.
 
 Capabilities: C007, C008, C009, C010. Dependencies: B01.
 
-**Implementation:** Expose local versus external signing and disable unavailable secret export with a reason. Preserve existing reveal/copy/share safeguards. Keep local fake export but add explicit result expiry/background concealment and signer-unavailable state. No cryptography or real keys. Add delete-key-packages choice and distinguish local sign-out success with incomplete relay cleanup from sign-out failure. Preserve approved wipe default/presentation pending Q05. Represent leave, key-package cleanup and local wipe stages with independent outcomes; do not turn partial loss into generic success. Preserve prototype whole-app erase and inactive-profile removal.
+**Implementation:** Expose local versus external signing and disable unavailable secret export with a reason. Preserve existing reveal/copy/share safeguards. Keep local fake export but add explicit result expiry/background concealment and signer-unavailable state. No cryptography or real keys. Add delete-key-packages choice and distinguish local sign-out success with incomplete relay cleanup from sign-out failure. Preserve approved wipe default/presentation; Q05 resolved in B02. Represent leave, key-package cleanup and local wipe stages with independent outcomes; do not turn partial loss into generic success. Preserve prototype whole-app erase and inactive-profile removal.
 
 **Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/Profile.kt`, `app/src/main/java/dev/ipf/whitenoise/model/ProfileSettings.kt`, `app/src/main/java/dev/ipf/whitenoise/state/AppViewModel.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/settings/DestructiveScreens.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/settings/ProfileSettingsScreens.kt`.
 

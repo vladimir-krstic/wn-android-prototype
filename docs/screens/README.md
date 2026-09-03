@@ -14,6 +14,7 @@ Current briefs:
 - `app-menus.md`
 - `onboarding-and-profiles.md`
 - `access-and-recovery.md`
+- `keys-and-profile-exit.md`
 - `diagnostics-and-improvements.md`
 - `chats-and-chat-creation.md`
 - `shared-conversation-core.md`

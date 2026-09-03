@@ -218,7 +218,7 @@ object ProfileRelayFixtures {
 }
 
 object ProfileKeyFixtures {
-    const val PRIVATE_KEY = "nsec1x7q3m9v5k2c8r4t6y1p7s3h9d5n2w8j4f6u1e7a3k9q5x2m8"
+    val PRIVATE_KEY: String = LoginPrototypeData.privateKey
 
     fun rawExport(profile: Profile): String = buildString {
         appendLine("White Noise key export")

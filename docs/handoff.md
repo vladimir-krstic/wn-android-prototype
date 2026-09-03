@@ -1,12 +1,13 @@
 # Android port handoff
 
-2026-09-04: production parity B01 is implemented and host-verified. The active
-goal covers B01–B32 with one commit per completed batch (`B01: <title>`).
-`docs/audits/production-android-parity/implementation-plan.md` tracks the
-sequence; `docs/screens/access-and-recovery.md` records B01 behavior and
-validation. Continue with B02, preserving the existing wipe default until Q05
-is resolved. B01 added deterministic access and startup scenarios under
-Developer Tools; no runtime backend, new permission or device validation.
+2026-09-04: production parity B01–B02 are implemented and host-verified.
+The active goal covers B01–B32 with one commit per completed batch
+(`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
+tracks the sequence. The selected access/recovery and keys/profile-exit briefs
+record evidence. Continue with B03. Q05 is resolved by the approved checked wipe
+default. Developer Tools now provides access/startup/sign-out outcomes and local
+key availability. Latest clean gate: 216 unit tests, zero lint errors, both APKs;
+14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The native Android port is functionally complete inside the approved offline,
 deterministic boundary. This handoff describes the shape that should remain
