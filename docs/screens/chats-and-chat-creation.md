@@ -1,5 +1,10 @@
 # Chats and chat creation
 
+2026-09-04: B03 extends discovery, private contact details, created-chat opening
+recovery and profile-to-group actions. See [people-discovery-and-private-details.md](people-discovery-and-private-details.md).
+The existing identity/header/group composition remains authoritative; the older
+single-group picker is replaced by checked multiple selection and confirmation.
+
 Status: Chats controls and shared Material-sheet follow-up implemented on
 2026-08-26; New Message, Person Profile, New Group, and Set Up Group hierarchy
 refined on 2026-08-30. Populated Chats, New Message, New Group selection, and

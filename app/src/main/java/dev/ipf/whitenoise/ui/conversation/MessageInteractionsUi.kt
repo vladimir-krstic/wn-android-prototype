@@ -1037,12 +1037,12 @@ fun MessageDetailsScreen(
 ) {
     val outgoing = message.authorId == profile.id
     val sender = profile.people.firstOrNull { it.id == message.authorId }
-    val senderName = sender?.name ?: chat.title
+    val senderName = sender?.displayName ?: chat.title
     val unknownPerson = stringResource(R.string.unknown_person)
     fun reactionPersonName(personId: String): String = when (personId) {
         profile.id -> profile.name
         chat.id -> chat.title
-        else -> profile.people.firstOrNull { it.id == personId }?.name ?: unknownPerson
+        else -> profile.people.firstOrNull { it.id == personId }?.displayName ?: unknownPerson
     }
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -1173,7 +1173,7 @@ fun MessageDetailsScreen(
                                     leadingContent = {
                                         if (sender != null) {
                                             ProfileAvatar(
-                                                sender.name,
+                                                sender.displayName,
                                                 sender.avatar,
                                                 Modifier.size(40.dp),
                                                 contentDescription = null,
@@ -1197,7 +1197,7 @@ fun MessageDetailsScreen(
                                 }
                                 recipients.forEach { person ->
                                     ListItem(
-                                        headlineContent = { Text(person.name) },
+                                        headlineContent = { Text(person.displayName) },
                                         supportingContent = {
                                             Text(
                                                 stringResource(
@@ -1211,7 +1211,7 @@ fun MessageDetailsScreen(
                                         },
                                         leadingContent = {
                                             ProfileAvatar(
-                                                person.name,
+                                                person.displayName,
                                                 person.avatar,
                                                 Modifier.size(40.dp),
                                                 contentDescription = null,

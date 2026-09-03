@@ -683,12 +683,12 @@ fun FullConversationComposer(
         val memberIds = chat.members.map { it.personId }.toSet()
         profile.people.filter { person ->
             person.id in memberIds && person.id != profile.id &&
-                (mentionQuery.isBlank() || person.name.contains(mentionQuery, ignoreCase = true))
+                (mentionQuery.isBlank() || person.displayName.contains(mentionQuery, ignoreCase = true))
         }.take(5)
     }
     val mentionNames = remember(chat.members, profile.people) {
         val memberIds = chat.members.mapTo(mutableSetOf()) { it.personId }
-        profile.people.filter { it.id in memberIds }.map(Person::name)
+        profile.people.filter { it.id in memberIds }.map(Person::displayName)
     }
     val sendable = chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty() || linkPreview != null
     val isExpansionEnabled = when (val state = voiceState) {
@@ -796,7 +796,7 @@ fun FullConversationComposer(
                         val range = mentionMatch.range
                         val prefix = chat.draftText.substring(0, range.first)
                         val separator = if (prefix.isNotEmpty() && !prefix.endsWith(' ')) " " else ""
-                        onDraftTextChanged("$prefix$separator@${person.name} ")
+                        onDraftTextChanged("$prefix$separator@${person.displayName} ")
                     },
                 )
             }
@@ -919,7 +919,7 @@ fun FullConversationComposer(
                                 author = if (message.authorId == profile.id) {
                                     stringResource(R.string.you)
                                 } else {
-                                    profile.people.firstOrNull { it.id == message.authorId }?.name
+                                    profile.people.firstOrNull { it.id == message.authorId }?.displayName
                                         ?: stringResource(R.string.unknown_person)
                                 },
                                 text = message.text.ifBlank { message.attachments.firstOrNull()?.label.orEmpty() },
@@ -1012,7 +1012,7 @@ fun FullConversationComposer(
                         MessageAttachment(
                             id = nextId("contact"),
                             kind = MessageAttachmentKind.Contact,
-                            label = "Contact: ${person.name}",
+                            label = "Contact: ${person.displayName}",
                             images = listOf(person.avatar),
                         ),
                     ),
@@ -1228,8 +1228,8 @@ private fun MentionSuggestions(people: List<Person>, onSelect: (Person) -> Unit)
         Column {
             people.forEach { person ->
                 ListItem(
-                    headlineContent = { Text(person.name) },
-                    leadingContent = { ProfileAvatar(person.name, person.avatar, Modifier.size(36.dp), contentDescription = null) },
+                    headlineContent = { Text(person.displayName) },
+                    leadingContent = { ProfileAvatar(person.displayName, person.avatar, Modifier.size(36.dp), contentDescription = null) },
                     modifier = Modifier.clickable { onSelect(person) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
@@ -1947,7 +1947,7 @@ private fun ContactPickerSheet(
                             modifier = Modifier.testTag("conversation.contact.${person.id}"),
                             leadingContent = {
                                 ProfileAvatar(
-                                    person.name,
+                                    person.displayName,
                                     person.avatar,
                                     Modifier.size(48.dp),
                                     contentDescription = null,
@@ -1965,7 +1965,7 @@ private fun ContactPickerSheet(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                             ),
                             content = {
-                                Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(person.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             },
                         )
                         if (index != filteredPeople.lastIndex) {

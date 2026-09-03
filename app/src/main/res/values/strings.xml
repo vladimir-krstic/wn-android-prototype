@@ -202,13 +202,7 @@
     <string name="block_person_detail">You’ll keep the chat history, but you won’t be able to send messages until you unblock them.</string>
     <string name="groups_in_common">Groups in Common</string>
     <string name="no_groups_in_common">No groups in common.</string>
-    <string name="add_to_group">Add to Group</string>
-    <string name="add">Add</string>
     <string name="add_to_another_group">Add to Another Group</string>
-    <string name="no_available_groups">No Available Groups</string>
-    <string name="no_available_groups_detail">You don’t administer another group this person can join.</string>
-    <string name="add_person_to_group_question">Add %1$s to %2$s?</string>
-    <string name="add_person_to_group_detail">They’ll be added as a member of this group.</string>
     <string name="chat_relays_required_title">Chat Relays Required</string>
     <string name="chat_relays_required_detail">Add a Chat Message relay before starting a conversation.</string>
     <string name="continue_action">Continue</string>
@@ -450,4 +444,46 @@
     <string name="media_saved">Media saved</string>
     <string name="media_save_error">Couldn’t save this media. Choose a destination and try again.</string>
     <string name="media_share_error">Couldn’t prepare this media for sharing. Try again.</string>
+
+    <string name="people_resolving">Looking for people…</string>
+    <string name="people_invalid_identifier">Enter a valid public key, profile link or address.</string>
+    <string name="people_address_not_found">No profile found for this address. Check it or try again.</string>
+    <string name="people_no_profile">No profile published. You can still message this public key or share an invitation.</string>
+    <string name="people_partial">Some results are unavailable. You can use the people shown or try again.</string>
+    <string name="people_unavailable">Search is unavailable. People already on this device are still shown.</string>
+    <string name="people_retry">Try Again</string>
+    <string name="people_invite">Share invitation</string>
+    <string name="people_invite_text">Connect with %1$s on White Noise:\n%2$s</string>
+    <string name="people_share_unavailable">Sharing is unavailable. Try again.</string>
+    <string name="people_source_chats">People in chats</string>
+    <string name="people_source_following">Following</string>
+    <string name="people_source_network">Network results</string>
+    <string name="contact_private_details">Nickname &amp; notes</string>
+    <string name="contact_published_name">Published name: %1$s</string>
+    <string name="contact_nickname">Nickname</string>
+    <string name="contact_nickname_limit">Up to 80 characters. Clear to use their published name.</string>
+    <string name="contact_notes">Notes</string>
+    <string name="contact_private_hint">Only you can see these details in this profile on this device.</string>
+    <string name="contact_save_failed">These details could not be saved. Reopen the profile and try again.</string>
+    <string name="contact_start_group">Start group</string>
+    <string name="contact_add_groups">Add to groups</string>
+    <string name="contact_promote_groups">Make admin in groups</string>
+    <string name="contact_find_groups">Find groups</string>
+    <string name="contact_roster_loading">Checking group membership…</string>
+    <string name="contact_roster_partial">Some group memberships could not be checked. Only confirmed choices are shown.</string>
+    <string name="contact_no_eligible_groups">No eligible groups to show.</string>
+    <string name="contact_group_result">Completed: %1$d. Still to complete: %2$d. Failed groups remain selected.</string>
+    <string name="contact_confirm">Confirm</string>
+    <string name="created_chat_title">Chat created</string>
+    <string name="created_chat_detail">Your chat was created, but could not be opened yet. Try opening it again.</string>
+    <string name="created_chat_open">Open chat</string>
+    <string name="people_source_local">On this device</string>
+    <plurals name="contact_invite_confirm">
+        <item quantity="one">Add %1$s to this group? They may receive group messages after joining.</item>
+        <item quantity="other">Add %1$s to %2$d groups? They may receive group messages after joining.</item>
+    </plurals>
+    <plurals name="contact_promote_confirm">
+        <item quantity="one">Make %1$s an admin in this group? Admins can manage people and group settings.</item>
+        <item quantity="other">Make %1$s an admin in %2$d groups? Admins can manage people and group settings.</item>
+    </plurals>
 </resources>

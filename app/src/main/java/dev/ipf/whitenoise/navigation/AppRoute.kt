@@ -35,7 +35,7 @@ sealed interface AppRoute {
     data class GroupsInCommon(val personId: String) : AppRoute
 
     @Serializable
-    data object NewGroup : AppRoute
+    data class NewGroup(val initialPersonId: String? = null) : AppRoute
 
     @Serializable
     data class GroupSetup(val selectedPersonIds: List<String>) : AppRoute

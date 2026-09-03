@@ -9,7 +9,9 @@ identity input, import/recovery, Amber, retained reactivation and bootstrap to
 `docs/screens/access-and-recovery.md`. B02 maps key availability/export and
 staged sign-out/wipe to `docs/screens/keys-and-profile-exit.md`; the established Android presentation
 remains authoritative. Production is read-only evidence and does not replace
-the accepted iOS scope or prototype-only features below.
+the accepted iOS scope or prototype-only features below. B03 maps discovery,
+private contact details, created-chat recovery and profile-to-group actions to
+`docs/screens/people-discovery-and-private-details.md`.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)

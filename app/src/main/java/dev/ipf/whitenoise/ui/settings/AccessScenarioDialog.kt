@@ -106,3 +106,19 @@ internal fun ProfileExitScenarioDialog(current: ProfileExitScenario, onSelect: (
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
+
+@Composable
+internal fun <T> ScenarioChoiceDialog(title: String, choices: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss, title = { androidx.compose.material3.Text(title) },
+        text = { androidx.compose.foundation.lazy.LazyColumn {
+            items(choices.size) { index ->
+                val choice = choices[index]
+                androidx.compose.material3.TextButton(onClick = { onSelect(choice); onDismiss() }) {
+                    androidx.compose.material3.Text((if (choice == selected) "✓ " else "") + label(choice))
+                }
+            }
+        } },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("Close") } },
+    )
+}

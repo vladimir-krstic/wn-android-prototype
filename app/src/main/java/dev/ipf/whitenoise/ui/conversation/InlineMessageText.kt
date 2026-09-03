@@ -72,16 +72,15 @@ private fun AnnotatedString.Builder.appendMentions(
     var cursor = 0
     while (cursor < text.length) {
         val match = people.asSequence()
-            .map { person -> person to text.indexOf("@${person.name}", startIndex = cursor) }
-            .filter { (_, index) -> index >= 0 }
-            .minWithOrNull(compareBy<Pair<Person, Int>> { it.second }.thenByDescending { it.first.name.length })
+            .flatMap { person -> sequenceOf(person.name, person.displayName).distinct().map { name -> Triple(person, "@$name", text.indexOf("@$name", startIndex = cursor)) } }
+            .filter { it.third >= 0 }
+            .minWithOrNull(compareBy<Triple<Person, String, Int>> { it.third }.thenByDescending { it.second.length })
         if (match == null) {
             append(text.substring(cursor))
             break
         }
-        val (person, index) = match
+        val (person, mention, index) = match
         if (index > cursor) append(text.substring(cursor, index))
-        val mention = "@${person.name}"
         withLink(
             LinkAnnotation.Clickable(
                 tag = person.id,

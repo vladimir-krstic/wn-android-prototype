@@ -560,10 +560,11 @@ class ChatsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Add to Group").performScrollTo().performClick()
-        composeRule.onNodeWithText("Group - Sole Admin").performClick()
-        composeRule.onNodeWithText("Add Tim to Group - Sole Admin?").assertIsDisplayed()
-        composeRule.onNodeWithText("Add").performClick()
+        composeRule.onNodeWithText("Add to groups").performScrollTo().performClick()
+        composeRule.onNodeWithTag("contact.group.catalog-group-sole-admin").performScrollTo().performClick()
+        composeRule.onNodeWithTag("contact.groups.apply").performClick()
+        composeRule.onNodeWithText("Add Tim to this group? They may receive group messages after joining.").assertIsDisplayed()
+        composeRule.onNodeWithText("Confirm").performClick()
         composeRule.runOnIdle { check(addedTo == "catalog-group-sole-admin") }
     }
 

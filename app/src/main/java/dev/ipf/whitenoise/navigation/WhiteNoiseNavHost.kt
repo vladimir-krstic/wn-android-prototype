@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import dev.ipf.whitenoise.model.SharedContentCategory
 import dev.ipf.whitenoise.model.ProfileExitDestination
 import dev.ipf.whitenoise.model.ConversationDebugPolicy
+import dev.ipf.whitenoise.ui.chats.CreatedChatOpenDialog
 import dev.ipf.whitenoise.ui.chats.ChatsScreen
 import dev.ipf.whitenoise.ui.chats.GroupSetupScreen
 import dev.ipf.whitenoise.ui.chats.GroupsInCommonScreen
@@ -81,6 +82,9 @@ fun WhiteNoiseNavHost(
     var scannerUnavailable by remember { mutableStateOf(false) }
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
 
+    LaunchedEffect(uiState.activeProfileId, currentBackStackEntry?.id) {
+        appViewModel.reconcileCreatedChatOrigin(currentBackStackEntry?.id)
+    }
     LaunchedEffect(uiState.activeProfileId, currentBackStackEntry?.destination?.route) {
         val destination = currentBackStackEntry?.destination ?: return@LaunchedEffect
         val routeName = destination.route?.substringBefore('/')?.substringBefore('?')
@@ -159,6 +163,23 @@ fun WhiteNoiseNavHost(
     }
 
     appViewModel.profileExitReport?.let { ProfileExitReportDialog(it, appViewModel::dismissProfileExitReport) }
+    appViewModel.createdChatOpen?.takeIf { appViewModel.createdChatProjectionUnavailable }?.let { request ->
+        CreatedChatOpenDialog(
+            onOpen = {
+                appViewModel.completeCreatedChatOpen(request.id, currentBackStackEntry?.id.orEmpty())?.let {
+                    openConversation(it, clearsCreationFlow = true)
+                }
+            },
+            onDismiss = {
+                appViewModel.cancelCreatedChatOpen()
+                navController.navigate(AppRoute.SignedIn) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                    launchSingleTop = true
+                }
+            },
+        )
+    }
+
     NavHost(
         navController = navController,
         startDestination = AppRoute.startDestination,
@@ -428,6 +449,12 @@ fun WhiteNoiseNavHost(
                     accessScenario = appViewModel.nextAccessScenario,
                     onAccessScenario = appViewModel::selectAccessScenario,
                     onStartupFailure = appViewModel::previewStartupFailure,
+                    peopleSearchScenario = appViewModel.peopleSearchScenario,
+                    onPeopleSearchScenario = appViewModel::selectPeopleSearchScenario,
+                    groupContactScenario = appViewModel.groupContactScenario,
+                    onGroupContactScenario = appViewModel::selectGroupContactScenario,
+                    createdChatUnavailable = appViewModel.nextCreatedChatUnavailable,
+                    onCreatedChatUnavailable = appViewModel::setCreatedChatUnavailable,
                     exitScenario = appViewModel.nextProfileExitScenario,
                     onExitScenario = appViewModel::selectProfileExitScenario,
                     onLocalKeyAvailable = appViewModel::setLocalKeyAvailable,
@@ -473,8 +500,12 @@ fun WhiteNoiseNavHost(
                 NewChatScreen(
                     profile = profile,
                     onBack = { navController.popBackStack() },
-                    onNewGroup = { navController.navigate(AppRoute.NewGroup) },
+                    onNewGroup = { navController.navigate(AppRoute.NewGroup()) },
                     onPerson = { navController.navigate(AppRoute.PersonProfile(it)) },
+                    searchScenario = appViewModel.peopleSearchScenario,
+                    onResolvedPerson = { person ->
+                        appViewModel.acceptDiscoveredPerson(profile.id, person)?.let { navController.navigate(AppRoute.PersonProfile(it)) }
+                    },
                 )
             }
         }
@@ -491,10 +522,14 @@ fun WhiteNoiseNavHost(
                     person = person,
                     onBack = { navController.popBackStack() },
                     onMessage = {
-                        val chatId = appViewModel.openOrCreateDirectChat(person.id)
-                        if (chatId != null) openConversation(chatId, clearsCreationFlow = true)
-                        chatId != null
+                        val request = if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.startDirectConversation(person.id, entry.id) else null
+                        if (request != null && !appViewModel.createdChatProjectionUnavailable) {
+                            appViewModel.completeCreatedChatOpen(request.id, entry.id)?.let { openConversation(it, clearsCreationFlow = true) }
+                        }
+                        request != null
                     },
+                    onSavePrivateContact = { nickname, notes -> appViewModel.savePrivateContact(profile.id, person.id, nickname, notes) },
+                    onStartGroup = { navController.navigate(AppRoute.NewGroup(person.id)) },
                     onToggleFollow = { appViewModel.toggleFollowing(person.id) },
                     onToggleBlock = { appViewModel.toggleBlocked(person.id) },
                     showMessageAction = contextChat == null,
@@ -513,6 +548,9 @@ fun WhiteNoiseNavHost(
                         navController.navigate(AppRoute.GroupsInCommon(person.id))
                     },
                     onAddToGroup = { chatId -> appViewModel.addGroupMembers(chatId, listOf(person.id)) },
+                    groupScenario = appViewModel.groupContactScenario,
+                    onRetryRoster = { appViewModel.retryContactRoster(profile.id) },
+                    onApplyGroups = { ids, action -> appViewModel.applyContactToGroups(profile.id, person.id, ids, action) },
                 )
             }
         }
@@ -527,12 +565,17 @@ fun WhiteNoiseNavHost(
                     onBack = { navController.popBackStack() },
                     onOpenGroup = { openConversation(it, clearsCreationFlow = false) },
                     onAddToGroup = { chatId -> appViewModel.addGroupMembers(chatId, listOf(person.id)) },
+                    groupScenario = appViewModel.groupContactScenario,
+                    onRetryRoster = { appViewModel.retryContactRoster(profile.id) },
+                    onApplyGroups = { ids, action -> appViewModel.applyContactToGroups(profile.id, person.id, ids, action) },
                 )
             }
         }
-        composable<AppRoute.NewGroup> {
+        composable<AppRoute.NewGroup> { entry ->
+            val route = entry.toRoute<AppRoute.NewGroup>()
             uiState.activeProfile?.let { profile ->
                 NewGroupScreen(
+                    initialPersonId = route.initialPersonId,
                     profile = profile,
                     onBack = { navController.popBackStack() },
                     onContinue = { navController.navigate(AppRoute.GroupSetup(it)) },
@@ -547,14 +590,13 @@ fun WhiteNoiseNavHost(
                     selectedPersonIds = route.selectedPersonIds,
                     onBack = { navController.popBackStack() },
                     onCreate = { name, description, avatar ->
-                        val chatId = appViewModel.createGroup(
-                            name = name,
-                            description = description,
-                            avatar = avatar,
-                            selectedPersonIds = route.selectedPersonIds,
-                        )
-                        if (chatId != null) openConversation(chatId, clearsCreationFlow = true)
-                        chatId != null
+                        val request = if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.startGroupConversation(
+                            name, description, avatar, route.selectedPersonIds, entry.id,
+                        ) else null
+                        if (request != null && !appViewModel.createdChatProjectionUnavailable) {
+                            appViewModel.completeCreatedChatOpen(request.id, entry.id)?.let { openConversation(it, clearsCreationFlow = true) }
+                        }
+                        request != null
                     },
                     onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 )

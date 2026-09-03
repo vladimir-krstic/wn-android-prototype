@@ -73,6 +73,12 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
+    peopleSearchScenario: dev.ipf.whitenoise.model.PeopleSearchScenario = dev.ipf.whitenoise.model.PeopleSearchScenario.Success,
+    onPeopleSearchScenario: (dev.ipf.whitenoise.model.PeopleSearchScenario) -> Unit = {},
+    groupContactScenario: dev.ipf.whitenoise.model.GroupContactScenario = dev.ipf.whitenoise.model.GroupContactScenario.Success,
+    onGroupContactScenario: (dev.ipf.whitenoise.model.GroupContactScenario) -> Unit = {},
+    createdChatUnavailable: Boolean = false,
+    onCreatedChatUnavailable: (Boolean) -> Unit = {},
     accessScenario: dev.ipf.whitenoise.model.AccessScenario = dev.ipf.whitenoise.model.AccessScenario.Success,
     onAccessScenario: (dev.ipf.whitenoise.model.AccessScenario) -> Unit = {},
     onStartupFailure: () -> Unit = {},
@@ -84,6 +90,12 @@ fun DeveloperToolsScreen(
     val tools = profile.developerTools
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var peopleScenariosOpen by remember { mutableStateOf(false) }
+    var groupScenariosOpen by remember { mutableStateOf(false) }
+    if (peopleScenariosOpen) ScenarioChoiceDialog("People search", dev.ipf.whitenoise.model.PeopleSearchScenario.entries,
+        peopleSearchScenario, { it.developerLabel }, onPeopleSearchScenario, { peopleScenariosOpen = false })
+    if (groupScenariosOpen) ScenarioChoiceDialog("Group contact actions", dev.ipf.whitenoise.model.GroupContactScenario.entries,
+        groupContactScenario, { it.developerLabel }, onGroupContactScenario, { groupScenariosOpen = false })
     var showAccessScenarios by rememberSaveable(profile.id) { mutableStateOf(false) }
     var showExitScenarios by rememberSaveable(profile.id) { mutableStateOf(false) }
     if (showAccessScenarios && tools.isEnabled) AccessScenarioDialog(
@@ -135,6 +147,12 @@ fun DeveloperToolsScreen(
                 item { SettingsSection("Access testing") }
                 item {
                     SettingsGroup {
+                        SettingsLink("People search scenarios", peopleSearchScenario.developerLabel, { peopleScenariosOpen = true })
+                        SettingsDivider()
+                        SettingsLink("Group contact scenarios", groupContactScenario.developerLabel, { groupScenariosOpen = true })
+                        SettingsDivider()
+                        SettingsSwitch("Next created chat cannot open", createdChatUnavailable, onCreatedChatUnavailable)
+                        SettingsDivider()
                         SettingsLink("Access scenarios", accessScenario.developerLabel, { showAccessScenarios = true })
                         SettingsDivider()
                         SettingsAction("Preview startup failure", onClick = onStartupFailure)

@@ -599,7 +599,7 @@ private fun ChatInfoMemberRow(
 ) {
     val isSelf = member.personId == profile.id
     val person = if (isSelf) null else profile.people.firstOrNull { it.id == member.personId }
-    val name = if (isSelf) stringResource(R.string.you) else person?.name ?: member.personId
+    val name = if (isSelf) stringResource(R.string.you) else person?.displayName ?: member.personId
     val headline: @Composable () -> Unit = { Text(name) }
     val supporting: @Composable () -> Unit = {
         Text(stringResource(if (member.role == GroupRole.Admin) R.string.admin else R.string.member))
@@ -1030,7 +1030,7 @@ fun AddGroupMembersScreen(
         profile.people
             .filter { it.id !in existing && it.id != profile.id }
             .filter { it.name.contains(query, ignoreCase = true) }
-            .sortedBy(Person::name)
+            .sortedBy(Person::displayName)
     }
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -1055,7 +1055,7 @@ fun AddGroupMembersScreen(
                     val checked = person.id in selected
                     ListItem(
                         headlineContent = {
-                            Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(person.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         },
                         supportingContent = {
                             Text(
@@ -1066,7 +1066,7 @@ fun AddGroupMembersScreen(
                         },
                         leadingContent = {
                             ProfileAvatar(
-                                person.name,
+                                person.displayName,
                                 person.avatar,
                                 Modifier.size(48.dp),
                                 contentDescription = null,

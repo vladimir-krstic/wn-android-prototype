@@ -271,7 +271,11 @@ data class Person(
     val avatar: ProfileAvatar = ProfileAvatar.Monogram,
     val isFollowing: Boolean = true,
     val isBlocked: Boolean = false,
+    val nickname: String = "",
+    val privateNotes: String = "",
 ) {
+    val displayName: String get() = nickname.ifBlank { name }
+
     val shortPublicKey: String
         get() = if (publicKey.length <= 17) publicKey else "${publicKey.take(12)}…${publicKey.takeLast(4)}"
 

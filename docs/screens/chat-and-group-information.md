@@ -1,5 +1,10 @@
 # Chat and group information
 
+2026-09-04: B03 extends discovery, private contact details, created-chat opening
+recovery and profile-to-group actions. See [people-discovery-and-private-details.md](people-discovery-and-private-details.md).
+The existing identity/header/group composition remains authoritative; the older
+single-group picker is replaced by checked multiple selection and confirmation.
+
 Status: Info-screen redesign passed the host gate on 2026-09-03: 186 unit
 tests, lint without errors, app assembly, and instrumentation-test APK
 compilation. Current-build visual inspection and user acceptance remain

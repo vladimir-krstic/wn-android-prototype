@@ -119,7 +119,7 @@ object ConversationMediaProjection {
         senderName = if (message.authorId == profile.id) {
             "You"
         } else {
-            profile.people.firstOrNull { it.id == message.authorId }?.name ?: chat.title
+            profile.people.firstOrNull { it.id == message.authorId }?.displayName ?: chat.title
         },
         sentLabel = "${message.dayLabel}, ${message.timeLabel}",
     )
@@ -156,7 +156,7 @@ object SharedContentProjection {
                         senderName = if (message.authorId == profile.id) {
                             "You"
                         } else {
-                            profile.people.firstOrNull { it.id == message.authorId }?.name ?: chat.title
+                            profile.people.firstOrNull { it.id == message.authorId }?.displayName ?: chat.title
                         },
                         sentLabel = "${message.dayLabel}, ${message.timeLabel}",
                     )

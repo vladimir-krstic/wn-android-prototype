@@ -171,7 +171,7 @@ object ConversationSearch {
     private fun ChatMessage.searchableText(profile: Profile): String = buildString {
         append(InlineMessageMarkup.plainText(text))
         append(' ')
-        append(if (authorId == profile.id) profile.name else profile.people.firstOrNull { it.id == authorId }?.name.orEmpty())
+        append(if (authorId == profile.id) profile.name else profile.people.firstOrNull { it.id == authorId }?.displayName.orEmpty())
         attachments.forEach { attachment ->
             append(' ')
             append(attachment.label)

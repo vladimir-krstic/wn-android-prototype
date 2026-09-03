@@ -22,6 +22,13 @@ import dev.ipf.whitenoise.model.MessageDeliveryState
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
 import dev.ipf.whitenoise.model.Person
+import dev.ipf.whitenoise.model.PeopleSearchScenario
+import dev.ipf.whitenoise.model.GroupContactScenario
+import dev.ipf.whitenoise.model.GroupContactAction
+import dev.ipf.whitenoise.model.GroupContactPolicy
+import dev.ipf.whitenoise.model.GroupContactResult
+import dev.ipf.whitenoise.model.PrivateContactDetails
+import dev.ipf.whitenoise.model.CreatedChatOpen
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.model.ProfileFixtures
@@ -140,6 +147,7 @@ class AppViewModel(
         if (uiState.profiles.none { it.id == profileId }) return
         cancelAccess()
         profileExitAttempt = null
+        cancelCreatedChatOpen()
         uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
     }
 
@@ -482,6 +490,7 @@ class AppViewModel(
 
     fun signOutActiveProfile(wipeData: Boolean): ProfileExitDestination? {
         val activeId = uiState.activeProfileId ?: return null
+        cancelCreatedChatOpen()
         cancelAccess()
         val signedIn = uiState.signedInProfileIds - activeId
         val profiles = if (wipeData) uiState.profiles.filterNot { it.id == activeId } else uiState.profiles
@@ -539,6 +548,7 @@ class AppViewModel(
         val destination = signOutActiveProfile(next.options.wipeData)
         profileExitReport = next.takeIf { it.hasIncompleteWork }
         profileExitAttempt = null
+        cancelCreatedChatOpen()
         return destination
     }
 
@@ -588,6 +598,10 @@ class AppViewModel(
         profileExitAttempt = null
         profileExitReport = null
         nextProfileExitScenario = ProfileExitScenario.Success
+        peopleSearchScenario = PeopleSearchScenario.Success
+        groupContactScenario = GroupContactScenario.Success
+        nextCreatedChatUnavailable = false
+        cancelCreatedChatOpen()
         uiState = AppUiState()
         createdChatSequence = 0
         return true
@@ -720,6 +734,118 @@ class AppViewModel(
             profile.copy(chats = chats)
         }
         return changed
+    }
+
+    var peopleSearchScenario by mutableStateOf(PeopleSearchScenario.Success)
+        private set
+    var groupContactScenario by mutableStateOf(GroupContactScenario.Success)
+        private set
+    var nextCreatedChatUnavailable by mutableStateOf(false)
+        private set
+    var createdChatOpen by mutableStateOf<CreatedChatOpen?>(null)
+        private set
+    var createdChatProjectionUnavailable by mutableStateOf(false)
+        private set
+    private var createdChatOpenSequence = 0L
+
+    fun selectPeopleSearchScenario(value: PeopleSearchScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) peopleSearchScenario = value
+    }
+    fun selectGroupContactScenario(value: GroupContactScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) groupContactScenario = value
+    }
+    fun setCreatedChatUnavailable(value: Boolean) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextCreatedChatUnavailable = value
+    }
+
+    fun acceptDiscoveredPerson(profileId: String, person: Person): String? {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return null
+        if (person.publicKey == profile.publicKey || person.id == profileId) return null
+        profile.people.firstOrNull { it.publicKey == person.publicKey }?.let { return it.id }
+        updateActiveProfile { it.copy(people = it.people + person.copy(nickname = "", privateNotes = "")) }
+        return person.id
+    }
+
+    fun savePrivateContact(profileId: String, personId: String, nickname: String, notes: String): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return false
+        val person = profile.people.firstOrNull { it.id == personId } ?: return false
+        val updated = person.copy(nickname = PrivateContactDetails.nickname(nickname), privateNotes = PrivateContactDetails.notes(notes))
+        fun contactLabel(attachment: MessageAttachment): MessageAttachment = if (attachment.contactPersonId == personId) {
+            attachment.copy(label = "Contact: ${updated.displayName}")
+        } else attachment
+        updateActiveProfile { current -> current.copy(
+            people = current.people.map { if (it.id == personId) updated else it },
+            chats = current.chats.map { chat ->
+                val timeline = chat.timeline.map { entry -> if (entry is ChatTimelineEntry.Message) {
+                    ChatTimelineEntry.Message(entry.message.copy(attachments = entry.message.attachments.map(::contactLabel)))
+                } else entry }
+                chat.copy(
+                    title = if ((chat.kind as? ChatKind.Direct)?.personId == personId) updated.displayName else chat.title,
+                    previewAuthor = if (chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().lastOrNull()?.message?.authorId == personId) updated.displayName else chat.previewAuthor,
+                    attachmentPreview = if (chat.attachmentPreview is AttachmentPreview.Contact && chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().lastOrNull()?.message?.attachments?.firstOrNull()?.contactPersonId == personId) AttachmentPreview.Contact(updated.displayName) else chat.attachmentPreview,
+                    timeline = timeline,
+                    draftAttachments = chat.draftAttachments.map(::contactLabel),
+                )
+            },
+        ) }
+        return true
+    }
+
+    fun applyContactToGroups(profileId: String, personId: String, groupIds: List<String>, action: GroupContactAction): GroupContactResult {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId }
+            ?: return GroupContactResult(emptyList(), groupIds.distinct())
+        val eligible = GroupContactPolicy.eligible(profile, personId, action).map(Chat::id).toSet()
+        val selected = groupIds.distinct()
+        val scenario = groupContactScenario
+        val unresolved = GroupContactPolicy.unresolved(profile, scenario)
+        val completed = mutableListOf<String>()
+        val failed = mutableListOf<String>()
+        selected.forEachIndexed { index, chatId ->
+            val fail = chatId !in eligible || chatId in unresolved ||
+                (scenario == GroupContactScenario.PartialApply && index == selected.lastIndex)
+            val changed = !fail && when (action) {
+                GroupContactAction.Invite -> addGroupMembers(chatId, listOf(personId))
+                GroupContactAction.Promote -> setGroupMemberAdmin(chatId, personId, true)
+            }
+            if (changed) completed += chatId else failed += chatId
+        }
+        if (scenario == GroupContactScenario.PartialApply) groupContactScenario = GroupContactScenario.Success
+        return GroupContactResult(completed, failed)
+    }
+
+    fun retryContactRoster(profileId: String) {
+        if (uiState.activeProfileId == profileId) groupContactScenario = GroupContactScenario.Success
+    }
+
+    fun startDirectConversation(personId: String, origin: String): CreatedChatOpen? {
+        createdChatOpen?.let { return it.takeIf { request -> request.profileId == uiState.activeProfileId && request.origin == origin } }
+        val chatId = openOrCreateDirectChat(personId) ?: return null
+        return prepareCreatedChatOpen(chatId, origin)
+    }
+
+    fun startGroupConversation(name: String, description: String, avatar: ProfileAvatar, personIds: List<String>, origin: String): CreatedChatOpen? {
+        createdChatOpen?.let { return it.takeIf { request -> request.profileId == uiState.activeProfileId && request.origin == origin } }
+        val chatId = createGroup(name, description, avatar, personIds) ?: return null
+        return prepareCreatedChatOpen(chatId, origin)
+    }
+
+    private fun prepareCreatedChatOpen(chatId: String, origin: String): CreatedChatOpen? {
+        val profileId = uiState.activeProfileId ?: return null
+        createdChatProjectionUnavailable = nextCreatedChatUnavailable
+        nextCreatedChatUnavailable = false
+        return CreatedChatOpen(++createdChatOpenSequence, profileId, origin, chatId).also { createdChatOpen = it }
+    }
+
+    fun completeCreatedChatOpen(requestId: Long, origin: String): String? {
+        val request = createdChatOpen ?: return null
+        if (request.id != requestId || request.origin != origin || request.profileId != uiState.activeProfileId || chat(request.chatId) == null) return null
+        cancelCreatedChatOpen()
+        return request.chatId
+    }
+
+    fun cancelCreatedChatOpen() { createdChatOpen = null; createdChatProjectionUnavailable = false }
+    fun reconcileCreatedChatOrigin(origin: String?) {
+        if (createdChatOpen?.let { it.profileId != uiState.activeProfileId || it.origin != origin } == true) cancelCreatedChatOpen()
     }
 
     fun toggleFollowing(personId: String) {
@@ -1218,7 +1344,7 @@ class AppViewModel(
             id = id,
             originalOrder = 0,
             kind = ChatKind.Direct(personId),
-            title = person.name,
+            title = person.displayName,
             avatar = person.avatar,
             preview = "You started the chat.",
             relayUrls = profile.chatRelayUrls,
@@ -1347,7 +1473,7 @@ class AppViewModel(
             if (!actorIsAdmin || member == null || member.role == desired || chat.membership != ChatMembership.Active) return@mutateChat chat
             if (!isAdmin && chat.members.count { it.role == GroupRole.Admin } <= 1) return@mutateChat chat
             changed = true
-            val name = uiState.activeProfile?.people?.firstOrNull { it.id == personId }?.name ?: "Member"
+            val name = uiState.activeProfile?.people?.firstOrNull { it.id == personId }?.displayName ?: "Member"
             val (day, minute) = nextTimelinePosition(chat)
             chat.copy(
                 members = chat.members.map { if (it.personId == personId) it.copy(role = desired) else it },
@@ -1373,7 +1499,7 @@ class AppViewModel(
             if (!actorIsAdmin || member == null || chat.membership != ChatMembership.Active) return@mutateChat chat
             if (member.role == GroupRole.Admin && chat.members.count { it.role == GroupRole.Admin } <= 1) return@mutateChat chat
             changed = true
-            val name = uiState.activeProfile?.people?.firstOrNull { it.id == personId }?.name ?: "Member"
+            val name = uiState.activeProfile?.people?.firstOrNull { it.id == personId }?.displayName ?: "Member"
             val (day, minute) = nextTimelinePosition(chat)
             chat.copy(
                 members = chat.members.filterNot { it.personId == personId },
@@ -1425,6 +1551,7 @@ class AppViewModel(
         uiState.activeProfile?.people?.firstOrNull { it.id == personId }
 
     private fun activate(profile: Profile, updatesStoredProfile: Boolean) {
+        cancelCreatedChatOpen()
         val profiles = uiState.profiles.toMutableList()
         val index = profiles.indexOfFirst { it.id == profile.id }
         if (index >= 0) {

@@ -990,7 +990,7 @@ private fun FocusedMessageActionsOverlay(
     val maximumTop = (dialogHeightPx - bottomInsetPx - marginPx - contentHeightPx).coerceAtLeast(minimumTop)
     val contentTop = desiredTop.coerceIn(minimumTop, maximumTop)
     val previewDescription = buildString {
-        append(if (outgoing) profile.name else profile.people.firstOrNull { it.id == message.authorId }?.name ?: chat.title)
+        append(if (outgoing) profile.name else profile.people.firstOrNull { it.id == message.authorId }?.displayName ?: chat.title)
         val visible = message.plainVisibleText(profile.id)
         if (visible.isNotBlank()) append(", $visible")
         message.attachments.forEach { append(", ${it.label}") }
@@ -1583,7 +1583,7 @@ private fun MessageRow(
     val message = item.message
     val outgoing = message.authorId == profile.id
     val author = profile.people.firstOrNull { it.id == message.authorId }
-    val authorName = if (outgoing) stringResource(R.string.you) else author?.name ?: chat.title
+    val authorName = if (outgoing) stringResource(R.string.you) else author?.displayName ?: chat.title
     val verticalPadding = when {
         item.startsCluster && !contextPreview -> WhiteNoiseSpacing.FormField
         else -> 0.dp
@@ -2334,7 +2334,7 @@ private fun ReplyQuote(
     val source = item.resolvedReply
     val author = source?.let { message ->
         if (message.authorId == profile.id) stringResource(R.string.you) else {
-            profile.people.firstOrNull { it.id == message.authorId }?.name
+            profile.people.firstOrNull { it.id == message.authorId }?.displayName
                 ?: stringResource(R.string.unknown_person)
         }
     }

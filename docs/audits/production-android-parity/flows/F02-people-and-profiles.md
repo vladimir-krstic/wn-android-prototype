@@ -17,15 +17,15 @@ These labels are the audit recommendation and follow current prototype terminolo
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
 | C012 · Direct-chat creation and existing-chat reuse | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C013 · People search by name, public identifier or address | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add local/following/network-result distinctions, resolving, partial results, retry, invalid npub and address not found; unresolved non-member can receive an invite link. |
-| C014 · Creation succeeds but conversation projection is unavailable | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Remember the created ID and retry opening it without creating a duplicate; drop completion after navigation/profile changes. |
+| C013 · People search by name, public identifier or address | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Search distinguishes local/chats/following/network results; resolving, invalid public key/address, address-not-found, no-profile, partial/unavailable and retry paths exist. Local rows remain available, and unresolved people can receive a standard invitation share. |
+| C014 · Creation succeeds but conversation projection is unavailable | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Direct/group creation records a canonical ID before opening. An unavailable projection retries that ID without duplicate creation; close returns to Chats, and navigation/profile changes reject stale completion. |
 | C015 · Own profile display name/about/avatar/verified address | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
 | C016 · Profile banner and large avatar viewer | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add banner choice/URL/removal and loading/failure states; open avatar image from own and other profiles without entering edit. |
 | C017 · Lightning address field and validation | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add syntactic validation, checking, unresolved and no-connection outcomes and read-only display in person profile; use a deterministic non-payment fixture. |
 | C018 · Generate a new suggested display name | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Offer a name suggestion action that changes only the draft, with deterministic suggestions and explicit Save. |
-| C019 · Private nickname and contact notes | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add per-profile nickname/notes editing; nickname cleaned/capped at 80 characters; clear restores published name. Propagate names to chats, search, shares and roster; never change published metadata. |
+| C019 · Private nickname and contact notes | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Profile-owned nickname/notes editing cleans and caps nickname at 80 characters. Clearing restores published name. Display names propagate to chats, search, authors, mentions, contacts/shared content and roster; published metadata and private notes stay separate. |
 | C020 · Follow/unfollow and groups in common | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C021 · Profile-to-group invitation and promotion across groups | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add Start group with person, eligible multi-group add and eligible admin-promotion selection, pending/partial roster lookup and retry; use authoritative role fixtures. |
+| C021 · Profile-to-group invitation and promotion across groups | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Start group preselects the person. Multi-group invite/admin promotion checks active authoritative roles, resolving/partial/unavailable rosters, confirmation and retry. Partial application preserves successes and retains only failed selections. |
 
 ## Production integration seam
 
@@ -45,3 +45,12 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B03, B04. Decisions: None. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B03 implementation evidence
+
+C013, C014, C019 and C021 are implemented and host-verified 2026-09-04. The
+[selected brief](../../../screens/people-discovery-and-private-details.md#implementation-evidence)
+records source/result states, private details, canonical chat-open recovery and
+role-checked group actions. The clean gate passed 231 unit tests, zero lint
+errors and both APKs; seven new UI cases compile. B04 owns the remaining profile
+banner/avatar/Lightning/name-suggestion additions. Device/visual acceptance pending.

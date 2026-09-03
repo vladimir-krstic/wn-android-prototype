@@ -37,6 +37,13 @@ manual TalkBack/system-surface pass. Exact findings and commits are recorded in
 
 ## Onboarding and profiles
 
+2026-09-04 production B03: C013, C014, C019 and C021 are implemented and
+host-verified. Search result/retry states, private nickname/notes, canonical
+created-chat opening and profile-to-group invitation/admin selection extend the
+accepted people flows. See [`people-discovery-and-private-details.md`](../screens/people-discovery-and-private-details.md).
+The clean gate passed 231 unit tests, both APKs and zero lint errors; seven new
+UI cases compile. Device/visual acceptance remains pending.
+
 2026-09-04 production B02: C007–C010 are implemented and host-verified.
 Local key availability, temporary reveal/export, optional connection-information
 cleanup, staged wipe, owner guards, retries and partial reports are covered in

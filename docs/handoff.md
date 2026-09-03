@@ -1,12 +1,14 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B02 are implemented and host-verified.
+2026-09-04: production parity B01–B03 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. Continue with B03. Q05 is resolved by the approved checked wipe
+record evidence. Continue with B04. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
-key availability. Latest clean gate: 216 unit tests, zero lint errors, both APKs;
+key availability. B03 adds people-search/group scenarios and created-chat opening
+recovery; `docs/screens/people-discovery-and-private-details.md` records private
+detail/name propagation and group-role checks. Latest clean gate: 231 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The native Android port is functionally complete inside the approved offline,

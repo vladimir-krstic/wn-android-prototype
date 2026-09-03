@@ -114,11 +114,19 @@ import dev.ipf.whitenoise.ui.settings.SettingsLink
 import dev.ipf.whitenoise.ui.settings.SettingsScaffold
 import dev.ipf.whitenoise.ui.settings.SettingsSection
 import dev.ipf.whitenoise.ui.settings.copyToClipboard
+import dev.ipf.whitenoise.model.matchesPeopleQuery
+import dev.ipf.whitenoise.model.PeopleDiscovery
+import dev.ipf.whitenoise.model.PeopleSearchScenario
+import dev.ipf.whitenoise.model.PeopleSearchResult
+import dev.ipf.whitenoise.model.PeopleSearchStatus
+import dev.ipf.whitenoise.model.PersonSource
+import dev.ipf.whitenoise.model.GroupContactAction
+import dev.ipf.whitenoise.model.GroupContactScenario
+import dev.ipf.whitenoise.model.GroupContactResult
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.Normalizer
 
 @Composable
 fun NewChatScreen(
@@ -127,13 +135,20 @@ fun NewChatScreen(
     onNewGroup: () -> Unit,
     onPerson: (String) -> Unit,
     modifier: Modifier = Modifier,
+    searchScenario: PeopleSearchScenario = PeopleSearchScenario.Success,
+    onResolvedPerson: (Person) -> Unit = { onPerson(it.id) },
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
-    val people = remember(profile.people, profile.id, query) {
-        profile.people
-            .filter { it.id != profile.id && it.id != "white-noise-support" }
-            .filter { it.matches(query) }
-            .sortedBy(Person::name)
+    var query by rememberSaveable(profile.id) { mutableStateOf("") }
+    var retry by remember(profile.id) { mutableIntStateOf(0) }
+    var resolving by remember(profile.id, query, retry) { mutableStateOf(query.isNotBlank()) }
+    var searchResult by remember(profile.id, query, retry) {
+        mutableStateOf(PeopleSearchResult(PeopleDiscovery.local(profile, query), PeopleSearchStatus.Ready))
+    }
+    LaunchedEffect(profile.id, profile.people, query, retry) {
+        resolving = query.isNotBlank()
+        if (resolving) delay(600)
+        searchResult = PeopleDiscovery.resolve(profile, query, if (retry > 0) PeopleSearchScenario.Success else searchScenario)
+        resolving = false
     }
     val bottomScrollClearance = WindowInsets.safeDrawing
         .only(WindowInsetsSides.Bottom)
@@ -171,25 +186,26 @@ fun NewChatScreen(
                     )
                 }
             }
-            item { SettingsSection(stringResource(R.string.people)) }
-            itemsIndexed(people, key = { _, person -> person.id }) { index, person ->
-                CreationPersonRow(
-                    person = person,
-                    onClick = { onPerson(person.id) },
-                    groupIndex = index,
-                    groupCount = people.size,
-                    showDivider = index != people.lastIndex,
-                )
-            }
-            if (people.isEmpty()) {
+            item { PeopleSearchFeedback(profile, searchResult.status, resolving, onRetry = { retry++ }) }
+            val sourceGroups = if (query.isBlank()) mapOf(null to searchResult.people) else searchResult.people.groupBy { it.source }
+            sourceGroups.forEach { (source, results) ->
                 item {
-                    WhiteNoiseEmptyState(
-                        title = stringResource(R.string.no_results),
-                        detail = stringResource(R.string.no_results_detail),
-                        modifier = Modifier.fillMaxWidth(),
+                    SettingsSection(stringResource(when (source) {
+                        null -> R.string.people
+                        PersonSource.Chats -> R.string.people_source_chats
+                        PersonSource.Following -> R.string.people_source_following
+                        PersonSource.Network -> R.string.people_source_network
+                        PersonSource.Local -> R.string.people_source_local
+                    }))
+                }
+                itemsIndexed(results, key = { _, result -> result.person.id }) { index, result ->
+                    CreationPersonRow(
+                        person = result.person, onClick = { onResolvedPerson(result.person) },
+                        groupIndex = index, groupCount = results.size, showDivider = index != results.lastIndex,
                     )
                 }
             }
+
         }
     }
 }
@@ -211,13 +227,24 @@ fun PersonProfileScreen(
     onOpenRelays: () -> Unit = {},
     onGroupsInCommon: () -> Unit = {},
     onAddToGroup: (String) -> Boolean = { false },
+    onSavePrivateContact: (String, String) -> Boolean = { _, _ -> false },
+    onStartGroup: () -> Unit = {},
+    groupScenario: GroupContactScenario = GroupContactScenario.Success,
+    onRetryRoster: () -> Unit = {},
+    onApplyGroups: (List<String>, GroupContactAction) -> GroupContactResult = { ids, _ ->
+        val completed = ids.filter(onAddToGroup); GroupContactResult(completed, ids - completed.toSet())
+    },
 ) {
+    var showPrivateDetails by rememberSaveable(profile.id, person.id) { mutableStateOf(false) }
+    var groupAction by remember(profile.id, person.id) { mutableStateOf<GroupContactAction?>(null) }
+    if (showPrivateDetails) PrivateContactDialog(person, { showPrivateDetails = false }, onSavePrivateContact)
+    groupAction?.let { action -> ContactGroupsSheet(profile, person, action, groupScenario,
+        onDismiss = { groupAction = null }, onRetryRoster = onRetryRoster, onApply = onApplyGroups) }
     val context = LocalContext.current
     var showRelayError by remember { mutableStateOf(false) }
     var showBlockConfirmation by remember { mutableStateOf(false) }
     var showRoleConfirmation by remember { mutableStateOf(false) }
     var showRemoveConfirmation by remember { mutableStateOf(false) }
-    var showAddToGroup by rememberSaveable(person.id) { mutableStateOf(false) }
     var copied by rememberSaveable(person.id) { mutableStateOf(false) }
     val groups = remember(profile.chats, person.id) {
         profile.groupsSharedWith(person.id)
@@ -320,13 +347,16 @@ fun PersonProfileScreen(
                             onClick = onGroupsInCommon,
                             leading = { GroupAvatarStack(groups) },
                         )
-                    } else {
-                        SettingsAction(
-                            title = stringResource(R.string.add_to_group),
-                            onClick = { showAddToGroup = true },
-                            leading = { ProfileActionIcon(R.drawable.ic_group_add) },
-                        )
+                        SettingsDivider()
                     }
+                    SettingsAction(title = stringResource(R.string.contact_private_details), onClick = { showPrivateDetails = true })
+                    SettingsDivider()
+                    SettingsAction(title = stringResource(R.string.contact_start_group), onClick = onStartGroup,
+                        leading = { ProfileActionIcon(R.drawable.ic_group_add) })
+                    SettingsDivider()
+                    SettingsAction(title = stringResource(R.string.contact_add_groups), onClick = { groupAction = GroupContactAction.Invite })
+                    SettingsDivider()
+                    SettingsAction(title = stringResource(R.string.contact_promote_groups), onClick = { groupAction = GroupContactAction.Promote })
                     SettingsDivider()
                     SettingsAction(
                         title = stringResource(if (person.isFollowing) R.string.unfollow else R.string.follow),
@@ -393,7 +423,7 @@ fun PersonProfileScreen(
     if (showBlockConfirmation) {
         AlertDialog(
             onDismissRequest = { showBlockConfirmation = false },
-            title = { Text(stringResource(R.string.block_person_question, person.name)) },
+            title = { Text(stringResource(R.string.block_person_question, person.displayName)) },
             text = { Text(stringResource(R.string.block_person_detail)) },
             confirmButton = {
                 TextButton(onClick = { showBlockConfirmation = false; onToggleBlock() }) {
@@ -410,7 +440,7 @@ fun PersonProfileScreen(
                 Text(
                     stringResource(
                         if (groupRole == GroupRole.Admin) R.string.remove_admin_question else R.string.make_admin_question,
-                        person.name,
+                        person.displayName,
                     ),
                 )
             },
@@ -425,7 +455,7 @@ fun PersonProfileScreen(
     if (showRemoveConfirmation) {
         AlertDialog(
             onDismissRequest = { showRemoveConfirmation = false },
-            title = { Text(stringResource(R.string.remove_member_question, person.name)) },
+            title = { Text(stringResource(R.string.remove_member_question, person.displayName)) },
             confirmButton = {
                 TextButton(onClick = { if (onRemoveFromGroup()) onBack() }) {
                     Text(stringResource(R.string.remove_from_group), color = MaterialTheme.colorScheme.error)
@@ -434,17 +464,7 @@ fun PersonProfileScreen(
             dismissButton = { TextButton(onClick = { showRemoveConfirmation = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
-    if (showAddToGroup) {
-        AddPersonToGroupFlow(
-            profile = profile,
-            person = person,
-            title = stringResource(
-                if (groups.isEmpty()) R.string.add_to_group else R.string.add_to_another_group,
-            ),
-            onDismiss = { showAddToGroup = false },
-            onAdd = onAddToGroup,
-        )
-    }
+
 }
 
 @Composable
@@ -455,6 +475,11 @@ fun GroupsInCommonScreen(
     onOpenGroup: (String) -> Unit,
     onAddToGroup: (String) -> Boolean,
     modifier: Modifier = Modifier,
+    groupScenario: GroupContactScenario = GroupContactScenario.Success,
+    onRetryRoster: () -> Unit = {},
+    onApplyGroups: (List<String>, GroupContactAction) -> GroupContactResult = { ids, _ ->
+        val completed = ids.filter(onAddToGroup); GroupContactResult(completed, ids - completed.toSet())
+    },
 ) {
     var showAddToGroup by rememberSaveable(person.id) { mutableStateOf(false) }
     val groups = remember(profile.chats, person.id) { profile.groupsSharedWith(person.id) }
@@ -496,13 +521,8 @@ fun GroupsInCommonScreen(
         }
     }
     if (showAddToGroup) {
-        AddPersonToGroupFlow(
-            profile = profile,
-            person = person,
-            title = stringResource(R.string.add_to_another_group),
-            onDismiss = { showAddToGroup = false },
-            onAdd = onAddToGroup,
-        )
+        ContactGroupsSheet(profile, person, GroupContactAction.Invite, groupScenario,
+            onDismiss = { showAddToGroup = false }, onRetryRoster = onRetryRoster, onApply = onApplyGroups)
     }
 }
 
@@ -512,14 +532,17 @@ fun NewGroupScreen(
     onBack: () -> Unit,
     onContinue: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
+    initialPersonId: String? = null,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var selectedIds by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var selectedIds by rememberSaveable(profile.id, initialPersonId) {
+        mutableStateOf(listOfNotNull(initialPersonId).filter { id -> profile.people.any { it.id == id } })
+    }
     val selectablePeople = remember(profile.people, profile.id, query) {
         profile.people
             .filter { it.id != profile.id && it.id != "white-noise-support" }
             .filter { it.matches(query) }
-            .sortedBy(Person::name)
+            .sortedBy(Person::displayName)
     }
     fun toggle(personId: String) {
         selectedIds = if (personId in selectedIds) selectedIds - personId else selectedIds + personId
@@ -850,15 +873,15 @@ internal fun PersonIdentityHeader(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ProfileAvatar(
-                name = person.name,
+                name = person.displayName,
                 avatar = person.avatar,
                 modifier = Modifier
                     .size(avatarSize)
                     .testTag("$testTagPrefix.avatar"),
-                contentDescription = stringResource(R.string.profile_photo_for, person.name),
+                contentDescription = stringResource(R.string.profile_photo_for, person.displayName),
             )
             Text(
-                text = person.name,
+                text = person.displayName,
                 modifier = Modifier
                     .padding(
                         start = WhiteNoiseSpacing.CompactScreenMargin,
@@ -1016,89 +1039,11 @@ private fun GroupLink(
 }
 
 @Composable
-private fun AddPersonToGroupFlow(
-    profile: Profile,
-    person: Person,
-    title: String,
-    onDismiss: () -> Unit,
-    onAdd: (String) -> Boolean,
-) {
-    var pendingGroup by remember(person.id) { mutableStateOf<Chat?>(null) }
-    val availableGroups = remember(profile.chats, profile.id, person.id) {
-        profile.availableGroupsFor(person.id)
-    }
-    WhiteNoiseModalBottomSheet(onDismissRequest = onDismiss) {
-        WhiteNoiseSheetHeader(title = title, onClose = onDismiss)
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 520.dp),
-            contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
-        ) {
-            if (availableGroups.isEmpty()) {
-                item {
-                    WhiteNoiseEmptyState(
-                        title = stringResource(R.string.no_available_groups),
-                        detail = stringResource(R.string.no_available_groups_detail),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            } else {
-                item {
-                    SettingsGroup {
-                        availableGroups.forEachIndexed { index, group ->
-                            SettingsAction(
-                                title = group.title,
-                                subtitle = pluralStringResource(
-                                    R.plurals.group_member_count,
-                                    group.members.size,
-                                    group.members.size,
-                                ),
-                                onClick = { pendingGroup = group },
-                                leading = {
-                                    ProfileAvatar(
-                                        name = group.title,
-                                        avatar = group.avatar,
-                                        modifier = Modifier.size(48.dp),
-                                        contentDescription = null,
-                                    )
-                                },
-                            )
-                            if (index != availableGroups.lastIndex) SettingsDivider()
-                        }
-                    }
-                }
-            }
-        }
-    }
-    pendingGroup?.let { group ->
-        AlertDialog(
-            onDismissRequest = { pendingGroup = null },
-            title = {
-                Text(stringResource(R.string.add_person_to_group_question, person.name, group.title))
-            },
-            text = { Text(stringResource(R.string.add_person_to_group_detail)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (onAdd(group.id)) {
-                            pendingGroup = null
-                            onDismiss()
-                        }
-                    },
-                ) { Text(stringResource(R.string.add)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingGroup = null }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
-}
-
-@Composable
 private fun SelectedPerson(
     person: Person,
     onRemove: () -> Unit,
 ) {
-    val removeDescription = stringResource(R.string.remove_person, person.name)
+    val removeDescription = stringResource(R.string.remove_person, person.displayName)
     val interactionSource = remember(person.id) { MutableInteractionSource() }
     Column(
         modifier = Modifier
@@ -1116,7 +1061,7 @@ private fun SelectedPerson(
     ) {
         Box(Modifier.size(72.dp)) {
             ProfileAvatar(
-                person.name,
+                person.displayName,
                 person.avatar,
                 Modifier
                     .size(64.dp)
@@ -1142,7 +1087,7 @@ private fun SelectedPerson(
             }
         }
         Text(
-            text = person.name,
+            text = person.displayName,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium,
@@ -1221,7 +1166,7 @@ private fun PersonRow(
     )
     val headline: @Composable () -> Unit = {
         Text(
-            text = person.name,
+            text = person.displayName,
             modifier = Modifier.testTag("creation.person.${person.id}.name"),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1232,7 +1177,7 @@ private fun PersonRow(
     }
     val leading: @Composable () -> Unit = {
         ProfileAvatar(
-            person.name,
+            person.displayName,
             person.avatar,
             Modifier.size(48.dp).testTag("creation.person.${person.id}.avatar"),
             contentDescription = null,
@@ -1400,18 +1345,4 @@ private fun Profile.groupsSharedWith(personId: String): List<Chat> = chats.filte
         chat.members.any { it.personId == personId }
 }
 
-private fun Profile.availableGroupsFor(personId: String): List<Chat> = chats.filter { chat ->
-    chat.isGroup &&
-        chat.membership == ChatMembership.Active &&
-        chat.members.firstOrNull { it.personId == id }?.role == GroupRole.Admin &&
-        chat.members.none { it.personId == personId }
-}
-
-private fun Person.matches(query: String): Boolean {
-    val needle = query.searchNormalized()
-    return needle.isEmpty() || name.searchNormalized().contains(needle) || publicKey.searchNormalized().contains(needle)
-}
-
-private fun String.searchNormalized(): String = Normalizer
-    .normalize(trim().lowercase(), Normalizer.Form.NFD)
-    .replace(Regex("\\p{Mn}+"), "")
+private fun Person.matches(query: String): Boolean = matchesPeopleQuery(query)

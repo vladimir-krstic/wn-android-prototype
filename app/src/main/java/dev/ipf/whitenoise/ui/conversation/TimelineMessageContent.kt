@@ -497,7 +497,7 @@ private fun DocumentOrContactCard(
             }
             Column(Modifier.weight(1f)) {
                 SearchHighlightedText(
-                    text = person?.name ?: attachment.label.removePrefix("Contact: "),
+                    text = person?.displayName ?: attachment.label.removePrefix("Contact: "),
                     query = searchQuery,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
