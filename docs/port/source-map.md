@@ -13,7 +13,10 @@ the accepted iOS scope or prototype-only features below. B03 maps discovery,
 private contact details, created-chat recovery and profile-to-group actions to
 `docs/screens/people-discovery-and-private-details.md`. B04 maps profile banner,
 avatar viewing, Lightning validation and generated name drafts to
-`docs/screens/profile-media-and-lightning.md`.
+`docs/screens/profile-media-and-lightning.md`. B05 maps pinned ordering, selection,
+local/leave-first deletion and connectivity recovery to
+`docs/screens/chat-organization-and-recovery.md`; folder assignment is the
+manual foundation for B06.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)

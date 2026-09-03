@@ -85,6 +85,14 @@ new device or visual acceptance is claimed. See
 
 ## Chats hub and creation
 
+2026-09-04 production B05: C024–C026 and C030 are implemented and host-verified.
+Selection, bulk updates with partial retry, pinned moves, explicit local/leave-first
+deletion, manual folder assignment/filtering and owned connection recovery
+extend Chats. C027–C029 are partial foundations only; B06 remains pending.
+See [chat-organization-and-recovery.md](../screens/chat-organization-and-recovery.md).
+The clean gate passed 262 unit tests, zero lint errors and both APKs; seven new
+UI cases compile. Device/visual acceptance remains pending.
+
 | Capability | Accepted parity scope | Android status |
 | --- | --- | --- |
 | Chats empty | Empty state, profile entry, New Message entry, relay recovery when relevant | Static gate passed 2026-08-26 — avatar-to-Settings, no default title, native icon-only New Message/Check Relays FAB in the active pane, hidden during search; edge-to-edge list with FAB content clearance; device acceptance pending |

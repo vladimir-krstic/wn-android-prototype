@@ -1,5 +1,9 @@
 # Chats and chat creation
 
+2026-09-04: B05 extends row menus with selection, pinned moves, folder assignment,
+active/local deletion and connection recovery. See [chat-organization-and-recovery.md](chat-organization-and-recovery.md).
+The existing row layout and text-measurement crash fix remain in use.
+
 2026-09-04: B03 extends discovery, private contact details, created-chat opening
 recovery and profile-to-group actions. See [people-discovery-and-private-details.md](people-discovery-and-private-details.md).
 The existing identity/header/group composition remains authoritative; the older

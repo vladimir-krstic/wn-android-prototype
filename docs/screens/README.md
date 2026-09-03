@@ -17,6 +17,7 @@ Current briefs:
 - `keys-and-profile-exit.md`
 - `people-discovery-and-private-details.md`
 - `profile-media-and-lightning.md`
+- `chat-organization-and-recovery.md`
 - `diagnostics-and-improvements.md`
 - `chats-and-chat-creation.md`
 - `shared-conversation-core.md`

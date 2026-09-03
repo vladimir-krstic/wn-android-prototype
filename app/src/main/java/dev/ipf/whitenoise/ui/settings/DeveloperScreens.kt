@@ -73,6 +73,9 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
+    chatBatchScenario: dev.ipf.whitenoise.model.ChatBatchScenario = dev.ipf.whitenoise.model.ChatBatchScenario.Success,
+    onChatBatchScenario: (dev.ipf.whitenoise.model.ChatBatchScenario) -> Unit = {},
+    onChatConnectionScenario: (dev.ipf.whitenoise.model.ChatConnectionScenario) -> Unit = {},
     profileSaveScenario: dev.ipf.whitenoise.model.ProfileSaveScenario = dev.ipf.whitenoise.model.ProfileSaveScenario.Success,
     onProfileSaveScenario: (dev.ipf.whitenoise.model.ProfileSaveScenario) -> Unit = {},
     profileImageFails: Boolean = false,
@@ -94,6 +97,14 @@ fun DeveloperToolsScreen(
     val tools = profile.developerTools
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var chatBatchOpen by remember { mutableStateOf(false) }
+    var chatConnectionOpen by remember { mutableStateOf(false) }
+    if (chatBatchOpen) ScenarioChoiceDialog("Chat actions", dev.ipf.whitenoise.model.ChatBatchScenario.entries,
+        chatBatchScenario, { it.developerLabel }, onChatBatchScenario, { chatBatchOpen = false })
+    if (chatConnectionOpen) ScenarioChoiceDialog("Chat connection", dev.ipf.whitenoise.model.ChatConnectionScenario.entries,
+        if (profile.chatConnection.retryFails) dev.ipf.whitenoise.model.ChatConnectionScenario.RetryFailure
+        else dev.ipf.whitenoise.model.ChatConnectionScenario.entries.first { it.name == profile.chatConnection.phase.name || (it == dev.ipf.whitenoise.model.ChatConnectionScenario.RetryFailure && profile.chatConnection.phase == dev.ipf.whitenoise.model.ChatConnectionPhase.Failed) },
+        { it.developerLabel }, onChatConnectionScenario, { chatConnectionOpen = false })
     var profileSaveScenariosOpen by remember { mutableStateOf(false) }
     if (profileSaveScenariosOpen) ScenarioChoiceDialog("Profile save", dev.ipf.whitenoise.model.ProfileSaveScenario.entries,
         profileSaveScenario, { it.developerLabel }, onProfileSaveScenario, { profileSaveScenariosOpen = false })
@@ -154,6 +165,10 @@ fun DeveloperToolsScreen(
                 item { SettingsSection("Access testing") }
                 item {
                     SettingsGroup {
+                        SettingsLink("Chat action scenarios", chatBatchScenario.developerLabel, { chatBatchOpen = true })
+                        SettingsDivider()
+                        SettingsLink("Chat connection scenarios", profile.chatConnection.phase.name, { chatConnectionOpen = true })
+                        SettingsDivider()
                         SettingsLink("Profile save scenarios", profileSaveScenario.developerLabel, { profileSaveScenariosOpen = true })
                         SettingsDivider()
                         SettingsSwitch("Next profile image fails", profileImageFails, onProfileImageFails)

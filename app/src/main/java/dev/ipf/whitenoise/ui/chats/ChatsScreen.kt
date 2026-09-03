@@ -1,6 +1,15 @@
 package dev.ipf.whitenoise.ui.chats
 
 import androidx.activity.compose.BackHandler
+import dev.ipf.whitenoise.model.ChatOrganization
+import dev.ipf.whitenoise.model.ChatBulkAction
+import dev.ipf.whitenoise.model.ChatBatchAttempt
+import dev.ipf.whitenoise.model.ChatBatchPhase
+import dev.ipf.whitenoise.model.ChatConnectionPhase
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -102,24 +111,57 @@ fun ChatsScreen(
     onSettings: () -> Unit = {},
     onProfileRelays: () -> Unit = {},
     onUndo: (ChatListUndo) -> Unit = {},
+    onMovePin: (String, Int) -> Unit = { _, _ -> },
+    onCreateFolder: (String) -> String? = { null },
+    onBeginBatch: ((List<String>, ChatBulkAction, String?, Boolean) -> Boolean)? = null,
+    batchAttempt: ChatBatchAttempt? = null,
+    onAdvanceBatch: (Long, Int, ChatBatchPhase) -> Boolean = { _, _, _ -> false },
+    onRetryBatch: () -> Unit = {},
+    onDismissBatch: () -> Unit = {},
+    onOpenGroup: (String) -> Unit = {},
+    onRetryConnection: () -> Unit = {},
+    onAdvanceConnection: (String, Long, ChatConnectionPhase) -> Boolean = { _, _, _ -> false },
 ) {
     val profile = uiState.activeProfile
     val searchChatsDescription = stringResource(R.string.search_chats)
     val closeSearchDescription = stringResource(R.string.close_search)
-    var scopeName by rememberSaveable { mutableStateOf(ChatScope.Chats.name) }
+    var scopeName by rememberSaveable(profile?.id) { mutableStateOf(ChatScope.Chats.name) }
     val scope = ChatScope.valueOf(scopeName)
-    var query by rememberSaveable { mutableStateOf("") }
-    var isSearching by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable(profile?.id) { mutableStateOf("") }
+    var isSearching by rememberSaveable(profile?.id) { mutableStateOf(false) }
     var filterMenuOpen by remember { mutableStateOf(false) }
     var muteChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
     var leaveChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
-    var deleteChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
+    var deleteIds by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
+    var folderTargets by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
+    var selectedIds by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
+    var folderId by rememberSaveable(profile?.id) { mutableStateOf<String?>(null) }
+    val selectedFolder = profile?.chatFolders?.firstOrNull { it.id == folderId }
     var soleAdminChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val rows = remember(profile?.chats, scope, query) {
-        ChatProjection.rows(profile?.chats.orEmpty(), scope, query)
+    val rows = remember(profile?.chats, scope, query, selectedFolder) {
+        if (selectedFolder == null) ChatProjection.rows(profile?.chats.orEmpty(), scope, query)
+        else profile.chats.filter { it.id in selectedFolder.chatIds }
+            .filter { query.isBlank() || it.title.contains(query.trim(), true) || it.displayPreview.contains(query.trim(), true) }
+            .sortedWith(ChatOrganization.order)
     }
+
+    val visibleSelected = ChatOrganization.reconcile(selectedIds, rows)
+    val selecting = visibleSelected.isNotEmpty()
+    val ownedAttempt = batchAttempt?.takeIf { it.profileId == profile?.id }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(profile?.id, profile?.chatConnection, lifecycle) {
+        val owner = profile ?: return@LaunchedEffect
+        val state = owner.chatConnection
+        if (state.phase == ChatConnectionPhase.Connecting || state.phase == ChatConnectionPhase.CatchingUp) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                delay(700)
+                onAdvanceConnection(owner.id, state.generation, state.phase)
+            }
+        }
+    }
+    LaunchedEffect(rows.map { it.id }) { selectedIds = ChatOrganization.reconcile(selectedIds, rows) }
 
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -139,7 +181,7 @@ fun ChatsScreen(
         menuTarget = null
         if (target.profileId != profile?.id) return
         val chat = profile.chats.firstOrNull { it.id == target.chatId } ?: return
-        if (action !in ChatListActionPolicy.all(chat)) return
+        if (action !in ChatOrganization.actions(chat, profile.chats)) return
         val undo = ChatListUndo.capture(profile.id, chat, action)
         when (action) {
             ChatListAction.Read -> onMarkUnread(chat.id, false)
@@ -150,7 +192,11 @@ fun ChatsScreen(
             ChatListAction.Archive -> onArchive(chat.id, true)
             ChatListAction.Unarchive -> onArchive(chat.id, false)
             ChatListAction.Leave -> if (chat.isSoleAdmin(profile.id)) soleAdminChat = chat else leaveChat = chat
-            ChatListAction.Delete -> deleteChat = chat
+            ChatListAction.Delete -> deleteIds = listOf(chat.id)
+            ChatListAction.Select -> { selectedIds = listOf(chat.id); focusManager.clearFocus(); keyboardController?.hide() }
+            ChatListAction.MoveUp -> onMovePin(chat.id, -1)
+            ChatListAction.MoveDown -> onMovePin(chat.id, 1)
+            ChatListAction.Folder -> folderTargets = listOf(chat.id)
         }
         undoJob?.cancel()
         snackbarHostState.currentSnackbarData?.dismiss()
@@ -178,6 +224,7 @@ fun ChatsScreen(
     }
 
     BackHandler(enabled = isSearching, onBack = ::closeSearch)
+    BackHandler(enabled = selecting) { selectedIds = emptyList() }
     BackHandler(enabled = menuTarget != null) { menuTarget = null }
 
     Scaffold(
@@ -185,7 +232,18 @@ fun ChatsScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             AdaptiveContent(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
-                Crossfade(
+                if (selecting) ChatSelectionBar(
+                    selected = rows.filter { it.id in visibleSelected },
+                    onClose = { selectedIds = emptyList() },
+                    onSelectAll = { selectedIds = rows.map { it.id } },
+                    onAction = { action ->
+                        when (action) {
+                            ChatBulkAction.Delete -> deleteIds = visibleSelected
+                            ChatBulkAction.Folder -> folderTargets = visibleSelected
+                            else -> onBeginBatch?.invoke(visibleSelected, action, null, false)
+                        }
+                    },
+                ) else Crossfade(
                     targetState = isSearching,
                     label = "Chats search mode",
                 ) { searching ->
@@ -200,9 +258,12 @@ fun ChatsScreen(
                         ChatsTopBar(
                             profile = profile,
                             scope = scope,
+                            folderId = selectedFolder?.id,
+                            onFolderChange = { folderId = it; filterMenuOpen = false },
                             filterMenuOpen = filterMenuOpen,
                             onFilterMenuOpenChange = { menuTarget = null; filterMenuOpen = it },
                             onScopeChange = {
+                                folderId = null
                                 scopeName = it.name
                                 filterMenuOpen = false
                             },
@@ -216,7 +277,7 @@ fun ChatsScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (!isSearching) {
+            if (!isSearching && !selecting) {
                 // Scaffold owns safe-area/16 dp FAB placement and Snackbar clearance.
                 // On wider windows only add the same centered-pane inset as the list.
                 BoxWithConstraints {
@@ -251,12 +312,17 @@ fun ChatsScreen(
                 state = listState,
                 modifier = Modifier.fillMaxSize().testTag("chats.list"),
                 contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() +
-                    if (isSearching) WhiteNoiseSpacing.CompactScreenMargin
+                    if (isSearching || selecting) WhiteNoiseSpacing.CompactScreenMargin
                     else 56.dp + WhiteNoiseSpacing.CompactScreenMargin * 2),
             ) {
+                profile?.let { owner ->
+                    item(key = "connection") { ChatConnectionBanner(owner, onRetryConnection, onProfileRelays) }
+                }
                 if (rows.isEmpty()) {
                     item {
-                        ChatEmptyState(scope, query.isNotBlank(), Modifier.fillParentMaxSize())
+                        if (selectedFolder != null && query.isBlank()) Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                            WhiteNoiseEmptyState(stringResource(R.string.chat_folder_empty), stringResource(R.string.chat_folder_empty_detail))
+                        } else ChatEmptyState(scope, query.isNotBlank(), Modifier.fillParentMaxSize())
                     }
                 }
                 items(rows, key = Chat::id) { chat ->
@@ -264,8 +330,19 @@ fun ChatsScreen(
                     ChatContextMenuRow(
                         chat = chat,
                         expanded = menuTarget == target,
-                        onOpen = { menuTarget = null; closeSearch(); onOpenChat(chat.id) },
-                        onShowMenu = { filterMenuOpen = false; menuTarget = target },
+                        onOpen = {
+                            menuTarget = null
+                            if (selecting) selectedIds = if (chat.id in selectedIds) selectedIds - chat.id else selectedIds + chat.id
+                            else { closeSearch(); onOpenChat(chat.id) }
+                        },
+                        onShowMenu = {
+                            filterMenuOpen = false
+                            if (selecting) selectedIds = if (chat.id in selectedIds) selectedIds - chat.id else selectedIds + chat.id
+                            else menuTarget = target
+                        },
+                        selecting = selecting,
+                        checked = chat.id in visibleSelected,
+                        availableActions = ChatOrganization.actions(chat, profile?.chats.orEmpty()),
                         onDismissMenu = { if (menuTarget == target) menuTarget = null },
                         onAction = { performAction(target, it) },
                     )
@@ -313,21 +390,26 @@ fun ChatsScreen(
         )
     }
 
-    deleteChat?.let { chat ->
-        AlertDialog(
-            onDismissRequest = { deleteChat = null },
-            title = { Text(stringResource(R.string.delete_chat_title)) },
-            text = { Text(stringResource(R.string.delete_chat_detail)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDelete(chat.id)
-                    deleteChat = null
-                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleteChat = null }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
+    if (profile != null && deleteIds.isNotEmpty()) ChatDeleteConfirmation(
+        chats = profile.chats.filter { it.id in deleteIds },
+        onDismiss = { deleteIds = emptyList() },
+        onConfirm = { leave ->
+            if (onBeginBatch == null) deleteIds.forEach(onDelete)
+            else onBeginBatch(deleteIds, ChatBulkAction.Delete, null, leave)
+            deleteIds = emptyList()
+        },
+    )
+    if (profile != null && folderTargets.isNotEmpty()) ChatFolderPicker(profile,
+        onDismiss = { folderTargets = emptyList() }, onCreate = onCreateFolder,
+        onSelect = { folder ->
+            onBeginBatch?.invoke(folderTargets, ChatBulkAction.Folder, folder, false)
+            folderTargets = emptyList()
+        },
+    )
+    ownedAttempt?.let { attempt ->
+        ChatBatchProgress(attempt, onAdvanceBatch,
+            onDismiss = { selectedIds = ChatOrganization.reconcile(attempt.failedIds, rows); onDismissBatch() },
+            onRetry = onRetryBatch, onOpenGroup = onOpenGroup)
     }
 }
 
@@ -336,6 +418,8 @@ fun ChatsScreen(
 private fun ChatsTopBar(
     profile: Profile?,
     scope: ChatScope,
+    folderId: String?,
+    onFolderChange: (String) -> Unit,
     filterMenuOpen: Boolean,
     onFilterMenuOpenChange: (Boolean) -> Unit,
     onScopeChange: (ChatScope) -> Unit,
@@ -344,7 +428,8 @@ private fun ChatsTopBar(
     searchChatsDescription: String,
 ) {
     val filterDescription = stringResource(R.string.filter_chats)
-    val scopeTitle = if (scope == ChatScope.Chats) stringResource(R.string.chats) else scope.label
+    val folder = profile?.chatFolders?.firstOrNull { it.id == folderId }
+    val scopeTitle = folder?.name ?: if (scope == ChatScope.Chats) stringResource(R.string.chats) else scope.label
     val selectedScopeDescription = stringResource(R.string.selected_chat_scope, scopeTitle)
     val settingsDescription = profile?.let {
         stringResource(R.string.open_settings_for, it.name)
@@ -352,7 +437,7 @@ private fun ChatsTopBar(
     TopAppBar(
         title = {
             Text(
-                text = if (scope == ChatScope.Chats) "" else scopeTitle,
+                text = if (scope == ChatScope.Chats && folder == null) "" else scopeTitle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.titleLarge,
@@ -379,7 +464,7 @@ private fun ChatsTopBar(
         },
         actions = {
             Box {
-                if (scope == ChatScope.Chats) {
+                if (scope == ChatScope.Chats && folder == null) {
                     IconButton(
                         onClick = { onFilterMenuOpenChange(true) },
                         modifier = Modifier.semantics {
@@ -416,8 +501,10 @@ private fun ChatsTopBar(
                         WhiteNoiseMenuItem(
                             label = candidate.label,
                             onClick = { onScopeChange(candidate) },
-                            selected = candidate == scope,
+                            selected = candidate == scope && folder == null,
                         )
+                    } + profile?.chatFolders.orEmpty().map { candidate ->
+                        WhiteNoiseMenuItem(label = candidate.name, onClick = { onFolderChange(candidate.id) }, selected = candidate.id == folderId)
                     },
                 )
             }

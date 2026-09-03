@@ -53,7 +53,7 @@ sealed interface ChatListStatus {
 }
 
 enum class ChatListAction {
-    Read, Unread, Pin, Unpin, Mute, Unmute, Archive, Unarchive, Leave, Delete;
+    Read, Unread, Pin, Unpin, Mute, Unmute, Archive, Unarchive, Leave, Delete, Select, MoveUp, MoveDown, Folder;
 
     val isDestructive: Boolean get() = this == Leave || this == Delete
 }
@@ -77,7 +77,8 @@ object ChatListActionPolicy {
         else if (chat.isGroup && chat.membership == ChatMembership.Active) add(ChatListAction.Leave)
     }
 
-    fun all(chat: Chat): List<ChatListAction> = leading(chat) + trailing(chat)
+    fun all(chat: Chat): List<ChatListAction> = leading(chat) + trailing(chat) +
+        listOfNotNull(ChatListAction.Delete.takeUnless { chat.hasEndedMembership }, ChatListAction.Folder, ChatListAction.Select)
 }
 
 /** A conditional field-level inverse: never replace a whole chat or a newer read/archive change. */

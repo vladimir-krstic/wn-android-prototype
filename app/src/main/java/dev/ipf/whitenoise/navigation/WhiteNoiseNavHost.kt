@@ -85,6 +85,7 @@ fun WhiteNoiseNavHost(
     LaunchedEffect(uiState.activeProfileId, currentBackStackEntry?.id) {
         val entry = currentBackStackEntry ?: return@LaunchedEffect
         appViewModel.reconcileCreatedChatOrigin(entry.id)
+        if (entry.destination.route != AppRoute.SignedIn::class.qualifiedName) appViewModel.dismissChatBatch()
         if (entry.destination.route != AppRoute.EditProfile::class.qualifiedName) appViewModel.cancelProfileSave()
     }
     LaunchedEffect(uiState.activeProfileId, currentBackStackEntry?.destination?.route) {
@@ -276,6 +277,16 @@ fun WhiteNoiseNavHost(
                 onSettings = { navController.navigate(AppRoute.Settings()) },
                 onProfileRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 onUndo = appViewModel::undoChatListAction,
+                onMovePin = { id, delta -> uiState.activeProfileId?.let { appViewModel.movePinnedChat(it, id, delta) } },
+                onCreateFolder = { name -> uiState.activeProfileId?.let { appViewModel.createChatFolder(it, name) } },
+                onBeginBatch = { ids, action, folder, leave -> uiState.activeProfileId?.let { appViewModel.beginChatBatch(it, ids, action, folder, leave) } ?: false },
+                batchAttempt = appViewModel.chatBatchAttempt,
+                onAdvanceBatch = appViewModel::advanceChatBatch,
+                onRetryBatch = { appViewModel.retryChatBatch() },
+                onDismissBatch = appViewModel::dismissChatBatch,
+                onOpenGroup = { navController.navigate(AppRoute.ChatInfo(it)) },
+                onRetryConnection = { uiState.activeProfileId?.let(appViewModel::retryChatConnection) },
+                onAdvanceConnection = appViewModel::advanceChatConnection,
             )
             DiagnosticsPromptHost(
                 uiState = uiState,
@@ -464,6 +475,9 @@ fun WhiteNoiseNavHost(
                     onGroupContactScenario = appViewModel::selectGroupContactScenario,
                     createdChatUnavailable = appViewModel.nextCreatedChatUnavailable,
                     onCreatedChatUnavailable = appViewModel::setCreatedChatUnavailable,
+                    chatBatchScenario = appViewModel.nextChatBatchScenario,
+                    onChatBatchScenario = appViewModel::selectChatBatchScenario,
+                    onChatConnectionScenario = appViewModel::selectChatConnectionScenario,
                     profileSaveScenario = appViewModel.nextProfileSaveScenario,
                     onProfileSaveScenario = appViewModel::selectProfileSaveScenario,
                     profileImageFails = appViewModel.nextProfileImageFails,

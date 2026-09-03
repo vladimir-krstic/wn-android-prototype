@@ -18,13 +18,13 @@ These labels are the audit recommendation and follow current prototype terminolo
 | --- | --- | --- | --- |
 | C022 · Chat list previews, unread, archived and ended states | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
 | C023 · Pin, mute, read/unread, archive per chat | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C024 · Reorder pinned chats | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add Move up/down and order state within pinned partition, preserving non-pinned order and accessible alternatives. |
-| C025 · Multi-select chats and bulk actions | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add select/select-all-visible, read/unread, archive/unarchive, folder assignment and delete where offered; reconcile disappearing rows and partial failures. |
-| C026 · Delete active chat locally with leave prerequisites | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Prototype deletes only ended chats. Add active-chat delete path, including leave/sole-admin prerequisites and outcome; never remove data before required leave succeeds. |
-| C027 · Create, rename, describe and delete folders | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add Folders management and New/Edit Folder. Deleting a folder leaves chats intact; blank names cannot save. |
-| C028 · Folder membership and rule matching | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Manual IDs union rule matches. People OR keyword; unread/groups/archive/muted constrain only rules; empty rule does not include every chat. Add included-chat/people pickers and preview counts. |
-| C029 · Folder ordering, defaults and contextual assignment | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Support default Unread/Archived/Groups as editable folders, reorder with Move actions, restore missing defaults, assign from row/bulk/info and filter chats. Keep prototype Left discoverable. |
-| C030 · Connectivity and catch-up recovery on Chats | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Distinguish no internet, connecting, catching up and failure/retry from missing relay-role configuration. Preserve loaded rows while recovery runs. |
+| C024 · Reorder pinned chats | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Move Up/Down and accessible actions reorder only pinned chats with bounded availability. Unpinned original order survives moving, unpinning and archiving. |
+| C025 · Multi-select chats and bulk actions | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Select and select-all-visible provide read/unread, archive/unarchive, folder assignment and confirmed deletion. Selection reconciles to visible rows, survives recreation, resets by profile and retains only failed targets; retries skip successes. |
+| C026 · Delete active chat locally with leave prerequisites | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Active/ended local deletion is available without leaving. Optional Also leave enforces sole-admin and authoritative membership prerequisites before history removal, with explicit leave/local failure results and stage-aware retry. |
+| C027 · Create, rename, describe and delete folders | Partial foundation in B05; B06 pending | Trigger its named entry/action; cancel with Back where available | B05 adds profile-owned manual folder creation through assignment, blank-name validation and filtering. B06 still needs management, rename, description and folder deletion with chats retained. |
+| C028 · Folder membership and rule matching | Partial foundation in B05; B06 pending | Trigger its named entry/action; cancel with Back where available | B05 stores deduplicated manual chat IDs per folder. B06 still needs rule matching, people/keyword selectors and constraints, included-chat/people pickers and preview counts. |
+| C029 · Folder ordering, defaults and contextual assignment | Partial foundation in B05; B06 pending | Trigger its named entry/action; cancel with Back where available | B05 adds row/bulk folder assignment and folder filters while keeping Left. B06 still needs folder ordering, editable defaults/restore and assignment from Chat Info. |
+| C030 · Connectivity and catch-up recovery on Chats | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Offline, Connecting, Catching up and Failed/retry preserve loaded rows/drafts. Profile/generation guards reject stale readiness. Relay-role configuration and availability have separate Check Relays recovery. |
 
 ## Production integration seam
 
@@ -44,3 +44,13 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B05, B06. Decisions: None. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B05 implementation evidence
+
+C024–C026 and C030 are implemented and host-verified 2026-09-04. The
+[selected brief](../../../screens/chat-organization-and-recovery.md#implementation-evidence)
+records selection, bulk actions and failed-target retry; pinned ordering;
+local-only versus optional leave-first deletion; and owned recovery phases.
+The clean gate passed 262 unit tests, both APKs and zero lint errors. Seven UI
+cases compile but were not executed. B06 owns the remaining folder work;
+C027–C029 currently have only manual creation, assignment and filtering.

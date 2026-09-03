@@ -1,5 +1,17 @@
 package dev.ipf.whitenoise.state
 
+import dev.ipf.whitenoise.model.ChatOrganization
+import dev.ipf.whitenoise.model.ChatFolder
+import dev.ipf.whitenoise.model.ChatBatchAttempt
+import dev.ipf.whitenoise.model.ChatBatchScenario
+import dev.ipf.whitenoise.model.ChatBatchPhase
+import dev.ipf.whitenoise.model.ChatBatchFailure
+import dev.ipf.whitenoise.model.ChatBatchResult
+import dev.ipf.whitenoise.model.ChatBulkAction
+import dev.ipf.whitenoise.model.ChatConnectionState
+import dev.ipf.whitenoise.model.ChatConnectionScenario
+import dev.ipf.whitenoise.model.ChatConnectionPhase
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -155,7 +167,9 @@ class AppViewModel(
         profileExitAttempt = null
         cancelCreatedChatOpen()
         cancelProfileSave()
+        dismissChatBatch()
         uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
+        updateActiveProfile { it.copy(chatConnection = it.chatConnection.copy(generation = it.chatConnection.generation + 1)) }
     }
 
     fun beginPrivateKeySignIn(origin: OnboardingOrigin, key: String): Boolean {
@@ -561,6 +575,7 @@ class AppViewModel(
         val activeId = uiState.activeProfileId ?: return null
         cancelCreatedChatOpen()
         cancelProfileSave()
+        dismissChatBatch()
         cancelAccess()
         val signedIn = uiState.signedInProfileIds - activeId
         val profiles = if (wipeData) uiState.profiles.filterNot { it.id == activeId } else uiState.profiles
@@ -620,6 +635,7 @@ class AppViewModel(
         profileExitAttempt = null
         cancelCreatedChatOpen()
         cancelProfileSave()
+        dismissChatBatch()
         return destination
     }
 
@@ -674,8 +690,10 @@ class AppViewModel(
         nextCreatedChatUnavailable = false
         nextProfileSaveScenario = ProfileSaveScenario.Success
         nextProfileImageFails = false
+        nextChatBatchScenario = ChatBatchScenario.Success
         cancelCreatedChatOpen()
         cancelProfileSave()
+        dismissChatBatch()
         uiState = AppUiState()
         createdChatSequence = 0
         return true
@@ -724,8 +742,12 @@ class AppViewModel(
     }
 
     fun toggleChatPin(chatId: String) {
-        mutateChat(chatId) { chat ->
-            if (chat.isArchived) chat else chat.copy(isPinned = !chat.isPinned)
+        updateActiveProfile { owner ->
+            val nextOrder = (ChatOrganization.pinned(owner.chats).maxOfOrNull { it.pinnedOrder ?: it.originalOrder } ?: -1) + 1
+            owner.copy(chats = owner.chats.map { chat ->
+                if (chat.id != chatId || chat.isArchived) chat else chat.copy(isPinned = !chat.isPinned,
+                    pinnedOrder = if (chat.isPinned) null else nextOrder)
+            })
         }
     }
 
@@ -808,6 +830,140 @@ class AppViewModel(
             profile.copy(chats = chats)
         }
         return changed
+    }
+
+    private var chatBatchGeneration = 0L
+    var chatBatchAttempt by mutableStateOf<ChatBatchAttempt?>(null)
+        private set
+    var nextChatBatchScenario by mutableStateOf(ChatBatchScenario.Success)
+        private set
+
+    fun selectChatBatchScenario(scenario: ChatBatchScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextChatBatchScenario = scenario
+    }
+
+    fun movePinnedChat(profileId: String, chatId: String, delta: Int) {
+        if (uiState.activeProfileId != profileId) return
+        updateActiveProfile { it.copy(chats = ChatOrganization.move(it.chats, chatId, delta)) }
+    }
+
+    fun createChatFolder(profileId: String, name: String): String? {
+        if (uiState.activeProfileId != profileId || name.isBlank()) return null
+        val id = "$profileId-folder-${createdChatSequence++}"
+        updateActiveProfile { it.copy(chatFolders = it.chatFolders + ChatFolder(id, name.trim())) }
+        return id
+    }
+
+    fun beginChatBatch(profileId: String, ids: List<String>, action: ChatBulkAction, folderId: String? = null, leaveFirst: Boolean = false): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (profile.id != profileId || ids.isEmpty() || chatBatchAttempt?.isBusy == true) return false
+        if (action == ChatBulkAction.Folder && profile.chatFolders.none { it.id == folderId }) return false
+        chatBatchAttempt = ChatBatchAttempt(++chatBatchGeneration, profileId, ids.distinct(), action,
+            folderId, leaveFirst, scenario = nextChatBatchScenario)
+        nextChatBatchScenario = ChatBatchScenario.Success
+        return true
+    }
+
+    fun retryChatBatch(): Boolean {
+        val attempt = chatBatchAttempt ?: return false
+        if (attempt.isBusy || attempt.failedIds.isEmpty()) return false
+        return beginChatBatch(attempt.profileId, attempt.failedIds, attempt.action, attempt.folderId, attempt.leaveFirst)
+    }
+
+    fun dismissChatBatch() { chatBatchAttempt = null }
+
+    /** Each callback is bound to the exact owner, request, target and stage. */
+    fun advanceChatBatch(id: Long, index: Int, phase: ChatBatchPhase): Boolean {
+        val request = chatBatchAttempt ?: return false
+        val profile = uiState.activeProfile ?: return false
+        if (request.id != id || request.index != index || request.phase != phase || !request.isBusy || profile.id != request.profileId) return false
+        val target = request.targets[index]
+        val chat = profile.chats.firstOrNull { it.id == target }
+        fun finish(failure: ChatBatchFailure? = null, consumed: Boolean = false) {
+            val next = index + 1
+            chatBatchAttempt = request.copy(index = next, phase = if (next == request.targets.size) ChatBatchPhase.Finished else ChatBatchPhase.Applying,
+                results = request.results + ChatBatchResult(target, chat?.title.orEmpty(), failure, request.leaveFirst && chat?.membership == ChatMembership.Left), scenarioConsumed = request.scenarioConsumed || consumed)
+        }
+        if (chat == null) { finish(ChatBatchFailure.Unavailable); return true }
+        if (!request.scenarioConsumed && request.scenario == ChatBatchScenario.PartialApply && index == 1) {
+            finish(ChatBatchFailure.Unavailable, consumed = true); return true
+        }
+        if (request.action == ChatBulkAction.Delete) {
+            if (request.leaveFirst && chat.membership == ChatMembership.Active && chat.isGroup && chat.members.none { it.personId == profile.id }) {
+                finish(ChatBatchFailure.Unavailable); return true
+            }
+            when (phase) {
+                ChatBatchPhase.Applying -> {
+                    if (request.leaveFirst && ChatOrganization.requiresAdmin(chat, profile.id)) finish(ChatBatchFailure.NeedsAdmin)
+                    else chatBatchAttempt = request.copy(phase = if (request.leaveFirst && ChatOrganization.requiresLeave(chat, profile.id)) ChatBatchPhase.Leaving else ChatBatchPhase.Deleting)
+                }
+                ChatBatchPhase.Leaving -> {
+                    if (ChatOrganization.requiresAdmin(chat, profile.id)) finish(ChatBatchFailure.NeedsAdmin)
+                    else if (!request.scenarioConsumed && request.scenario == ChatBatchScenario.LeaveFailure) finish(ChatBatchFailure.LeaveFailed, consumed = true)
+                    else if (ChatOrganization.requiresLeave(chat, profile.id) && !leaveChat(target)) finish(ChatBatchFailure.LeaveFailed)
+                    else chatBatchAttempt = request.copy(phase = ChatBatchPhase.Deleting)
+                }
+                ChatBatchPhase.Deleting -> {
+                    // Recheck membership: a changed target must never bypass a required leave.
+                    if (request.leaveFirst && ChatOrganization.requiresLeave(chat, profile.id)) {
+                        chatBatchAttempt = request.copy(phase = ChatBatchPhase.Applying)
+                    } else if (!request.scenarioConsumed && request.scenario == ChatBatchScenario.DeleteFailure) finish(ChatBatchFailure.DeleteFailed, consumed = true)
+                    else {
+                        updateActiveProfile { owner -> owner.copy(chats = owner.chats.filterNot { it.id == target },
+                            chatFolders = owner.chatFolders.map { it.copy(chatIds = it.chatIds - target) }) }
+                        finish()
+                    }
+                }
+                ChatBatchPhase.Finished -> Unit
+            }
+        } else {
+            when (request.action) {
+                ChatBulkAction.Read -> markChatUnread(target, false)
+                ChatBulkAction.Unread -> markChatUnread(target, true)
+                ChatBulkAction.Archive -> setChatArchived(target, true)
+                ChatBulkAction.Unarchive -> setChatArchived(target, false)
+                ChatBulkAction.Folder -> {
+                    if (profile.chatFolders.none { it.id == request.folderId }) { finish(ChatBatchFailure.Unavailable); return true }
+                    updateActiveProfile { owner -> owner.copy(chatFolders = owner.chatFolders.map {
+                        if (it.id == request.folderId) it.copy(chatIds = it.chatIds + target) else it
+                    }) }
+                }
+                ChatBulkAction.Delete -> Unit
+            }
+            finish()
+        }
+        return true
+    }
+
+    fun selectChatConnectionScenario(scenario: ChatConnectionScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled != true) return
+        updateActiveProfile { owner -> owner.copy(chatConnection = ChatConnectionState(
+            phase = when (scenario) {
+                ChatConnectionScenario.Online -> ChatConnectionPhase.Online
+                ChatConnectionScenario.Offline, ChatConnectionScenario.RetryFailure -> ChatConnectionPhase.Offline
+                ChatConnectionScenario.Connecting -> ChatConnectionPhase.Connecting
+                ChatConnectionScenario.CatchingUp -> ChatConnectionPhase.CatchingUp
+            }, generation = owner.chatConnection.generation + 1, retryFails = scenario == ChatConnectionScenario.RetryFailure,
+        )) }
+    }
+
+    fun retryChatConnection(profileId: String) {
+        if (uiState.activeProfileId != profileId) return
+        updateActiveProfile { owner -> owner.copy(chatConnection = owner.chatConnection.copy(
+            phase = ChatConnectionPhase.Connecting, generation = owner.chatConnection.generation + 1,
+        )) }
+    }
+
+    fun advanceChatConnection(profileId: String, generation: Long, phase: ChatConnectionPhase): Boolean {
+        val owner = uiState.activeProfile ?: return false
+        if (owner.id != profileId || owner.chatConnection.generation != generation || owner.chatConnection.phase != phase) return false
+        if (phase != ChatConnectionPhase.Connecting && phase != ChatConnectionPhase.CatchingUp) return false
+        updateActiveProfile { it.copy(chatConnection = it.chatConnection.copy(
+            phase = if (phase == ChatConnectionPhase.CatchingUp) ChatConnectionPhase.Online
+                else if (it.chatConnection.retryFails) ChatConnectionPhase.Failed else ChatConnectionPhase.CatchingUp,
+            retryFails = false,
+        )) }
+        return true
     }
 
     var peopleSearchScenario by mutableStateOf(PeopleSearchScenario.Success)
@@ -1627,6 +1783,7 @@ class AppViewModel(
     private fun activate(profile: Profile, updatesStoredProfile: Boolean) {
         cancelCreatedChatOpen()
         cancelProfileSave()
+        dismissChatBatch()
         val profiles = uiState.profiles.toMutableList()
         val index = profiles.indexOfFirst { it.id == profile.id }
         if (index >= 0) {
@@ -1638,7 +1795,11 @@ class AppViewModel(
         }
 
         val activatedIndex = profiles.indexOfFirst { it.id == profile.id }
-        profiles[activatedIndex] = profiles[activatedIndex].copy(connectionInformationPublished = true)
+        profiles[activatedIndex] = profiles[activatedIndex].copy(connectionInformationPublished = true,
+            chatConnection = profiles[activatedIndex].chatConnection.let { connection ->
+                if (connection.phase == ChatConnectionPhase.Connecting || connection.phase == ChatConnectionPhase.CatchingUp)
+                    connection.copy(generation = connection.generation + 1) else connection
+            })
 
         uiState = uiState.copy(
             profiles = profiles,

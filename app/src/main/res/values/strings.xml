@@ -185,8 +185,6 @@
     <string name="leave_group_detail">You’ll keep the chat history, but you won’t be able to send new messages.</string>
     <string name="sole_admin_title">Promote Another Admin</string>
     <string name="sole_admin_detail">You’re the only admin. Promote another member before leaving this group.</string>
-    <string name="delete_chat_title">Delete this chat?</string>
-    <string name="delete_chat_detail">This removes the chat and its local history from this profile.</string>
     <string name="new_group">New Group</string>
     <string name="people">People</string>
     <string name="name_or_npub">Name or npub</string>
@@ -507,4 +505,41 @@
     <string name="profile_publish_failed">Your profile could not be saved. Check your details and try again.</string>
     <string name="profile_saving">Saving profile…</string>
     <string name="profile_lightning_display">Lightning: %1$s</string>
+
+    <string name="chat_selection_close">Close selection</string>
+    <string name="chat_select_all">Select All</string>
+    <string name="chat_add_folder">Add to Folder</string>
+    <string name="chat_new_folder">New Folder</string>
+    <string name="chat_folder_name">Folder name</string>
+    <string name="chat_move_up">Move Up</string>
+    <string name="chat_move_down">Move Down</string>
+    <plurals name="chat_delete_count"><item quantity="one">Delete this chat?</item><item quantity="other">Delete %d chats?</item></plurals>
+    <string name="chat_delete_local_detail">Remove the selected chat history from this device. This cannot be undone.</string>
+    <string name="chat_delete_also_leave">Also leave active chats</string>
+    <string name="chat_delete_stay_detail">You remain a member of active chats. New messages may bring them back to your list.</string>
+    <string name="chat_delete_leave_detail">Leave active chats before removing their history. Other people keep their copies.</string>
+    <string name="chat_updating">Updating chats…</string>
+    <string name="chat_action_results">Chats updated</string>
+    <string name="chat_leaving_progress">Leaving chat %1$d of %2$d…</string>
+    <string name="chat_deleting_progress">Deleting chat %1$d of %2$d…</string>
+    <string name="chat_applying_progress">Updating chat %1$d of %2$d…</string>
+    <plurals name="chat_action_result_count"><item quantity="one">Completed for %1$d of %2$d chat.</item><item quantity="other">Completed for %1$d of %2$d chats.</item></plurals>
+    <string name="chat_unavailable_title">Unavailable chat</string>
+    <string name="chat_delete_admin_required">Make another member an admin before leaving. Your history is still here.</string>
+    <string name="chat_delete_leave_failed">Could not leave this chat. Your history is still here.</string>
+    <string name="chat_delete_local_failed">Could not remove local history. Your history is still here.</string>
+    <string name="chat_action_failed">Could not update this chat. Retry the remaining chats.</string>
+    <string name="chat_open_group">Open Group</string>
+    <string name="chat_connection_offline">No internet connection. Your loaded chats are still available.</string>
+    <string name="chat_connection_connecting">Connecting…</string>
+    <string name="chat_connection_catching_up">Catching up on messages…</string>
+    <string name="chat_connection_failed">Could not reconnect. Your loaded chats are still available.</string>
+    <string name="chat_relays_unassigned">Choose a relay for Chat Messages.</string>
+    <string name="chat_relays_unavailable">No connected relay for Chat Messages.</string>
+    <string name="chat_check_relays">Check Relays</string>
+    <string name="chat_delete_after_leave_failed">You left this chat, but its local history could not be removed. Retry to remove the history.</string>
+    <string name="chat_folder_empty">No chats in this folder</string>
+    <string name="chat_folder_empty_detail">Use Add to Folder from a chat’s actions to include it here.</string>
+    <string name="chat_action_incomplete">Some chats need attention</string>
+    <string name="chat_deselect">Deselect</string>
 </resources>

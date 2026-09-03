@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -63,16 +64,16 @@ import dev.ipf.whitenoise.ui.components.ProfileAvatar
 internal val ChatRowHorizontalInset = 8.dp
 
 @Composable
-internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, onAction: (ChatListAction) -> Unit, highlighted: Boolean = false) {
+internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, onAction: (ChatListAction) -> Unit, highlighted: Boolean = false, availableActions: List<ChatListAction> = ChatListActionPolicy.all(chat), selecting: Boolean = false, checked: Boolean = false) {
     val preview = ChatListPresentation.from(chat)
-    val actions = ChatListActionPolicy.all(chat).map { action ->
+    val actions = (if (selecting) emptyList() else availableActions).map { action ->
         CustomAccessibilityAction(stringResource(action.labelResource)) { onAction(action); true }
     }
     val actionsDescription = stringResource(R.string.actions_for, chat.title)
     ListItem(
         onClick = onOpen,
         onLongClick = onActions,
-        onLongClickLabel = actionsDescription,
+        onLongClickLabel = if (selecting) stringResource(if (checked) R.string.chat_deselect else R.string.select) else actionsDescription,
         content = {
             ChatRowTextLayout(
                 title = {
@@ -139,7 +140,8 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
             )
         },
         leadingContent = {
-            Box {
+            if (selecting) androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = null)
+            else Box {
                 ProfileAvatar(chat.title, chat.avatar, Modifier.size(52.dp).testTag("chat.avatar.${chat.id}"), contentDescription = null)
                 if (chat.isPinned) {
                     Surface(modifier = Modifier.size(20.dp).align(Alignment.BottomEnd), shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
@@ -151,7 +153,8 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
             }
         },
         modifier = Modifier.fillMaxWidth().testTag("chat.row.${chat.id}")
-            .semantics { customActions = actions; selected = highlighted; role = Role.Button },
+            .semantics { customActions = actions; selected = highlighted; role = if (selecting) Role.Checkbox else Role.Button
+                if (selecting) toggleableState = if (checked) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off },
         // The anchor's outer inset plus this inner padding keep artwork on the shared
         // 16 dp content edge. Native ListItem owns the tighter 12 dp avatar/text gap.
         contentPadding = PaddingValues(

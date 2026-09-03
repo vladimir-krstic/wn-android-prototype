@@ -227,6 +227,7 @@ data class Chat(
     val draftAttachments: List<MessageAttachment> = emptyList(),
     val suppressedDraftLinkUrl: String? = null,
     val draftReplyMessageId: String? = null,
+    val pinnedOrder: Int? = null,
 ) {
     val isGroup: Boolean
         get() = kind == ChatKind.Group
@@ -327,7 +328,7 @@ object ChatProjection {
                     chat.title.normalizedSearchText().contains(normalizedQuery) ||
                     chat.displayPreview.normalizedSearchText().contains(normalizedQuery)
             }
-            .sortedWith(compareByDescending<Chat> { it.isPinned }.thenBy { it.originalOrder })
+            .sortedWith(ChatOrganization.order)
     }
 }
 

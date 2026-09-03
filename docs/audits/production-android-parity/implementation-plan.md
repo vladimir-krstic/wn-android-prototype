@@ -8,7 +8,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B02: implemented and host-verified 2026-09-04; 216 unit tests, zero lint errors, both APKs, five new compiled UI cases. [Selected brief and evidence](../../screens/keys-and-profile-exit.md). Q05 preserves the approved checked wipe default. Commit title: `B02: Add staged profile exit and temporary key exports`.
 - B03: implemented and host-verified 2026-09-04; 231 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/people-discovery-and-private-details.md). Commit title: `B03: Add people discovery and private contact flows`.
 - B04: implemented and host-verified 2026-09-04; 244 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/profile-media-and-lightning.md). Commit title: `B04: Add profile media and Lightning address editing`.
-- B05–B32: pending; linked decisions apply only to their named slices.
+- B05: implemented and host-verified 2026-09-04; 262 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/chat-organization-and-recovery.md). Manual folder assignment provides part of B06. Commit title: `B05: Add chat organization and connection recovery`.
+- B06–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -110,7 +111,7 @@ Capabilities: C016, C017, C018. Dependencies: B03.
 
 Capabilities: C024, C025, C026, C030. Dependencies: B01.
 
-**Implementation:** Add Move up/down and order state within pinned partition, preserving non-pinned order and accessible alternatives. Add select/select-all-visible, read/unread, archive/unarchive, folder assignment and delete where offered; reconcile disappearing rows and partial failures. Prototype deletes only ended chats. Add active-chat delete path, including leave/sole-admin prerequisites and outcome; never remove data before required leave succeeds. Distinguish no internet, connecting, catching up and failure/retry from missing relay-role configuration. Preserve loaded rows while recovery runs.
+**Implementation:** Add Move up/down and order state within pinned partition, preserving non-pinned order and accessible alternatives. Add select/select-all-visible, read/unread, archive/unarchive, folder assignment and delete where offered; reconcile disappearing rows and partial failures. Active/ended local deletion follows production's local-only action. An explicit optional leave-first path checks membership/sole-admin prerequisites and reports independent leave/local results; never remove data before a required leave succeeds. Distinguish no internet, connecting, catching up and failure/retry from missing relay-role configuration. Preserve loaded rows while recovery runs.
 
 **Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/ChatListPresentation.kt`, `app/src/main/java/dev/ipf/whitenoise/model/ProfileSettings.kt`, `app/src/main/java/dev/ipf/whitenoise/state/AppViewModel.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/chats/ChatsScreen.kt`.
 

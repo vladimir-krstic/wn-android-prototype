@@ -28,6 +28,9 @@ internal fun ChatContextMenuRow(
     onShowMenu: () -> Unit,
     onDismissMenu: () -> Unit,
     onAction: (ChatListAction) -> Unit,
+    availableActions: List<ChatListAction> = ChatListActionPolicy.all(chat),
+    selecting: Boolean = false,
+    checked: Boolean = false,
 ) {
     val dismissCurrentMenu by rememberUpdatedState(onDismissMenu)
     DisposableEffect(chat.id) {
@@ -35,13 +38,13 @@ internal fun ChatContextMenuRow(
         onDispose { dismissCurrentMenu() }
     }
     Box(Modifier.padding(horizontal = ChatRowHorizontalInset)) {
-        ChatListRow(chat, onOpen, onShowMenu, onAction, highlighted = expanded)
+        ChatListRow(chat, onOpen, onShowMenu, onAction, highlighted = expanded || checked, availableActions = availableActions, selecting = selecting, checked = checked)
         WhiteNoiseDropdownMenu(
             expanded = expanded,
             onDismissRequest = onDismissMenu,
             anchorSpacing = 8.dp,
             modifier = Modifier.testTag("chat.menu.${chat.id}"),
-            items = ChatListActionPolicy.all(chat).map { action ->
+            items = availableActions.map { action ->
                 WhiteNoiseMenuItem(
                     label = stringResource(action.labelResource),
                     icon = action.iconResource,
@@ -66,6 +69,10 @@ internal val ChatListAction.labelResource: Int
         ChatListAction.Unarchive -> R.string.unarchive
         ChatListAction.Leave -> R.string.leave_group
         ChatListAction.Delete -> R.string.delete_chat
+        ChatListAction.Select -> R.string.select
+        ChatListAction.MoveUp -> R.string.chat_move_up
+        ChatListAction.MoveDown -> R.string.chat_move_down
+        ChatListAction.Folder -> R.string.chat_add_folder
     }
 
 internal val ChatListAction.iconResource: Int
@@ -80,4 +87,8 @@ internal val ChatListAction.iconResource: Int
         ChatListAction.Unarchive -> R.drawable.ic_unarchive
         ChatListAction.Leave -> R.drawable.ic_logout
         ChatListAction.Delete -> R.drawable.ic_delete
+        ChatListAction.Select -> R.drawable.ic_check
+        ChatListAction.MoveUp -> R.drawable.ic_arrow_up
+        ChatListAction.MoveDown -> R.drawable.ic_arrow_down
+        ChatListAction.Folder -> R.drawable.ic_add
     }
