@@ -249,6 +249,8 @@ data class Chat(
     val messageDeletion: MessageDeleteOperation? = null,
     val groupRoster: GroupRoster = GroupRoster(),
     val publicInviteAvatar: ProfileAvatar = avatar,
+    val groupLifecycle: GroupLifecycle = GroupLifecycle.Active,
+    val disbandCapability: GroupDisbandCapability = GroupDisbandCapability(),
 ) {
     val visibleAvatar: ProfileAvatar get() = if (isGroup && membership == ChatMembership.Invited) publicInviteAvatar else avatar
 

@@ -122,6 +122,16 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B19: C076–C079 are implemented and host-verified. Group Info
+adds grant-first transfer/step-down/leave, retained partial results, sole-member
+deletion and capability-controlled disbanding with acknowledgment and convergence.
+Shared locks and verified membership guard commits. Frozen/ended/unknown states
+block outbound while preserving history and recovery. Transcript export pages the
+full local history and preserves authored identity and accepted edits, then saves
+through Android Files with owned cancellation/error/success. 617 unit tests,
+zero lint errors and both APKs pass; nine new UI cases compile only.
+See [group-administration-and-transcript.md](../screens/group-administration-and-transcript.md#implementation-evidence).
+
 2026-09-04 production B18: C072–C074 are implemented and host-verified. Solo
 creation, initial timer and open recovery preserve one group ID; private/public
 images remain separate through staged editing, loading/upload failures and retry.

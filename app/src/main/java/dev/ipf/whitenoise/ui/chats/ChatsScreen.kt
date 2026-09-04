@@ -229,7 +229,7 @@ fun ChatsScreen(
             ChatListAction.Unmute -> onMute(chat.id, null)
             ChatListAction.Archive -> onArchive(chat.id, true)
             ChatListAction.Unarchive -> onArchive(chat.id, false)
-            ChatListAction.Leave -> if (chat.isSoleAdmin(profile.id)) soleAdminChat = chat else leaveChat = chat
+            ChatListAction.Leave -> if (chat.isSoleAdmin(profile.id) && chat.members.any { it.personId != profile.id }) soleAdminChat = chat else leaveChat = chat
             ChatListAction.Delete -> deleteIds = listOf(chat.id)
             ChatListAction.Select -> { selectedIds = listOf(chat.id); focusManager.clearFocus(); keyboardController?.hide() }
             ChatListAction.MoveUp -> onMovePin(chat.id, -1)
@@ -451,7 +451,7 @@ fun ChatsScreen(
         AlertDialog(
             onDismissRequest = { leaveChat = null },
             title = { Text(stringResource(R.string.leave_group_title)) },
-            text = { Text(stringResource(R.string.leave_group_detail)) },
+            text = { Text(stringResource(if (chat.members.singleOrNull()?.personId == profile?.id) R.string.group_delete_solo_detail else R.string.leave_group_detail)) },
             confirmButton = {
                 TextButton(onClick = {
                     onLeave(chat.id)
@@ -464,13 +464,13 @@ fun ChatsScreen(
         )
     }
 
-    soleAdminChat?.let {
+    soleAdminChat?.let { chat ->
         AlertDialog(
             onDismissRequest = { soleAdminChat = null },
             title = { Text(stringResource(R.string.sole_admin_title)) },
             text = { Text(stringResource(R.string.sole_admin_detail)) },
             confirmButton = {
-                TextButton(onClick = { soleAdminChat = null }) { Text(stringResource(R.string.done)) }
+                TextButton(onClick = { soleAdminChat = null; onOpenGroup(chat.id) }) { Text(stringResource(R.string.group_transfer_admin)) }
             },
         )
     }

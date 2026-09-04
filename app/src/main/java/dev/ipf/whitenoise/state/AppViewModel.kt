@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.state
 
+import dev.ipf.whitenoise.model.*
+
 import dev.ipf.whitenoise.model.LocationSession
 import dev.ipf.whitenoise.model.LocationScenario
 import dev.ipf.whitenoise.model.LocationEvent
@@ -206,8 +208,46 @@ class AppViewModel(
             commitEdit = { owner, draft -> uiState.activeProfileId == owner.profileId &&
                 editGroup(owner.chatId, draft.name, draft.description, draft.image, draft.publicImage) },
             create = { draft, ids -> createGroup(draft.name, draft.description, draft.image, ids, publicAvatar = draft.publicImage) },
+            additionalLock = { groupLifecycle.locked(it) },
             applyTimer = { owner, timer -> uiState.activeProfileId == owner.profileId && chat(owner.chatId)?.hasAuthoritativeGroupAdmin(owner.profileId) == true &&
                 (chat(owner.chatId)?.disappearingDuration == timer || setChatDisappearing(owner.chatId, timer)) },
+        )
+    }
+
+    val transcript: TranscriptController by lazy { TranscriptController { uiState.activeProfile?.takeIf { it.id in uiState.signedInProfileIds } } }
+
+    val groupLifecycle: GroupLifecycleController by lazy {
+        GroupLifecycleController(
+            profiles = { uiState.profiles }, activeId = { uiState.activeProfileId }, signedIn = { it in uiState.signedInProfileIds },
+            otherLocked = { groupWork.memberEditLocked(it) },
+            commit = { owner, stage, target, convergenceFailed ->
+                val current = uiState.profiles.firstOrNull { it.id == owner.profileId }?.chats?.firstOrNull { it.id == owner.chatId }
+                if (owner.profileId !in uiState.signedInProfileIds || current == null ||
+                    (stage != GroupLifecycleStage.Converge && owner.profileId != uiState.activeProfileId) ||
+                    !GroupLifecyclePolicy.permits(current, owner.profileId, stage, target)) false else {
+                    val next = GroupLifecyclePolicy.apply(current, owner.profileId, stage, target, convergenceFailed)
+                    uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != owner.profileId) profile else
+                        profile.copy(chats = profile.chats.mapNotNull { if (it.id == owner.chatId) next else it },
+                            chatFolders = if (next == null) profile.chatFolders.map { it.copy(chatIds = it.chatIds - owner.chatId) } else profile.chatFolders) })
+                    composerCapture.reconcile()
+                    true
+                }
+            },
+            setScenario = { owner, scenario -> if (uiState.activeProfileId == owner.profileId) mutateChat(owner.chatId) { chat ->
+                chat.copy(groupLifecycle = when (scenario) {
+                    GroupStateScenario.Frozen -> GroupLifecycle.Unrecoverable
+                    GroupStateScenario.Disbanding -> GroupLifecycle.Disbanding
+                    GroupStateScenario.Ended -> GroupLifecycle.Disbanded
+                    else -> GroupLifecycle.Active
+                }, disbandCapability = GroupDisbandCapability(
+                    canEnable = scenario != GroupStateScenario.CapabilityUnavailable,
+                    canDisband = scenario != GroupStateScenario.CapabilityUnavailable,
+                    blockers = when (scenario) {
+                        GroupStateScenario.Unsupported -> setOf(DisbandBlocker.UnsupportedMembers)
+                        GroupStateScenario.PendingInvitations -> setOf(DisbandBlocker.PendingInvitations)
+                        else -> emptySet()
+                    }))
+            } },
         )
     }
 
@@ -678,6 +718,8 @@ class AppViewModel(
         )
         composerCapture.reconcile()
         groupWork.reconcile()
+        groupLifecycle.reconcile()
+        transcript.reconcile()
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
@@ -771,6 +813,8 @@ class AppViewModel(
         )
         composerCapture.reconcile()
         groupWork.reconcile()
+        groupLifecycle.reconcile()
+        transcript.reconcile()
         return true
     }
 
@@ -808,6 +852,8 @@ class AppViewModel(
         uiState = AppUiState()
         composerCapture.reconcile()
         groupWork.reconcile()
+        groupLifecycle.reconcile()
+        transcript.reconcile()
         createdChatSequence = 0
         return true
     }
@@ -891,6 +937,9 @@ class AppViewModel(
     }
 
     fun setChatDisappearing(chatId: String, duration: DisappearingDuration): Boolean {
+        val current = chat(chatId) ?: return false
+        val profileId = uiState.activeProfileId ?: return false
+        if (current.isGroup && (!current.hasAuthoritativeGroupAdmin(profileId) || !groupWork.permitsPrimitive(GroupOwner(profileId, chatId)))) return false
         var changed = false
         mutateChat(chatId) { chat ->
             if (chat.disappearingDuration == duration || chat.membership != ChatMembership.Active) {
@@ -924,6 +973,14 @@ class AppViewModel(
     }
 
     fun leaveChat(chatId: String): Boolean {
+        val current = chat(chatId) ?: return false
+        val profileId = uiState.activeProfileId ?: return false
+        if (current.isGroup && (!current.canLeaveWithoutTransfer(profileId) || groupWork.locked(GroupOwner(profileId, chatId)))) return false
+        if (current.isSoleMember(profileId)) {
+            updateActiveProfile { profile -> profile.copy(chats = profile.chats.filterNot { c -> c.id == chatId },
+                chatFolders = profile.chatFolders.map { it.copy(chatIds = it.chatIds - chatId) }) }
+            return true
+        }
         var changed = false
         updateActiveProfile { profile ->
             val chats = profile.chats.map { chat ->
@@ -961,9 +1018,9 @@ class AppViewModel(
         var changed = false
         updateActiveProfile { profile ->
             val chats = profile.chats.filterNot { chat ->
-                (chat.id == chatId && chat.hasEndedMembership).also { if (it) changed = true }
+                (chat.id == chatId && (chat.hasEndedMembership || chat.groupLifecycle == GroupLifecycle.Disbanded)).also { if (it) changed = true }
             }
-            profile.copy(chats = chats)
+            profile.copy(chats = chats, chatFolders = if (changed) profile.chatFolders.map { it.copy(chatIds = it.chatIds - chatId) } else profile.chatFolders)
         }
         return changed
     }
@@ -1839,6 +1896,7 @@ class AppViewModel(
         removeIfSelected: Boolean,
     ): Boolean {
         val profileId = uiState.activeProfileId ?: return false
+        if (composerAvailability(chatId) != ComposerAvailability.Available) return false
         var changed = false
         mutateChat(chatId) { chat ->
             val timeline = chat.timeline.map { entry ->
@@ -2437,6 +2495,8 @@ class AppViewModel(
         )
         composerCapture.reconcile()
         groupWork.reconcile()
+        groupLifecycle.reconcile()
+        transcript.reconcile()
     }
 
     private fun addShowcaseProfiles() {
@@ -2481,6 +2541,8 @@ class AppViewModel(
         )
         composerCapture.reconcile()
         groupWork.reconcile()
+        groupLifecycle.reconcile()
+        transcript.reconcile()
     }
 
     private fun insertAfterPinned(chats: List<Chat>, chat: Chat): List<Chat> {

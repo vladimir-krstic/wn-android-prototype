@@ -242,5 +242,19 @@ member roster/revision, group commit lock and actual image/retention callbacks.
 Private group image and public invite preview are distinct local fields; preserve
 the production legacy-image migration semantics when reconnecting real uploads.
 Current master permits warm seeded picker presentation but still gates commit on
-Ready. B19 owns the ChatListGroupSeed cold-frame terminal/unrecoverable checks.
+Ready. B19 covers the ChatListGroupSeed cold-frame terminal/unrecoverable checks.
 The prototype retains staged Edit Group Save and existing initial timer presets.
+
+## Production B19 administration, lifecycle and transcript
+
+`docs/screens/group-administration-and-transcript.md` maps Controllers transfer,
+self-demotion/leave, enable/disband/failure acknowledgment, GroupDisbandControls,
+ComposerGate and ConversationTranscriptExport to `GroupLifecycle.kt`,
+`GroupLifecycleController.kt`, `GroupLifecycleUi.kt`, `ConversationProjection.kt`,
+`ConversationTranscript.kt`, `TranscriptController.kt` and `TranscriptUi.kt`.
+The B18 group lock and authoritative roster remain shared. Production reconnects
+accepted-stage ownership, management capability/blocker state and convergence.
+The latest ChatListGroupSeed terminal/unrecoverable preservation is covered.
+Transcript handoff follows local Q07 Files destination; its separately identified
+local JSON schema does not fabricate production wire-event fields. Restore the
+full production export schema and engine timeline reader during migration.

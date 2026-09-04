@@ -22,7 +22,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B16: implemented and host-verified 2026-09-04; 510 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Selected brief and evidence](../../screens/read-aloud-preferences.md). Commit title: `B16: Add Read Aloud preferences and auto-read`. Q06 remains outside local background-control scope.
 - B17: implemented and host-verified 2026-09-04; 550 unit tests, zero lint errors, both APKs and ten new compiled UI cases. [Selected brief and evidence](../../screens/dictation-and-voice-recording.md). Commit title: `B17: Add dictation and owned voice recording`. Q06 real microphone/recognition remains outside scope.
 - B18: implemented and host-verified 2026-09-04; 575 unit tests, zero lint errors, both APKs and ten new compiled UI/bitmap cases. [Selected brief and evidence](../../screens/group-setup-images-and-roster.md). Commit title: `B18: Add group setup, image and roster recovery`. Warm roster presentation drift reconciled.
-- B19–B32: pending; linked decisions apply only to their named slices.
+- B19: implemented and host-verified 2026-09-04; 617 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/group-administration-and-transcript.md). Commit title: `B19: Add group administration, disbanding and transcript export`. Cold/terminal group-seed drift reconciled.
+- B20–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -47,7 +48,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Implemented; host verified; real services remain outside Q06 |
 | **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Implemented; host verified; real microphone/recognition remains outside Q06 scope |
 | **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Implemented; host verified |
-| **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Ready |
+| **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Implemented; host verified |
 | **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Blocked slices: Q03 |
 | **B21** | Inbound sharing, shortcuts and profile links | C084, C085, C086, C087, C088 | B01, B11 | Blocked slices: Q06 |
 | **B22** | Global and per-chat notification settings | C089, C090, C091, C092, C093 | B05 | Blocked slices: Q06 |
@@ -352,6 +353,14 @@ Commit: `B18: Add group setup, image and roster recovery`.
 ### B19 — Administration transfer, disband and transcript export
 
 Capabilities: C076, C077, C078, C079. Dependencies: B18.
+
+**Status:** Implemented and host-verified 2026-09-04. Grant-first transfer,
+stage-specific partial retry, disband enable/blockers/convergence/acknowledgment,
+terminal/unknown composer gates and full local JSON export through Files are
+covered. 617 unit tests, zero lint errors and both APKs pass; nine new UI cases
+compile only. [Evidence](../../screens/group-administration-and-transcript.md#implementation-evidence).
+
+Commit: `B19: Add group administration, disbanding and transcript export`.
 
 **Implementation:** Add explicit transfer-and-step-down and transfer-then-leave completion, partial failure and sole-member deletion case. A blocked leave dialog alone does not cover this flow. Add capability-enable, engine-declared blockers, confirmation, pending convergence, failure acknowledgment/retry and permanently ended state. Distinguish local delete and ordinary leave. Add verified-role unknown, unrecoverable and disbanding/disbanded states; block send/reaction/edit until permitted; preserve readable history and recovery explanation. Add export progress, unavailable source, cancellation/error and completed local document handoff; preserve ordering, authored identity and edits per export contract.
 

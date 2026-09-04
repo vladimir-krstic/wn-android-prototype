@@ -73,12 +73,12 @@ object ChatListActionPolicy {
             add(if (chat.muteDuration == null) ChatListAction.Mute else ChatListAction.Unmute)
         }
         add(if (chat.isArchived) ChatListAction.Unarchive else ChatListAction.Archive)
-        if (chat.hasEndedMembership) add(ChatListAction.Delete)
-        else if (chat.isGroup && chat.membership == ChatMembership.Active) add(ChatListAction.Leave)
+        if (chat.hasEndedMembership || chat.groupLifecycle == GroupLifecycle.Disbanded) add(ChatListAction.Delete)
+        else if (chat.isGroup && chat.groupLifecycle == GroupLifecycle.Active && chat.membership == ChatMembership.Active) add(ChatListAction.Leave)
     }
 
     fun all(chat: Chat): List<ChatListAction> = leading(chat) + trailing(chat) +
-        listOfNotNull(ChatListAction.Delete.takeUnless { chat.hasEndedMembership }, ChatListAction.Folder, ChatListAction.Select)
+        listOfNotNull(ChatListAction.Delete.takeUnless { chat.hasEndedMembership || chat.groupLifecycle == GroupLifecycle.Disbanded }, ChatListAction.Folder, ChatListAction.Select)
 }
 
 /** A conditional field-level inverse: never replace a whole chat or a newer read/archive change. */

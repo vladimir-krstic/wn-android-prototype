@@ -323,6 +323,13 @@ fun ConversationScreen(
     onInterruptMessageEdits: () -> Unit = {},
 ) {
     DictationOriginHost(profile, chat)
+    val groupStateController = LocalGroupLifecycle.current
+    val groupRosterController = LocalGroupWork.current
+    LaunchedEffect(profile.id, chat.id, groupStateController?.stateScenario, groupRosterController?.rosterScenario) {
+        val owner = dev.ipf.whitenoise.model.GroupOwner(profile.id, chat.id)
+        groupStateController?.open(owner)
+        groupRosterController?.openRoster(owner)
+    }
     val history = rememberConversationHistory(profile, chat)
     val readState = remember(chat, profile.id) {
         ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat, profile.id), chat, profile.id)
@@ -3062,9 +3069,20 @@ private fun ConversationBottomBar(
     onCheckRelays: () -> Unit,
 ) {
     val availability = chat.composerAvailability(profile)
+    val rosterController = LocalGroupWork.current
+    val lifecycleController = LocalGroupLifecycle.current
+    LaunchedEffect(profile.id, chat.id, lifecycleController?.stateScenario) { lifecycleController?.open(dev.ipf.whitenoise.model.GroupOwner(profile.id, chat.id)) }
     when (availability) {
         ComposerAvailability.PendingInvitation -> InvitationActions(chat, onDecline, onAccept)
         ComposerAvailability.Available -> Unit
+        ComposerAvailability.MembershipUnknown -> ConversationRecovery(
+            title = stringResource(R.string.group_membership_check), detail = stringResource(R.string.group_roster_unknown),
+            actionLabel = stringResource(R.string.lifecycle_retry),
+            onAction = { rosterController?.retryRoster(dev.ipf.whitenoise.model.GroupOwner(profile.id, chat.id)) },
+        )
+        ComposerAvailability.Unrecoverable -> ConversationStatus(stringResource(R.string.group_frozen_notice))
+        ComposerAvailability.Disbanding -> ConversationStatus(stringResource(R.string.group_disband_pending))
+        ComposerAvailability.Disbanded -> ConversationStatus(stringResource(R.string.group_ended_notice))
         ComposerAvailability.Left -> ConversationStatus(
             if (chat.isGroup) stringResource(R.string.left_group_status) else stringResource(R.string.left_chat_status),
         )

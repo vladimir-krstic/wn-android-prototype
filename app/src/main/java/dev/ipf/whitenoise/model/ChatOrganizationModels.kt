@@ -32,9 +32,9 @@ object ChatOrganization {
 
     fun reconcile(selected: List<String>, visible: List<Chat>) = selected.distinct().filter { id -> visible.any { it.id == id } }
     fun archiveAction(chats: List<Chat>) = if (chats.isNotEmpty() && chats.all { it.isArchived }) ChatBulkAction.Unarchive else ChatBulkAction.Archive
-    fun requiresAdmin(chat: Chat, owner: String) = chat.membership == ChatMembership.Active &&
+    fun requiresAdmin(chat: Chat, owner: String) = chat.membership == ChatMembership.Active && chat.groupLifecycle == GroupLifecycle.Active &&
         chat.isSoleAdmin(owner) && chat.members.any { it.personId != owner }
-    fun requiresLeave(chat: Chat, owner: String) = chat.membership == ChatMembership.Active &&
+    fun requiresLeave(chat: Chat, owner: String) = chat.membership == ChatMembership.Active && chat.groupLifecycle != GroupLifecycle.Disbanded &&
         (!chat.isGroup || chat.members.singleOrNull()?.personId != owner)
 }
 

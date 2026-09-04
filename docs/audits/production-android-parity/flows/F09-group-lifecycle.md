@@ -21,10 +21,10 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C073 · Private group image and emoji-generated avatar | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | One/two emoji image, unsupported/limit states, private group photo versus public invite avatar, image loading/upload retry. Preserve public preview continuity. |
 | C074 · Role and roster mutation pending/failure | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add unknown/loading/failed roster, pending invites, per-person mutation lock, retry and stale completion handling before enabling role-sensitive commands. |
 | C075 · Promote, revoke and remove member | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C076 · Transfer administration and step down | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add explicit transfer-and-step-down and transfer-then-leave completion, partial failure and sole-member deletion case. A blocked leave dialog alone does not cover this flow. |
-| C077 · Disband group for everyone | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add capability-enable, engine-declared blockers, confirmation, pending convergence, failure acknowledgment/retry and permanently ended state. Distinguish local delete and ordinary leave. |
-| C078 · Frozen/unrecoverable, verifying and disbanded composer | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add verified-role unknown, unrecoverable and disbanding/disbanded states; block send/reaction/edit until permitted; preserve readable history and recovery explanation. |
-| C079 · Conversation transcript export | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add export progress, unavailable source, cancellation/error and completed local document handoff; preserve ordering, authored identity and edits per export contract. |
+| C076 · Transfer administration and step down | Implemented B19 | Trigger its named entry/action; cancel with Back where available | Add explicit transfer-and-step-down and transfer-then-leave completion, partial failure and sole-member deletion case. A blocked leave dialog alone does not cover this flow. |
+| C077 · Disband group for everyone | Implemented B19 | Trigger its named entry/action; cancel with Back where available | Add capability-enable, engine-declared blockers, confirmation, pending convergence, failure acknowledgment/retry and permanently ended state. Distinguish local delete and ordinary leave. |
+| C078 · Frozen/unrecoverable, verifying and disbanded composer | Implemented B19 | Trigger its named entry/action; cancel with Back where available | Add verified-role unknown, unrecoverable and disbanding/disbanded states; block send/reaction/edit until permitted; preserve readable history and recovery explanation. |
+| C079 · Conversation transcript export | Implemented B19 | Trigger its named entry/action; cancel with Back where available | Add export progress, unavailable source, cancellation/error and completed local document handoff; preserve ordering, authored identity and edits per export contract. |
 | C080 · Technical group identifiers and relay inspection | Decision required | Trigger its named entry/action; cancel with Back where available | Extend developer inspection for MLS/Nostr identifiers, required components and detailed push state; keep raw protocol fields developer-only unless Q04 changes exposure. |
 
 ## Production integration seam
@@ -58,3 +58,17 @@ UI/bitmap cases. Production master warm-roster presentation is reconciled.
 B19 lifecycle/transfer/export and B25 technical details remain pending; the table
 above preserves the original complete flow contract. Device/visual acceptance is
 separate from this host verification.
+
+## B19 implementation evidence
+
+C076–C079 are covered on 2026-09-04. Administration uses grant-first transfer,
+self-demotion, optional leave and explicit partial-stage retry; sole deletion also
+cleans folder assignment. Disbanding has authoritative capability/blocker state,
+separate enable/confirm, pending convergence, failure acknowledgment and ended
+history. Unknown/frozen/terminal composer states guard all outbound actions and
+persist independently of navigation/profile presentation. Full-history local JSON
+export preserves authored identity, ordering and accepted revisions, then uses an
+owned Android Files destination with distinct cancellation/failure/Saved outcomes.
+The [selected brief](../../../screens/group-administration-and-transcript.md#implementation-evidence)
+records 617 passing unit tests, zero lint errors, both APKs and nine new compiled
+UI cases. Device/visual acceptance is pending. Q04/C080 remains B25 scope.

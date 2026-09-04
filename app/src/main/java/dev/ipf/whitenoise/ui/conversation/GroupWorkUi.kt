@@ -21,7 +21,12 @@ import kotlinx.coroutines.delay
 internal val LocalGroupWork = staticCompositionLocalOf<GroupWorkController?> { null }
 
 @Composable
-internal fun GroupWorkHost(controller: GroupWorkController, content: @Composable () -> Unit) {
+internal fun GroupWorkHost(controller: GroupWorkController,
+    lifecycleController: dev.ipf.whitenoise.state.GroupLifecycleController? = null,
+    transcriptController: dev.ipf.whitenoise.state.TranscriptController? = null,
+    content: @Composable () -> Unit) {
+    if (lifecycleController != null) GroupLifecycleHost(lifecycleController)
+    if (transcriptController != null) TranscriptHost(transcriptController)
     SideEffect { controller.reconcile() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     controller.rosterLoads.values.forEach { load -> key(load.owner) {
@@ -44,7 +49,7 @@ internal fun GroupWorkHost(controller: GroupWorkController, content: @Composable
             delay(500); controller.advanceCreate(work.id, work.phase)
         } }
     }
-    CompositionLocalProvider(LocalGroupWork provides controller, content = content)
+    CompositionLocalProvider(LocalGroupWork provides controller, LocalGroupLifecycle provides lifecycleController, LocalTranscript provides transcriptController, content = content)
 }
 
 @Composable

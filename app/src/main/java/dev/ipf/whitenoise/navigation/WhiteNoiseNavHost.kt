@@ -196,7 +196,7 @@ fun WhiteNoiseNavHost(
         } }
     }
 
-    dev.ipf.whitenoise.ui.conversation.GroupWorkHost(appViewModel.groupWork) {
+    dev.ipf.whitenoise.ui.conversation.GroupWorkHost(appViewModel.groupWork, appViewModel.groupLifecycle, appViewModel.transcript) {
     dev.ipf.whitenoise.ui.conversation.ComposerCaptureHost(appViewModel.composerCapture) {
     dev.ipf.whitenoise.ui.conversation.ReadAloudHost(uiState.activeProfile, onSource = { target ->
         if (dev.ipf.whitenoise.model.SpeechOwnership.owns(appViewModel.uiState.activeProfile, target)) {
@@ -814,6 +814,7 @@ fun WhiteNoiseNavHost(
             val route = entry.toRoute<AppRoute.ChatInfo>()
             val profile = uiState.activeProfile
             val chat = appViewModel.chat(route.chatId)
+            if (profile != null && chat == null) LaunchedEffect(route.chatId) { navController.popBackStack<AppRoute.SignedIn>(inclusive = false) }
             if (profile != null && chat != null) {
                 ChatInfoScreen(
                     profile = profile,

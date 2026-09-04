@@ -14,6 +14,7 @@ class GroupWorkController(
     private val commitEdit: (GroupOwner, GroupEditDraft) -> Boolean,
     private val create: (GroupEditDraft, List<String>) -> String?,
     private val applyTimer: (GroupOwner, DisappearingDuration) -> Boolean,
+    private val additionalLock: (GroupOwner) -> Boolean = { false },
 ) {
     var memberWork by mutableStateOf<Map<GroupOwner, GroupMemberWork>>(emptyMap()); private set
     var editWork by mutableStateOf<Map<GroupOwner, GroupEditWork>>(emptyMap()); private set
@@ -29,7 +30,8 @@ class GroupWorkController(
     private val presented = mutableMapOf<GroupOwner, GroupRosterScenario>()
     private fun profile(id: String) = profiles().firstOrNull { it.id == id && signedIn(id) }
     private fun chat(owner: GroupOwner) = profile(owner.profileId)?.chats?.firstOrNull { it.id == owner.chatId }
-    fun locked(owner: GroupOwner): Boolean = memberWork[owner]?.running == true || editWork[owner]?.phase == GroupWorkPhase.Applying
+    fun locked(owner: GroupOwner): Boolean = memberEditLocked(owner) || additionalLock(owner)
+    fun memberEditLocked(owner: GroupOwner): Boolean = memberWork[owner]?.running == true || editWork[owner]?.phase == GroupWorkPhase.Applying
     fun permitsPrimitive(owner: GroupOwner): Boolean = committing == owner || !locked(owner)
     private fun developer(): Boolean {
         val p = profile(activeId() ?: return false)?.takeIf { it.developerTools.isEnabled } ?: return false
@@ -64,7 +66,7 @@ class GroupWorkController(
     private fun loadRoster(owner: GroupOwner, scenario: GroupRosterScenario) {
         val chat = chat(owner)?.takeIf { owner.profileId == activeId() && it.isGroup } ?: return
         val status = if (scenario == GroupRosterScenario.Unknown) GroupRosterStatus.Unknown else GroupRosterStatus.Loading
-        val roster = GroupRoster(status, chat.groupRoster.revision + 1, scenario == GroupRosterScenario.WarmLoading && chat.hasGroupAdmin(owner.profileId))
+        val roster = GroupRoster(status, chat.groupRoster.revision + 1, scenario == GroupRosterScenario.WarmLoading && chat.membership == ChatMembership.Active && chat.members.any { it.personId == owner.profileId })
         changeRoster(owner, roster)
         rosterLoads = if (status == GroupRosterStatus.Unknown) rosterLoads - owner else rosterLoads + (owner to GroupRosterLoad(++sequence, owner, roster.revision, scenario))
     }

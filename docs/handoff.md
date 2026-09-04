@@ -1,13 +1,14 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B18 are implemented and host-verified.
+2026-09-04: production parity B01–B19 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. B18 is complete within its local scope: solo groups, separate
-create/timer/open recovery, private/public and emoji image editing, authoritative
-roster loading and owned member pending/convergence/retry. Continue with B19.
-B18's commit title is `B18: Add group setup, image and roster recovery`. Q05 is resolved by the approved checked wipe
+record evidence. B19 is complete within its local scope: staged transfer and
+leave, sole deletion, disband capability/convergence/recovery, frozen/ended groups
+and complete local transcript export. Continue with B20 and resolve its Q03
+retention copy/behavior slice from current authoritative evidence.
+B19's commit title is `B19: Add group administration, disbanding and transcript export`. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -70,14 +71,23 @@ Group edits retain prepared drafts; emoji selection renders opaque local image
 bytes. Member commands show pending/convergence/failure with fresh role/revision
 checks. See `docs/screens/group-setup-images-and-roster.md`. Ten new UI/bitmap
 cases compile only. B18 reconciles warm-roster Add People presentation at the same
-master hash. B19 must preserve the new ChatListGroupSeed unrecoverable and terminal
-lifecycle behavior on cold/profile-switch frames. Timeline ordering drift remains
+master hash. B19 now preserves the new ChatListGroupSeed unrecoverable and
+terminal lifecycle behavior on cold/profile-switch frames. Timeline ordering drift remains
 for final reconciliation alongside Nostr/installer/startup seams.
-Latest host gate: 575 unit tests, zero lint errors, both APKs;
+B19 adds `GroupLifecycleController` alongside the existing group lock and
+`TranscriptController` above navigation. Accepted grant/demotion stages survive
+partial failure; retry resumes only the remaining stage. Disband capability,
+blockers, acknowledgment and terminal precedence are typed. Full local history
+exports as JSON with authored identity and accepted revisions; Files results are
+bound to the original snapshot and stale/failed writes are cleaned up best-effort.
+See `docs/screens/group-administration-and-transcript.md`. Nine new UI cases
+compile only. The production export schema/engine callbacks must replace the
+local document schema and deterministic outcomes when migrating back.
+Latest host gate: 617 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B19–B32. This
+boundary. Production Android parity remains in progress through B20–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

@@ -114,6 +114,7 @@ object MessageForwarding {
         ComposerAvailability.Removed -> MessageForwardFailure.Removed
         ComposerAvailability.Blocked -> MessageForwardFailure.Blocked
         ComposerAvailability.MissingRelays -> MessageForwardFailure.MissingRelays
+        ComposerAvailability.MembershipUnknown, ComposerAvailability.Unrecoverable, ComposerAvailability.Disbanding, ComposerAvailability.Disbanded -> MessageForwardFailure.TargetUnavailable
         null -> MessageForwardFailure.TargetUnavailable
     }
     fun folderMembers(profile: Profile, sourceProfileId: String, sourceChatId: String, folder: ChatFolder): List<String> =

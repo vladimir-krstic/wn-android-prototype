@@ -67,7 +67,7 @@ internal fun ChatDeleteConfirmation(chats: List<Chat>, onDismiss: () -> Unit, on
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                 Text(stringResource(R.string.chat_delete_local_detail))
-                if (chats.any { it.membership == ChatMembership.Active }) {
+                if (chats.any { it.membership == ChatMembership.Active && it.groupLifecycle != GroupLifecycle.Disbanded }) {
                     Row(Modifier.fillMaxWidth().toggleable(leave, role = Role.Checkbox, onValueChange = { leave = it }), verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(leave, null)
                         Text(stringResource(R.string.chat_delete_also_leave), Modifier.weight(1f))

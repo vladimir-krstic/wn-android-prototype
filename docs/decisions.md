@@ -3973,3 +3973,31 @@ The [selected brief](screens/group-setup-images-and-roster.md#implementation-evi
 records current production drift and migration seams. Host validation passes 575
 unit tests, zero lint errors and both APKs; ten new UI/bitmap cases compile only.
 All upload, creation and roster state remains deterministic and in memory.
+
+## WN-ANDROID-0139 — Accepted group stages, terminal precedence and owned transcript export
+
+- Status: Implemented under authorized B19; host verified, device/visual acceptance pending.
+
+Administration transfer grants the selected member before self-demotion and
+optional leave. Accepted stages remain visible on partial failure or profile
+interruption; a retry validates current authority/target and resumes the remaining
+stage. All group administration shares the B18 commit lock. Sole-member deletion
+removes local history and folder assignment. Disbanding is a distinct
+capability-controlled operation, with explicit enable/confirm, pending convergence,
+failure acknowledgment and permanent ended state. Terminal/unrecoverable state
+outranks invitation and warm membership seeds; unknown role state cannot confer
+administration. A positive warm member seed may preserve messaging during refresh.
+
+Transcript export snapshots all available local history, with stable chronology,
+authored IDs/public keys and accepted revisions. Pending edits/drafts and deleted
+bodies are excluded. The local schema is identified separately from production
+Marmot event data, and uses the existing fixed clock. Following Q07, an unstyled
+Android CreateDocument flow selects the destination. Generation/profile/source
+checks guard preparation, picker return and output completion; failure/cancellation
+is distinct from Saved. Cleanup of a failed or stale newly created document is
+best-effort because provider deletion is not guaranteed. No new permission,
+backend, persistence service or production wire archive is implied.
+
+The [selected brief](screens/group-administration-and-transcript.md#implementation-evidence)
+records source drift and exact migration seams. Host validation passes 617 unit
+tests, zero lint errors and both APKs; nine new UI cases compile only.

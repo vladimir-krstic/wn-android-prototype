@@ -3,7 +3,7 @@ package dev.ipf.whitenoise.model
 data class GroupOwner(val profileId: String, val chatId: String)
 enum class GroupRosterStatus { Unknown, Loading, Ready, Failed, Inconsistent }
 data class GroupRoster(val status: GroupRosterStatus = GroupRosterStatus.Ready, val revision: Long = 0, val seededSelfMember: Boolean = false)
-fun Chat.hasGroupAdmin(profileId: String): Boolean = isGroup && membership == ChatMembership.Active && members.any { it.personId == profileId && it.role == GroupRole.Admin }
+fun Chat.hasGroupAdmin(profileId: String): Boolean = isGroup && groupLifecycle == GroupLifecycle.Active && membership == ChatMembership.Active && members.any { it.personId == profileId && it.role == GroupRole.Admin }
 fun Chat.hasAuthoritativeGroupAdmin(profileId: String): Boolean = groupRoster.status == GroupRosterStatus.Ready && hasGroupAdmin(profileId)
 fun Chat.canPresentMemberAdministration(profileId: String): Boolean = hasGroupAdmin(profileId) &&
     (groupRoster.status == GroupRosterStatus.Ready || (groupRoster.status == GroupRosterStatus.Loading && groupRoster.seededSelfMember))

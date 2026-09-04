@@ -96,20 +96,37 @@ enum class ComposerAvailability {
     Removed,
     Blocked,
     MissingRelays,
+    MembershipUnknown,
+    Unrecoverable,
+    Disbanding,
+    Disbanded,
 }
 
-fun Chat.composerAvailability(profile: Profile): ComposerAvailability = when (membership) {
-    ChatMembership.Invited -> ComposerAvailability.PendingInvitation
-    ChatMembership.Left -> ComposerAvailability.Left
-    ChatMembership.Removed -> ComposerAvailability.Removed
-    ChatMembership.Active -> {
-        val directPerson = (kind as? ChatKind.Direct)?.personId
-        when {
-            directPerson != null && profile.people.firstOrNull { it.id == directPerson }?.isBlocked == true -> {
-                ComposerAvailability.Blocked
+fun Chat.composerAvailability(profile: Profile): ComposerAvailability {
+    if (isGroup) {
+        when (groupLifecycle) {
+            GroupLifecycle.Disbanded -> return ComposerAvailability.Disbanded
+            GroupLifecycle.Disbanding -> return ComposerAvailability.Disbanding
+            GroupLifecycle.Unrecoverable -> return ComposerAvailability.Unrecoverable
+            GroupLifecycle.Active -> Unit
+        }
+        if (membership == ChatMembership.Active) {
+            if (groupRoster.status != GroupRosterStatus.Ready &&
+                !(groupRoster.status == GroupRosterStatus.Loading && groupRoster.seededSelfMember)) return ComposerAvailability.MembershipUnknown
+            if (members.none { it.personId == profile.id }) return ComposerAvailability.Removed
+        }
+    }
+    return when (membership) {
+        ChatMembership.Invited -> ComposerAvailability.PendingInvitation
+        ChatMembership.Left -> ComposerAvailability.Left
+        ChatMembership.Removed -> ComposerAvailability.Removed
+        ChatMembership.Active -> {
+            val directPerson = (kind as? ChatKind.Direct)?.personId
+            when {
+                directPerson != null && profile.people.firstOrNull { it.id == directPerson }?.isBlocked == true -> ComposerAvailability.Blocked
+                relayUrls.isEmpty() -> ComposerAvailability.MissingRelays
+                else -> ComposerAvailability.Available
             }
-            relayUrls.isEmpty() -> ComposerAvailability.MissingRelays
-            else -> ComposerAvailability.Available
         }
     }
 }

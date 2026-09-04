@@ -92,3 +92,17 @@ cold/profile-switch frames; B19 must reconcile that C078 behavior. Its admin
 seed remains conservative. The larger authoritative timeline-window ordering,
 Nostr, installation, Amber/contact/startup changes remain for the relevant later
 batch or final audit, not implicitly completed by B18.
+
+## Implementation drift check — B19, 2026-09-04
+
+The current master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`, with no main
+ref. B19 explicitly reconciles
+[ChatListGroupSeed.kt](https://github.com/marmot-protocol/whitenoise-android/blob/911040c7e1c31652638c8cfd72812d1f3a694b9b/app/src/main/java/dev/ipf/whitenoise/android/state/ChatListGroupSeed.kt):
+unrecoverable, disbanding/disbanded and request state survive the first frame
+before the full record arrives; absent admin evidence remains conservative.
+Local Chat stores lifecycle independently and gates composer and administration
+before membership presentation, including profile round trips. B19 keeps the
+pinned transfer/disband/transcript contracts and the B18 warm roster behavior.
+The full engine export schema is a documented migration seam, not fabricated
+local state. This does not complete unrelated timeline-window ordering,
+Nostr-event, installer, Amber/contact or startup drift.

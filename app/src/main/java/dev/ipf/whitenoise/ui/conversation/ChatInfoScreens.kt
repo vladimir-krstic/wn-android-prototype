@@ -192,7 +192,7 @@ fun ChatInfoScreen(
                 onClick = onArchive,
             ),
         )
-        if (chat.membership == ChatMembership.Active) {
+        if (chat.membership == ChatMembership.Active && (!chat.isGroup || LocalGroupLifecycle.current == null)) {
             add(
                 ChatInfoAction(
                     title = stringResource(if (chat.isGroup) R.string.leave_group else R.string.leave_chat),
@@ -312,6 +312,7 @@ fun ChatInfoScreen(
                         dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
                     }
                 }
+                item(key = "transcript_export") { TranscriptPanel(profile, chat) }
                 item(key = "technical_actions") {
                     ChatInfoActionGroup(
                         actions = if (chat.isGroup) technicalActions else technicalActions + lifecycleActions,
@@ -352,6 +353,7 @@ fun ChatInfoScreen(
                             )
                         }
                     }
+                    item(key = "group_lifecycle") { GroupLifecyclePanel(profile, chat, onBack) }
                     item(key = "lifecycle") {
                         ChatInfoActionGroup(
                             actions = lifecycleActions,

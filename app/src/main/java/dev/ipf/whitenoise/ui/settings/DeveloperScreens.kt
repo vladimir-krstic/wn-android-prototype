@@ -173,8 +173,13 @@ fun DeveloperToolsScreen(
         profileSaveScenario, { it.developerLabel }, onProfileSaveScenario, { profileSaveScenariosOpen = false })
     var peopleScenariosOpen by remember { mutableStateOf(false) }
     var groupScenariosOpen by remember { mutableStateOf(false) }
+    val groupLifecycle = dev.ipf.whitenoise.ui.conversation.LocalGroupLifecycle.current
+    val transcript = dev.ipf.whitenoise.ui.conversation.LocalTranscript.current
     val groupWork = dev.ipf.whitenoise.ui.conversation.LocalGroupWork.current
     var groupWorkChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
+    if (groupLifecycle != null && groupWorkChoice == "lifecycle") ScenarioChoiceDialog("Group administration", dev.ipf.whitenoise.model.GroupLifecycleScenario.entries, groupLifecycle.scenario, { it.developerLabel }, groupLifecycle::choose, { groupWorkChoice = null })
+    if (groupLifecycle != null && groupWorkChoice == "groupState") ScenarioChoiceDialog("Group lifecycle", dev.ipf.whitenoise.model.GroupStateScenario.entries, groupLifecycle.stateScenario, { it.developerLabel }, groupLifecycle::chooseState, { groupWorkChoice = null })
+    if (transcript != null && groupWorkChoice == "transcript") ScenarioChoiceDialog("Transcript export", dev.ipf.whitenoise.model.TranscriptScenario.entries, transcript.scenario, { it.developerLabel }, transcript::choose, { groupWorkChoice = null })
     if (groupWork != null) when (groupWorkChoice) {
         "roster" -> ScenarioChoiceDialog("Group roster", dev.ipf.whitenoise.model.GroupRosterScenario.entries, groupWork.rosterScenario, { it.developerLabel }, groupWork::chooseRoster, { groupWorkChoice = null })
         "members" -> ScenarioChoiceDialog("Group member updates", dev.ipf.whitenoise.model.GroupMutationScenario.entries, groupWork.mutationScenario, { it.developerLabel }, groupWork::chooseMutation, { groupWorkChoice = null })
@@ -278,6 +283,11 @@ fun DeveloperToolsScreen(
                             SettingsDivider(); SettingsLink("Group member updates", groupWork.mutationScenario.developerLabel, { groupWorkChoice = "members" })
                             SettingsDivider(); SettingsLink("Group images", groupWork.imageScenario.developerLabel, { groupWorkChoice = "images" })
                             SettingsDivider(); SettingsLink("Group creation", groupWork.createScenario.developerLabel, { groupWorkChoice = "create" })
+                            if (groupLifecycle != null) {
+                                SettingsDivider(); SettingsLink("Group administration", groupLifecycle.scenario.developerLabel, { groupWorkChoice = "lifecycle" })
+                                SettingsDivider(); SettingsLink("Group lifecycle", groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
+                            }
+                            if (transcript != null) { SettingsDivider(); SettingsLink("Transcript export", transcript.scenario.developerLabel, { groupWorkChoice = "transcript" }) }
                         }
                         SettingsDivider()
                         SettingsSwitch("Next created chat cannot open", createdChatUnavailable, onCreatedChatUnavailable)
