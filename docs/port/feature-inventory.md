@@ -122,6 +122,15 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B23: C094 is implemented and host-verified locally.
+Notification message/invite/role/list entry preserves original profile ownership,
+exact history/read boundaries and bounded invitation recovery. Inline actions
+preserve drafts, validate current choices, defer for lock and separate accepted
+proof from cleanup/retry. Newer arrivals survive stale cleanup. 748 unit tests,
+zero lint errors and both APKs pass; seven UI cases compile only. Real notification
+delivery/workers/durable recovery remain Q06 seams. See
+[notification-routing-and-actions.md](../screens/notification-routing-and-actions.md#implementation-evidence).
+
 2026-09-04 production B22: C089–C093 are implemented and host-verified locally.
 Notifications adds provider/dependency failures and accepted/rejected app-wide
 background connection state. Sounds & notifications adds owned All/Mentions/mute,

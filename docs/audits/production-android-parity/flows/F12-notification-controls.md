@@ -4,7 +4,7 @@ B22/C089–C093 are implemented and host-verified within local scope. The
 [selected brief](../../../screens/notification-controls.md#implementation-evidence)
 records 714 passing unit tests, ten compiled UI/platform cases and production
 integration seams. Q06 excludes real delivery/services/publication/vibration.
-B23/C094 remains pending. Device and visual acceptance remain pending.
+B23/C094 is implemented and host-verified: [notification routing/action evidence](../../../screens/notification-routing-and-actions.md#implementation-evidence) records 748 passing unit tests and seven compiled UI cases. Device and visual acceptance remain pending.
 
 ## Purpose and current composition
 
@@ -27,7 +27,7 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C091 · Android notification categories and global defaults | Global categories and distribution availability | Open Android category settings | Exact existing category targets or explicit app-settings fallback/unavailable outcomes; no imitation system screen or channel publication. |
 | C092 · Per-chat notify mode, custom category and vibration | Saved Notify for, mute, scope and vibration | Select modes/scope; stage vibration; save, preview or cancel | All/Mentions survives effective Nothing while muted. Primary/custom/global scope and Android override projections are independent and owner-checked. |
 | C093 · Custom mute-until and restoration of previous notify mode | Existing preset/custom mute or unmuted state | One-tap presets or native date/time; Back/cancel preserves | Future-time acceptance and shared foreground expiry update canonical mute state and restore the saved choice. |
-| C094 · Notification tap, inline reply/reaction/mark-read | Decision required | Trigger its named entry/action; cancel with Back where available | Model message/invite route and account ownership, inline action pending/failure/retry, exactly-once result and read-through boundary; live notifications require Q06. |
+| C094 · Notification tap, inline reply/reaction/mark-read | Owned local route/action and card generation | Tap, act, defer/unlock, cancel, Retry or Done | Message/invite/role/list entry, bounded invitation probes, exact read-through, accepted action proof and cleanup-only retry preserve drafts, profile ownership and newer arrivals. Live delivery/workers remain Q06. |
 
 ## Production integration seam
 

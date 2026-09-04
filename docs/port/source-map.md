@@ -308,3 +308,21 @@ independent NotifyFor and mute/deadline fields. `MuteDurationDialog.kt` uses nat
 calendar/time input; RetentionController's shared clock expires canonical mute state.
 All/Mentions remain independent of effective Nothing while muted. Current master
 changes none of these settings contracts.
+
+## Production B23 notification routing and actions
+
+`docs/screens/notification-routing-and-actions.md` maps NotificationTarget,
+NotificationAction and NotificationReadThroughCommitter to `IncomingController`,
+`NotificationActions`, typed conversation request/target arguments and
+`NotificationReadBoundary`. History uses the existing single canonical local
+conversation; optional message IDs and bounded invitation probes preserve source
+routing distinctions. Request leases guard read-through after unread capture.
+
+NotificationActionReceiver and Reply/Reaction/MarkRead workers map to
+`NotificationActionController` and AppViewModel's originating-profile mutation/read
+callbacks. Local generation-aware cleanup, accepted proof and lock/operation retry
+accounting reconnect to production's presenter, durable stores and AppState
+notification methods. `NotificationActionsUi` owns app status; Developer Tools
+owns examples. Real exported intents, RemoteInput, delivery, workers, services and
+process-death persistence remain outside Q06 local coverage. Current route test
+drift preserves one mounted controller while moving to authoritative windows.

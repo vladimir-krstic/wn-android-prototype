@@ -312,6 +312,8 @@ fun ConversationScreen(
     onOpenDeveloperTools: (() -> Unit)? = null,
     initialSearch: Boolean = false,
     initialMessageId: String? = null,
+    notificationRequestId: Long? = null,
+    onNotificationBoundaryCaptured: () -> Unit = {},
     searchRequestId: Long = 0,
     onHistoryScenario: (HistoryOperation) -> HistoryScenario = { HistoryScenario.Success },
     onMessagesVisible: (Set<String>) -> Unit = {},
@@ -337,6 +339,8 @@ fun ConversationScreen(
         ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat, profile.id), chat, profile.id)
     }
     val speechEntryUnreadIds = remember(profile.id, chat.id) { readState.unreadIds.toSet() }
+    // History has captured the entry boundary above; committing now must not move that marker.
+    dev.ipf.whitenoise.ui.settings.NotificationReadBoundary(notificationRequestId,profile.id,chat.id,onNotificationBoundaryCaptured)
     val items = remember(chat.timeline, history.windowIds, history.boundaryId, history.request, history.scanning, history.scanFailed) {
         buildList {
             fun control(id: String) { add(ConversationItem.NoticeItem(ChatTimelineEntry.Notice(id, ""))) }
@@ -409,7 +413,7 @@ fun ConversationScreen(
     var preSearchAnchor by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var preSearchOffset by rememberSaveable(profile.id, chat.id) { mutableIntStateOf(0) }
     var handledSearchRequest by rememberSaveable(profile.id, chat.id) { mutableStateOf(0L) }
-    var pendingInitialMessageId by rememberSaveable(chat.id, initialMessageId) {
+    var pendingInitialMessageId by rememberSaveable(profile.id, chat.id, initialMessageId, notificationRequestId) {
         mutableStateOf(initialMessageId ?: history.boundaryId)
     }
     var initialViewportSettled by rememberSaveable(chat.id) { mutableStateOf(false) }

@@ -4,14 +4,14 @@ import androidx.compose.runtime.*
 import dev.ipf.whitenoise.model.*
 
 enum class IncomingPhase { Queued, Preparing, Choosing, Applying, Opening, Complete, Failed, Cancelled }
-enum class IncomingFailure { ContentEmpty, ContentInvalid, ContentUnavailable, ContentTooLarge, ProfileUnavailable, TargetUnavailable, Preparation, Apply, Open, SourceChanged }
-enum class IncomingScenario(val developerLabel: String) { Success("Share succeeds"), PreparationFailure("Content preparation fails"), ApplyFailure("Draft staging fails"), OpenFailure("Draft staged but chat cannot open") }
+enum class IncomingFailure { ContentEmpty, ContentInvalid, ContentUnavailable, ContentTooLarge, ProfileUnavailable, TargetUnavailable, Preparation, Apply, Open, SourceChanged, InviteUnconfirmed }
+enum class IncomingScenario(val developerLabel: String) { Success("Share succeeds"), PreparationFailure("Content preparation fails"), ApplyFailure("Draft staging fails"), OpenFailure("Draft staged but chat cannot open"), NotificationLoadFailure("Notification history fails once"), InviteRowDelayed("Invitation row appears on third probe"), InviteUnavailable("Invitation no longer available"), InviteInconclusive("Invitation cannot be confirmed") }
 data class IncomingCommit(val chatIds: List<String>, val dropped: Int)
-data class IncomingOpen(val requestId: Long, val target: IncomingTarget? = null, val person: Person? = null, val profileId: String, val otherChats: Int = 0, val dropped: Int = 0, val chatList: Boolean = false)
+data class IncomingOpen(val requestId: Long, val target: IncomingTarget? = null, val person: Person? = null, val profileId: String, val otherChats: Int = 0, val dropped: Int = 0, val chatList: Boolean = false, val notification: NotificationTarget? = null)
 data class IncomingWork(val id: Long, val entry: IncomingEntry, val receivingProfileId: String?, val phase: IncomingPhase,
     val originRoute: String?, val selectedProfileId: String?, val awaitingActivation: Boolean = false, val selectedChatIds: List<String> = emptyList(),
     val prepared: PreparedIncoming? = null, val committed: IncomingCommit? = null, val failure: IncomingFailure? = null,
-    val scenario: IncomingScenario = IncomingScenario.Success, val fallback: Boolean = false, val attempt: Int = 0) {
+    val scenario: IncomingScenario = IncomingScenario.Success, val fallback: Boolean = false, val attempt: Int = 0, val probe: Int = 0) {
     val running get() = phase in setOf(IncomingPhase.Preparing, IncomingPhase.Applying, IncomingPhase.Opening)
 }
 
@@ -49,11 +49,12 @@ class IncomingController(
         route = token; routeWasOnboarding = onboarding
     }
     /** A null entry is a launcher re-entry and must not erase an unconsumed request. */
-    fun receive(entry: IncomingEntry?): Long? {
+    fun receive(incomingEntry: IncomingEntry?): Long? {
+        val entry = if (incomingEntry is IncomingEntry.Notification) incomingEntry.copy(target = incomingEntry.target.normalized()) else incomingEntry
         if (entry == null) return work?.id
         navigating = null
         val id = ++sequence
-        val selected = when (entry) { is IncomingEntry.Conversation -> entry.target.profileId; else -> activeId() }
+        val selected = when (entry) { is IncomingEntry.Conversation -> entry.target.profileId; is IncomingEntry.Notification -> entry.target.profileId; else -> activeId() }
         work = IncomingWork(id, entry, activeId(), IncomingPhase.Queued, route, selected, awaitingActivation = !ready() || signedProfiles().isEmpty(), scenario = scenario)
         reconcile(); return id
     }
@@ -115,6 +116,26 @@ class IncomingController(
                     if (profile(entry.target.profileId)?.chats?.none { it.id == entry.target.chatId } != false) { fail(w,IncomingFailure.TargetUnavailable); return }
                     work = w.copy(phase = IncomingPhase.Opening)
                 }
+                is IncomingEntry.Notification -> {
+                    val target = entry.target
+                    if (!target.valid) { fail(w,IncomingFailure.ContentInvalid); return }
+                    val p = profile(target.profileId) ?: run { fail(w,IncomingFailure.ProfileUnavailable); return }
+                    if (target.kind == NotificationTargetKind.ChatList) { work = w.copy(phase = IncomingPhase.Opening); return }
+                    val chat = p.chats.firstOrNull { it.id == target.chatId }
+                    if (target.kind == NotificationTargetKind.Invite) {
+                        if (chat?.hasEndedMembership == true || w.scenario == IncomingScenario.InviteUnavailable) { fail(w,IncomingFailure.TargetUnavailable); return }
+                        val needsProbe = chat == null || w.scenario == IncomingScenario.InviteInconclusive ||
+                            w.scenario == IncomingScenario.InviteRowDelayed && w.probe < 2
+                        if (needsProbe) {
+                            if (w.probe >= 2) fail(w,IncomingFailure.InviteUnconfirmed)
+                            else work = w.copy(probe = w.probe + 1)
+                            return
+                        }
+                    }
+                    if (chat == null) { fail(w,IncomingFailure.TargetUnavailable); return }
+                    if (w.scenario == IncomingScenario.NotificationLoadFailure && w.attempt == 0) { fail(w,IncomingFailure.Open); return }
+                    work = w.copy(phase = IncomingPhase.Opening)
+                }
                 is IncomingEntry.ProfileLink -> {
                     if (ProfileLinks.parse(entry.value, recipient = true) == null) { fail(w,IncomingFailure.ContentInvalid); return }
                     work = w.copy(phase = IncomingPhase.Opening)
@@ -134,22 +155,25 @@ class IncomingController(
         if (locked || !ready()) return null
         if (w.scenario == IncomingScenario.OpenFailure && w.attempt == 0) { fail(w,IncomingFailure.Open); return null }
         val p = profile(w.selectedProfileId) ?: run { fail(w,IncomingFailure.ProfileUnavailable); return null }
-        if (w.fallback && w.entry !is IncomingEntry.Share) {
+        if (w.fallback && w.entry !is IncomingEntry.Share || (w.entry as? IncomingEntry.Notification)?.target?.kind == NotificationTargetKind.ChatList) {
             navigating = id; return IncomingOpen(id,profileId = p.id,chatList = true)
         }
         val target = when (val entry = w.entry) {
             is IncomingEntry.Share -> w.committed?.chatIds?.firstOrNull()?.let { IncomingTarget(p.id,it) }
             is IncomingEntry.Conversation -> entry.target
             is IncomingEntry.ProfileLink -> null
+            is IncomingEntry.Notification -> IncomingTarget(entry.target.profileId,entry.target.chatId)
         }
         if (target != null && p.chats.none { it.id == target.chatId }) { fail(w,IncomingFailure.TargetUnavailable); return null }
+        val notification = (w.entry as? IncomingEntry.Notification)?.target
+        if (notification?.kind == NotificationTargetKind.Invite && p.chats.firstOrNull { it.id == notification.chatId }?.hasEndedMembership != false) { fail(w,IncomingFailure.TargetUnavailable); return null }
         val person = (w.entry as? IncomingEntry.ProfileLink)?.let { entry ->
             val ref = ProfileLinks.parse(entry.value,true) ?: return null
             PeopleDiscovery.resolve(p,ref.value).people.firstOrNull()?.person
         }
         if (target == null && person == null) { fail(w,IncomingFailure.TargetUnavailable); return null }
         navigating = id
-        return IncomingOpen(w.id,target,person,p.id,(w.committed?.chatIds?.size ?: 1) - 1,w.committed?.dropped ?: 0)
+        return IncomingOpen(w.id,target,person,p.id,(w.committed?.chatIds?.size ?: 1) - 1,w.committed?.dropped ?: 0, notification = notification)
     }
     fun opened(id: Long, accepted: Boolean) {
         val w = work?.takeIf { it.id == id && it.phase == IncomingPhase.Opening && navigating == id } ?: return
@@ -160,7 +184,7 @@ class IncomingController(
     fun retry(id: Long): Boolean {
         val w = work?.takeIf { it.id == id && it.phase == IncomingPhase.Failed } ?: return false
         if (profile(w.selectedProfileId) == null) return false
-        work = w.copy(attempt = w.attempt + 1, failure = null, phase = when {
+        work = w.copy(attempt = w.attempt + 1, probe = 0, failure = null, phase = when {
             w.committed != null -> IncomingPhase.Opening
             w.entry is IncomingEntry.Share && w.prepared != null -> IncomingPhase.Choosing
             else -> IncomingPhase.Preparing

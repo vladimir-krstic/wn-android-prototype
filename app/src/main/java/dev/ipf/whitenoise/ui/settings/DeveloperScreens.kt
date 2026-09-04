@@ -175,6 +175,19 @@ fun DeveloperToolsScreen(
     var groupScenariosOpen by remember { mutableStateOf(false) }
     val incoming = dev.ipf.whitenoise.ui.share.LocalIncoming.current
     val notificationControls = LocalNotificationControls.current
+    val notificationActions = LocalNotificationActions.current
+    var actionChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
+    if (notificationActions != null && actionChoice == "outcome") ScenarioChoiceDialog("Notification action outcome",
+        dev.ipf.whitenoise.state.NotificationActionScenario.entries,notificationActions.scenario,{it.label},notificationActions::choose,{actionChoice = null})
+    if (notificationActions != null && actionChoice == "action") ScenarioChoiceDialog("Notification action",
+        dev.ipf.whitenoise.model.NotificationActionKind.entries,dev.ipf.whitenoise.model.NotificationActionKind.Reply,{it.name},{ kind ->
+            val entry = dev.ipf.whitenoise.model.IncomingExamples.entry(dev.ipf.whitenoise.model.IncomingExample.NotificationMessage,profile,listOf(profile)) as dev.ipf.whitenoise.model.IncomingEntry.Notification
+            val generation = notificationActions.nextExampleId()
+            val card = dev.ipf.whitenoise.model.NotificationCard("developer-message",generation,entry.target)
+            notificationActions.recordCard(card)
+            notificationActions.submit(dev.ipf.whitenoise.model.NotificationActionInput("developer-action-$generation",card,kind,
+                if (kind == dev.ipf.whitenoise.model.NotificationActionKind.React) profile.quickReactions.firstOrNull().orEmpty() else "Thanks, see you there."))
+        },{actionChoice = null})
     var notificationChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
     if (notificationControls != null) {
         when (notificationChoice) {
@@ -195,7 +208,7 @@ fun DeveloperToolsScreen(
     var groupWorkChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
     if (incoming != null && incomingExampleOpen) ScenarioChoiceDialog("Incoming request", dev.ipf.whitenoise.model.IncomingExample.entries,
         dev.ipf.whitenoise.model.IncomingExample.Text, { it.label }, { example -> incoming.receive(dev.ipf.whitenoise.model.IncomingExamples.entry(example,profile,incoming.signedProfiles())) }, { incomingExampleOpen = false })
-    if (incoming != null && incomingOutcomeOpen) ScenarioChoiceDialog("Incoming share outcome", dev.ipf.whitenoise.state.IncomingScenario.entries,
+    if (incoming != null && incomingOutcomeOpen) ScenarioChoiceDialog("Incoming request outcome", dev.ipf.whitenoise.state.IncomingScenario.entries,
         incoming.scenario, { it.developerLabel }, incoming::choose, { incomingOutcomeOpen = false })
     if (retention != null && groupWorkChoice == "retention") ScenarioChoiceDialog("Retention update", dev.ipf.whitenoise.state.RetentionScenario.entries, retention.scenario, { it.developerLabel }, retention::choose, { groupWorkChoice = null })
     if (retention != null && groupWorkChoice == "expiry") ScenarioChoiceDialog("Retention example", dev.ipf.whitenoise.state.RetentionExample.entries, retention.example, { it.developerLabel }, retention::chooseExample, { groupWorkChoice = null })
@@ -310,9 +323,13 @@ fun DeveloperToolsScreen(
                                 SettingsDivider(); SettingsLink("Group lifecycle", groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
                             }
                             if (transcript != null) { SettingsDivider(); SettingsLink("Transcript export", transcript.scenario.developerLabel, { groupWorkChoice = "transcript" }) }
+                            if (notificationActions != null) {
+                                SettingsDivider(); SettingsLink("Notification action", "Reply, react or mark a message read", { actionChoice = "action" })
+                                SettingsDivider(); SettingsLink("Notification action outcome", notificationActions.scenario.label, { actionChoice = "outcome" })
+                            }
                             if (incoming != null) {
-                                SettingsDivider(); SettingsLink("Incoming request", "Open an owned share, shortcut or profile link", { incomingExampleOpen = true })
-                                SettingsDivider(); SettingsLink("Incoming share outcome", incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
+                                SettingsDivider(); SettingsLink("Incoming request", "Open an owned share, notification, shortcut or profile link", { incomingExampleOpen = true })
+                                SettingsDivider(); SettingsLink("Incoming request outcome", incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
                                 SettingsDivider(); SettingsLink("Defer incoming requests", if (incoming.locked) "Locked" else "Unlocked", { incoming.chooseLock(!incoming.locked) })
                             }
                             if (notificationControls != null) {

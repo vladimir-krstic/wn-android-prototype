@@ -51,6 +51,7 @@ sealed interface AppRoute {
         val chatId: String,
         val openSearch: Boolean = false,
         val targetMessageId: String? = null,
+        val notificationRequestId: Long? = null,
     ) : AppRoute
 
     @Serializable

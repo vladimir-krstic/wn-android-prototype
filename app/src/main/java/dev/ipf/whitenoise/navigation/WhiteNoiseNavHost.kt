@@ -127,9 +127,9 @@ fun WhiteNoiseNavHost(
         }
     }
 
-    fun openConversation(chatId: String, clearsCreationFlow: Boolean) {
+    fun openConversation(chatId: String, clearsCreationFlow: Boolean, messageId: String? = null, notificationId: Long? = null) {
         appViewModel.openChat(chatId)
-        navController.navigate(AppRoute.Conversation(chatId)) {
+        navController.navigate(AppRoute.Conversation(chatId, targetMessageId = messageId, notificationRequestId = notificationId)) {
             if (clearsCreationFlow) popUpTo<AppRoute.SignedIn> { inclusive = false }
             launchSingleTop = true
         }
@@ -196,6 +196,7 @@ fun WhiteNoiseNavHost(
         } }
     }
 
+    dev.ipf.whitenoise.ui.settings.NotificationActionsHost(appViewModel.notificationActions,uiState.activeProfileId,appViewModel.incoming.locked) {
     dev.ipf.whitenoise.ui.settings.NotificationControlsHost(appViewModel.notificationControls,currentBackStackEntry?.id) {
     dev.ipf.whitenoise.ui.share.IncomingHost(appViewModel.incoming, currentBackStackEntry?.id,
         currentBackStackEntry?.destination?.route?.substringBefore('/')?.substringBefore('?') in onboardingRouteNames,
@@ -205,7 +206,9 @@ fun WhiteNoiseNavHost(
                 val target = opening.target
                 if (opening.chatList) { showSignedInRoot(); true }
                 else if (target != null && appViewModel.chat(target.chatId) != null) {
-                    openConversation(target.chatId, clearsCreationFlow = true); true
+                    appViewModel.registerNotificationRead(opening)
+                    openConversation(target.chatId, clearsCreationFlow = true, messageId = opening.notification?.messageId,
+                        notificationId = opening.requestId.takeIf { opening.notification?.kind == dev.ipf.whitenoise.model.NotificationTargetKind.Message && !opening.notification.messageId.isNullOrBlank() }); true
                 } else if (opening.person != null) {
                     if (opening.person.publicKey == appViewModel.uiState.activeProfile?.publicKey) { navController.navigate(AppRoute.ShareConnect); true }
                     else appViewModel.acceptDiscoveredPerson(opening.profileId,opening.person)?.let { id -> navController.navigate(AppRoute.PersonProfile(id)); true } ?: false
@@ -818,6 +821,8 @@ fun WhiteNoiseNavHost(
                     },
                     initialSearch = route.openSearch,
                     initialMessageId = route.targetMessageId,
+                    notificationRequestId = route.notificationRequestId,
+                    onNotificationBoundaryCaptured = { appViewModel.commitNotificationRead(route.notificationRequestId,profile.id,chat.id) },
                     searchRequestId = searchRequest,
                     onHistoryScenario = { appViewModel.consumeHistoryScenario(profile.id, it) },
                     onMessagesVisible = { appViewModel.markConversationVisible(profile.id, chat.id, it) },
@@ -958,6 +963,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
     }
     }

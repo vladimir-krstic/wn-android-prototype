@@ -148,3 +148,19 @@ The [brief](../../screens/notification-controls.md#implementation-evidence) reco
 714 passing unit tests and ten compiled UI/platform cases. Broader timeline-window,
 notification startup, Nostr, installer and Amber/contact drift remains for its
 relevant batch or final reconciliation.
+
+## Implementation drift check — B23, 2026-09-04
+
+Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`; no main.
+NotificationRouteTimelinePresentationTest now consumes authoritative subscription
+windows and explicitly preserves the mounted conversation through reconnect.
+The local route continues using canonical history and stable message/request IDs;
+no separate notification timeline is introduced. NotificationTarget preserves
+message routes without a message ID for role-change events. Reply/Reaction/
+MarkRead workers distinguish accepted mutation from cleanup, exact read targets,
+24-hour lock deferral, three operation failures and generation-aware dismissal.
+The [B23 brief](../../screens/notification-routing-and-actions.md#implementation-evidence)
+records these local mappings and 748 passing unit tests/seven compiled UI cases.
+Real subscriptions, encrypted/durable worker recovery and system notification
+presentation remain explicit production seams. Broader startup/window, Nostr,
+installer and Amber/contact drift remains for later/final reconciliation.

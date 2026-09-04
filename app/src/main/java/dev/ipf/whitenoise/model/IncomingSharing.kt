@@ -14,6 +14,7 @@ data class IncomingTarget(val profileId: String, val chatId: String)
 sealed interface IncomingEntry {
     data class Share(val payload: IncomingPayload, val shortcut: IncomingTarget? = null) : IncomingEntry
     data class Conversation(val target: IncomingTarget) : IncomingEntry
+    data class Notification(val target: NotificationTarget) : IncomingEntry
     data class ProfileLink(val value: String) : IncomingEntry
 }
 

@@ -4085,3 +4085,28 @@ preview defaults unavailable without the Q06 device capability.
 The [selected brief](screens/notification-controls.md#implementation-evidence)
 records exact contracts and production reconnection. Host validation passes 714
 unit tests, zero lint errors and both APKs; ten new UI/platform cases compile only.
+
+## WN-ANDROID-0143 — Notification ownership, read boundaries and accepted action cleanup
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B23; host verified, device/visual acceptance pending.
+
+Notification entry reuses B21 navigation and the established conversation. Taps
+carry fresh request identity, target profile/chat/kind and optional message ID;
+role changes without a message open the conversation without advancing read state.
+Invitation absence gets bounded authoritative-probe outcomes, and removed-group
+notifications return to Chats. Capture the existing history unread boundary before
+an exact notification read-through; route exit/background retries cannot commit twice.
+
+Inline actions stay with their original signed-in profile while another profile
+is active. Reply preserves the complete composer; reaction validates current
+choices and sets without replay toggling. Three operation failures are independent
+of the 24-hour local lock wait. Accepted mutation proof is separate from cleanup:
+Retry or closing accepted status cannot resend, and newer notification generations
+survive cleanup. App-owned status uses Material dialogs with normal resource copy;
+examples remain in Developer Tools. Real notification input/delivery, workers,
+services, encrypted/durable stores and process-death recovery remain Q06 seams.
+
+The [selected brief](screens/notification-routing-and-actions.md#implementation-evidence)
+records production callbacks, drift and validation: 748 passing unit tests, zero
+lint errors and both APKs; seven new UI cases compile only.

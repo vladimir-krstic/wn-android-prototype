@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise.model
 
 enum class IncomingExample(val label: String) {
+    NotificationMessage("Message notification"), NotificationInvite("Invitation notification"), NotificationRemoved("Membership removal notification"), NotificationOtherProfile("Notification for another profile"),
     Text("Shared text"), Photo("Shared photo"), Video("Shared video"), Audio("Shared audio"), Document("Shared document"), Mixed("Text and mixed files"), Overflow("More files than fit in the draft"), Unavailable("Unavailable shared file"), TooLarge("Shared file too large"), Empty("Empty share"),
     Direct("Direct Share target"), MissingDirect("Missing Direct Share target"), WrongOwner("Direct Share belongs to another profile"), Conversation("Conversation shortcut"), MissingConversation("Deleted conversation shortcut"), MissingProfile("Signed-out shortcut owner"), ProfileLink("Canonical profile link"), InvalidProfile("Invalid profile link")
 }
@@ -12,7 +13,17 @@ object IncomingExamples {
         val document = AttachmentReadingExamples.attachments().first { it.localSource == AttachmentLocalSource.PlainText }
         fun stream(a: MessageAttachment) = IncomingStream(a.id,a,a.mimeType)
         val target = IncomingTarget(profile.id,profile.chats.firstOrNull { IncomingSharing.canStage(profile,it) }?.id ?: "unavailable-chat")
+        fun notification(p: Profile): IncomingEntry {
+            val chat = p.chats.firstOrNull { it.timeline.filterIsInstance<ChatTimelineEntry.Message>().any { m -> !m.message.isDeleted } }
+            return IncomingEntry.Notification(NotificationTarget(p.id,chat?.id ?: "unavailable-chat",
+                chat?.timeline?.filterIsInstance<ChatTimelineEntry.Message>()?.firstOrNull { !it.message.isDeleted }?.id ?: "unavailable-message"))
+        }
         return when(example) {
+            IncomingExample.NotificationMessage -> notification(profile)
+            IncomingExample.NotificationOtherProfile -> notification(profiles.firstOrNull { it.id != profile.id } ?: profile)
+            IncomingExample.NotificationInvite -> IncomingEntry.Notification(NotificationTarget(profile.id,
+                profile.chats.firstOrNull { it.membership == ChatMembership.Invited }?.id ?: "unavailable-invitation",kind = NotificationTargetKind.Invite))
+            IncomingExample.NotificationRemoved -> IncomingEntry.Notification(NotificationTarget(profile.id,"removed-group",kind = NotificationTargetKind.ChatList))
             IncomingExample.Conversation -> IncomingEntry.Conversation(target)
             IncomingExample.MissingConversation -> IncomingEntry.Conversation(target.copy(chatId = "unavailable-chat"))
             IncomingExample.MissingProfile -> IncomingEntry.Conversation(target.copy(profileId = "signed-out-profile"))

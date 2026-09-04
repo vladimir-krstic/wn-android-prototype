@@ -41,7 +41,7 @@ internal fun IncomingHost(controller: IncomingController, route: String?, onboar
     val snackbar = remember { SnackbarHostState() }
     val currentOpen = rememberUpdatedState(onOpen)
     SideEffect { controller.observeRoute(route,onboarding); controller.reconcile() }
-    LaunchedEffect(work?.id, work?.phase, work?.attempt, controller.locked, lifecycle) {
+    LaunchedEffect(work?.id, work?.phase, work?.attempt, work?.probe, controller.locked, lifecycle) {
         if (work?.running == true && !controller.locked) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             delay(450)
             if (work.phase == IncomingPhase.Opening) {
@@ -102,7 +102,7 @@ internal fun IncomingShareScreen(controller: IncomingController) {
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("incoming.failure"))
                 } }
                 if (work.running) item {
-                    Text(stringResource(when(work.phase) { IncomingPhase.Preparing -> R.string.incoming_preparing; IncomingPhase.Applying -> R.string.incoming_staging; else -> R.string.incoming_opening }), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    Text(stringResource(when(work.phase) { IncomingPhase.Preparing -> if (share) R.string.incoming_preparing else if ((work.entry as? IncomingEntry.Notification)?.target?.kind == NotificationTargetKind.Invite) R.string.notification_invite_opening else R.string.incoming_opening; IncomingPhase.Applying -> R.string.incoming_staging; else -> R.string.incoming_opening }), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     TextButton(onClick = { controller.cancel(work.id) }) { Text(stringResource(R.string.cancel)) }
                 }
@@ -156,4 +156,5 @@ private fun incomingFailureResource(failure: IncomingFailure, staged: Boolean): 
     IncomingFailure.Apply -> R.string.incoming_stage_failed
     IncomingFailure.Open -> R.string.incoming_target_unavailable
     IncomingFailure.SourceChanged -> R.string.incoming_changed
+    IncomingFailure.InviteUnconfirmed -> R.string.notification_invite_unconfirmed
 }

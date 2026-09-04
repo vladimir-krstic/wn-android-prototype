@@ -233,6 +233,67 @@ class AppViewModel(
             stage = ::stageIncomingDrafts)
     }
 
+    val notificationActions: NotificationActionController by lazy {
+        NotificationActionController(profiles = { uiState.profiles }, signedIn = { it in uiState.signedInProfileIds },
+            activeId = { uiState.activeProfileId },
+            ready = { startupState.phase == StartupPhase.Ready && accessAttempt == null },
+            locked = { incoming.locked }, now = { retention.nowMillis },
+            mutate = ::applyNotificationAction, read = ::markNotificationThrough)
+    }
+
+    private val notificationReadTargets = mutableMapOf<Long,NotificationTarget>()
+    fun registerNotificationRead(opening: IncomingOpen) {
+        val target = opening.notification ?: return
+        if (target.kind == NotificationTargetKind.Message && !target.messageId.isNullOrBlank() && incoming.work?.id == opening.requestId &&
+            incoming.work?.phase == IncomingPhase.Opening && incoming.work?.entry == IncomingEntry.Notification(target) && uiState.activeProfileId == target.profileId)
+            notificationReadTargets[opening.requestId] = target
+    }
+    fun commitNotificationRead(requestId: Long?, profileId: String, chatId: String): Boolean {
+        val target = notificationReadTargets[requestId]?.takeIf { it.profileId == profileId && it.chatId == chatId } ?: return false
+        if (!markNotificationThrough(target)) return false
+        notificationReadTargets.remove(requestId); return true
+    }
+
+    fun markNotificationThrough(target: NotificationTarget): Boolean {
+        if (!target.valid || target.kind != NotificationTargetKind.Message || incoming.locked ||
+            target.profileId !in uiState.signedInProfileIds) return false
+        val p = uiState.profiles.firstOrNull { it.id == target.profileId } ?: return false
+        val chat = p.chats.firstOrNull { it.id == target.chatId } ?: return false
+        val next = NotificationActions.readThrough(chat,target,retention.nowMillis) ?: return false
+        uiState = uiState.copy(profiles = uiState.profiles.map { if (it.id == p.id) it.copy(chats = it.chats.map { c -> if (c.id == chat.id) next else c }) else it })
+        return true
+    }
+
+    private fun applyNotificationAction(requestId: Long, input: NotificationActionInput): Boolean {
+        val target = input.card.target
+        if (incoming.locked || target.profileId !in uiState.signedInProfileIds) return false
+        val p = uiState.profiles.firstOrNull { it.id == target.profileId } ?: return false
+        val chat = p.chats.firstOrNull { it.id == target.chatId } ?: return false
+        val message = NotificationActions.message(chat,target,retention.nowMillis) ?: return false
+        val owner = GroupOwner(p.id,chat.id)
+        if (chat.composerAvailability(p) != ComposerAvailability.Available || groupWork.memberEditLocked(owner) ||
+            groupLifecycle.locked(owner) || retention.locked(owner) || NotificationActions.normalize(input,p) == null) return false
+        val changed = when (input.kind) {
+            NotificationActionKind.Reply -> {
+                val id = "notification-reply-$requestId"
+                if (chat.timeline.any { it.id == id }) return true
+                val (day,minute) = nextTimelinePosition(chat)
+                val reply = ChatMessage(id,p.id,day,"Today",minute,"Now",input.text,createdAtMillis = retention.nowMillis)
+                    .let { MessageRetentionPolicy.capture(it,chat.disappearingDuration,retention.nowMillis,received = false) }
+                chat.copy(timeline = chat.timeline + ChatTimelineEntry.Message(reply),preview = input.text,
+                    previewAuthor = "You",attachmentPreview = null,timestamp = "Now",deliveryState = ChatDeliveryState.None)
+            }
+            NotificationActionKind.React -> chat.copy(timeline = chat.timeline.map { entry ->
+                if (entry is ChatTimelineEntry.Message && entry.id == message.id)
+                    entry.copy(message = NotificationActions.react(entry.message,p.id,input.text)) else entry })
+            NotificationActionKind.MarkRead -> return false
+        }
+        val read = ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat,p.id),changed,p.id)
+        val next = changed.copy(readState = read,unreadCount = read.unreadIds.size)
+        uiState = uiState.copy(profiles = uiState.profiles.map { if (it.id == p.id) it.copy(chats = it.chats.map { c -> if (c.id == chat.id) next else c }) else it })
+        return true
+    }
+
     private fun stageIncomingDrafts(requestId: Long, profileId: String, ids: List<String>, prepared: PreparedIncoming): IncomingCommit? {
         val profile = uiState.profiles.firstOrNull { it.id == profileId && it.id in uiState.signedInProfileIds } ?: return null
         val targets = ids.distinct().map { id -> profile.chats.firstOrNull { it.id == id && IncomingSharing.canStage(profile,it) } ?: return null }
@@ -812,6 +873,8 @@ class AppViewModel(
         retention.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
+        notificationActions.reconcile()
+        notificationReadTargets.entries.removeAll { it.value.profileId !in uiState.signedInProfileIds }
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
@@ -910,6 +973,8 @@ class AppViewModel(
         retention.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
+        notificationActions.reconcile()
+        notificationReadTargets.entries.removeAll { it.value.profileId !in uiState.signedInProfileIds }
         return true
     }
 
@@ -946,6 +1011,8 @@ class AppViewModel(
         dismissChatBatch()
         uiState = AppUiState()
         notificationControls.eraseAppData()
+        notificationActions.erase()
+        notificationReadTargets.clear()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()
@@ -953,6 +1020,8 @@ class AppViewModel(
         retention.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
+        notificationActions.reconcile()
+        notificationReadTargets.entries.removeAll { it.value.profileId !in uiState.signedInProfileIds }
         createdChatSequence = 0
         return true
     }
@@ -2590,6 +2659,8 @@ class AppViewModel(
         retention.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
+        notificationActions.reconcile()
+        notificationReadTargets.entries.removeAll { it.value.profileId !in uiState.signedInProfileIds }
     }
 
     private fun addShowcaseProfiles() {
@@ -2639,6 +2710,8 @@ class AppViewModel(
         retention.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
+        notificationActions.reconcile()
+        notificationReadTargets.entries.removeAll { it.value.profileId !in uiState.signedInProfileIds }
     }
 
     private fun insertAfterPinned(chats: List<Chat>, chat: Chat): List<Chat> {

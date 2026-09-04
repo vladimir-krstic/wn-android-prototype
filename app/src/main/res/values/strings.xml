@@ -1205,4 +1205,22 @@
     <string name="notification_push_build">Native push isn’t configured in this build.</string>
     <string name="notification_push_services">Native push requires Google Play services.</string>
     <string name="notification_push_provider">The push provider isn’t available. Reopen White Noise to try again.</string>
+    <string name="notification_invite_unconfirmed">This invitation could not be confirmed. Try again or go to Chats.</string>
+    <string name="notification_reply_sent">Reply sent</string>
+    <string name="notification_reply_sending">Sending reply…</string>
+    <string name="notification_reaction_added">Reaction added</string>
+    <string name="notification_reaction_adding">Adding reaction…</string>
+    <string name="notification_marked_read">Marked as read</string>
+    <string name="notification_marking_read">Marking as read…</string>
+    <string name="notification_action_title">Notification action</string>
+    <string name="notification_action_invalid">This notification action is no longer valid.</string>
+    <string name="notification_action_locked">Unlock White Noise, then try again.</string>
+    <string name="notification_action_unavailable">The message or conversation is no longer available for this action.</string>
+    <string name="notification_action_failed">The action could not be completed. Try again.</string>
+    <string name="notification_action_exhausted">The action could not be completed after three attempts. Open the conversation to continue.</string>
+    <string name="notification_action_cleanup">The action succeeded, but its notification could not be cleared. Retry to finish without sending again.</string>
+    <string name="notification_action_waiting">Waiting for White Noise to be ready…</string>
+    <string name="notification_action_processing">Finishing the notification action…</string>
+    <string name="notification_action_retry">Retry</string>
+    <string name="notification_invite_opening">Opening invitation…</string>
 </resources>
