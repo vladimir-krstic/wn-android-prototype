@@ -93,6 +93,7 @@ data class ProfileSettings(
     val sentMediaQuality: SentMediaQuality = SentMediaQuality.Standard,
     val relays: List<ProfileRelay> = ProfileRelayFixtures.defaults,
     val speech: SpeechPreferences = SpeechPreferences(),
+    val dictation: DictationPreferences = DictationPreferences(),
 )
 
 object ProfileRelayFixtures {

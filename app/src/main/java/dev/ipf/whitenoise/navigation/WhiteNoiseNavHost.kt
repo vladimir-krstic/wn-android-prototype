@@ -195,6 +195,7 @@ fun WhiteNoiseNavHost(
         } }
     }
 
+    dev.ipf.whitenoise.ui.conversation.ComposerCaptureHost(appViewModel.composerCapture) {
     dev.ipf.whitenoise.ui.conversation.ReadAloudHost(uiState.activeProfile, onSource = { target ->
         if (dev.ipf.whitenoise.model.SpeechOwnership.owns(appViewModel.uiState.activeProfile, target)) {
             navController.navigate(AppRoute.Conversation(target.owner.chatId!!, targetMessageId = target.message.id)) {
@@ -351,6 +352,7 @@ fun WhiteNoiseNavHost(
                 onNotifications = { navController.navigate(AppRoute.Notifications) },
                 onAppearance = { navController.navigate(AppRoute.Appearance) },
                 onReadAloud = { navController.navigate(AppRoute.ReadAloud) },
+                onDictation = { navController.navigate(AppRoute.Dictation) },
                 onPrivacy = { navController.navigate(AppRoute.PrivacySecurity) },
                 onDataUsage = { navController.navigate(AppRoute.DataUsage) },
                 onRelays = { navController.navigate(AppRoute.ProfileRelays) },
@@ -365,6 +367,11 @@ fun WhiteNoiseNavHost(
                 onFolders = { uiState.activeProfileId?.let { navController.navigate(AppRoute.Folders(it)) } },
                 initiallyShowSwitcher = route.showProfileSwitcher,
             )
+        }
+        composable<AppRoute.Dictation> {
+            uiState.activeProfile?.let { profile ->
+                dev.ipf.whitenoise.ui.settings.DictationSettingsScreen(profile, onBack = { navController.popBackStack() })
+            }
         }
         composable<AppRoute.ReadAloud> {
             uiState.activeProfile?.let { profile ->
@@ -924,6 +931,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
     }
     }

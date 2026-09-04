@@ -39,3 +39,14 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B17. Decisions: Q06. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B17 implementation evidence
+
+C067–C070 are covered within the deterministic capture boundary on 2026-09-04.
+The [selected brief](../../../screens/dictation-and-voice-recording.md#implementation-evidence)
+records inline editable-draft dictation, profile-owned settings, revision-guarded
+Paste/Send, retained review and exact selected-service recovery. Voice includes
+owned hold/release-to-review/RTL cancel/lock, native tap-to-lock and typed errors.
+550 unit tests pass; lint has zero errors; both APKs assemble; ten new UI cases
+compile only. Q06 real microphone/recognizer/service and device/visual acceptance
+remain separate. The table above is the original audit contract.

@@ -322,6 +322,7 @@ fun ConversationScreen(
     onDiscardMessageEdit: (String) -> Unit = {},
     onInterruptMessageEdits: () -> Unit = {},
 ) {
+    DictationOriginHost(profile, chat)
     val history = rememberConversationHistory(profile, chat)
     val readState = remember(chat, profile.id) {
         ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat, profile.id), chat, profile.id)

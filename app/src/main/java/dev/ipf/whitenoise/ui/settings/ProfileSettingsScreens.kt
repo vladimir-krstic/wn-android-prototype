@@ -135,6 +135,7 @@ fun SettingsScreen(
     onSignOut: (dev.ipf.whitenoise.model.SignOutOptions) -> Unit,
     onFolders: () -> Unit = {},
     onReadAloud: () -> Unit = {},
+    onDictation: () -> Unit = {},
     initiallyShowSwitcher: Boolean = false,
     exitAttempt: dev.ipf.whitenoise.model.ProfileExitAttempt? = null,
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
@@ -225,6 +226,11 @@ fun SettingsScreen(
                     SettingsHubLink(
                         title = stringResource(R.string.read_aloud), icon = R.drawable.ic_volume_up,
                         iconTag = "read_aloud", onClick = onReadAloud,
+                    )
+                    SettingsDivider()
+                    SettingsHubLink(
+                        title = stringResource(R.string.dictation_title), icon = R.drawable.ic_mic,
+                        iconTag = "dictation", onClick = onDictation,
                     )
                     SettingsDivider()
                     SettingsHubLink(

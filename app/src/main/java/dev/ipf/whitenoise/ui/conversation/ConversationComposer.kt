@@ -90,6 +90,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -298,43 +299,6 @@ private fun Modifier.composerExpansionGesture(
     }
 }
 
-private fun Modifier.voiceLongPressGesture(
-    enabled: Boolean,
-    onLongPress: () -> Unit,
-): Modifier = if (!enabled) {
-    this
-} else {
-    pointerInput(enabled) {
-        coroutineScope outer@{
-            val movementTolerance = 32.dp.toPx()
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false)
-                var eligible = true
-                var longPressed = false
-                val longPressJob = this@outer.launch {
-                    delay(400)
-                    if (eligible) {
-                        longPressed = true
-                        onLongPress()
-                    }
-                }
-                var pressed = true
-                while (pressed) {
-                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
-                    pressed = change?.pressed == true
-                    if (change == null || (change.position - down.position).getDistance() > movementTolerance) {
-                        eligible = false
-                        longPressJob.cancel()
-                    }
-                    if (longPressed) change?.consume()
-                }
-                eligible = false
-                longPressJob.cancel()
-            }
-        }
-    }
-}
-
 /** Keeps the app-shell outside-tap observer from clearing a focus acquired by this editor tap. */
 private fun Modifier.consumeEditorTapAtFinalPass(): Modifier = pointerInput(Unit) {
     awaitEachGesture {
@@ -478,6 +442,23 @@ fun FullConversationComposer(
     val context = LocalContext.current
     val addAttachmentDescription = stringResource(R.string.add_attachment)
     val recordVoiceDescription = stringResource(R.string.record_voice_message)
+    val capture = LocalComposerCapture.current
+    val captureOwner = remember(profile.id, chat.id) { dev.ipf.whitenoise.model.ComposerCaptureOwner(profile.id, chat.id) }
+    var composerValue by rememberSaveable(profile.id, chat.id, stateSaver = androidx.compose.ui.text.input.TextFieldValue.Saver) {
+        mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(chat.draftText, androidx.compose.ui.text.TextRange(chat.draftText.length)))
+    }
+    var appliedDictation by rememberSaveable(profile.id, chat.id) { mutableLongStateOf(-1L) }
+    val insertion = capture?.insertion?.takeIf { it.owner == captureOwner && it.requestId != appliedDictation && it.value.text == chat.draftText }
+    val editorValue = when {
+        insertion != null -> androidx.compose.ui.text.input.TextFieldValue(chat.draftText, androidx.compose.ui.text.TextRange(insertion.value.cursor))
+        composerValue.text != chat.draftText -> androidx.compose.ui.text.input.TextFieldValue(chat.draftText, androidx.compose.ui.text.TextRange(chat.draftText.length))
+        else -> composerValue
+    }
+    androidx.compose.runtime.SideEffect {
+        if (composerValue != editorValue) composerValue = editorValue
+        if (insertion != null) appliedDictation = insertion.requestId
+    }
+
     val expandMessageLabel = stringResource(R.string.expand_message)
     val collapseMessageLabel = stringResource(R.string.collapse_message)
     val hideKeyboardLabel = stringResource(R.string.hide_keyboard)
@@ -509,8 +490,56 @@ fun FullConversationComposer(
     var showCameraPermissionRecovery by rememberSaveable(chat.id) { mutableStateOf(false) }
     var attachmentCounter by rememberSaveable(chat.id) { mutableIntStateOf(0) }
     var preparationGeneration by remember { mutableIntStateOf(0) }
-    var voiceState by rememberSaveable(chat.id, stateSaver = ComposerVoiceStateSaver) {
+    var voiceState by rememberSaveable(profile.id, chat.id, stateSaver = ComposerVoiceStateSaver) {
         mutableStateOf<ComposerVoiceState>(ComposerVoiceState.Idle)
+    }
+
+    var voiceFailure by rememberSaveable(profile.id, chat.id) { mutableStateOf<dev.ipf.whitenoise.model.VoiceCaptureFailure?>(null) }
+    var voiceOutcome by remember(profile.id, chat.id) { mutableStateOf(dev.ipf.whitenoise.model.VoiceCaptureScenario.Success) }
+    var localVoiceSequence by remember(profile.id, chat.id) { mutableLongStateOf(0) }
+    val sharedSpeech = LocalReadAloudController.current
+    fun startVoice(locked: Boolean): Long? {
+        if (voiceState != ComposerVoiceState.Idle) return null
+        val outcome = capture?.voiceScenario ?: dev.ipf.whitenoise.model.VoiceCaptureScenario.Success
+        if (outcome.startFailure != null) { voiceFailure = outcome.startFailure; return null }
+        val requestId = if (capture == null) ++localVoiceSequence else capture.beginVoice(captureOwner)
+        if (requestId == null) { voiceFailure = dev.ipf.whitenoise.model.VoiceCaptureFailure.MicrophoneBusy; return null }
+        focusManager.clearFocus(); sharedSpeech?.pause(); voiceOutcome = outcome
+        voiceState = ComposerVoiceReducer.start(voiceState, locked = locked, requestId = requestId)
+        return requestId
+    }
+    fun cancelVoice(requestId: Long) {
+        voiceState = dev.ipf.whitenoise.model.VoiceCapture.cancel(voiceState, requestId)
+        capture?.releaseVoice(captureOwner, requestId)
+    }
+    fun finishVoice(requestId: Long, release: Boolean = false) {
+        val recording = (voiceState as? ComposerVoiceState.Recording)?.takeIf { it.requestId == requestId } ?: return
+        val next = if (release) dev.ipf.whitenoise.model.VoiceCapture.release(recording, requestId) else ComposerVoiceReducer.stop(recording)
+        if (next is ComposerVoiceState.Recording) { voiceState = next; return }
+        capture?.releaseVoice(captureOwner, requestId)
+        if (next is ComposerVoiceState.Review && voiceOutcome.finishFailure != null) {
+            voiceFailure = voiceOutcome.finishFailure; voiceState = ComposerVoiceState.Idle
+        } else voiceState = next
+    }
+    val captureLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(captureLifecycle, captureOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) (voiceState as? ComposerVoiceState.Recording)?.let { cancelVoice(it.requestId) }
+        }
+        captureLifecycle.addObserver(observer)
+        onDispose {
+            captureLifecycle.removeObserver(observer)
+            (voiceState as? ComposerVoiceState.Recording)?.let { capture?.releaseVoice(captureOwner, it.requestId) }
+        }
+    }
+    androidx.compose.runtime.SideEffect {
+        val recording = voiceState as? ComposerVoiceState.Recording
+        if (recording != null && capture != null && capture.lease != dev.ipf.whitenoise.model.ComposerCaptureLease(captureOwner, recording.requestId, dev.ipf.whitenoise.model.ComposerCaptureMode.Voice)) {
+            voiceState = ComposerVoiceState.Idle
+        }
+    }
+    BackHandler(enabled = voiceState is ComposerVoiceState.Recording) {
+        (voiceState as? ComposerVoiceState.Recording)?.let { cancelVoice(it.requestId) }
     }
 
     androidx.compose.runtime.SideEffect {
@@ -718,10 +747,13 @@ fun FullConversationComposer(
             }
         }
     }
-    LaunchedEffect(voiceState is ComposerVoiceState.Recording) {
-        while (voiceState is ComposerVoiceState.Recording) {
+    val recordingId = (voiceState as? ComposerVoiceState.Recording)?.requestId
+    LaunchedEffect(recordingId) {
+        if (recordingId != null) while ((voiceState as? ComposerVoiceState.Recording)?.requestId == recordingId) {
             delay(100)
+            if ((voiceState as? ComposerVoiceState.Recording)?.requestId != recordingId) break
             voiceState = ComposerVoiceReducer.tick(voiceState)
+            if ((voiceState as? ComposerVoiceState.Recording)?.elapsedTenths == dev.ipf.whitenoise.model.VoiceCapture.maximumTenths) finishVoice(recordingId)
         }
     }
     LaunchedEffect((voiceState as? ComposerVoiceState.Review)?.isPlaying) {
@@ -810,7 +842,7 @@ fun FullConversationComposer(
                 )
             }
         }
-        BackHandler(enabled = isExpanded && !attachmentMenuOpen) {
+        BackHandler(enabled = isExpanded && !attachmentMenuOpen && voiceState !is ComposerVoiceState.Recording && capture?.attempts?.get(captureOwner)?.capturing != true) {
             coroutineScope.launch { settle(false) }
         }
 
@@ -889,7 +921,7 @@ fun FullConversationComposer(
                         onMenuExpandedChange = { attachmentMenuOpen = it },
                         addAttachmentDescription = addAttachmentDescription,
                         enabled = !isPreparing,
-                        menuItems = listOf(
+                        menuItems = listOfNotNull(
                         WhiteNoiseMenuItem(
                             label = stringResource(R.string.camera),
                             icon = R.drawable.ic_camera,
@@ -930,6 +962,14 @@ fun FullConversationComposer(
                         }),
                         WhiteNoiseMenuItem(stringResource(R.string.recent_media), icon = R.drawable.ic_image, onClick = { recentMediaOpen = true }),
                         WhiteNoiseMenuItem(stringResource(R.string.photo_quality), icon = R.drawable.ic_image, onClick = { qualityOpen = true }),
+                        if (capture != null) WhiteNoiseMenuItem(
+                            label = stringResource(if (capture.attempts[captureOwner]?.phase == dev.ipf.whitenoise.model.DictationPhase.Review) R.string.dictation_review else R.string.dictation_title),
+                            icon = R.drawable.ic_mic, onClick = {
+                                attachmentMenuOpen = false
+                                if (capture.attempts[captureOwner]?.phase == dev.ipf.whitenoise.model.DictationPhase.Review) capture.present(captureOwner)
+                                else capture.begin(captureOwner, editorValue.text, editorValue.selection.start, editorValue.selection.end)
+                            },
+                        ) else null,
                         ),
                         onCancelVoice = {
                             voiceState = ComposerVoiceState.Idle
@@ -1021,18 +1061,27 @@ fun FullConversationComposer(
                                 onCancel = onCancelReply,
                             )
                         }
+                        DictationActiveControls(captureOwner)
                         when (val state = voiceState) {
-                            ComposerVoiceState.Idle -> ComposerTextInput(
-                                text = chat.draftText,
-                                onTextChanged = onDraftTextChanged,
+                            ComposerVoiceState.Idle, is ComposerVoiceState.Recording -> ComposerTextInput(
+                                value = editorValue,
+                                onValueChanged = { value -> composerValue = value; if (value.text != chat.draftText) onDraftTextChanged(value.text) },
                                 onSend = {
                                     if (onSendDraft()) coroutineScope.launch { settle(false) }
                                 },
-                                onRecord = {
-                                    focusManager.clearFocus()
-                                    voiceState = ComposerVoiceReducer.start(voiceState)
-                                    coroutineScope.launch { settle(false) }
+                                recording = state as? ComposerVoiceState.Recording,
+                                onRecordTap = {
+                                    if (state is ComposerVoiceState.Recording) finishVoice(state.requestId)
+                                    else startVoice(true)?.let { coroutineScope.launch { settle(false) } }
                                 },
+                                onRecordHold = { startVoice(false)?.also { coroutineScope.launch { settle(false) } } },
+                                onRecordDrag = { id, horizontal, vertical -> voiceState = dev.ipf.whitenoise.model.VoiceCapture.drag(voiceState, id, horizontal, vertical) },
+                                onRecordRelease = { finishVoice(it, release = true) },
+                                onRecordCancel = ::cancelVoice,
+                                onRecordGestureCancel = { id -> if ((voiceState as? ComposerVoiceState.Recording)?.locked != true) cancelVoice(id) },
+                                onRecordLock = { id -> voiceState = dev.ipf.whitenoise.model.VoiceCapture.lock(voiceState, id) },
+                                recordEnabled = capture?.lease?.mode != dev.ipf.whitenoise.model.ComposerCaptureMode.Dictation,
+                                recordGestureKey = captureOwner,
                                 sendable = sendable,
                                 enabled = !isPreparing,
                                 expanded = usesFlexibleLayout,
@@ -1041,10 +1090,6 @@ fun FullConversationComposer(
                                 mentionNames = mentionNames,
                                 recordVoiceDescription = recordVoiceDescription,
                                 modifier = if (usesFlexibleLayout) Modifier.weight(1f) else Modifier,
-                            )
-                            is ComposerVoiceState.Recording -> RecordingComposer(
-                                elapsedTenths = state.elapsedTenths,
-                                onStop = { voiceState = ComposerVoiceReducer.stop(voiceState) },
                             )
                             is ComposerVoiceState.Review -> VoiceReviewComposer(
                                 state = state,
@@ -1108,6 +1153,8 @@ fun FullConversationComposer(
     if (qualityOpen) PhotoQualityDialog(chat.draftPhotoQuality, { qualityOpen = false }) { quality ->
         qualityOpen = false; prepareDraftPhotos(quality)
     }
+    voiceFailure?.let { failure -> VoiceCaptureFailureDialog(failure,
+        onDismiss = { voiceFailure = null }, onRetry = { voiceFailure = null; startVoice(true) }) }
     deviceContact?.let { contact -> DeviceContactPreview(contact, { deviceContact = null }) { selected ->
         selected.attachment(nextId("device-contact"))?.let { onAddAttachments(listOf(it)) }
         deviceContact = null
@@ -1212,10 +1259,19 @@ fun FullConversationComposer(
 
 @Composable
 private fun ComposerTextInput(
-    text: String,
-    onTextChanged: (String) -> Unit,
+    value: androidx.compose.ui.text.input.TextFieldValue,
+    onValueChanged: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
     onSend: () -> Unit,
-    onRecord: () -> Unit,
+    recording: ComposerVoiceState.Recording?,
+    onRecordTap: () -> Unit,
+    onRecordHold: () -> Long?,
+    onRecordDrag: (Long, Float, Float) -> Unit,
+    onRecordRelease: (Long) -> Unit,
+    onRecordCancel: (Long) -> Unit,
+    onRecordGestureCancel: (Long) -> Unit,
+    onRecordLock: (Long) -> Unit,
+    recordEnabled: Boolean,
+    recordGestureKey: Any,
     sendable: Boolean,
     enabled: Boolean,
     expanded: Boolean,
@@ -1225,6 +1281,7 @@ private fun ComposerTextInput(
     recordVoiceDescription: String,
     modifier: Modifier = Modifier,
 ) {
+    val text = value.text
     val haptics = LocalHapticFeedback.current
     val mentionBackground = MaterialTheme.colorScheme.outlineVariant
     val mentionContent = MaterialTheme.colorScheme.onSurface
@@ -1240,9 +1297,21 @@ private fun ComposerTextInput(
             .then(if (expanded) Modifier.fillMaxHeight() else Modifier),
         verticalAlignment = Alignment.Bottom,
     ) {
-        BasicTextField(
-            value = text,
-            onValueChange = onTextChanged,
+        if (recording != null) Column(Modifier.weight(1f)) {
+            RecordingComposer(recording.elapsedTenths)
+            Text(stringResource(when {
+                recording.locked -> R.string.voice_capture_locked
+                recording.willCancel -> R.string.voice_capture_cancel
+                else -> R.string.voice_capture_release
+            }), Modifier.padding(start = WhiteNoiseSpacing.Related), style = MaterialTheme.typography.labelMedium)
+            if (!recording.locked) Text(stringResource(R.string.voice_capture_drag), Modifier.padding(start = WhiteNoiseSpacing.Related), style = MaterialTheme.typography.bodySmall)
+            Row {
+                TextButton(onClick = { onRecordCancel(recording.requestId) }) { Text(stringResource(R.string.cancel)) }
+                if (!recording.locked) TextButton(onClick = { onRecordLock(recording.requestId) }) { Text(stringResource(R.string.voice_capture_lock)) }
+            }
+        } else BasicTextField(
+            value = value,
+            onValueChange = onValueChanged,
             enabled = enabled,
             modifier = Modifier
                 .weight(1f)
@@ -1294,38 +1363,20 @@ private fun ComposerTextInput(
                 }
             },
         )
-        if (sendable) {
+        if (sendable && recording == null) {
             ComposerSendButton(
                 onClick = onSend,
                 enabled = enabled,
                 description = stringResource(R.string.send),
             )
         } else {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .voiceLongPressGesture(
-                        enabled = enabled,
-                        onLongPress = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onRecord()
-                        },
-                    )
-                    .semantics {
-                        role = Role.Button
-                        contentDescription = recordVoiceDescription
-                        onClick(label = recordVoiceDescription) {
-                            onRecord()
-                            true
-                        }
-                    }
-                    .testTag("conversation.voice"),
-                contentAlignment = Alignment.Center,
-            ) {
-                MiniWaveformGlyph(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("conversation.voice.icon"),
-                )
+            VoiceCaptureControl(enabled && recordEnabled, recording != null, recordGestureKey,
+                if (recording != null) stringResource(R.string.stop_recording) else recordVoiceDescription,
+                onTap = onRecordTap, onHold = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onRecordHold() },
+                onDrag = onRecordDrag, onRelease = onRecordRelease, onCancel = onRecordGestureCancel) {
+                if (recording == null) MiniWaveformGlyph(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.testTag("conversation.voice.icon"))
+                else Icon(painterResource(R.drawable.ic_stop), contentDescription = null, tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp).testTag("conversation.voice.stop.icon"))
             }
         }
     }
@@ -1656,7 +1707,7 @@ private fun DraftReplyQuote(author: String, text: String, onCancel: () -> Unit) 
 }
 
 @Composable
-private fun RecordingComposer(elapsedTenths: Int, onStop: () -> Unit) {
+private fun RecordingComposer(elapsedTenths: Int) {
     Row(
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1675,19 +1726,6 @@ private fun RecordingComposer(elapsedTenths: Int, onStop: () -> Unit) {
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.labelLarge.copy(fontFamily = FontFamily.Monospace),
         )
-        IconButton(
-            onClick = onStop,
-            modifier = Modifier
-                .size(48.dp)
-                .testTag("conversation.voice.stop"),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_stop),
-                contentDescription = stringResource(R.string.stop_recording),
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp).testTag("conversation.voice.stop.icon"),
-            )
-        }
     }
 }
 

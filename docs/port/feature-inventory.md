@@ -122,6 +122,16 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B17: C067–C070 are implemented and host-verified within
+local scope. A profile/chat/request lease separates voice from dictation; inline
+controls preserve native draft editing. Manual/silence completion and default
+Paste/opt-in Send capture preferences and draft revisions; changed context or
+failed delivery retains selectable review with Copy/Insert/Discard. Voice adds
+hold/release/cancel/lock, native tap-to-lock and typed recovery. Sign-out clears
+capture text. The host gate passes 550 unit tests, zero lint errors and both APKs;
+ten new UI cases compile only. Q06 real microphone/recognition remains excluded.
+See [dictation-and-voice-recording.md](../screens/dictation-and-voice-recording.md#implementation-evidence).
+
 2026-09-04 production B16: C063–C066 are implemented and host-verified within
 local scope. Read Aloud settings adds offline engine/voice discovery and fallback,
 profile-scoped consent, System/preset/custom rate and explicit media mixing.

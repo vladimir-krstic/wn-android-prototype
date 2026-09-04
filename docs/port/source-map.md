@@ -216,3 +216,17 @@ reconnects authoritative history, settings and audio ownership. The
 TtsPlaybackForegroundService/AppState lock-boundary contract is represented only
 by `SpeechBackgroundExample` and `SpeechDeveloperDialog`. These example controls
 must not be migrated as a real notification, service, clock or lock authority.
+
+## Production B17 dictation and voice recording
+
+`docs/screens/dictation-and-voice-recording.md` maps pinned
+ConversationDictationController/Preferences/RecognitionService/Compatibility,
+DictationSettingsScreen, VoiceRecordingController and VoiceRecorder into
+`ComposerDictation.kt`, `ComposerCaptureController.kt`, `VoiceCapture.kt`, the
+composer and Dictation settings. Profile/chat/request, captured preferences,
+draft revision/selection/payload and membership remain the migration seams.
+Production supplies the real recognizer/recorder and authoritative callbacks;
+local fixed transcripts, elapsed ticks and failure choices are not services.
+The prototype retains release-to-review plus explicit Send and uses a stricter
+any-draft-change-to-review guard specified by B17. The seven-commit master drift
+through `911040c7e1c31652638c8cfd72812d1f3a694b9b` changes no capture sources.

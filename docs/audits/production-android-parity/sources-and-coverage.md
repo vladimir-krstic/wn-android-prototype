@@ -66,3 +66,16 @@ No emulator/device or rendered-screen inspection was performed. Therefore hierar
 - [Navigation](https://developer.android.com/guide/navigation): external entry and Back behavior need explicit destination ownership and restored state.
 - [TextToSpeech](https://developer.android.com/reference/android/speech/tts/TextToSpeech): engine lifecycle and availability are device-owned boundaries.
 - [Permission best practices](https://developer.android.com/training/permissions/usage-notes): request sensitive access only after the relevant user action and preserve capability when denial allows it.
+
+## Implementation drift check — B17, 2026-09-04
+
+Production `master` resolved to
+[`911040c7e1c31652638c8cfd72812d1f3a694b9b`](https://github.com/marmot-protocol/whitenoise-android/commit/911040c7e1c31652638c8cfd72812d1f3a694b9b);
+there is no `main` ref. The [seven-commit comparison](https://github.com/marmot-protocol/whitenoise-android/compare/319454889f1c2494dec4a69b5577d98017f44eee...911040c7e1c31652638c8cfd72812d1f3a694b9b)
+contains 94 changed files and no dictation/voice-recording source or test change.
+AppState changes concern startup retry, account snapshots, chat-list publication
+and attachment installers; Controllers changes concern timeline/roster behavior.
+B17 retains its pinned capture contracts. Roster/admin availability, Nostr event
+reading, installer handoffs, Amber grants, contact-follow presentation and startup
+must be checked in the relevant later batches/final reconciliation. This scoped
+check does not replace the immutable baseline or claim the other drift is done.

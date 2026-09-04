@@ -167,7 +167,7 @@ data class VoiceDraftSubmission(
 sealed interface ComposerVoiceState {
     data object Idle : ComposerVoiceState
 
-    data class Recording(val elapsedTenths: Int = 0) : ComposerVoiceState
+    data class Recording(val elapsedTenths: Int = 0, val locked: Boolean = false, val willCancel: Boolean = false, val requestId: Long = 0) : ComposerVoiceState
 
     data class Review(
         val durationSeconds: Int,
@@ -180,11 +180,11 @@ sealed interface ComposerVoiceState {
 }
 
 object ComposerVoiceReducer {
-    fun start(state: ComposerVoiceState): ComposerVoiceState =
-        if (state == ComposerVoiceState.Idle) ComposerVoiceState.Recording() else state
+    fun start(state: ComposerVoiceState, locked: Boolean = false, requestId: Long = 0): ComposerVoiceState =
+        if (state == ComposerVoiceState.Idle) ComposerVoiceState.Recording(locked = locked, requestId = requestId) else state
 
     fun tick(state: ComposerVoiceState): ComposerVoiceState = when (state) {
-        is ComposerVoiceState.Recording -> state.copy(elapsedTenths = state.elapsedTenths + 1)
+        is ComposerVoiceState.Recording -> state.copy(elapsedTenths = (state.elapsedTenths + 1).coerceAtMost(VoiceCapture.maximumTenths))
         else -> state
     }
 

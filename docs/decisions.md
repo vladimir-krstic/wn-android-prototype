@@ -3917,3 +3917,28 @@ service, notification, permission or lock authority is introduced. The
 [selected brief](screens/read-aloud-preferences.md#implementation-evidence)
 records production seams and official sources. Host validation passes 510 unit
 tests, zero lint errors and both APKs; eight new UI cases compile only.
+
+## WN-ANDROID-0137 — Owned dictation and voice recording
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B17; host verified, device/visual acceptance pending.
+
+Voice and dictation share an exact profile/chat/request capture lease. Native tap,
+keyboard and accessibility activation start locked recording; hold permits logical
+start cancel and upward lock. Release opens the established review, followed by
+explicit Send. This preserves the accepted prototype review contract while adding
+production ownership and failure states. Background, Back and stale gestures do
+not send. Real microphone permission/recognition remains outside Q06.
+
+Dictation is a separate composer action with profile-owned manual/3/5/10-second
+completion and default Paste. Send requires explicit opt-in. Each request captures
+preferences, draft selection/payload and a revision that detects edit-and-revert,
+membership and session changes. Delivery rechecks that immutable context; changed
+or rejected results remain in review. Explicit Insert at end uses the latest draft
+of the original available chat and never auto-sends. Sign-out/removal/wipe clear
+capture text. The draft stays editable while capture controls are inline.
+
+The [selected brief](screens/dictation-and-voice-recording.md#implementation-evidence)
+records pinned production seams, source drift and the scoped custom gesture.
+Host validation passes 550 unit tests, zero lint errors and both APKs; ten new
+UI cases compile only. No new permission, provider Activity or service is added.

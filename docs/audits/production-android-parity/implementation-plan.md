@@ -20,7 +20,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B14: implemented and host-verified 2026-09-04; 432 unit tests, zero lint errors, both APKs and 13 new compiled UI/platform cases. [Selected brief and evidence](../../screens/location-sharing.md). Commit title: `B14: Add location selection and sharing`.
 - B15: implemented and host-verified 2026-09-04; 465 unit tests, zero lint errors, both APKs and 15 new compiled UI/platform cases. [Selected brief and evidence](../../screens/read-aloud-transport.md). Commit title: `B15: Add Read Aloud transport and source navigation`.
 - B16: implemented and host-verified 2026-09-04; 510 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Selected brief and evidence](../../screens/read-aloud-preferences.md). Commit title: `B16: Add Read Aloud preferences and auto-read`. Q06 remains outside local background-control scope.
-- B17–B32: pending; linked decisions apply only to their named slices.
+- B17: implemented and host-verified 2026-09-04; 550 unit tests, zero lint errors, both APKs and ten new compiled UI cases. [Selected brief and evidence](../../screens/dictation-and-voice-recording.md). Commit title: `B17: Add dictation and owned voice recording`. Q06 real microphone/recognition remains outside scope.
+- B18–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -43,7 +44,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B14** | Location sharing state flow | C058 | B11 | Implemented; host verified; real location/map integration remains outside Q06 scope |
 | **B15** | Read Aloud transport and source navigation | C061, C062 | B08 | Implemented; host verified |
 | **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Implemented; host verified; real services remain outside Q06 |
-| **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Blocked slices: Q06 |
+| **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Implemented; host verified; real microphone/recognition remains outside Q06 scope |
 | **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Ready |
 | **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Ready |
 | **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Blocked slices: Q03 |
@@ -308,6 +309,13 @@ Capabilities: C063, C064, C065, C066. Dependencies: B15.
 ### B17 — Dictation and production voice-note interaction
 
 Capabilities: C067, C068, C069, C070. Dependencies: B11.
+
+**Implemented and host-verified 2026-09-04:** owned dictation, native draft
+selection/insertion, manual/silence completion, guarded Send and review recovery;
+voice hold/release/RTL cancel/lock, tap-to-lock and typed capture failures.
+550 passing unit tests, zero lint errors, both APKs and ten new compiled UI cases.
+[Implementation evidence](../../screens/dictation-and-voice-recording.md#implementation-evidence).
+Commit: `B17: Add dictation and owned voice recording`. Q06 real capture remains excluded.
 
 **Implementation:** Existing deterministic record/review is retained. Add production hold/release/lock/cancel ownership, too-short/mic-in-use/permission/failure states where absent, with an accessible tap alternative. Separate dictation from a voice-note transcript. Add service-check/listening/processing/review/error/cancel states and exact destination draft ownership. New Dictation settings: manual or silence completion and paste versus explicit opt-in send. If draft, membership or session changes, preserve transcript for review; never send to a new context. Model selected service missing/busy/network/timed out and denial/permanent denial, then Copy/Insert at end/Discard review. Real recognition/microphone service requires Q06.
 

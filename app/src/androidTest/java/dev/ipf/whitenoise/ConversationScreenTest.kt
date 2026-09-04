@@ -750,23 +750,20 @@ class ConversationScreenTest {
     }
 
     @Test
-    fun physicalTapDoesNotRecordButHoldDoesAndReviewStaysInline() {
+    fun physicalTapStartsLockedRecordingAndReviewStaysInline() {
         setConversation("fiatjaf")
         val voice = composeRule.onNodeWithTag("conversation.voice")
 
         voice.performTouchInput { click() }
-        composeRule.onNodeWithContentDescription("Stop Recording").assertDoesNotExist()
-        voice.performTouchInput { longClick(durationMillis = 450) }
+        composeRule.onNodeWithText("Recording locked").assertIsDisplayed()
         composeRule.onNodeWithTag("conversation.voice.recording.waveform").assertHeightIsEqualTo(24.dp)
         composeRule.onNodeWithTag("conversation.voice.stop").assertHeightIsAtLeast(48.dp)
-        composeRule.onNodeWithTag(
-            "conversation.voice.stop.icon",
-            useUnmergedTree = true,
-        )
-            .assertWidthIsEqualTo(20.dp)
-            .assertHeightIsEqualTo(20.dp)
-        composeRule.onNodeWithText("Stop Recording").assertDoesNotExist()
-        composeRule.onNodeWithContentDescription("Stop Recording").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("conversation.voice.stop.icon", useUnmergedTree = true)
+            .assertWidthIsEqualTo(20.dp).assertHeightIsEqualTo(20.dp)
+        composeRule.onNodeWithContentDescription("Stop Recording").performClick()
+        composeRule.onNodeWithContentDescription("Play").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Cancel").performClick()
+        composeRule.onNodeWithTag("conversation.voice").performTouchInput { longClick(durationMillis = 650) }
         composeRule.onNodeWithContentDescription("Play").assertIsDisplayed()
         composeRule.onNodeWithTag(
             "conversation.voice.play.container",

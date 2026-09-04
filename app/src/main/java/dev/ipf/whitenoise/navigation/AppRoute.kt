@@ -93,6 +93,9 @@ sealed interface AppRoute {
     data object ReadAloud : AppRoute
 
     @Serializable
+    data object Dictation : AppRoute
+
+    @Serializable
     data object Language : AppRoute
 
     @Serializable

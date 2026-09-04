@@ -188,6 +188,32 @@ class AppViewModel(
         if (origin == OnboardingOrigin.AddProfile) addShowcaseProfiles()
     }
 
+    val composerCapture: ComposerCaptureController by lazy {
+        ComposerCaptureController(
+            profiles = { uiState.profiles }, activeProfileId = { uiState.activeProfileId },
+            signedIn = { it in uiState.signedInProfileIds },
+            writeDraft = { owner, text ->
+                if (uiState.activeProfileId != owner.profileId || composerAvailability(owner.chatId) != ComposerAvailability.Available) false
+                else { updateDraftText(owner.chatId, text); true }
+            },
+            sendDraft = { owner, expected, text ->
+                val chat = chat(owner.chatId)
+                if (uiState.activeProfileId != owner.profileId || chat == null || composerAvailability(owner.chatId) != ComposerAvailability.Available ||
+                    !expected.matches(dev.ipf.whitenoise.model.DictationDraft.capture(chat, expected.revision))) false
+                else {
+                    updateDraftText(owner.chatId, text)
+                    val sent = sendDraft(owner.chatId)
+                    if (!sent && chat(owner.chatId)?.draftText == text) updateDraftText(owner.chatId, expected.text)
+                    sent
+                }
+            },
+            updatePreferences = { profileId, reduce ->
+                updateActiveProfile { profile -> if (profile.id != profileId) profile else
+                    profile.copy(settings = profile.settings.copy(dictation = reduce(profile.settings.dictation))) }
+            },
+        )
+    }
+
     fun selectProfile(profileId: String) {
         if (profileId !in uiState.signedInProfileIds) return
         if (uiState.profiles.none { it.id == profileId } || uiState.activeProfileId == profileId) return
@@ -627,6 +653,7 @@ class AppViewModel(
             signedInProfileIds = signedIn,
             lastRetainedProfileId = activeId.takeUnless { wipeData },
         )
+        composerCapture.reconcile()
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
@@ -718,6 +745,7 @@ class AppViewModel(
             profiles = uiState.profiles.filterNot { it.id == profileId },
             signedInProfileIds = uiState.signedInProfileIds - profileId,
         )
+        composerCapture.reconcile()
         return true
     }
 
@@ -753,6 +781,7 @@ class AppViewModel(
         cancelProfileSave()
         dismissChatBatch()
         uiState = AppUiState()
+        composerCapture.reconcile()
         createdChatSequence = 0
         return true
     }
@@ -2416,6 +2445,7 @@ class AppViewModel(
                 if (profile.id == activeId) transform(profile) else profile
             },
         )
+        composerCapture.reconcile()
     }
 
     private fun insertAfterPinned(chats: List<Chat>, chat: Chat): List<Chat> {

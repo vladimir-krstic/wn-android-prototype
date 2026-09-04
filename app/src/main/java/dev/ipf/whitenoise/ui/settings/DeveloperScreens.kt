@@ -125,6 +125,13 @@ fun DeveloperToolsScreen(
     var photoEditorOpen by remember { mutableStateOf(false) }
     val speech = dev.ipf.whitenoise.ui.conversation.LocalReadAloudController.current
     var speechOpen by remember { mutableStateOf(false) }
+    val capture = dev.ipf.whitenoise.ui.conversation.LocalComposerCapture.current
+    var dictationOpen by remember { mutableStateOf(false) }
+    var recordingOpen by remember { mutableStateOf(false) }
+    if (recordingOpen && capture != null) ScenarioChoiceDialog("Voice recording outcomes", dev.ipf.whitenoise.model.VoiceCaptureScenario.entries,
+        capture.voiceScenario, { it.developerLabel }, { capture.chooseVoiceScenario(it) }, { recordingOpen = false })
+    if (dictationOpen && capture != null) ScenarioChoiceDialog("Dictation outcomes", dev.ipf.whitenoise.model.DictationScenario.entries,
+        capture.scenario, { it.developerLabel }, { capture.chooseScenario(it) }, { dictationOpen = false })
     var speechPreferencesOpen by remember { mutableStateOf(false) }
     if (speechPreferencesOpen && speech != null) SpeechDeveloperDialog(profile, speech) { speechPreferencesOpen = false }
     if (speechOpen && speech != null) ScenarioChoiceDialog("Read Aloud history", dev.ipf.whitenoise.model.SpeechEdgeScenario.entries,
@@ -224,6 +231,10 @@ fun DeveloperToolsScreen(
                         if (speech != null) {
                             SettingsLink("Read Aloud history outcomes", speech.edgeScenario.name, { speechOpen = true })
                             SettingsLink("Read Aloud engine, audio and background outcomes", onClick = { speechPreferencesOpen = true })
+                        }
+                        if (capture != null) {
+                            SettingsLink("Dictation outcomes", capture.scenario.developerLabel, { dictationOpen = true })
+                            SettingsLink("Voice recording outcomes", capture.voiceScenario.developerLabel, { recordingOpen = true })
                         }
                         SettingsLink("History loading scenarios", historyScenario.developerLabel, { historyOpen = true })
                         SettingsDivider()

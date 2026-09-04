@@ -1,13 +1,13 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B16 are implemented and host-verified.
+2026-09-04: production parity B01–B17 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. B16 is complete within its local scope: native engine/voice
-selection, profile-owned consent/rate/media controls, global/per-chat auto-read,
-and developer engine/audio/background-control outcomes. Continue with B17.
-B16's commit title is `B16: Add Read Aloud preferences and auto-read`. Q05 is resolved by the approved checked wipe
+record evidence. B17 is complete within its local scope: dictation preferences,
+owned draft capture/delivery/review, typed recognition failures and voice
+hold/release/cancel/lock with native tap-to-lock. Continue with B18.
+B17's commit title is `B17: Add dictation and owned voice recording`. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -55,11 +55,19 @@ reader. See `docs/screens/read-aloud-transport.md`. Fifteen new UI/platform case
 compile. B16 adds the preferences/auto-read coordinator and local background
 controls; see `docs/screens/read-aloud-preferences.md`. Eight new UI cases compile.
 Actual background services/notifications remain outside Q06; no device execution.
-Latest host gate: 510 unit tests, zero lint errors, both APKs;
+B17 adds inline dictation controls with an editable native draft, selected-service
+outcomes, manual/silence completion, guarded Send and retained review. Voice
+recording has shared capture ownership, RTL cancel/lock, tap-to-lock and typed
+failures. See `docs/screens/dictation-and-voice-recording.md`. Ten new UI cases
+compile only. No microphone/recognizer is started. Production master advanced to
+`911040c7e1c31652638c8cfd72812d1f3a694b9b`; its seven-commit diff changes no capture
+sources. Review roster/Nostr/installer/startup drift in relevant later batches
+and final reconciliation; keep the immutable audit baseline.
+Latest host gate: 550 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B16–B32. This
+boundary. Production Android parity remains in progress through B18–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 
