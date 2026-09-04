@@ -675,6 +675,7 @@ fun WhiteNoiseNavHost(
                     onAddReadingExample = { appViewModel.addMessageReadingExample(profile.id, route.chatId) },
                     onAddAttachmentExamples = { appViewModel.addAttachmentReadingExamples(profile.id, route.chatId) },
                     onAddAgentExamples = { appViewModel.addAgentConversationExamples(profile.id, route.chatId) },
+                    onAddNostrEventExamples = { appViewModel.addNostrEventExamples(profile.id, route.chatId) },
                 )
             }
         }
@@ -839,6 +840,9 @@ fun WhiteNoiseNavHost(
                     onOpenChatInfo = { navController.navigate(AppRoute.ChatInfo(chat.id)) },
                     onOpenPersonProfile = { personId ->
                         navController.navigate(AppRoute.PersonProfile(personId, chat.id))
+                    },
+                    onRetryNostrEvent = { messageId, referenceId, revision ->
+                        appViewModel.retryNostrEvent(profile.id, chat.id, messageId, referenceId, revision)
                     },
                     onOpenDeveloperTools = if (ConversationDebugPolicy.showsToolbarAction(profile, chat.id)) {
                         { navController.navigate(AppRoute.ConversationDebug(chat.id)) }

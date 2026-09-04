@@ -195,6 +195,7 @@ data class ChatMessage(
     val editHistory: MessageEditHistory? = null,
     val editAttempt: MessageEditAttempt? = null,
     val agentOperation: AgentOperation? = null,
+    val nostrEvents: List<NostrEventReference> = emptyList(),
 ) {
     val isDeleted: Boolean
         get() = deletionState != MessageDeletionState.None

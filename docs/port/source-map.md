@@ -28,7 +28,8 @@ B09 maps authenticated edit aggregation and pending/retry/discard controller eve
 MessageFullScreen/EditHistory, native passage selection and MarkdownRenderer into
 `docs/screens/message-editing-and-reading.md`. Accepted text is authoritative;
 local document/source annotations reconnect to production AST/selection data.
-Encoded Nostr profile/event reference resolution is tracked with B30.
+Encoded Nostr profile/event reference resolution is implemented and mapped in
+the B30 section below.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)
@@ -380,3 +381,22 @@ the AppViewModel/model boundary during production migration. Preserve exact
 profile/chat ownership and do not make ordinary operation visibility depend on
 Developer Tools. The prototype examples are local records and do not define a
 wire schema, install connectors, create accounts, start networking or persist.
+
+## Production Android B30 — verified public references and readers
+
+[Selected brief](../screens/verified-event-cards-and-readers.md) maps C114/C115
+to model/NostrReferences.kt, ProfileLinks.kt, ChatMessage,
+ui/conversation/MessageDocumentUi.kt, NostrEventUi.kt, ConversationScreen.kt and
+the exact-profile mutations in AppViewModel. Production NostrProfileReference,
+NostrEventReferenceOccurrence, NostrTlvCodec, NostrEventCardResolver,
+NostrEventCardModelMapper, NostrEventCards, MarkdownRenderer and event viewers
+provide the parity seams. The prototype keeps complete authored references and
+source offsets while projecting known member and nonmember names.
+
+Reconnect relay-backed profile/event resolution, authoritative event kinds,
+signatures and media sources at those seams during production migration.
+Prototype card records and retry outcomes remain deterministic and in memory;
+Developer Tools only inserts examples. Ordinary rendering, profile routing,
+copy, readers, playback and retry do not depend on the developer gate. No
+private-key form, transport, persistence, relay access or wire-schema claim is
+introduced.

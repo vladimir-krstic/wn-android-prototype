@@ -1240,6 +1240,30 @@ class AppViewModel(
         return true
     }
 
+    fun addNostrEventExamples(profileId: String, chatId: String): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (profile.id != profileId || !profile.developerTools.isEnabled) return false
+        val original = profile.chats.firstOrNull { it.id == chatId } ?: return false
+        val updated = NostrEventExamples.add(original, profile) ?: return false
+        mutateChat(chatId) { updated }
+        return true
+    }
+
+    fun retryNostrEvent(
+        profileId: String,
+        chatId: String,
+        messageId: String,
+        referenceId: String,
+        expectedRevision: Int,
+    ): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (profile.id != profileId || profileId !in uiState.signedInProfileIds) return false
+        val chat = profile.chats.firstOrNull { it.id == chatId } ?: return false
+        val updated = NostrEventExamples.retry(chat, messageId, referenceId, expectedRevision) ?: return false
+        mutateChat(chatId) { updated }
+        return true
+    }
+
     fun selectGlobalVoiceScenario(scenario: GlobalVoiceScenario) {
         if (uiState.activeProfile?.developerTools?.isEnabled == true) nextGlobalVoiceScenario = scenario
     }

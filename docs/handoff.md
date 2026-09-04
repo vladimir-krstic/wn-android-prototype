@@ -23,7 +23,8 @@ visible-only unread state, mention navigation and delivery facts; see
 `docs/screens/conversation-history-and-reading.md`. B09 adds accepted/pending edit
 state and history, full reading, per-chat collapse, native passage selection and
 source-aware Markdown; see `docs/screens/message-editing-and-reading.md`. Encoded
-Nostr reference resolution/profile presentation stays tracked with B30.
+Nostr reference resolution/profile presentation is host-verified in B30; see
+`docs/screens/verified-event-cards-and-readers.md`.
 B10 adds moderation, mixed deletion and app-owned forwarding/retry across both
 conversation and Shared Content; see `docs/screens/message-moderation-and-forwarding.md`.
 The 32/5 count caps are removed following the production source comparison.

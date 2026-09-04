@@ -5,6 +5,7 @@ import java.util.Locale
 
 /** Public encoding/checksum handling only. This does not generate keys, sign or resolve a network identity. */
 object PublicReferenceEncoding {
+    private val supportedPrefixes = setOf("npub", "nprofile", "note", "nevent", "naddr")
     private const val alphabet = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
     private val generators = intArrayOf(0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3)
     private fun checksum(values: List<Int>): Int {
@@ -31,7 +32,7 @@ object PublicReferenceEncoding {
         return output
     }
     fun encode(prefix: String, bytes: List<Int>): String {
-        require(prefix in setOf("npub", "nprofile"))
+        require(prefix in supportedPrefixes)
         val data = requireNotNull(convert(bytes, 8, 5, true))
         val sum = checksum(expand(prefix) + data + List(6) { 0 }) xor 1
         return prefix + "1" + (data + (0..5).map { (sum ushr (5 * (5 - it))) and 31 }).map { alphabet[it] }.joinToString("")
@@ -41,7 +42,7 @@ object PublicReferenceEncoding {
         val value = raw.lowercase(Locale.ROOT); val separator = value.lastIndexOf('1')
         if (separator < 1 || separator + 7 > value.length) return null
         val prefix = value.take(separator)
-        if (prefix !in setOf("npub", "nprofile")) return null
+        if (prefix !in supportedPrefixes) return null
         val data = value.drop(separator + 1).map { alphabet.indexOf(it) }
         if (data.any { it < 0 } || checksum(expand(prefix) + data) != 1) return null
         return prefix to (convert(data.dropLast(6), 5, 8, false) ?: return null)
@@ -49,6 +50,7 @@ object PublicReferenceEncoding {
     fun publicKey(raw: String): String? {
         val (prefix, bytes) = decode(raw) ?: return null
         if (prefix == "npub") return raw.lowercase(Locale.ROOT).takeIf { bytes.size == 32 }
+        if (prefix != "nprofile") return null
         var offset = 0; var key: List<Int>? = null
         while (offset < bytes.size) {
             if (offset + 2 > bytes.size) return null

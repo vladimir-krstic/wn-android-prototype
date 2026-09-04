@@ -46,7 +46,7 @@ Images never trigger remote loading. Unsupported link schemes stay inert;
 named links reveal their actual destination before external opening. Existing
 person mentions remain connected. Encoded Nostr profile/event references retain
 their authored text; their resolution, profile presentation and rich cards are
-tracked with B30 alongside referenced article/video readers.
+implemented and host-verified in B30 alongside referenced article/video readers.
 Document and inline projections retain source offsets for selection/speech and
 search; rendering limits must retain a route to the complete authored content.
 

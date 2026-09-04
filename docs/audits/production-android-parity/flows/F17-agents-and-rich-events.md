@@ -2,7 +2,7 @@
 
 ## Purpose and current composition
 
-Agent setup copies public-key prompts only; rich event cards use verified local fixtures and preserve raw reference for copying. Loading/retry never initializes networking.
+Agent setup copies public-key prompts only; B30 rich event cards use verified local fixtures and preserve raw reference for copying. Loading/retry never initializes networking. Encoded public identity references remain in-app and retain authored source.
 
 Prototype surface: `ui/settings/SettingsComponents.kt; model/ChatModels.kt; ui/conversation/TimelineMessageContent.kt`. Reuse `WhiteNoiseScaffold`, tonal Settings groups/rows, shared sheets/dialogs, `WhiteNoiseTextField`, `WhiteNoiseButton`, adaptive content bounds, message action/reaction components, MediaViewer and established empty/loading/error content as applicable. Keep 48 dp minimum targets, label-above forms, semantic error colors, bounded state layers, RTL, 200% text, IME/inset ownership and compact/expanded behavior.
 
@@ -18,8 +18,8 @@ These labels are the audit recommendation and follow current prototype terminolo
 | --- | --- | --- | --- |
 | C112 · AI-agent connector setup guide | Active-profile public key or unavailable-key recovery | Open Settings → AI Agents; reveal/copy a connector prompt; open documentation; Back returns to Settings | Hermes/OpenClaw/OpenCode/Codex prompts contain only the exact public key, manual setup and browser failure are explicit, and no installation or connection runs. [B29 evidence](../../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). |
 | C113 · Streaming agent messages and operation rows | Ordinary partial text plus typed operation phases | Expand an operation for details; message actions remain available; developer injection replaces its owned rows | Streaming text and queued/running/completed/failed/cancelled/unavailable rows use text, progress and details independent of Streaming Debug. [B29 evidence](../../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). |
-| C114 · Verified Nostr event cards and recovery | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Typed fixtures for supported note/article/image/video/document/event kinds, loading/not-found/invalid/unavailable/retry; preserve authored reference and Copy. No relay/network resolution. |
-| C115 · Article reader and referenced-video viewer | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Reuse rich reader and native local-video viewer for event content, loaded metadata and retry states; remote video remains a local fixture. |
+| C114 · Verified Nostr event cards and recovery | Developer-inserted typed local event rows | Copy, Retry or Open; profile/member references route in-app; modal Back returns to the conversation | Note/article/image/video/document/event plus loading/not-found/invalid/unavailable/failure states preserve exact authored reference. Retry requires exact owner/revision and performs no relay work. [B30 evidence](../../../screens/verified-event-cards-and-readers.md#implementation-evidence). |
+| C115 · Article reader and referenced-video viewer | Loaded typed Article, Document or Video card | Read/Play opens app-owned presentation; app-bar/system Back or Close returns | Article/Document reuse the structured reader; Video reuses Media3 with the bundled local clip. Metadata and identity links remain accessible and local. [B30 evidence](../../../screens/verified-event-cards-and-readers.md#implementation-evidence). |
 
 ## Production integration seam
 
@@ -38,4 +38,4 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B29, B30. Decisions: None. B29 is implemented and host-verified under [WN-ANDROID-0149](../../../decisions.md#wn-android-0149--agent-operations-are-ordinary-content-raw-streams-stay-developer-only); B30 remains. Facts are the matrix's cited production behavior and current prototype evidence.
+Batches: B29, B30. Decisions: None. B29 is implemented and host-verified under [WN-ANDROID-0149](../../../decisions.md#wn-android-0149--agent-operations-are-ordinary-content-raw-streams-stay-developer-only). B30 is implemented and host-verified under [WN-ANDROID-0150](../../../decisions.md#wn-android-0150--public-references-stay-in-app-and-verified-events-reuse-existing-readers). Facts are the matrix's cited production behavior and current prototype evidence.

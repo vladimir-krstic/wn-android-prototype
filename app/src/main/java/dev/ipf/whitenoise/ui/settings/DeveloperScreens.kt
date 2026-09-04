@@ -660,6 +660,7 @@ fun ConversationDebugScreen(
     onAddReadingExample: () -> Unit = {},
     onAddAttachmentExamples: () -> Unit = {},
     onAddAgentExamples: () -> Unit = {},
+    onAddNostrEventExamples: () -> Unit = {},
     parityController: dev.ipf.whitenoise.state.DeveloperParityController? = null,
 ) {
     val context = LocalContext.current
@@ -723,6 +724,12 @@ fun ConversationDebugScreen(
                                 stringResource(R.string.agent_examples_add),
                                 stringResource(R.string.agent_examples_add_detail),
                                 onAddAgentExamples,
+                            )
+                            SettingsDivider()
+                            SettingsLink(
+                                stringResource(R.string.nostr_event_examples_add),
+                                stringResource(R.string.nostr_event_examples_add_detail),
+                                onAddNostrEventExamples,
                             )
                             SettingsDivider()
                             SettingsLink("Add long document", "Markdown, selection and revision history", onAddReadingExample)

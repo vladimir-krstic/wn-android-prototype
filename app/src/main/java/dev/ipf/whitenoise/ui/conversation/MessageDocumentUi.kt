@@ -36,6 +36,13 @@ import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 private data class DocumentSpeech(val range: IntRange?, val follow: Boolean)
 private val LocalDocumentSpeech = staticCompositionLocalOf { DocumentSpeech(null, false) }
+private data class ProfileReferencePresentation(
+    val memberIds: Set<String>?,
+    val onOpen: ((NostrProfileOccurrence) -> Unit)?,
+)
+private val LocalProfileReferencePresentation = staticCompositionLocalOf {
+    ProfileReferencePresentation(null, null)
+}
 
 internal const val MessageSourceAnnotation = "white-noise-source-range"
 
@@ -53,6 +60,8 @@ internal fun selectedMessagePassage(source: String, fragments: List<AnnotatedStr
 internal fun MessageDocumentContent(
     document: MessageDocument, people: List<Person>, onOpenPerson: (String) -> Unit,
     modifier: Modifier = Modifier, annotateSource: Boolean = false, spokenRange: IntRange? = null, followSpeech: Boolean = false,
+    memberIds: Set<String>? = null,
+    onOpenProfileReference: ((NostrProfileOccurrence) -> Unit)? = null,
 ) {
     var pendingLink by rememberSaveable(document.source) { mutableStateOf<String?>(null) }
     var failedLink by remember { mutableStateOf(false) }
@@ -62,7 +71,10 @@ internal fun MessageDocumentContent(
         if (named) pendingLink = destination
         else if (runCatching { uri.openUri(destination) }.isFailure) failedLink = true
     }
-    CompositionLocalProvider(LocalDocumentSpeech provides DocumentSpeech(spokenRange, followSpeech)) {
+    CompositionLocalProvider(
+        LocalDocumentSpeech provides DocumentSpeech(spokenRange, followSpeech),
+        LocalProfileReferencePresentation provides ProfileReferencePresentation(memberIds, onOpenProfileReference),
+    ) {
         DocumentBlocks(document.blocks, people, onOpenPerson, open, annotateSource, modifier)
     }
     pendingLink?.let { destination ->
@@ -163,8 +175,19 @@ private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson
     onLink: (String, Boolean) -> Unit, annotate: Boolean, modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge, align: TextAlign? = null, linksEnabled: Boolean = true) {
     val color = LocalContentColor.current
+    val referencePresentation = LocalProfileReferencePresentation.current
     val spoken = LocalDocumentSpeech.current
-    val mapped = remember(runs) { runs.fold(SourceText.from("")) { a, b -> a + b.source } }
+    val projected = remember(runs, people, referencePresentation.memberIds) {
+        runs.flatMap { run ->
+            val fragments = if (run.destination == null && !run.style.code) {
+                NostrProfileTextProjection.project(run.source, people, referencePresentation.memberIds)
+            } else {
+                listOf(NostrProfileTextFragment(run.source))
+            }
+            fragments.map { run to it }
+        }
+    }
+    val mapped = remember(projected) { projected.fold(SourceText.from("")) { value, (_, fragment) -> value + fragment.source } }
     val hit = spoken.range?.let { range -> mapped.offsets.indices.filter {
         mapped.offsets[it] >= 0 && mapped.offsets[it] <= range.last && mapped.ends[it] > range.first
     }.firstOrNull() }
@@ -178,7 +201,7 @@ private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson
     }
     val currentSentenceLabel = stringResource(R.string.speech_current_sentence)
     val text = buildAnnotatedString {
-        runs.forEach { run ->
+        projected.forEach { (run, fragment) ->
             val start = length
             val span = SpanStyle(fontWeight = if (run.style.strong) FontWeight.Bold else null,
                 fontStyle = if (run.style.emphasis) FontStyle.Italic else null,
@@ -187,14 +210,26 @@ private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson
                 background = if (run.style.code) color.copy(alpha = 0.08f) else Color.Unspecified)
             withStyle(span) {
                 if (linksEnabled && run.destination != null) withLink(LinkAnnotation.Url(run.destination,
-                    TextLinkStyles(SpanStyle(color = color, textDecoration = TextDecoration.Underline))) { onLink(run.destination, run.namedLink) }) { append(run.source.text) }
-                else append(run.source.text)
+                    TextLinkStyles(SpanStyle(color = color, textDecoration = TextDecoration.Underline))) { onLink(run.destination, run.namedLink) }) { append(fragment.source.text) }
+                else if (linksEnabled && fragment.display != null) {
+                    val display = fragment.display
+                    val style = if (display.memberMention) {
+                        TextLinkStyles(SpanStyle(color = color, fontWeight = FontWeight.Bold, background = color.copy(alpha = 0.12f)))
+                    } else {
+                        TextLinkStyles(SpanStyle(color = color, textDecoration = TextDecoration.Underline))
+                    }
+                    withLink(LinkAnnotation.Clickable(
+                        tag = "nostr-profile:${display.occurrence.publicKey}",
+                        styles = style,
+                        linkInteractionListener = { referencePresentation.onOpen?.invoke(display.occurrence) },
+                    )) { append(fragment.source.text) }
+                } else append(fragment.source.text)
             }
-            if (linksEnabled && run.destination == null && !run.style.code) {
+            if (linksEnabled && run.destination == null && !run.style.code && fragment.display == null) {
                 val mentionRanges = mutableListOf<IntRange>()
                 people.flatMap { person -> listOf(person.name, person.displayName).distinct().map { person to "@$it" } }
                     .sortedByDescending { it.second.length }.forEach { (person, mention) ->
-                        var cursor = run.source.text.indexOf(mention)
+                        var cursor = fragment.source.text.indexOf(mention)
                         while (cursor >= 0) {
                             val end = cursor + mention.length
                             if (mentionRanges.none { range -> cursor in range || (end - 1) in range }) {
@@ -202,19 +237,19 @@ private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson
                                     TextLinkStyles(SpanStyle(color = color, fontWeight = FontWeight.SemiBold))) { onPerson(person.id) }, start + cursor, start + end)
                                 mentionRanges += cursor until end
                             }
-                            cursor = run.source.text.indexOf(mention, end)
+                            cursor = fragment.source.text.indexOf(mention, end)
                         }
                     }
             }
             spoken.range?.let { range ->
-                val highlighted = run.source.offsets.indices.filter {
-                    run.source.offsets[it] >= 0 && run.source.offsets[it] <= range.last && run.source.ends[it] > range.first
+                val highlighted = fragment.source.offsets.indices.filter {
+                    fragment.source.offsets[it] >= 0 && fragment.source.offsets[it] <= range.last && fragment.source.ends[it] > range.first
                 }
                 if (highlighted.isNotEmpty()) addStyle(SpanStyle(background = color.copy(alpha = 0.16f), fontWeight = FontWeight.SemiBold),
                     start + highlighted.first(), start + highlighted.last() + 1)
             }
-            if (annotate) run.source.offsets.indices.forEach { i ->
-                addStringAnnotation(MessageSourceAnnotation, "${run.source.offsets[i]}:${run.source.ends[i]}", start + i, start + i + 1)
+            if (annotate) fragment.source.offsets.indices.forEach { i ->
+                addStringAnnotation(MessageSourceAnnotation, "${fragment.source.offsets[i]}:${fragment.source.ends[i]}", start + i, start + i + 1)
             }
         }
     }

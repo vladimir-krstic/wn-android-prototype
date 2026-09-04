@@ -309,6 +309,7 @@ fun ConversationScreen(
     onOpenMessageDetails: (String) -> Unit = {},
     onOpenChatInfo: () -> Unit = {},
     onOpenPersonProfile: (String) -> Unit = {},
+    onRetryNostrEvent: (messageId: String, referenceId: String, revision: Int) -> Unit = { _, _, _ -> },
     onOpenDeveloperTools: (() -> Unit)? = null,
     initialSearch: Boolean = false,
     initialMessageId: String? = null,
@@ -1002,6 +1003,9 @@ fun ConversationScreen(
                                         onReaction(item.message.id, emoji, false)
                                     },
                                     onOpenPersonProfile = onOpenPersonProfile,
+                                    onRetryNostrEvent = { referenceId, revision ->
+                                        onRetryNostrEvent(item.message.id, referenceId, revision)
+                                    },
                                     sourceHighlighted = highlightedMessageId == item.message.id,
                                     onOpenReplyTarget = ::openReplyTarget,
                                     readAloudController = readAloudController,
@@ -1897,6 +1901,7 @@ private fun MessageRow(
     onSwipeReply: () -> Boolean,
     onReaction: (String) -> Unit,
     onOpenPersonProfile: (String) -> Unit = {},
+    onRetryNostrEvent: (referenceId: String, revision: Int) -> Unit = { _, _ -> },
     sourceHighlighted: Boolean = false,
     onOpenReplyTarget: (String) -> Unit = {},
     readAloudController: ReadAloudController,
@@ -2175,6 +2180,8 @@ private fun MessageRow(
                             authorName = authorName,
                             onOpenMedia = onOpenMedia,
                             onOpenPersonProfile = onOpenPersonProfile,
+                            memberIds = chat.members.mapTo(mutableSetOf()) { it.personId }.takeIf { chat.isGroup },
+                            onRetryNostrEvent = onRetryNostrEvent,
                             onOpenReplyTarget = onOpenReplyTarget,
                             canOpenReplyTarget = message.replyToMessageId != null,
                             searchQuery = searchQuery,
@@ -2298,6 +2305,8 @@ private fun MessageBubbleWithMetadata(
     authorName: String,
     onOpenMedia: (ConversationMediaKey) -> Unit,
     onOpenPersonProfile: (String) -> Unit,
+    memberIds: Set<String>?,
+    onRetryNostrEvent: (referenceId: String, revision: Int) -> Unit,
     onOpenReplyTarget: (String) -> Unit,
     canOpenReplyTarget: Boolean,
     searchQuery: String,
@@ -2338,6 +2347,8 @@ private fun MessageBubbleWithMetadata(
                     authorName = authorName,
                     onOpenMedia = onOpenMedia,
                     onOpenPersonProfile = onOpenPersonProfile,
+                    memberIds = memberIds,
+                    onRetryNostrEvent = onRetryNostrEvent,
                     onOpenReplyTarget = onOpenReplyTarget,
                     canOpenReplyTarget = canOpenReplyTarget,
                     searchQuery = searchQuery,
@@ -2400,6 +2411,8 @@ private fun MessageBubbleWithMetadata(
                 authorName = authorName,
                 onOpenMedia = onOpenMedia,
                 onOpenPersonProfile = onOpenPersonProfile,
+                memberIds = memberIds,
+                onRetryNostrEvent = onRetryNostrEvent,
                 onOpenReplyTarget = onOpenReplyTarget,
                 canOpenReplyTarget = canOpenReplyTarget,
                 searchQuery = searchQuery,
@@ -2468,6 +2481,8 @@ private fun MessageBubble(
     authorName: String,
     onOpenMedia: (ConversationMediaKey) -> Unit,
     onOpenPersonProfile: (String) -> Unit,
+    memberIds: Set<String>?,
+    onRetryNostrEvent: (referenceId: String, revision: Int) -> Unit,
     onOpenReplyTarget: (String) -> Unit,
     canOpenReplyTarget: Boolean,
     searchQuery: String,
@@ -2478,7 +2493,10 @@ private fun MessageBubble(
     messageInteractionSource: MutableInteractionSource?,
     onPositioned: (Rect) -> Unit,
 ) {
-    val text = if (message.isDeleted || searchQuery.isNotBlank()) message.visibleText(profile.id) else dev.ipf.whitenoise.model.MessageEditing.displayedText(message)
+    val authoredText = if (message.isDeleted || searchQuery.isNotBlank()) message.visibleText(profile.id) else dev.ipf.whitenoise.model.MessageEditing.displayedText(message)
+    val eventOnly = searchQuery.isBlank() && message.nostrEvents.isNotEmpty() &&
+        authoredText.trim() in message.nostrEvents.map { it.authoredReference.trim() }
+    val text = authoredText.takeUnless { eventOnly }.orEmpty()
     val plainText = dev.ipf.whitenoise.model.InlineMessageMarkup.plainText(text)
     val description = buildString {
         append(authorName)
@@ -2515,7 +2533,7 @@ private fun MessageBubble(
         MaterialTheme.colorScheme.onSurface
     }
     val hasRichContent = !message.isDeleted &&
-        (message.replyToMessageId != null || message.attachments.isNotEmpty())
+        (message.replyToMessageId != null || message.attachments.isNotEmpty() || message.nostrEvents.isNotEmpty())
     val singleMediaSize = rememberTimelineSingleMediaSize(message.attachments.singleOrNull())
     val richCanvasWidth = richContentCanvasWidthDp(message.attachments, singleMediaSize).dp
     Surface(
@@ -2564,6 +2582,14 @@ private fun MessageBubble(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    if (message.nostrEvents.isNotEmpty()) {
+                        NostrEventCards(
+                            message = message,
+                            profile = profile,
+                            onRetry = onRetryNostrEvent,
+                            onOpenPerson = onOpenPersonProfile,
+                        )
+                    }
                     if (text.isNotBlank()) {
                         MessageBubbleText(
                             profile = profile,
@@ -2572,6 +2598,7 @@ private fun MessageBubble(
                             plainText = plainText,
                             searchQuery = searchQuery,
                             onOpenPersonProfile = onOpenPersonProfile,
+                            memberIds = memberIds,
                             readAloudController = readAloudController,
                             showTranscriptLabel = message.attachments.any {
                                 it.voiceFormat == VoiceMessageFormat.Both
@@ -2594,6 +2621,7 @@ private fun MessageBubble(
                     plainText = plainText,
                     searchQuery = searchQuery,
                     onOpenPersonProfile = onOpenPersonProfile,
+                    memberIds = memberIds,
                     readAloudController = readAloudController,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 )
@@ -2622,10 +2650,14 @@ private fun MessageBubbleText(
     plainText: String,
     searchQuery: String,
     onOpenPersonProfile: (String) -> Unit,
+    memberIds: Set<String>?,
     readAloudController: ReadAloudController,
     modifier: Modifier = Modifier,
     showTranscriptLabel: Boolean = false,
 ) {
+    var unavailableProfile by rememberSaveable(message.id) {
+        mutableStateOf<dev.ipf.whitenoise.model.NostrProfileOccurrence?>(null)
+    }
     Column(modifier = modifier) {
         if (showTranscriptLabel) {
             Text(
@@ -2654,7 +2686,12 @@ private fun MessageBubbleText(
                     Modifier.wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged { overflow = it.height > limitPx },
                     spokenRange = readAloudController.session?.takeIf { it.owner == LocalSpeechOwner.current && it.current.item.id == message.id && it.current.item.authored == text }
                         ?.passage?.let { it.sourceStart until it.sourceEnd },
-                    followSpeech = readAloudController.session?.following == true)
+                    followSpeech = readAloudController.session?.following == true,
+                    memberIds = memberIds,
+                    onOpenProfileReference = { occurrence ->
+                        val person = profile.people.firstOrNull { it.publicKey == occurrence.publicKey }
+                        if (person != null) onOpenPersonProfile(person.id) else unavailableProfile = occurrence
+                    })
             }
             if (overflow && reading.collapse) TextButton(onClick = { reading.open(message.id) }, modifier = Modifier.testTag("message.readMore.${message.id}"),
                 colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.LocalContentColor.current)) {
@@ -2669,6 +2706,9 @@ private fun MessageBubbleText(
         }
         if (!message.isDeleted) MessageEditStatus(message)
         ReadAloudProgress(message.id, readAloudController)
+    }
+    unavailableProfile?.let { occurrence ->
+        UnavailableNostrProfileDialog(occurrence) { unavailableProfile = null }
     }
 }
 

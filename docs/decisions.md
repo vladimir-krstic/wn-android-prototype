@@ -4207,3 +4207,31 @@ is added.
 
 Evidence: [B29 brief](screens/ai-agents-and-streaming-operations.md),
 AgentOperations, AiAgentsScreen, AgentOperationUi and the state/Compose tests.
+
+## WN-ANDROID-0150 — Public references stay in-app and verified events reuse existing readers
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B30 contract; host verified
+
+Treat checksum-valid `npub`/`nprofile` text as in-app identity links. In a
+group, reserve `@Name` plus highlighted mention styling for a known current
+member; render a known non-member as an underlined Name without `@`. An
+unresolved public identity opens local unavailable/retry presentation. Never
+send an identity tap to an external URI handler. Map every rendered-name unit
+back to the complete authored reference so B09 source, selection, speech,
+editing and history stay authoritative.
+
+Accept strict public `note`, `nevent` and `naddr` pointer shapes. A typed Loaded
+fixture stands for production’s successful verification; ordinary UI never
+claims relay or cryptographic work occurred in this prototype. Event cards
+retain the exact authored `nostr:` reference for Copy, cap one message at three
+cards, and cover Note, Article, Image, Video, Document, Event plus loading and
+recovery states. Retry requires exact profile/chat/message/reference/revision
+ownership. Article/document content reuses the structured message reader;
+referenced video reuses the existing Media3 Compose player with the bundled
+local clip. No network, remote media, signing, persistence or external event
+handoff is added.
+
+Evidence: [B30 brief](screens/verified-event-cards-and-readers.md),
+NostrReferences, NostrEventUi, MessageDocumentUi, AppViewModel and the
+state/Compose tests.
