@@ -2,6 +2,8 @@ package dev.ipf.whitenoise.state
 
 import dev.ipf.whitenoise.model.ChatOrganization
 import dev.ipf.whitenoise.model.ChatFolder
+import dev.ipf.whitenoise.model.ChatFolderDraft
+import dev.ipf.whitenoise.model.ChatFolders
 import dev.ipf.whitenoise.model.ChatBatchAttempt
 import dev.ipf.whitenoise.model.ChatBatchScenario
 import dev.ipf.whitenoise.model.ChatBatchPhase
@@ -852,6 +854,43 @@ class AppViewModel(
         val id = "$profileId-folder-${createdChatSequence++}"
         updateActiveProfile { it.copy(chatFolders = it.chatFolders + ChatFolder(id, name.trim())) }
         return id
+    }
+
+    fun saveChatFolder(profileId: String, folderId: String?, draft: ChatFolderDraft): String? {
+        val profile = uiState.activeProfile ?: return null
+        val value = draft.normalized()
+        if (profile.id != profileId || value.name.isEmpty()) return null
+        val existing = profile.chatFolders.firstOrNull { it.id == folderId }
+        if (folderId != null && existing == null) return null
+        val id = folderId ?: "$profileId-folder-${createdChatSequence++}"
+        val folder = ChatFolder(id, value.name, value.chatIds.filterTo(mutableSetOf()) { candidate -> profile.chats.any { it.id == candidate } },
+            value.description, value.rule, existing?.systemKind)
+        updateActiveProfile { it.copy(chatFolders = if (existing == null) it.chatFolders + folder else it.chatFolders.map { current -> if (current.id == id) folder else current }) }
+        return id
+    }
+
+    fun deleteChatFolder(profileId: String, folderId: String): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (profile.id != profileId || profile.chatFolders.none { it.id == folderId }) return false
+        updateActiveProfile { it.copy(chatFolders = it.chatFolders.filterNot { folder -> folder.id == folderId }) }
+        return true
+    }
+
+    fun moveChatFolder(profileId: String, folderId: String, delta: Int) {
+        if (uiState.activeProfileId != profileId) return
+        updateActiveProfile { it.copy(chatFolders = ChatFolders.move(it.chatFolders, folderId, delta)) }
+    }
+
+    fun restoreChatFolders(profileId: String) {
+        if (uiState.activeProfileId != profileId) return
+        updateActiveProfile { it.copy(chatFolders = ChatFolders.restore(it.chatFolders)) }
+    }
+
+    fun assignChatFolder(profileId: String, chatId: String, folderId: String): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (profile.id != profileId || profile.chats.none { it.id == chatId } || profile.chatFolders.none { it.id == folderId }) return false
+        updateActiveProfile { it.copy(chatFolders = it.chatFolders.map { folder -> if (folder.id == folderId) folder.copy(chatIds = folder.chatIds + chatId) else folder }) }
+        return true
     }
 
     fun beginChatBatch(profileId: String, ids: List<String>, action: ChatBulkAction, folderId: String? = null, leaveFirst: Boolean = false): Boolean {

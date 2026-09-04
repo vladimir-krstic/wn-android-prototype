@@ -56,6 +56,8 @@ import dev.ipf.whitenoise.ui.settings.PrivacySecurityScreen
 import dev.ipf.whitenoise.ui.settings.ProfileKeysScreen
 import dev.ipf.whitenoise.ui.settings.ProfileRelayDetailsScreen
 import dev.ipf.whitenoise.ui.settings.ProfileRelaysScreen
+import dev.ipf.whitenoise.ui.settings.ChatFoldersScreen
+import dev.ipf.whitenoise.ui.settings.ChatFolderEditScreen
 import dev.ipf.whitenoise.ui.settings.SettingsScreen
 import dev.ipf.whitenoise.ui.settings.ShareConnectScreen
 import dev.ipf.whitenoise.ui.settings.SupportScreen
@@ -277,6 +279,7 @@ fun WhiteNoiseNavHost(
                 onSettings = { navController.navigate(AppRoute.Settings()) },
                 onProfileRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 onUndo = appViewModel::undoChatListAction,
+                onFolders = { uiState.activeProfileId?.let { navController.navigate(AppRoute.Folders(it)) } },
                 onMovePin = { id, delta -> uiState.activeProfileId?.let { appViewModel.movePinnedChat(it, id, delta) } },
                 onCreateFolder = { name -> uiState.activeProfileId?.let { appViewModel.createChatFolder(it, name) } },
                 onBeginBatch = { ids, action, folder, leave -> uiState.activeProfileId?.let { appViewModel.beginChatBatch(it, ids, action, folder, leave) } ?: false },
@@ -319,8 +322,27 @@ fun WhiteNoiseNavHost(
                 onAdvanceExit = { id, step -> appViewModel.advanceProfileExit(id, step)?.let(::finishProfileExit) },
                 onRetryExit = appViewModel::retryProfileExit,
                 onDismissExit = appViewModel::dismissProfileExit,
+                onFolders = { uiState.activeProfileId?.let { navController.navigate(AppRoute.Folders(it)) } },
                 initiallyShowSwitcher = route.showProfileSwitcher,
             )
+        }
+        composable<AppRoute.Folders> { entry ->
+            val route = entry.toRoute<AppRoute.Folders>()
+            val profile = uiState.activeProfile?.takeIf { it.id == route.profileId }
+            if (profile == null) LaunchedEffect(route.profileId) { showSignedInRoot() }
+            else ChatFoldersScreen(profile, onBack = { navController.popBackStack() },
+                onCreate = { navController.navigate(AppRoute.EditFolder(profile.id)) },
+                onEdit = { navController.navigate(AppRoute.EditFolder(profile.id, it)) },
+                onMove = { id, delta -> appViewModel.moveChatFolder(profile.id, id, delta) },
+                onDelete = { appViewModel.deleteChatFolder(profile.id, it) },
+                onRestore = { appViewModel.restoreChatFolders(profile.id) })
+        }
+        composable<AppRoute.EditFolder> { entry ->
+            val route = entry.toRoute<AppRoute.EditFolder>()
+            val profile = uiState.activeProfile?.takeIf { it.id == route.profileId }
+            if (profile == null) LaunchedEffect(route.profileId) { showSignedInRoot() }
+            else ChatFolderEditScreen(profile, route.folderId, onBack = { navController.popBackStack() },
+                onSave = { appViewModel.saveChatFolder(profile.id, route.folderId, it) != null })
         }
         composable<AppRoute.ShareConnect> {
             uiState.activeProfile?.let { ShareConnectScreen(it, onBack = { navController.popBackStack() }) }
@@ -706,6 +728,8 @@ fun WhiteNoiseNavHost(
                     onArchive = { appViewModel.setChatArchived(chat.id, !chat.isArchived) },
                     onLeave = { appViewModel.leaveChat(chat.id) },
                     onDeveloperTools = { navController.navigate(AppRoute.ConversationDebug(chat.id)) },
+                    onCreateFolder = { appViewModel.createChatFolder(profile.id, it) },
+                    onAddToFolder = { appViewModel.assignChatFolder(profile.id, chat.id, it) },
                 )
             }
         }

@@ -16,7 +16,8 @@ avatar viewing, Lightning validation and generated name drafts to
 `docs/screens/profile-media-and-lightning.md`. B05 maps pinned ordering, selection,
 local/leave-first deletion and connectivity recovery to
 `docs/screens/chat-organization-and-recovery.md`; folder assignment is the
-manual foundation for B06.
+manual foundation for B06. B06 maps folder preferences/rules, management/editor,
+defaults/order and contextual assignment to `docs/screens/chat-folders.md`.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)

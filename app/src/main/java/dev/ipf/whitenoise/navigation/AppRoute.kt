@@ -29,6 +29,12 @@ sealed interface AppRoute {
     data object NewChat : AppRoute
 
     @Serializable
+    data class Folders(val profileId: String) : AppRoute
+
+    @Serializable
+    data class EditFolder(val profileId: String, val folderId: String? = null) : AppRoute
+
+    @Serializable
     data class PersonProfile(val personId: String, val chatId: String? = null) : AppRoute
 
     @Serializable

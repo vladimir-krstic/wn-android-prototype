@@ -542,4 +542,34 @@
     <string name="chat_folder_empty_detail">Use Add to Folder from a chat’s actions to include it here.</string>
     <string name="chat_action_incomplete">Some chats need attention</string>
     <string name="chat_deselect">Deselect</string>
+    <string name="chat_folders">Folders</string>
+    <string name="folder_none">No folders</string>
+    <string name="folder_none_detail">Create a folder to organize your chats.</string>
+    <string name="folder_restore">Restore Default Folders</string>
+    <string name="folder_restore_hint">Restore missing Unread, Archived and Groups folders. Existing folders keep your changes.</string>
+    <string name="folder_edit">Edit Folder</string>
+    <string name="folder_delete_title">Delete “%1$s”?</string>
+    <string name="folder_delete_detail">Delete this folder? Your chats will stay where they are.</string>
+    <plurals name="folder_chat_count"><item quantity="one">%d chat</item><item quantity="other">%d chats</item></plurals>
+    <string name="folder_description">Description</string>
+    <string name="folder_included_chats">Included Chats</string>
+    <string name="folder_manual_hint">Chats you add here stay included, even when they do not match the automatic rules.</string>
+    <string name="folder_rules">Automatic rules</string>
+    <string name="folder_people">People</string>
+    <string name="folder_keyword">Keyword</string>
+    <string name="folder_keyword_hint">Match a chat title or group description. Chats with any selected person also match.</string>
+    <string name="folder_unread">Unread only</string>
+    <string name="folder_groups">Groups only</string>
+    <string name="folder_archived">Archived only</string>
+    <string name="folder_muted">Include muted chats</string>
+    <string name="folder_rule_hint">These settings narrow automatic matches. Archived only switches automatic matches to archived chats. Removing an included chat does not exclude it if a rule still matches.</string>
+    <string name="folder_preview">Preview</string>
+    <string name="folder_discard_title">Discard changes?</string>
+    <string name="folder_discard_detail">Your folder changes have not been saved.</string>
+    <string name="folder_discard">Discard Changes</string>
+    <string name="folder_keep_editing">Keep Editing</string>
+    <string name="folder_unavailable">This folder is no longer available.</string>
+    <string name="folder_save_failed">Could not save this folder. Your changes are still here. Try saving again.</string>
+    <string name="folder_search">Search</string>
+    <string name="folder_assignment_failed">Could not add this chat to the folder. Try again.</string>
 </resources>

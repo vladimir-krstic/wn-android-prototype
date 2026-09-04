@@ -21,9 +21,9 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C024 · Reorder pinned chats | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Move Up/Down and accessible actions reorder only pinned chats with bounded availability. Unpinned original order survives moving, unpinning and archiving. |
 | C025 · Multi-select chats and bulk actions | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Select and select-all-visible provide read/unread, archive/unarchive, folder assignment and confirmed deletion. Selection reconciles to visible rows, survives recreation, resets by profile and retains only failed targets; retries skip successes. |
 | C026 · Delete active chat locally with leave prerequisites | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Active/ended local deletion is available without leaving. Optional Also leave enforces sole-admin and authoritative membership prerequisites before history removal, with explicit leave/local failure results and stage-aware retry. |
-| C027 · Create, rename, describe and delete folders | Partial foundation in B05; B06 pending | Trigger its named entry/action; cancel with Back where available | B05 adds profile-owned manual folder creation through assignment, blank-name validation and filtering. B06 still needs management, rename, description and folder deletion with chats retained. |
-| C028 · Folder membership and rule matching | Partial foundation in B05; B06 pending | Trigger its named entry/action; cancel with Back where available | B05 stores deduplicated manual chat IDs per folder. B06 still needs rule matching, people/keyword selectors and constraints, included-chat/people pickers and preview counts. |
-| C029 · Folder ordering, defaults and contextual assignment | Partial foundation in B05; B06 pending | Trigger its named entry/action; cancel with Back where available | B05 adds row/bulk folder assignment and folder filters while keeping Left. B06 still needs folder ordering, editable defaults/restore and assignment from Chat Info. |
+| C027 · Create, rename, describe and delete folders | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Folders management and draft-only New/Edit provide name, description, manual membership, atomic Save, discard protection and failed-save retention. Blank names and missing/stale targets cannot save; deleting any folder preserves chats. |
+| C028 · Folder membership and rule matching | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Manual chat IDs union automatic matches. People OR title/group-description keyword matches, narrowed by unread/groups/archive/mute; empty rules match nothing. Searchable Included Chats/People pickers and live counts/Preview expose the result, including manual exceptions. |
+| C029 · Folder ordering, defaults and contextual assignment | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Editable Unread/Archived/Groups defaults support Move Up/Down with TalkBack equivalents and restore-only-missing behavior. Row/bulk/Chat Info assignment and derived folder filters are connected. Chats/Left remain available; deleted selected folders fall back to Chats. |
 | C030 · Connectivity and catch-up recovery on Chats | Implemented; host verified | Trigger its named entry/action; cancel with Back where available | Offline, Connecting, Catching up and Failed/retry preserve loaded rows/drafts. Profile/generation guards reject stale readiness. Relay-role configuration and availability have separate Check Relays recovery. |
 
 ## Production integration seam
@@ -52,5 +52,14 @@ C024–C026 and C030 are implemented and host-verified 2026-09-04. The
 records selection, bulk actions and failed-target retry; pinned ordering;
 local-only versus optional leave-first deletion; and owned recovery phases.
 The clean gate passed 262 unit tests, both APKs and zero lint errors. Seven UI
-cases compile but were not executed. B06 owns the remaining folder work;
-C027–C029 currently have only manual creation, assignment and filtering.
+cases compile but were not executed. B05 introduced manual creation, assignment and filtering. B06 subsequently
+completed C027–C029 as recorded below.
+
+## B06 implementation evidence
+
+C027–C029 are implemented and host-verified 2026-09-04. The
+[selected brief](../../../screens/chat-folders.md#implementation-evidence)
+records atomic New/Edit with discard protection, rule/preview semantics,
+editable defaults, restore/order, derived filters and all assignment entry
+points. The clean gate passed 277 unit tests, both APKs and zero lint errors.
+Nine new UI cases compile; device execution and visual acceptance remain separate.

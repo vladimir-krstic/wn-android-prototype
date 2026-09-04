@@ -1,5 +1,8 @@
 # Chat organization and recovery — B05
 
+2026-09-04: B06 completes the folder foundation described here. See
+[chat-folders.md](chat-folders.md) for editable defaults, rules and management.
+
 Selected by the user's all-batches goal, 2026-09-04. Capabilities C024, C025,
 C026 and C030. Implemented and host-verified; device/visual acceptance not claimed.
 

@@ -85,6 +85,14 @@ new device or visual acceptance is claimed. See
 
 ## Chats hub and creation
 
+2026-09-04 production B06: C027–C029 are implemented and host-verified.
+Folders now has atomic New/Edit, descriptions, manual/automatic membership,
+searchable selectors and preview, editable defaults, delete/restore, bounded
+ordering and assignment from row/bulk/Chat Info. Derived filters preserve
+Chats/Left. See [chat-folders.md](../screens/chat-folders.md). The clean gate
+passed 277 unit tests, zero lint errors and both APKs; nine new UI cases compile.
+Device/visual acceptance remains pending.
+
 2026-09-04 production B05: C024–C026 and C030 are implemented and host-verified.
 Selection, bulk updates with partial retry, pinned moves, explicit local/leave-first
 deletion, manual folder assignment/filtering and owned connection recovery

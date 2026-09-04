@@ -82,13 +82,14 @@ internal fun ChatDeleteConfirmation(chats: List<Chat>, onDismiss: () -> Unit, on
 }
 
 @Composable
-internal fun ChatFolderPicker(profile: Profile, onDismiss: () -> Unit, onCreate: (String) -> String?, onSelect: (String) -> Unit) {
+internal fun ChatFolderPicker(profile: Profile, onDismiss: () -> Unit, onCreate: (String) -> String?, onSelect: (String) -> Unit, errorMessage: String? = null) {
     val name = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
     var creating by rememberSaveable { mutableStateOf(profile.chatFolders.isEmpty()) }
     AlertDialog(onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.chat_add_folder)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+                if (errorMessage != null) Text(errorMessage, color = MaterialTheme.colorScheme.error)
                 profile.chatFolders.forEach { folder ->
                     TextButton(onClick = { onSelect(folder.id) }, modifier = Modifier.fillMaxWidth()) { Text(folder.name) }
                 }

@@ -86,7 +86,7 @@ data class Profile(
     val connectionInformationPublished: Boolean = true,
     val banner: ProfileAvatar? = null,
     val lightningAddress: String = "",
-    val chatFolders: List<ChatFolder> = emptyList(),
+    val chatFolders: List<ChatFolder> = ChatFolders.defaults,
     val chatConnection: ChatConnectionState = ChatConnectionState(),
 ) {
     val initial: String

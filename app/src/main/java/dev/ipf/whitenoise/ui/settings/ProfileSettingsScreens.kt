@@ -133,6 +133,7 @@ fun SettingsScreen(
     onDonate: () -> Unit,
     onDeveloperTools: () -> Unit,
     onSignOut: (dev.ipf.whitenoise.model.SignOutOptions) -> Unit,
+    onFolders: () -> Unit = {},
     initiallyShowSwitcher: Boolean = false,
     exitAttempt: dev.ipf.whitenoise.model.ProfileExitAttempt? = null,
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
@@ -210,6 +211,8 @@ fun SettingsScreen(
                         iconTag = "profile_keys",
                         onClick = onProfileKeys,
                     )
+                    SettingsDivider()
+                    SettingsHubLink(title = stringResource(R.string.chat_folders), icon = R.drawable.ic_filter_list, iconTag = "folders", onClick = onFolders)
                     SettingsDivider()
                     SettingsHubLink(
                         title = "Notifications",

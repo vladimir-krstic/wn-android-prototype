@@ -1,5 +1,9 @@
 # Chats and chat creation
 
+2026-09-04: B06 replaces the fixed Unread/Archived filters with editable default
+folders, adds Groups/Folders, preserves Chats/Left and connects derived rules.
+See [chat-folders.md](chat-folders.md).
+
 2026-09-04: B05 extends row menus with selection, pinned moves, folder assignment,
 active/local deletion and connection recovery. See [chat-organization-and-recovery.md](chat-organization-and-recovery.md).
 The existing row layout and text-measurement crash fix remain in use.

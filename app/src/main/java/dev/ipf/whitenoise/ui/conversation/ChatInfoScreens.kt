@@ -140,7 +140,15 @@ fun ChatInfoScreen(
     onLeave: () -> Boolean,
     onDeveloperTools: () -> Unit,
     modifier: Modifier = Modifier,
+    onCreateFolder: (String) -> String? = { null },
+    onAddToFolder: (String) -> Boolean = { false },
 ) {
+    var folderPicker by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
+    var folderFailed by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
+    if (folderPicker) dev.ipf.whitenoise.ui.chats.ChatFolderPicker(profile,
+        onDismiss = { folderPicker = false }, onCreate = onCreateFolder,
+        onSelect = { if (onAddToFolder(it)) folderPicker = false else folderFailed = true },
+        errorMessage = if (folderFailed) stringResource(R.string.folder_assignment_failed) else null)
     var muteSheet by remember { mutableStateOf(false) }
     var disappearingSheet by remember { mutableStateOf(false) }
     var leaveConfirmation by remember { mutableStateOf(false) }
@@ -171,6 +179,8 @@ fun ChatInfoScreen(
         ),
     )
     val lifecycleActions = buildList {
+        add(ChatInfoAction(title = stringResource(R.string.chat_add_folder), icon = R.drawable.ic_add,
+            onClick = { folderFailed = false; folderPicker = true }))
         add(
             ChatInfoAction(
                 title = stringResource(if (chat.isArchived) R.string.unarchive else R.string.archive),

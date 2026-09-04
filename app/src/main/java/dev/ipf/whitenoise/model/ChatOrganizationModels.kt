@@ -1,6 +1,9 @@
 package dev.ipf.whitenoise.model
 
-data class ChatFolder(val id: String, val name: String, val chatIds: Set<String> = emptySet())
+data class ChatFolder(
+    val id: String, val name: String, val chatIds: Set<String> = emptySet(),
+    val description: String = "", val rule: ChatFolderRule = ChatFolderRule(), val systemKind: ChatFolderKind? = null,
+)
 
 object ChatOrganization {
     val order: Comparator<Chat> = compareByDescending<Chat> { it.isPinned }

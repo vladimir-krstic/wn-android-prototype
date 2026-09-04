@@ -102,12 +102,12 @@ class ChatOrganizationStateTest {
         assertNull(vm.createChatFolder(owner, "  ")); assertNull(vm.createChatFolder("other", "Name"))
         val folder = vm.createChatFolder(owner, "  Friends  ")!!
         repeat(2) { vm.beginChatBatch(owner, listOf(id, id), ChatBulkAction.Folder, folder); vm.finish() }
-        assertEquals(ChatFolder(folder, "Friends", setOf(id)), vm.uiState.activeProfile!!.chatFolders.single())
+        assertEquals(ChatFolder(folder, "Friends", setOf(id)), vm.uiState.activeProfile!!.chatFolders.single { it.id == folder })
         assertFalse(vm.beginChatBatch(owner, listOf(id), ChatBulkAction.Folder, "missing"))
         vm.beginChatBatch(owner, listOf(id), ChatBulkAction.Delete); vm.finish()
-        assertTrue(vm.uiState.activeProfile!!.chatFolders.single().chatIds.isEmpty())
+        assertTrue(vm.uiState.activeProfile!!.chatFolders.single { it.id == folder }.chatIds.isEmpty())
         vm.completeSignIn(OnboardingOrigin.AddProfile)
-        assertTrue(vm.uiState.activeProfile!!.chatFolders.isEmpty())
+        assertEquals(ChatFolders.defaults, vm.uiState.activeProfile!!.chatFolders)
     }
     @Test fun recoveryRequiresCurrentGenerationAndPreservesChatsAndDrafts() {
         val vm = signedIn(); val owner = vm.uiState.activeProfileId!!; val id = vm.direct()

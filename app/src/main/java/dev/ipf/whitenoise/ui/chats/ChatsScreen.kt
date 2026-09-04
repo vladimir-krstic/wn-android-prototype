@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise.ui.chats
 
 import androidx.activity.compose.BackHandler
+import dev.ipf.whitenoise.model.ChatFolders
 import dev.ipf.whitenoise.model.ChatOrganization
 import dev.ipf.whitenoise.model.ChatBulkAction
 import dev.ipf.whitenoise.model.ChatBatchAttempt
@@ -111,6 +112,7 @@ fun ChatsScreen(
     onSettings: () -> Unit = {},
     onProfileRelays: () -> Unit = {},
     onUndo: (ChatListUndo) -> Unit = {},
+    onFolders: () -> Unit = {},
     onMovePin: (String, Int) -> Unit = { _, _ -> },
     onCreateFolder: (String) -> String? = { null },
     onBeginBatch: ((List<String>, ChatBulkAction, String?, Boolean) -> Boolean)? = null,
@@ -137,14 +139,15 @@ fun ChatsScreen(
     var selectedIds by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
     var folderId by rememberSaveable(profile?.id) { mutableStateOf<String?>(null) }
     val selectedFolder = profile?.chatFolders?.firstOrNull { it.id == folderId }
+    LaunchedEffect(profile?.id, folderId, selectedFolder?.id) {
+        if (folderId != null && selectedFolder == null) { folderId = null; scopeName = ChatScope.Chats.name }
+    }
     var soleAdminChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val rows = remember(profile?.chats, scope, query, selectedFolder) {
         if (selectedFolder == null) ChatProjection.rows(profile?.chats.orEmpty(), scope, query)
-        else profile.chats.filter { it.id in selectedFolder.chatIds }
-            .filter { query.isBlank() || it.title.contains(query.trim(), true) || it.displayPreview.contains(query.trim(), true) }
-            .sortedWith(ChatOrganization.order)
+        else ChatFolders.rows(profile.chats, selectedFolder, query)
     }
 
     val visibleSelected = ChatOrganization.reconcile(selectedIds, rows)
@@ -259,6 +262,7 @@ fun ChatsScreen(
                             profile = profile,
                             scope = scope,
                             folderId = selectedFolder?.id,
+                            onFolders = onFolders,
                             onFolderChange = { folderId = it; filterMenuOpen = false },
                             filterMenuOpen = filterMenuOpen,
                             onFilterMenuOpenChange = { menuTarget = null; filterMenuOpen = it },
@@ -420,6 +424,7 @@ private fun ChatsTopBar(
     scope: ChatScope,
     folderId: String?,
     onFolderChange: (String) -> Unit,
+    onFolders: () -> Unit,
     filterMenuOpen: Boolean,
     onFilterMenuOpenChange: (Boolean) -> Unit,
     onScopeChange: (ChatScope) -> Unit,
@@ -497,15 +502,14 @@ private fun ChatsTopBar(
                     expanded = filterMenuOpen,
                     onDismissRequest = { onFilterMenuOpenChange(false) },
                     modifier = Modifier.testTag("chats.filterMenu"),
-                    items = ChatScope.entries.map { candidate ->
-                        WhiteNoiseMenuItem(
-                            label = candidate.label,
-                            onClick = { onScopeChange(candidate) },
-                            selected = candidate == scope && folder == null,
-                        )
-                    } + profile?.chatFolders.orEmpty().map { candidate ->
+                    items = listOf(
+                        WhiteNoiseMenuItem(label = ChatScope.Chats.label, onClick = { onScopeChange(ChatScope.Chats) }, selected = scope == ChatScope.Chats && folder == null),
+                    ) + profile?.chatFolders.orEmpty().map { candidate ->
                         WhiteNoiseMenuItem(label = candidate.name, onClick = { onFolderChange(candidate.id) }, selected = candidate.id == folderId)
-                    },
+                    } + listOf(
+                        WhiteNoiseMenuItem(label = ChatScope.Left.label, onClick = { onScopeChange(ChatScope.Left) }, selected = scope == ChatScope.Left && folder == null),
+                        WhiteNoiseMenuItem(label = stringResource(R.string.chat_folders), icon = R.drawable.ic_filter_list, onClick = { onFilterMenuOpenChange(false); onFolders() }),
+                    ),
                 )
             }
             IconButton(onClick = onSearch) {
