@@ -1,10 +1,10 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B13 are implemented and host-verified.
+2026-09-04: production parity B01–B14 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. Continue with B14. Q05 is resolved by the approved checked wipe
+record evidence. Continue with B15. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -38,11 +38,16 @@ shared media filters/month groups/Voice, source-owned audio controls and package
 fallback states. Real installation remains outside Q06. See
 `docs/screens/text-attachments-and-shared-content.md`. Thirteen new UI/platform
 cases compile; profile/source/lifecycle changes invalidate stale content.
-Latest clean gate: 414 unit tests, zero lint errors, both APKs;
+B14 adds coordinate selection/review, current-location outcomes and reply/draft-safe
+send/retry. Location-only wire bodies render offline cards with explicit Maps
+handoff/error/Copy; accepted messages are revealed from older history. See
+`docs/screens/location-sharing.md`. Thirteen new UI/platform cases compile.
+Q06 real GPS/map tiles/geocoding and permissions remain outside scope.
+Latest clean gate: 432 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B14–B32. This
+boundary. Production Android parity remains in progress through B15–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

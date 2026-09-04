@@ -122,6 +122,16 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B14: C058 is implemented and host-verified within Q06.
+Composer Location adds coordinate/current-state selection, review, bounds and
+accuracy, owned cancellation, reply/draft-safe sending and Retry. Location-only
+legacy links become offline coordinate cards, preserve source Copy/forward/search
+and reveal the accepted message from older history. Explicit Maps handoff has
+copyable no-handler/access recovery. No GPS, tile/geocoding requests or permission
+was added. The clean gate passes 432 unit tests, both APKs and zero lint errors;
+13 new UI/platform cases compile. Device/visual acceptance remains pending. See
+[location-sharing.md](../screens/location-sharing.md#implementation-evidence).
+
 2026-09-04 production B13: C055/C056/C059 are implemented and host-verified
 within the prototype boundary. Strict bounded text/Markdown reading, native
 selection/full Copy/speech, newest-first month-grouped image/video/voice content,

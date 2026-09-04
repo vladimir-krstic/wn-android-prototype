@@ -1,5 +1,10 @@
 package dev.ipf.whitenoise.state
 
+import dev.ipf.whitenoise.model.LocationSession
+import dev.ipf.whitenoise.model.LocationScenario
+import dev.ipf.whitenoise.model.LocationEvent
+import dev.ipf.whitenoise.model.LocationPhase
+import dev.ipf.whitenoise.model.LocationFailure
 import dev.ipf.whitenoise.model.PhotoEditorSession
 import dev.ipf.whitenoise.model.PhotoEditorScenario
 import dev.ipf.whitenoise.model.PhotoEditorEvent
@@ -730,6 +735,8 @@ class AppViewModel(
         nextMessageDeleteScenario = MessageDeleteScenario.Success
         nextMessageForwardScenario = MessageForwardScenario.Success
         photoEditorSession = null
+        locationSession = null
+        locationScenarios = emptyMap()
         nextPhotoEditorScenario = PhotoEditorScenario.Success
         nextAttachmentAccessScenario = dev.ipf.whitenoise.model.AttachmentAccessScenario.Success
         attachmentAccessScenarioOwner = null
@@ -1663,11 +1670,64 @@ class AppViewModel(
         }
     }
 
+    private var locationGeneration = 0L
+    private var locationScenarios by mutableStateOf(emptyMap<String, LocationScenario>())
+    val nextLocationScenario: LocationScenario get() = locationScenarios[uiState.activeProfileId] ?: LocationScenario.Unavailable
+    var locationSession by mutableStateOf<LocationSession?>(null)
+        private set
+
+    fun selectLocationScenario(value: LocationScenario) {
+        val profile = uiState.activeProfile?.takeIf { it.developerTools.isEnabled } ?: return
+        locationScenarios = locationScenarios + (profile.id to value)
+    }
+
+    fun openLocation(profileId: String, chatId: String): Boolean {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds ||
+            composerAvailability(chatId) != ComposerAvailability.Available) return false
+        val chat = chat(chatId) ?: return false
+        val reply = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().firstOrNull { it.message.id == chat.draftReplyMessageId }?.message
+        if (chat.draftReplyMessageId != null && (reply == null || reply.isDeleted || reply.expiresAtMillis?.let { it <= MessageForwarding.nowMillis } == true)) return false
+        val scenario = if (uiState.activeProfile?.developerTools?.isEnabled == true) nextLocationScenario else LocationScenario.Unavailable
+        locationSession = LocationSession(++locationGeneration, profileId, chatId, reply, scenario)
+        locationScenarios = locationScenarios - profileId
+        return true
+    }
+
+    fun locationAction(sessionId: Long, event: LocationEvent): Boolean {
+        val session = locationSession?.takeIf { it.id == sessionId } ?: return false
+        if (session.profileId != uiState.activeProfileId || session.profileId !in uiState.signedInProfileIds) return false
+        if (event == LocationEvent.Close || event == LocationEvent.Back) {
+            val next = session.reduce(event)
+            locationSession = next.takeUnless { it.phase == LocationPhase.Closed }
+            return true
+        }
+        val chat = chat(session.chatId)
+        val reply = chat?.timeline?.filterIsInstance<ChatTimelineEntry.Message>()?.firstOrNull { it.message.id == session.expectedReply?.id }?.message
+        val replyValid = session.expectedReply == null || (reply != null && !reply.isDeleted &&
+            reply.expiresAtMillis?.let { it <= MessageForwarding.nowMillis } != true && reply.text == session.expectedReply.text && reply.attachments == session.expectedReply.attachments)
+        if (chat == null || composerAvailability(session.chatId) != ComposerAvailability.Available ||
+            chat.draftReplyMessageId != session.expectedReply?.id || !replyValid) {
+            locationSession = session.copy(phase = LocationPhase.Review, failure = LocationFailure.SourceChanged, revision = session.revision + 1)
+            return false
+        }
+        val next = session.reduce(event)
+        if (next == session) return false
+        if (next.phase == LocationPhase.Closed && event is LocationEvent.Sent) {
+            val point = session.point ?: return false
+            if (!sendContent(session.chatId, point.messageText, emptyList(), session.expectedReply?.id, preserveDraft = true)) {
+                locationSession = session.copy(phase = LocationPhase.Review, failure = LocationFailure.SourceChanged, revision = session.revision + 1)
+                return false
+            }
+            locationSession = null
+        } else locationSession = next
+        return true
+    }
+
     fun sendDraft(chatId: String): Boolean {
         val chat = chat(chatId) ?: return false
         val trimmed = chat.draftText.trim()
         val linkPreview = LinkPreviewDetector.first(trimmed)
-            ?.takeUnless { it.url == chat.suppressedDraftLinkUrl }
+            ?.takeUnless { it.url == chat.suppressedDraftLinkUrl || (chat.draftAttachments.isEmpty() && dev.ipf.whitenoise.model.LocationSharing.parse(trimmed) != null) }
             ?.attachment("$chatId-link-${createdChatSequence + 1}")
         val attachments = chat.draftAttachments.map { it.copy(sourceImages = emptyList(), photoEdits = emptyMap(), photoFrameQualities = emptyMap(), transfer = if (it.kind in setOf(dev.ipf.whitenoise.model.MessageAttachmentKind.Photo, dev.ipf.whitenoise.model.MessageAttachmentKind.Photos,
             dev.ipf.whitenoise.model.MessageAttachmentKind.Video, dev.ipf.whitenoise.model.MessageAttachmentKind.File, dev.ipf.whitenoise.model.MessageAttachmentKind.Gif))
@@ -1930,6 +1990,7 @@ class AppViewModel(
     fun interruptMessageOperations(profileId: String? = uiState.activeProfileId) {
         if (profileId == null) return
         if (photoEditorSession?.profileId == profileId) photoEditorSession = null
+        if (locationSession?.profileId == profileId) locationSession = null
         messageForwards = messageForwards.mapValues { (_, op) ->
             if (!op.isRunning || profileId !in setOf(op.sourceProfileId, op.destinationProfileId)) op else op.copy(revision = op.revision + 1,
                 targets = op.targets.map { if (it.phase == MessageForwardTargetPhase.Completed) it else it.copy(phase = MessageForwardTargetPhase.Failed, failure = MessageForwardFailure.SessionChanged) }).settled()
@@ -1974,6 +2035,7 @@ class AppViewModel(
         text: String,
         attachments: List<MessageAttachment>,
         replyMessageId: String?,
+        preserveDraft: Boolean = false,
     ): Boolean {
         var changed = false
         updateActiveProfile { profile ->
@@ -1993,10 +2055,10 @@ class AppViewModel(
                             timestamp = "Now",
                             unreadCount = chat.unreadCount,
                             isMarkedUnread = chat.isMarkedUnread,
-                            isDraft = false,
-                            draftText = "",
-                            draftAttachments = emptyList(),
-                            suppressedDraftLinkUrl = null,
+                            isDraft = preserveDraft && (chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty()),
+                            draftText = if (preserveDraft) chat.draftText else "",
+                            draftAttachments = if (preserveDraft) chat.draftAttachments else emptyList(),
+                            suppressedDraftLinkUrl = if (preserveDraft) chat.suppressedDraftLinkUrl else null,
                             draftReplyMessageId = null,
                             deliveryState = ChatDeliveryState.None,
                             timeline = chat.timeline + ChatTimelineEntry.Message(

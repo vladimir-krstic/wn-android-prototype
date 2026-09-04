@@ -473,6 +473,7 @@ fun FullConversationComposer(
     onCompactHeightChanged: (Int) -> Unit = {},
     onExpansionPresentationChanged: (Boolean, Float) -> Unit = { _, _ -> },
     onOverlayPresentationChanged: (Boolean) -> Unit = {},
+    onLocationSent: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val addAttachmentDescription = stringResource(R.string.add_attachment)
@@ -514,7 +515,7 @@ fun FullConversationComposer(
 
     androidx.compose.runtime.SideEffect {
         onOverlayPresentationChanged(attachmentMenuOpen || contactPickerOpen || recentMediaOpen || qualityOpen ||
-            deviceContact != null || showCameraPermissionRecovery || mediaViewerAttachmentId != null || attachmentEnvironment.editorSession != null)
+            deviceContact != null || showCameraPermissionRecovery || mediaViewerAttachmentId != null || attachmentEnvironment.editorSession != null || attachmentEnvironment.locationSession != null)
     }
 
     fun nextId(prefix: String): String {
@@ -918,6 +919,7 @@ fun FullConversationComposer(
                                 }.isFailure
                             },
                         ),
+                        WhiteNoiseMenuItem(stringResource(R.string.location_title), icon = R.drawable.ic_location_on, onClick = { attachmentError = !attachmentEnvironment.openLocation() }),
                         WhiteNoiseMenuItem(
                             label = stringResource(R.string.white_noise_person),
                             icon = R.drawable.ic_person,
@@ -1096,6 +1098,9 @@ fun FullConversationComposer(
         }
     }
 
+    attachmentEnvironment.locationSession?.let { session ->
+        LocationPickerDialog(session) { event -> attachmentEnvironment.locationEvent(session.id, event)?.let(onLocationSent) }
+    }
     if (recentMediaOpen) RecentMediaSheet(attachmentEnvironment.recentAccess, { recentMediaOpen = false }, onGallery = {
         recentMediaOpen = false
         attachmentError = runCatching { visualPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }.isFailure

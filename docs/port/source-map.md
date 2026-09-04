@@ -179,3 +179,14 @@ boundary. AppViewModel owns developer examples/one-shot outcomes; source IDs own
 reader/player lifetime. Production reconnects authoritative attachment cache,
 voice sources and distribution/installer outcomes. Real installation and new
 permissions remain outside Q06 prototype coverage.
+
+## Production B14 location sharing
+
+`docs/screens/location-sharing.md` maps pinned LocationPickerScreen/LocationShare,
+LocationBubble/BubbleContentBlocks and Controllers.send into
+`LocationSharingModels.kt`, `LocationSharingUi.kt`, the shared composer and
+AppViewModel's owned location session. Location messages preserve the production
+text wire form; explicit map opening reuses Android ACTION_VIEW. The prototype
+uses manual point entry and developer-only one-shot current-location examples;
+production must reconnect grants/provider cancellation, map selection and send
+acceptance. No in-memory scenario state should migrate into a location service.

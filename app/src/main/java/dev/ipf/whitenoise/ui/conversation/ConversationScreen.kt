@@ -402,6 +402,7 @@ fun ConversationScreen(
         mutableStateOf(initialMessageId ?: history.boundaryId)
     }
     var initialViewportSettled by rememberSaveable(chat.id) { mutableStateOf(false) }
+    var sentLocationTarget by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var pendingEndSettlement by remember(chat.id) { mutableStateOf(false) }
     var compactComposerHeightPx by remember(chat.id) { mutableIntStateOf(0) }
     var composerOverlayActive by remember(chat.id) { mutableStateOf(false) }
@@ -612,6 +613,13 @@ fun ConversationScreen(
         withFrameNanos { }
         listState.scrollToItem(items.lastIndex)
         pendingEndSettlement = false
+    }
+    LaunchedEffect(sentLocationTarget, chat.timeline) {
+        val target = sentLocationTarget ?: return@LaunchedEffect
+        if (chat.timeline.any { it.id == target }) {
+            history.target(chat, target, dev.ipf.whitenoise.model.HistoryScenario.Success, highlight = false)
+            sentLocationTarget = null
+        }
     }
     LaunchedEffect(currentSearchMessageId) {
         val messageId = currentSearchMessageId ?: return@LaunchedEffect
@@ -992,6 +1000,7 @@ fun ConversationScreen(
                                 if (sent) settleAfterNextTimelineItem(previousCount)
                             }
                         },
+                        onLocationSent = { sentLocationTarget = it },
                         onSendVoice = { submission ->
                             val previousCount = listState.layoutInfo.totalItemsCount
                             onSendVoice(submission).also { sent ->
@@ -2569,7 +2578,10 @@ private fun MessageBubbleText(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
+        val location = remember(message, text) { dev.ipf.whitenoise.model.LocationSharing.fromMessage(message.copy(text = text)) }
+        if (location != null && searchQuery.isBlank()) {
+            LocationMessageCard(location)
+        } else if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
             SearchHighlightedText(
                 text = plainText,
                 query = searchQuery,

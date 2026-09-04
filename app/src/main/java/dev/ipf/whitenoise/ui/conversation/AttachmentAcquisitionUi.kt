@@ -38,6 +38,9 @@ import dev.ipf.whitenoise.model.*
 import kotlinx.coroutines.delay
 
 internal data class AttachmentEnvironment(
+    val locationSession: LocationSession? = null,
+    val openLocation: () -> Boolean = { false },
+    val locationEvent: (Long, LocationEvent) -> String? = { _, _ -> null },
     val recentAccess: RecentMediaAccess = RecentMediaAccess.Full,
     val editorSession: PhotoEditorSession? = null,
     val openEditor: (String, Int) -> Boolean = { _, _ -> false },

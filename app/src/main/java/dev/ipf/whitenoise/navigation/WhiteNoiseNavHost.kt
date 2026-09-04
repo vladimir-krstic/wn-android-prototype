@@ -541,6 +541,8 @@ fun WhiteNoiseNavHost(
                     onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
                     photoEditorScenario = appViewModel.nextPhotoEditorScenario,
                     onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
+                    locationScenario = appViewModel.nextLocationScenario,
+                    onLocationScenario = appViewModel::selectLocationScenario,
                     attachmentAccessScenario = appViewModel.nextAttachmentAccessScenario,
                     onAttachmentAccessScenario = appViewModel::selectAttachmentAccessScenario,
                     onMessageForwardScenario = appViewModel::selectMessageForwardScenario,
@@ -711,6 +713,13 @@ fun WhiteNoiseNavHost(
                 androidx.compose.runtime.key(profile.id, chat.id) {
                 androidx.compose.runtime.CompositionLocalProvider(dev.ipf.whitenoise.ui.conversation.LocalAttachmentEnvironment provides
                     dev.ipf.whitenoise.ui.conversation.AttachmentEnvironment(
+                        locationSession = appViewModel.locationSession?.takeIf { it.profileId == profile.id && it.chatId == chat.id },
+                        openLocation = { appViewModel.openLocation(profile.id, chat.id) },
+                        locationEvent = { id, event ->
+                            val applied = appViewModel.locationAction(id, event)
+                            if (applied && event is dev.ipf.whitenoise.model.LocationEvent.Sent && appViewModel.locationSession == null)
+                                appViewModel.chat(chat.id)?.timeline?.lastOrNull()?.id else null
+                        },
                         recentAccess = appViewModel.recentMediaAccess,
                         editorSession = appViewModel.photoEditorSession?.takeIf { it.profileId == profile.id && it.chatId == chat.id },
                         openEditor = { attachmentId, imageIndex -> appViewModel.openPhotoEditor(profile.id, chat.id, attachmentId, imageIndex) },

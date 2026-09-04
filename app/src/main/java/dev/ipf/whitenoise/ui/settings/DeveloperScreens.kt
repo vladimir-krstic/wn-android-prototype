@@ -86,6 +86,8 @@ fun DeveloperToolsScreen(
     onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
     photoEditorScenario: dev.ipf.whitenoise.model.PhotoEditorScenario = dev.ipf.whitenoise.model.PhotoEditorScenario.Success,
     onPhotoEditorScenario: (dev.ipf.whitenoise.model.PhotoEditorScenario) -> Unit = {},
+    locationScenario: dev.ipf.whitenoise.model.LocationScenario = dev.ipf.whitenoise.model.LocationScenario.Unavailable,
+    onLocationScenario: (dev.ipf.whitenoise.model.LocationScenario) -> Unit = {},
     attachmentAccessScenario: dev.ipf.whitenoise.model.AttachmentAccessScenario = dev.ipf.whitenoise.model.AttachmentAccessScenario.Success,
     onAttachmentAccessScenario: (dev.ipf.whitenoise.model.AttachmentAccessScenario) -> Unit = {},
     onMessageForwardScenario: (dev.ipf.whitenoise.model.MessageForwardScenario) -> Unit = {},
@@ -121,6 +123,9 @@ fun DeveloperToolsScreen(
     var recentOpen by remember { mutableStateOf(false) }
     var transferOpen by remember { mutableStateOf(false) }
     var photoEditorOpen by remember { mutableStateOf(false) }
+    var locationOpen by remember { mutableStateOf(false) }
+    if (locationOpen) ScenarioChoiceDialog("Location sharing", dev.ipf.whitenoise.model.LocationScenario.entries,
+        locationScenario, { it.developerLabel }, onLocationScenario, { locationOpen = false })
     var attachmentAccessOpen by remember { mutableStateOf(false) }
     if (attachmentAccessOpen) ScenarioChoiceDialog("File opening", dev.ipf.whitenoise.model.AttachmentAccessScenario.entries,
         attachmentAccessScenario, { it.developerLabel }, onAttachmentAccessScenario, { attachmentAccessOpen = false })
@@ -220,6 +225,7 @@ fun DeveloperToolsScreen(
                         SettingsDivider()
                         SettingsLink("Photo editor outcomes", photoEditorScenario.developerLabel, { photoEditorOpen = true })
                         SettingsDivider()
+                        SettingsLink("Location sharing outcomes", locationScenario.developerLabel, { locationOpen = true })
                         SettingsLink("File opening outcomes", attachmentAccessScenario.developerLabel, { attachmentAccessOpen = true })
                         SettingsDivider()
                         SettingsLink("Message forwarding outcomes", messageForwardScenario.developerLabel, { forwardOpen = true })

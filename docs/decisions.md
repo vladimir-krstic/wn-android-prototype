@@ -3835,3 +3835,28 @@ dispatch installation. Existing system surfaces retain platform appearance.
 Evidence and official guidance: [attachment reading brief](screens/text-attachments-and-shared-content.md#implementation-evidence).
 The clean gate passes 414 unit tests, both APKs and zero lint errors. Thirteen
 new UI/platform cases compile; no device playback/speech/visual result is claimed.
+
+## WN-ANDROID-0134 — Location shares are fixed points with explicit external viewing
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B14; host verified, device/visual acceptance pending.
+
+Select a point with native coordinate fields and review it before sending. Empty
+input is not zero/zero; finite bounds and dot-decimal wire formatting are explicit.
+Current-location fixtures require an enabled developer profile and a one-shot
+selection. Q06 keeps GPS, real location grants, map tiles/geocoding and tracking
+off. Manual fields are the accessible, bounded replacement for a networked picker.
+
+Preserve the production location-only text wire format and strict whole-body
+legacy parsing. Render coordinates without a map request. Reuse the permissionless
+ACTION_VIEW boundary only after Open in Maps; missing/access failures offer
+Copy/Retry. Prose around links and ordinary media must stay visible.
+
+A location send preserves the ordinary draft, includes and consumes only its
+unchanged valid reply, rejects stale/profile/eligibility changes, and reveals the
+accepted source message through history targeting. Failure retains the point and
+draft. Coordinate synchronization must not silently discard reported accuracy.
+
+Evidence and current official sources: [location sharing brief](screens/location-sharing.md#implementation-evidence).
+The clean gate passes 432 unit tests, both APKs and zero lint errors. Thirteen new
+UI/platform cases compile; no native Maps execution or visual result is claimed.
