@@ -1,6 +1,12 @@
 package dev.ipf.whitenoise.state
 
 import dev.ipf.whitenoise.model.ProfileFixtures
+import dev.ipf.whitenoise.model.ProfileRelayFixtures
+import dev.ipf.whitenoise.model.Profile
+import dev.ipf.whitenoise.model.RelayRole
+import dev.ipf.whitenoise.model.RelayConnectionStatus
+import dev.ipf.whitenoise.model.PublishedRelayList
+import dev.ipf.whitenoise.model.WipeConfirmationPhrase
 import dev.ipf.whitenoise.model.ChatFixtures
 import dev.ipf.whitenoise.model.ChatProjection
 import dev.ipf.whitenoise.model.ChatScope
@@ -713,5 +719,56 @@ class AppViewModelTest {
 
     private fun signedInEmptyProfile() = AppViewModel().also {
         it.completeSignIn(OnboardingOrigin.AddProfile)
+    }
+    @Test
+    fun relayPublicationChangesTrackOnlyProfileAndInboxRoles() {
+        val viewModel = AppViewModel(); viewModel.completeSignIn(OnboardingOrigin.Initial)
+        val profile = viewModel.uiState.activeProfile!!; val relay = profile.settings.relays.first { RelayRole.Profile in it.roles }
+        assertTrue(viewModel.setProfileRelayRole(profile.id, relay.id, RelayRole.Profile, false))
+        assertEquals(setOf(PublishedRelayList.Posting), viewModel.relayPublication.projection(viewModel.uiState.activeProfile!!).missing)
+        val before = viewModel.relayPublication.projection(viewModel.uiState.activeProfile!!)
+        assertTrue(viewModel.setProfileRelayConnectionStatus(profile.id, relay.id, RelayConnectionStatus.Disconnected))
+        assertEquals(before, viewModel.relayPublication.projection(viewModel.uiState.activeProfile!!))
+    }
+
+    @Test
+    fun staleRelayCallbacksCannotMutateNewActiveProfile() {
+        val viewModel = AppViewModel(); viewModel.completeSignIn(OnboardingOrigin.Initial)
+        val first = viewModel.uiState.activeProfile!!; val target = first.settings.relays.first()
+        viewModel.completeSignIn(OnboardingOrigin.AddProfile); val second = viewModel.uiState.activeProfile!!
+        assertFalse(viewModel.setProfileRelayRole(first.id, target.id, RelayRole.Profile, false))
+        assertFalse(viewModel.removeProfileRelay(first.id, target.id))
+        assertFalse(viewModel.setProfileRelayConnectionStatus(first.id, target.id, RelayConnectionStatus.Disconnected))
+        assertEquals(second, viewModel.uiState.activeProfile)
+    }
+
+    @Test
+    fun relayAddAndRestoreMarkExactlyTheirPublishedListChanges() {
+        val viewModel = AppViewModel(); viewModel.completeSignIn(OnboardingOrigin.Initial)
+        val id = viewModel.uiState.activeProfileId!!
+        assertTrue(viewModel.addProfileRelay(id, "wss://new.example", setOf(RelayRole.Inbox, RelayRole.ChatMessages)))
+        assertEquals(setOf(PublishedRelayList.Inbox), viewModel.relayPublication.projection(viewModel.uiState.activeProfile!!).missing)
+        assertTrue(viewModel.restoreProfileRelays(id))
+        assertEquals(setOf(PublishedRelayList.Inbox), viewModel.relayPublication.projection(viewModel.uiState.activeProfile!!).missing)
+    }
+
+    @Test
+    fun erasingAppDataDropsRelayPublicationState() {
+        val viewModel = AppViewModel(); viewModel.completeSignIn(OnboardingOrigin.Initial)
+        val profile = viewModel.uiState.activeProfile!!; val relay = profile.settings.relays.first()
+        viewModel.setProfileRelayRole(profile.id, relay.id, RelayRole.Profile, false)
+        assertTrue(viewModel.relayPublication.projections.isNotEmpty())
+        assertTrue(viewModel.eraseAppData(WipeConfirmationPhrase.make(viewModel.uiState.profiles.map(Profile::id))))
+        assertTrue(viewModel.relayPublication.projections.isEmpty())
+    }
+    @Test
+    fun importedRelayExampleIsDeveloperGatedAndPreservesEveryRoleUntilExplicitRemoval() {
+        val viewModel = AppViewModel(); viewModel.completeSignIn(OnboardingOrigin.Initial)
+        assertFalse(viewModel.loadRelayImportExample())
+        viewModel.setDeveloperToolsEnabled(true); assertTrue(viewModel.loadRelayImportExample())
+        val imported = viewModel.uiState.activeProfile!!.settings.relays.single { it.id == "imported-invalid" }
+        assertEquals(RelayRole.entries.toSet(), imported.roles)
+        assertTrue(ProfileRelayFixtures.importedAddressNeedsAttention(imported))
+        assertTrue(viewModel.removeProfileRelay(viewModel.uiState.activeProfileId!!, imported.id))
     }
 }

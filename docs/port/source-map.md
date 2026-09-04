@@ -351,3 +351,15 @@ and held-queue examples. Reconnect production connectivity and durable workers
 at migration. MediaQuality maps to effective draft photo policy and captured
 voice policy in ComposerModels/ConversationComposer; real encoding is outside
 this prototype. B11 remains photo processing and metadata authority.
+
+## Production Android B28 — relay publication and validation
+
+[Selected brief](../screens/relay-publication-and-validation.md) maps C108/C109
+to model/RelayPublication.kt, state/RelayPublicationController.kt,
+ui/settings/RelayPublicationUi.kt and exact-profile relay mutations in
+AppViewModel. Production AccountRelayListsFfi/MissingRelayListKindFfi maps to
+Where I post/Where I receive projections; RelaysScreen reload/mutation maps to
+owned Refresh/Publish work. Production managed-host validation becomes a named
+compatibility issue without narrowing accepted general `wss://` support or
+silently cleaning three-role imports. Reconnect Marmot I/O, DNS/SSRF checks,
+event publication and durable state only in production.

@@ -148,6 +148,10 @@ object ProfileRelayFixtures {
 
     fun normalize(value: String): String? = ChatRelayPolicy.normalize(value)
 
+    fun importedAddressNeedsAttention(relay: ProfileRelay): Boolean = normalize(relay.url) == null
+    fun importedAddressesNeedingAttention(relays: List<ProfileRelay>): List<ProfileRelay> =
+        relays.filter(::importedAddressNeedsAttention)
+
     fun add(
         relays: List<ProfileRelay>,
         value: String,

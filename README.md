@@ -17,15 +17,15 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B23, B25 and B27 are implemented and host-verified.
+Production Android parity batches B01–B23 and B25–B28 are implemented and host-verified.
 [B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 adds publication/rotation/deletion recovery, detailed push inspection, streaming
 status controls, relay health, self-send outcomes and timed performance state.
-The latest host gate passes 791 unit tests, zero lint errors and both APKs.
+The latest host gate passes 809 unit tests, zero lint errors and both APKs.
 Six new UI cases compile only; device and visual acceptance remain pending.
 The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks B24, B26 and B28–B32 and the per-batch commits.
+tracks B24, B26 and B29–B32 and the per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
@@ -187,3 +187,8 @@ B27 adds [download rules, queue controls and media quality](docs/screens/downloa
 All 16 rules and queue ownership are deterministic; global quality applies to
 new photos/voice while preserving prepared media. Six new UI cases compile;
 no device inspection, network worker or voice encoder was added.
+
+B28 adds [relay publication readiness and recovery](docs/screens/relay-publication-and-validation.md#implementation-evidence).
+Where I post/receive state remains independent from socket status, and invalid
+imports keep their roles until explicit recovery. Seven UI cases compile; no
+network publication, device inspection or persistence was added.

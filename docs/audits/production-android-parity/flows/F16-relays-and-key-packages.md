@@ -47,3 +47,14 @@ gate. [The B25 brief](../../../screens/key-packages-and-developer-diagnostics.md
 records 772 passing unit tests, zero lint errors and six compiled UI cases.
 Q04 remains about ordinary Settings relocation; new states preserve the existing
 placement. No device or visual acceptance is claimed.
+
+## B28 implementation evidence — 2026-09-04
+
+C108/C109 are implemented and host-verified. The goal’s preservation rule and
+Q04 recommendation retain general secure URLs and all three roles; narrowing is
+reserved for future explicit direction. Invalid imported addresses and their
+roles remain visible until explicit recovery. Independent Where I post/Where I
+receive projections cover Published/Missing/Unavailable, refresh/publish
+pending, failure/retry and exact owner/revision/signature guards. Socket status
+is independent. [Evidence](../../../screens/relay-publication-and-validation.md#implementation-evidence).
+809 unit tests, zero lint errors and both APKs pass; seven UI cases compile only.

@@ -514,32 +514,38 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
-        composable<AppRoute.ProfileRelays> {
+        composable<AppRoute.ProfileRelays> { entry ->
             uiState.activeProfile?.let { profile ->
                 ProfileRelaysScreen(
                     profile = profile,
                     onBack = { navController.popBackStack() },
                     onRelay = { navController.navigate(AppRoute.ProfileRelayDetails(it)) },
-                    onAdd = { value, roles -> appViewModel.addProfileRelay(value, roles) },
+                    onAdd = { value, roles -> appViewModel.addProfileRelay(profile.id, value, roles) },
                     onConnected = {
                         appViewModel.setProfileRelayConnectionStatus(
-                            it,
+                            profile.id, it,
                             dev.ipf.whitenoise.model.RelayConnectionStatus.Connected,
                         )
                     },
-                    onRestore = appViewModel::restoreProfileRelays,
+                    onRestore = { appViewModel.restoreProfileRelays(profile.id) },
+                    publication = appViewModel.relayPublication,
+                    publicationSurface = entry.id,
                 )
             }
         }
         composable<AppRoute.ProfileRelayDetails> { entry ->
             val route = entry.toRoute<AppRoute.ProfileRelayDetails>()
-            uiState.activeProfile?.settings?.relays?.firstOrNull { it.id == route.relayId }?.let { relay ->
-                ProfileRelayDetailsScreen(
-                    relay = relay,
-                    onBack = { navController.popBackStack() },
-                    onSetRole = { role, enabled -> appViewModel.setProfileRelayRole(relay.id, role, enabled) },
-                    onRemove = { appViewModel.removeProfileRelay(relay.id) },
-                )
+            uiState.activeProfile?.let { profile ->
+                profile.settings.relays.firstOrNull { it.id == route.relayId }?.let { relay ->
+                    ProfileRelayDetailsScreen(
+                        relay = relay,
+                        onBack = { navController.popBackStack() },
+                        onSetRole = { role, enabled ->
+                            appViewModel.setProfileRelayRole(profile.id, relay.id, role, enabled)
+                        },
+                        onRemove = { appViewModel.removeProfileRelay(profile.id, relay.id) },
+                    )
+                }
             }
         }
         composable<AppRoute.Support> {
@@ -602,6 +608,7 @@ fun WhiteNoiseNavHost(
                     downloadExampleControls = { dev.ipf.whitenoise.ui.settings.DownloadExampleControls(
                         appViewModel.downloadNetworkExample, appViewModel.downloadTransfersHeld,
                         appViewModel::chooseDownloadNetwork, appViewModel::loadDownloadQueueExample, appViewModel::holdDownloadTransfers) },
+                    relayPublicationControls = { dev.ipf.whitenoise.ui.settings.RelayPublicationDeveloperControls(appViewModel.relayPublication, appViewModel::loadRelayImportExample) },
                     photoEditorScenario = appViewModel.nextPhotoEditorScenario,
                     onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
                     locationScenario = appViewModel.nextLocationScenario,

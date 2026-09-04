@@ -188,3 +188,10 @@ settings or stop/restart methods. IntentStore gains installer handoff ownership;
 Worker gains strict protocol ID validation and durable work observation. Those
 production persistence/installer seams do not change C105–C107's prototype
 contract. [Implementation and verification](../../screens/downloads-and-media-quality.md#implementation-evidence).
+
+## Implementation drift check — B28, 2026-09-04
+
+Production `master` remains `911040c7e1c31652638c8cfd72812d1f3a694b9b` with
+no main branch. RelaysScreen, account relay-list mutation/validation, Marmot
+relay-list projection and RelayUrlsTest are unchanged from the pinned audit.
+AppState drift does not touch their contract. [B28 evidence](../../screens/relay-publication-and-validation.md#implementation-evidence).

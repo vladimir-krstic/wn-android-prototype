@@ -1,5 +1,7 @@
 # Relays
 
+Current publication/readiness behavior is governed by [B28 relay publication and validation](relay-publication-and-validation.md).
+
 ## Purpose
 
 Let the active profile inspect relay availability, assign Profile, Inbox and
@@ -158,3 +160,10 @@ Settings treatment.
 - Read-only relays cannot change roles or expose Remove Relay.
 - The flow remains usable with TalkBack, large text, dark theme, RTL, keyboard,
   compact and expanded widths, IME and system/predictive Back.
+
+## B28 publication evidence
+
+The existing endpoint list, three roles, socket statuses and native composition
+remain. B28 adds independent Where I post/Where I receive publication state,
+refresh/publish recovery, exact operation ownership and visible preservation of
+invalid imported addresses. [Implementation and host verification](relay-publication-and-validation.md#implementation-evidence).

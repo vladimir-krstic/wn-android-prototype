@@ -235,6 +235,11 @@ class AppViewModel(
             })
     }
 
+    val relayPublication: RelayPublicationController by lazy {
+        RelayPublicationController(profiles = { uiState.profiles }, activeId = { uiState.activeProfileId },
+            signedIn = { it in uiState.signedInProfileIds })
+    }
+
     val developerParity: DeveloperParityController by lazy {
         DeveloperParityController(performanceAvailable = dev.ipf.whitenoise.BuildConfig.DEBUG, active = { uiState.activeProfile }, signedIn = { it in uiState.signedInProfileIds },
             profileCount = { uiState.signedInProfileIds.size },
@@ -458,6 +463,7 @@ class AppViewModel(
         developerParity.cancel()
         uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
         updateActiveProfile { it.copy(chatConnection = it.chatConnection.copy(generation = it.chatConnection.generation + 1)) }
+        relayPublication.reconcile()
     }
 
     fun beginPrivateKeySignIn(origin: OnboardingOrigin, key: String): Boolean {
@@ -710,86 +716,45 @@ class AppViewModel(
         return changed
     }
 
-    fun addProfileRelay(
-        value: String,
-        roles: Set<RelayRole> = RelayRole.entries.toSet(),
-    ): Boolean {
-        var changed = false
-        updateActiveProfile { profile ->
-            val relays = ProfileRelayFixtures.add(profile.settings.relays, value, roles)
-                ?: return@updateActiveProfile profile
-            changed = true
-            val settings = profile.settings.copy(relays = relays)
-            profile.copy(
-                settings = settings,
-                chatRelayUrls = ProfileRelayFixtures.chatMessageUrls(relays),
-            )
-        }
-        return changed
+    private fun changeProfileRelays(profileId: String, transform: (List<ProfileRelay>) -> List<ProfileRelay>?): Boolean {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return false
+        val before = uiState.activeProfile?.settings?.relays ?: return false
+        val after = transform(before)?.takeIf { it != before } ?: return false
+        updateActiveProfile { profile -> profile.copy(settings = profile.settings.copy(relays = after),
+            chatRelayUrls = ProfileRelayFixtures.chatMessageUrls(after)) }
+        relayPublication.relaySettingsChanged(profileId, before, after)
+        return true
     }
+    fun addProfileRelay(value: String, roles: Set<RelayRole> = RelayRole.entries.toSet()): Boolean =
+        uiState.activeProfileId?.let { addProfileRelay(it, value, roles) } ?: false
+    fun addProfileRelay(profileId: String, value: String, roles: Set<RelayRole>): Boolean =
+        changeProfileRelays(profileId) { ProfileRelayFixtures.add(it, value, roles) }
 
-    fun setProfileRelayConnectionStatus(relayId: String, status: RelayConnectionStatus): Boolean {
-        var changed = false
-        updateActiveProfile { profile ->
-            val relays = profile.settings.relays.map { relay ->
-                if (relay.id != relayId || relay.status == status) relay else {
-                    changed = true
-                    relay.copy(status = status)
-                }
-            }
-            if (!changed) profile else profile.copy(
-                settings = profile.settings.copy(relays = relays),
-                chatRelayUrls = ProfileRelayFixtures.chatMessageUrls(relays),
-            )
-        }
-        return changed
+    fun setProfileRelayConnectionStatus(relayId: String, status: RelayConnectionStatus): Boolean =
+        uiState.activeProfileId?.let { setProfileRelayConnectionStatus(it, relayId, status) } ?: false
+    fun setProfileRelayConnectionStatus(profileId: String, relayId: String, status: RelayConnectionStatus): Boolean =
+        changeProfileRelays(profileId) { relays -> relays.map { relay -> if (relay.id == relayId) relay.copy(status = status) else relay } }
+
+    fun removeProfileRelay(relayId: String): Boolean = uiState.activeProfileId?.let { removeProfileRelay(it, relayId) } ?: false
+    fun removeProfileRelay(profileId: String, relayId: String): Boolean = changeProfileRelays(profileId) { relays ->
+        relays.firstOrNull { it.id == relayId }?.takeUnless { it.isReadOnly }?.let { relays.filterNot { relay -> relay.id == relayId } }
     }
+    fun setProfileRelayRole(relayId: String, role: RelayRole, enabled: Boolean): Boolean =
+        uiState.activeProfileId?.let { setProfileRelayRole(it, relayId, role, enabled) } ?: false
+    fun setProfileRelayRole(profileId: String, relayId: String, role: RelayRole, enabled: Boolean): Boolean =
+        changeProfileRelays(profileId) { relays -> relays.map { relay ->
+            if (relay.id != relayId || relay.isReadOnly) relay else relay.copy(roles = if (enabled) relay.roles + role else relay.roles - role)
+        } }
+    fun restoreProfileRelays(): Boolean = uiState.activeProfileId?.let(::restoreProfileRelays) ?: false
+    fun restoreProfileRelays(profileId: String): Boolean = changeProfileRelays(profileId) { ProfileRelayFixtures.defaults }
 
-    fun removeProfileRelay(relayId: String): Boolean {
-        var changed = false
-        updateActiveProfile { profile ->
-            val target = profile.settings.relays.firstOrNull { it.id == relayId }
-            if (target == null || target.isReadOnly) return@updateActiveProfile profile
-            val relays = profile.settings.relays.filterNot { it.id == relayId }
-            changed = true
-            profile.copy(
-                settings = profile.settings.copy(relays = relays),
-                chatRelayUrls = ProfileRelayFixtures.chatMessageUrls(relays),
-            )
+    fun loadRelayImportExample(): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.developerTools.isEnabled } ?: return false
+        return changeProfileRelays(profile.id) { relays ->
+            if (relays.any { it.id == "imported-invalid" }) relays else relays + ProfileRelay(
+                id = "imported-invalid", name = "Imported relay", url = "https://legacy-relay.example",
+                status = RelayConnectionStatus.Disconnected, roles = RelayRole.entries.toSet())
         }
-        return changed
-    }
-
-    fun setProfileRelayRole(relayId: String, role: RelayRole, enabled: Boolean): Boolean {
-        var changed = false
-        updateActiveProfile { profile ->
-            val relays = profile.settings.relays.map { relay ->
-                if (relay.id != relayId || relay.isReadOnly || (role in relay.roles) == enabled) {
-                    relay
-                } else {
-                    changed = true
-                    relay.copy(roles = if (enabled) relay.roles + role else relay.roles - role)
-                }
-            }
-            if (!changed) profile else profile.copy(
-                settings = profile.settings.copy(relays = relays),
-                chatRelayUrls = ProfileRelayFixtures.chatMessageUrls(relays),
-            )
-        }
-        return changed
-    }
-
-    fun restoreProfileRelays(): Boolean {
-        var changed = false
-        updateActiveProfile { profile ->
-            if (profile.settings.relays == ProfileRelayFixtures.defaults) return@updateActiveProfile profile
-            changed = true
-            profile.copy(
-                settings = profile.settings.copy(relays = ProfileRelayFixtures.defaults),
-                chatRelayUrls = ProfileRelayFixtures.chatMessageUrls(ProfileRelayFixtures.defaults),
-            )
-        }
-        return changed
     }
 
     fun setDeveloperToolsEnabled(enabled: Boolean): Boolean {
@@ -806,6 +771,7 @@ class AppViewModel(
             changed = tools != profile.developerTools
             profile.copy(developerTools = tools)
         }
+        relayPublication.reconcile()
         return changed
     }
 
@@ -894,6 +860,7 @@ class AppViewModel(
         incoming.reconcile()
         notificationControls.reconcile()
         notificationActions.reconcile()
+        relayPublication.reconcile()
         notificationReadTargets.entries.removeAll { it.value.profileId !in uiState.signedInProfileIds }
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
@@ -994,6 +961,7 @@ class AppViewModel(
         incoming.reconcile()
         notificationControls.reconcile()
         notificationActions.reconcile()
+        relayPublication.reconcile()
         notificationReadTargets.entries.removeAll { it.value.profileId !in uiState.signedInProfileIds }
         return true
     }
@@ -1032,6 +1000,7 @@ class AppViewModel(
         cancelProfileSave()
         dismissChatBatch()
         developerParity.cancel()
+        relayPublication.erase()
         uiState = AppUiState()
         notificationControls.eraseAppData()
         notificationActions.erase()

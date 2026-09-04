@@ -78,6 +78,7 @@ import dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll
 import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import dev.ipf.whitenoise.state.RelayPublicationController
 import kotlinx.coroutines.delay
 
 @Composable
@@ -88,6 +89,8 @@ fun ProfileRelaysScreen(
     onAdd: (String, Set<RelayRole>) -> Boolean,
     onConnected: (String) -> Boolean,
     onRestore: () -> Boolean,
+    publication: RelayPublicationController? = null,
+    publicationSurface: String = "relays",
 ) {
     var addSheet by remember { mutableStateOf(false) }
     var restoreDialog by remember { mutableStateOf(false) }
@@ -100,11 +103,20 @@ fun ProfileRelaysScreen(
             onConnected(relayId)
         }
     }
+    publication?.let { RelayPublicationHost(profile.id, publicationSurface, it) }
     SettingsScaffold(
         title = "Relays",
         onBack = onBack,
     ) {
         SettingsList {
+            val importedIssues = ProfileRelayFixtures.importedAddressesNeedingAttention(profile.settings.relays)
+            if (importedIssues.isNotEmpty()) {
+                item { SettingsCallout(
+                    title = stringResource(R.string.relay_imported_issue_title),
+                    text = stringResource(R.string.relay_imported_issue_detail),
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Section).testTag("relays.imported.issue"),
+                ) }
+            }
             val recovery = ProfileRelayFixtures.recoverySummary(profile.settings.relays)
             if (recovery != null) {
                 item {
@@ -114,6 +126,17 @@ fun ProfileRelaysScreen(
                         modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     )
                 }
+            }
+            if (publication != null) {
+                item { SettingsSection(stringResource(R.string.relay_lists_section)) }
+                item { SettingsGroup(Modifier.testTag("relay.publication.group")) {
+                    RelayPublicationRows(profile, publication)
+                } }
+                item { SettingsExplainer(when (publication.projection(profile).phase) {
+                    dev.ipf.whitenoise.model.RelayProjectionPhase.Published -> stringResource(R.string.relay_lists_published_help)
+                    dev.ipf.whitenoise.model.RelayProjectionPhase.Missing -> stringResource(R.string.relay_lists_missing_help)
+                    dev.ipf.whitenoise.model.RelayProjectionPhase.Unavailable -> stringResource(R.string.relay_lists_unavailable_help)
+                }) }
             }
             item { SettingsSection("Profile relays") }
             item {
@@ -293,7 +316,11 @@ fun ProfileRelayDetailsScreen(
 
 @Composable
 private fun RelayListRow(relay: ProfileRelay, onClick: () -> Unit) {
-    val capability = if (relay.isReadOnly) " · Read only" else ""
+    val needsAttention = stringResource(R.string.relay_needs_attention)
+    val capability = buildString {
+        if (relay.isReadOnly) append(" · Read only")
+        if (ProfileRelayFixtures.importedAddressNeedsAttention(relay)) append(" · $needsAttention")
+    }
     ListItem(
         supportingContent = {
             Text(
@@ -325,6 +352,7 @@ private fun RelayListRow(relay: ProfileRelay, onClick: () -> Unit) {
                 stateDescription = buildString {
                     append(relay.status.label)
                     if (relay.isReadOnly) append(", Read only")
+                    if (ProfileRelayFixtures.importedAddressNeedsAttention(relay)) append(", $needsAttention")
                 }
             }
             .testTag("relays.row.${relay.id}"),

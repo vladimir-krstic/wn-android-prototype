@@ -16,6 +16,16 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-09-04 production B28
+
+C108/C109 are implemented and host-verified without narrowing the accepted
+three-role/general-URL relay model. Per-profile Where I post/Where I receive
+projection, refresh/publish recovery, exact ownership and visible invalid-import
+recovery are independent of socket connection state. 809 unit tests pass; seven
+UI cases compile, zero lint errors and both APKs build. [Evidence](../screens/relay-publication-and-validation.md#implementation-evidence).
+Production network, DNS, publication and persistence remain migration seams;
+device and visual acceptance are pending.
+
 ## 2026-09-04 production B27
 
 C105–C107 are implemented and host-verified: all 16 network/media rules,

@@ -1289,4 +1289,24 @@
     <string name="download_stop_confirmation">Clear waiting automatic downloads for this profile? Active downloads and downloads you started yourself will continue.</string>
     <string name="download_waiting">Waiting to download</string>
     <string name="download_now">Download now</string>
+    <string name="relay_lists_section">Relay lists</string>
+    <string name="relay_list_posting">Where I post</string>
+    <string name="relay_list_receiving">Where I receive</string>
+    <string name="relay_list_published">Published</string>
+    <string name="relay_list_missing">Missing</string>
+    <string name="relay_list_status_unavailable">Status unavailable</string>
+    <string name="relay_list_refresh">Refresh status</string>
+    <string name="relay_list_refreshing">Refreshing…</string>
+    <string name="relay_list_publish">Publish missing lists</string>
+    <string name="relay_list_publishing">Publishing…</string>
+    <string name="relay_list_retry">Retry</string>
+    <string name="relay_list_publish_help">Publish the missing lists so other people can find where to reach this profile.</string>
+    <string name="relay_list_refresh_failed">Couldn’t refresh relay lists. Your last known status is shown.</string>
+    <string name="relay_list_publish_failed">Couldn’t publish relay lists. Your relay settings were kept.</string>
+    <string name="relay_lists_published_help">Your relay lists are published.</string>
+    <string name="relay_lists_missing_help">Some relay lists need publishing. Your connection status is shown separately below.</string>
+    <string name="relay_lists_unavailable_help">Relay list status is unavailable. Your saved relay settings are shown below.</string>
+    <string name="relay_imported_issue_title">Relay address needs attention</string>
+    <string name="relay_imported_issue_detail">An imported relay doesn’t use a secure wss:// address. Remove it or add a secure replacement. Its role assignments were kept.</string>
+    <string name="relay_needs_attention">Needs attention</string>
 </resources>

@@ -4160,3 +4160,26 @@ behavior in decisions 0068/0069 while retaining their presentation and alignment
 
 Evidence: [B27 brief](screens/downloads-and-media-quality.md#implementation-evidence),
 MediaDownloads, AttachmentModels, DataUsageScreen, AppViewModel and state/UI tests.
+
+## WN-ANDROID-0148 — Relay publication state does not narrow accepted relay editing
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B28 contract; host verified
+
+Keep general valid `wss://` endpoints and Profile, Inbox and Chat Messages roles.
+The active goal requires preserving existing capabilities, and Q04 explicitly
+allows state coverage while reserving a future product choice about narrowing
+to managed hosts/two lists. Imported invalid addresses are named and retained
+with every role until an explicit removal or replacement; no migration silently
+cleans data. Key Packages retains its B25 Developer Tools placement.
+
+Model **Where I post** from Profile-role URLs and **Where I receive** from
+Inbox-role URLs. Their Published/Missing/Unavailable projection is profile-owned
+and independent of Connected/Reconnecting/Disconnected. Role/URL changes mark
+only affected lists; Chat-Messages-only and socket-state changes do not. Refresh
+and Publish missing lists retain the last accepted state on failure and use exact
+profile, route, projection revision and role/URL signature leases. No network,
+DNS, event publication, persistence or background worker is added.
+
+Evidence: [B28 brief](screens/relay-publication-and-validation.md#implementation-evidence),
+RelayPublication model/controller/UI and state/Compose tests.
