@@ -1,5 +1,9 @@
 # Chats and chat creation
 
+2026-09-04: B07 extends Chats search across the active profile, preserving the
+existing compact field and row actions. Grouped results, exact-message opening,
+typed filters and lookup/voice entry are specified in [global-search.md](global-search.md).
+
 2026-09-04: B06 replaces the fixed Unread/Archived filters with editable default
 folders, adds Groups/Folders, preserves Chats/Left and connects derived rules.
 See [chat-folders.md](chat-folders.md).
@@ -208,11 +212,12 @@ the global baseline or import its changed timelines/timestamps.
   including left/removed membership.
 - Archived contains archived chats.
 - Left contains non-archived chats whose membership is left or removed.
-- Search applies inside the selected scope across title and the same
-  `ChatListPresentation` used for display. Membership overrides stale drafts;
-  drafts override the previous preview; sender and attachment text are kept.
-  Matching is case- and diacritic-insensitive.
-- Search empty state: **No Results** / **Check the spelling or try a different search.**
+- B07 search spans the active profile, including archived/ended history, with
+  optional chat filters. Ordinary chat matching retains the same visible preview,
+  membership/draft precedence and case/diacritic folding, and adds group description.
+  Message bodies/attachments and People have distinct results and destinations.
+- Global search empty state: **No matches** / **Try another search or remove a filter.**
+  Creation pickers retain **No Results** / **Check the spelling or try a different search.**
 - Scope empty states:
   - Chats: **No Chats** / **Start a new chat to send a message.**
   - Unread: **No Unread Chats** / **You’re all caught up.**

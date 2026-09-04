@@ -3671,3 +3671,21 @@ claimed for this build.
 Sources: [Android icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button),
 [lists and grids](https://developer.android.com/develop/ui/compose/lists), and
 the pinned Material 3 source archive's `ListItemDefaults.segmentedShapes`.
+
+## WN-ANDROID-0128 — Java time compatibility for civil-date filtering
+
+2026-09-04 implementation decision under the authorized B07 global-search batch.
+Keep minimum SDK 23 and use Android core-library desugaring for Java time, so
+civil-day boundaries, DST and Material picker date conversion use the same
+calendar model on all supported versions. Enable `isCoreLibraryDesugaringEnabled`
+and pin Google's `com.android.tools:desugar_jdk_libs:2.1.5` in the version catalog.
+Google Maven metadata and the official changelog both identified 2.1.5 as the
+current stable release when checked. This is Android toolchain compatibility;
+no backend, permission or product service is added. Calendar filters use the
+documented fixed fixture clock until production reconnects real timestamps.
+
+Sources: [Android Java API desugaring](https://developer.android.com/studio/write/java8-support),
+[Google changelog](https://github.com/google/desugar_jdk_libs/blob/master/CHANGELOG.md),
+[Google Maven metadata](https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs/maven-metadata.xml).
+The final clean host gate passed 296 unit tests, both APKs and lint without
+errors after the compatibility fix. Device execution remains unrequested.

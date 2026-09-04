@@ -20,6 +20,7 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
 - Minimum SDK: 23
+- Java time compatibility: Android core-library desugaring 2.1.5
 - Compile and target SDK: 37
 - Android Gradle Plugin: 9.3.2
 - Gradle: 9.7.1

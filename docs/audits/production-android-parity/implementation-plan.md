@@ -10,7 +10,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B04: implemented and host-verified 2026-09-04; 244 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/profile-media-and-lightning.md). Commit title: `B04: Add profile media and Lightning address editing`.
 - B05: implemented and host-verified 2026-09-04; 262 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/chat-organization-and-recovery.md). Manual folder assignment provides part of B06. Commit title: `B05: Add chat organization and connection recovery`.
 - B06: implemented and host-verified 2026-09-04; 277 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/chat-folders.md). Commit title: `B06: Add folder management and automatic rules`.
-- B07–B32: pending; linked decisions apply only to their named slices.
+- B07: implemented and host-verified 2026-09-04; 296 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Selected brief and evidence](../../screens/global-search.md). Commit title: `B07: Add cross-chat search and typed filters`.
+- B08–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence

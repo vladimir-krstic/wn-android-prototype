@@ -18,6 +18,9 @@ local/leave-first deletion and connectivity recovery to
 `docs/screens/chat-organization-and-recovery.md`; folder assignment is the
 manual foundation for B06. B06 maps folder preferences/rules, management/editor,
 defaults/order and contextual assignment to `docs/screens/chat-folders.md`.
+B07 maps cross-chat body results, typed search filters, identifier lookup and
+voice-query entry to `docs/screens/global-search.md`; existing Conversation
+accepts the exact loaded-message ID, while B08 owns unloaded-target recovery.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)

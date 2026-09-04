@@ -19,6 +19,7 @@ Current briefs:
 - `profile-media-and-lightning.md`
 - `chat-organization-and-recovery.md`
 - `chat-folders.md`
+- `global-search.md`
 - `diagnostics-and-improvements.md`
 - `chats-and-chat-creation.md`
 - `shared-conversation-core.md`

@@ -270,6 +270,17 @@ fun WhiteNoiseNavHost(
                 uiState = uiState,
                 onNewMessage = { navController.navigate(AppRoute.NewChat) },
                 onOpenChat = { openConversation(it, clearsCreationFlow = false) },
+                onOpenSearchMessage = { chatId, messageId ->
+                    val owner = uiState.activeProfileId
+                    if (owner != null && appViewModel.openGlobalSearchMessage(owner, chatId, messageId)) {
+                        navController.navigate(AppRoute.Conversation(chatId, targetMessageId = messageId)); true
+                    } else false
+                },
+                onOpenSearchPerson = { person -> uiState.activeProfileId?.let { owner ->
+                    appViewModel.acceptDiscoveredPerson(owner, person)?.let { navController.navigate(AppRoute.PersonProfile(it)) }
+                } },
+                peopleScenario = appViewModel.peopleSearchScenario,
+                onVoiceScenario = { uiState.activeProfileId?.let(appViewModel::consumeGlobalVoiceScenario) ?: dev.ipf.whitenoise.model.GlobalVoiceScenario.Unavailable },
                 onMarkUnread = appViewModel::markChatUnread,
                 onTogglePin = appViewModel::toggleChatPin,
                 onMute = appViewModel::setChatMute,
@@ -497,6 +508,8 @@ fun WhiteNoiseNavHost(
                     onGroupContactScenario = appViewModel::selectGroupContactScenario,
                     createdChatUnavailable = appViewModel.nextCreatedChatUnavailable,
                     onCreatedChatUnavailable = appViewModel::setCreatedChatUnavailable,
+                    globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
+                    onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
                     chatBatchScenario = appViewModel.nextChatBatchScenario,
                     onChatBatchScenario = appViewModel::selectChatBatchScenario,
                     onChatConnectionScenario = appViewModel::selectChatConnectionScenario,

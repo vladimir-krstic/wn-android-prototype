@@ -4,6 +4,7 @@ import dev.ipf.whitenoise.model.ChatOrganization
 import dev.ipf.whitenoise.model.ChatFolder
 import dev.ipf.whitenoise.model.ChatFolderDraft
 import dev.ipf.whitenoise.model.ChatFolders
+import dev.ipf.whitenoise.model.GlobalVoiceScenario
 import dev.ipf.whitenoise.model.ChatBatchAttempt
 import dev.ipf.whitenoise.model.ChatBatchScenario
 import dev.ipf.whitenoise.model.ChatBatchPhase
@@ -693,6 +694,7 @@ class AppViewModel(
         nextProfileSaveScenario = ProfileSaveScenario.Success
         nextProfileImageFails = false
         nextChatBatchScenario = ChatBatchScenario.Success
+        nextGlobalVoiceScenario = GlobalVoiceScenario.Success
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
@@ -854,6 +856,26 @@ class AppViewModel(
         val id = "$profileId-folder-${createdChatSequence++}"
         updateActiveProfile { it.copy(chatFolders = it.chatFolders + ChatFolder(id, name.trim())) }
         return id
+    }
+
+    var nextGlobalVoiceScenario by mutableStateOf(GlobalVoiceScenario.Success)
+        private set
+
+    fun selectGlobalVoiceScenario(scenario: GlobalVoiceScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextGlobalVoiceScenario = scenario
+    }
+
+    fun consumeGlobalVoiceScenario(profileId: String): GlobalVoiceScenario {
+        if (uiState.activeProfileId != profileId) return GlobalVoiceScenario.Unavailable
+        return nextGlobalVoiceScenario.also { nextGlobalVoiceScenario = GlobalVoiceScenario.Success }
+    }
+
+    fun openGlobalSearchMessage(profileId: String, chatId: String, messageId: String): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val message = chat(chatId)?.timeline?.filterIsInstance<ChatTimelineEntry.Message>()?.firstOrNull { it.message.id == messageId }?.message
+        if (message == null || message.isDeleted) return false
+        openChat(chatId)
+        return true
     }
 
     fun saveChatFolder(profileId: String, folderId: String?, draft: ChatFolderDraft): String? {

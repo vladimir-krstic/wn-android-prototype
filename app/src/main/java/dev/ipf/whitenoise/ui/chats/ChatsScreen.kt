@@ -1,6 +1,13 @@
 package dev.ipf.whitenoise.ui.chats
 
 import androidx.activity.compose.BackHandler
+import dev.ipf.whitenoise.model.GlobalSearch
+import dev.ipf.whitenoise.model.GlobalSearchFilters
+import dev.ipf.whitenoise.model.GlobalVoiceRequest
+import dev.ipf.whitenoise.model.GlobalVoiceScenario
+import dev.ipf.whitenoise.model.PeopleSearchScenario
+import dev.ipf.whitenoise.model.PeopleSearchStatus
+import dev.ipf.whitenoise.model.Person
 import dev.ipf.whitenoise.model.ChatFolders
 import dev.ipf.whitenoise.model.ChatOrganization
 import dev.ipf.whitenoise.model.ChatBulkAction
@@ -112,6 +119,10 @@ fun ChatsScreen(
     onSettings: () -> Unit = {},
     onProfileRelays: () -> Unit = {},
     onUndo: (ChatListUndo) -> Unit = {},
+    onOpenSearchMessage: (String, String) -> Boolean = { _, _ -> false },
+    onOpenSearchPerson: (Person) -> Unit = {},
+    peopleScenario: PeopleSearchScenario = PeopleSearchScenario.Success,
+    onVoiceScenario: () -> GlobalVoiceScenario = { GlobalVoiceScenario.Success },
     onFolders: () -> Unit = {},
     onMovePin: (String, Int) -> Unit = { _, _ -> },
     onCreateFolder: (String) -> String? = { null },
@@ -132,6 +143,29 @@ fun ChatsScreen(
     var query by rememberSaveable(profile?.id) { mutableStateOf("") }
     var isSearching by rememberSaveable(profile?.id) { mutableStateOf(false) }
     var filterMenuOpen by remember { mutableStateOf(false) }
+    var searchFilters by rememberSaveable(profile?.id, stateSaver = GlobalSearchFilterSaver) { mutableStateOf(GlobalSearchFilters()) }
+    var searchFilterDialog by rememberSaveable(profile?.id) { mutableStateOf(false) }
+    var lookupRetried by rememberSaveable(profile?.id, query) { mutableStateOf(false) }
+    var lookupPending by remember(profile?.id, query) { mutableStateOf(false) }
+    var voiceGeneration by remember(profile?.id) { mutableStateOf(0L) }
+    var voiceRequest by remember(profile?.id) { mutableStateOf<GlobalVoiceRequest?>(null) }
+    val globalActive = isSearching && (query.isNotBlank() || searchFilters.active)
+    val globalResults = remember(profile, query, searchFilters, globalActive) {
+        if (profile != null && globalActive) GlobalSearch.results(profile, query, searchFilters) else null
+    }
+    val showPeople = globalActive && query.isNotBlank() && !searchFilters.active
+    val people = remember(profile, query, peopleScenario, lookupRetried, showPeople) {
+        if (profile != null && showPeople) GlobalSearch.people(profile, query, if (lookupRetried) PeopleSearchScenario.Success else peopleScenario) else null
+    }
+    val hasLookupFeedback = lookupPending || people?.status in setOf(PeopleSearchStatus.AddressNotFound, PeopleSearchStatus.Unavailable, PeopleSearchStatus.Partial) ||
+        (people?.status == PeopleSearchStatus.InvalidIdentifier && GlobalSearch.identifierIntent(query))
+    LaunchedEffect(profile?.id, profile?.chats) {
+        profile?.let { searchFilters = searchFilters.reconcile(it) }
+    }
+    LaunchedEffect(profile?.id, query, lookupRetried, showPeople) {
+        lookupPending = showPeople && GlobalSearch.identifierIntent(query)
+        if (lookupPending) { delay(300); lookupPending = false }
+    }
     var muteChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
     var leaveChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
     var deleteIds by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
@@ -145,8 +179,9 @@ fun ChatsScreen(
     var soleAdminChat by remember(profile?.id) { mutableStateOf<Chat?>(null) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val rows = remember(profile?.chats, scope, query, selectedFolder) {
-        if (selectedFolder == null) ChatProjection.rows(profile?.chats.orEmpty(), scope, query)
+    val rows = remember(profile?.chats, scope, query, selectedFolder, globalResults) {
+        if (globalResults != null) globalResults.chats
+        else if (selectedFolder == null) ChatProjection.rows(profile?.chats.orEmpty(), scope, query)
         else ChatFolders.rows(profile.chats, selectedFolder, query)
     }
 
@@ -224,6 +259,15 @@ fun ChatsScreen(
         keyboardController?.hide()
         isSearching = false
         query = ""
+        searchFilters = GlobalSearchFilters()
+        searchFilterDialog = false
+        voiceRequest = null
+    }
+    fun startVoice() {
+        val owner = profile ?: return
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        voiceRequest = GlobalVoiceRequest(++voiceGeneration, owner.id, query, onVoiceScenario())
     }
 
     BackHandler(enabled = isSearching, onBack = ::closeSearch)
@@ -256,6 +300,7 @@ fun ChatsScreen(
                             onQueryChange = { query = it },
                             onClose = ::closeSearch,
                             closeSearchDescription = closeSearchDescription,
+                            onVoice = ::startVoice,
                         )
                     } else {
                         ChatsTopBar(
@@ -319,12 +364,18 @@ fun ChatsScreen(
                     if (isSearching || selecting) WhiteNoiseSpacing.CompactScreenMargin
                     else 56.dp + WhiteNoiseSpacing.CompactScreenMargin * 2),
             ) {
+                if (isSearching && !selecting && profile != null) item(key = "search-filters") {
+                    GlobalSearchFilterBar(profile, searchFilters, onChange = { searchFilters = it }, onOpen = { searchFilterDialog = true; focusManager.clearFocus(); keyboardController?.hide() })
+                }
                 profile?.let { owner ->
                     item(key = "connection") { ChatConnectionBanner(owner, onRetryConnection, onProfileRelays) }
                 }
-                if (rows.isEmpty()) {
+                if (globalActive && !selecting && rows.isNotEmpty()) item(key = "chat-results-heading") { GlobalSearchHeading(stringResource(R.string.global_chats)) }
+                if (rows.isEmpty() && (!globalActive || (globalResults?.messages.isNullOrEmpty() && people?.people.isNullOrEmpty() && !hasLookupFeedback))) {
                     item {
-                        if (selectedFolder != null && query.isBlank()) Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        if (globalActive) {
+                            WhiteNoiseEmptyState(stringResource(R.string.global_no_matches), stringResource(R.string.global_no_matches_detail))
+                        } else if (selectedFolder != null && query.isBlank()) Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                             WhiteNoiseEmptyState(stringResource(R.string.chat_folder_empty), stringResource(R.string.chat_folder_empty_detail))
                         } else ChatEmptyState(scope, query.isNotBlank(), Modifier.fillParentMaxSize())
                     }
@@ -337,7 +388,7 @@ fun ChatsScreen(
                         onOpen = {
                             menuTarget = null
                             if (selecting) selectedIds = if (chat.id in selectedIds) selectedIds - chat.id else selectedIds + chat.id
-                            else { closeSearch(); onOpenChat(chat.id) }
+                            else { focusManager.clearFocus(); keyboardController?.hide(); onOpenChat(chat.id) }
                         },
                         onShowMenu = {
                             filterMenuOpen = false
@@ -351,8 +402,38 @@ fun ChatsScreen(
                         onAction = { performAction(target, it) },
                     )
                 }
+                if (globalActive && !selecting) {
+                    val messages = globalResults?.messages.orEmpty()
+                    if (messages.isNotEmpty()) item(key = "messages-heading") { GlobalSearchHeading(stringResource(R.string.global_messages)) }
+                    items(messages, key = { "message:${it.chatId}:${it.message.id}" }) { result ->
+                        GlobalMessageRow(result, query) {
+                            focusManager.clearFocus(); keyboardController?.hide()
+                            if (!onOpenSearchMessage(result.chatId, result.message.id)) coroutineScope.launch {
+                                snackbarHostState.showSnackbar(resources.getString(R.string.global_message_unavailable))
+                            }
+                        }
+                    }
+                    if (people != null) {
+                        if (people.people.isNotEmpty() || hasLookupFeedback) item(key = "people-heading") { GlobalSearchHeading(stringResource(R.string.folder_people)) }
+                        item(key = "people-feedback") { GlobalPeopleFeedback(people.status, GlobalSearch.identifierIntent(query), lookupPending) { lookupRetried = true } }
+                        if (!lookupPending) items(people.people, key = { "person:${it.person.id}" }) { result ->
+                            GlobalPersonRow(result, unknown = people.status == PeopleSearchStatus.NoProfile) { person ->
+                                focusManager.clearFocus(); keyboardController?.hide(); onOpenSearchPerson(person)
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+    if (searchFilterDialog && profile != null) GlobalSearchFiltersDialog(profile, searchFilters, { searchFilters = it }, { searchFilterDialog = false })
+    voiceRequest?.let { request ->
+        GlobalVoiceDialog(request, onComplete = { completed ->
+            if (voiceRequest?.id == completed.id) {
+                GlobalSearch.voiceResult(completed, profile?.id, query, isSearching)?.let { query = it }
+                voiceRequest = null
+            }
+        }, onRetry = ::startVoice, onDismiss = { voiceRequest = null })
     }
 
     muteChat?.let { chat ->
@@ -531,6 +612,7 @@ private fun ChatsSearchTopBar(
     onQueryChange: (String) -> Unit,
     onClose: () -> Unit,
     closeSearchDescription: String,
+    onVoice: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -559,6 +641,7 @@ private fun ChatsSearchTopBar(
                 )
             }
         },
+        actions = { IconButton(onClick = onVoice) { Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.global_voice)) } },
         scrollBehavior = LocalWhiteNoiseHeaderScroll.current,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,

@@ -116,7 +116,7 @@ class ChatsScreenTest {
 
         composeRule.onNodeWithContentDescription("Search Chats").performClick()
         composeRule.onNode(hasSetTextAction()).performTextInput("not a fixture")
-        composeRule.onNodeWithText("No Results").assertIsDisplayed()
+        composeRule.onNodeWithText("No matches").assertIsDisplayed()
     }
 
     @Test

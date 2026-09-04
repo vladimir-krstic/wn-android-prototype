@@ -73,6 +73,8 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
+    globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
+    onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
     chatBatchScenario: dev.ipf.whitenoise.model.ChatBatchScenario = dev.ipf.whitenoise.model.ChatBatchScenario.Success,
     onChatBatchScenario: (dev.ipf.whitenoise.model.ChatBatchScenario) -> Unit = {},
     onChatConnectionScenario: (dev.ipf.whitenoise.model.ChatConnectionScenario) -> Unit = {},
@@ -97,6 +99,9 @@ fun DeveloperToolsScreen(
     val tools = profile.developerTools
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var globalVoiceOpen by remember { mutableStateOf(false) }
+    if (globalVoiceOpen) ScenarioChoiceDialog("Voice search", dev.ipf.whitenoise.model.GlobalVoiceScenario.entries,
+        globalVoiceScenario, { it.developerLabel }, onGlobalVoiceScenario, { globalVoiceOpen = false })
     var chatBatchOpen by remember { mutableStateOf(false) }
     var chatConnectionOpen by remember { mutableStateOf(false) }
     if (chatBatchOpen) ScenarioChoiceDialog("Chat actions", dev.ipf.whitenoise.model.ChatBatchScenario.entries,
@@ -165,6 +170,8 @@ fun DeveloperToolsScreen(
                 item { SettingsSection("Access testing") }
                 item {
                     SettingsGroup {
+                        SettingsLink("Voice search scenarios", globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
+                        SettingsDivider()
                         SettingsLink("Chat action scenarios", chatBatchScenario.developerLabel, { chatBatchOpen = true })
                         SettingsDivider()
                         SettingsLink("Chat connection scenarios", profile.chatConnection.phase.name, { chatConnectionOpen = true })

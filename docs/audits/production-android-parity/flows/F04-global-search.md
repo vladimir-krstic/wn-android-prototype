@@ -16,10 +16,10 @@ These labels are the audit recommendation and follow current prototype terminolo
 
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
-| C031 · Cross-chat message-body results | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add grouped chat/message/profile results with snippets and exact-message navigation; current Chats filters rows and conversation search is local. |
-| C032 · Filter global search by chats and senders | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Multi-select chat and sender filters; OR within each category, AND across categories, removable chips and Clear all; reset/reconcile on profile switch. |
-| C033 · Global date and content filters | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Date presets/custom bounds plus text, links, images/video, voice/audio, files and any attachment; test boundary inclusion using fixed clock. |
-| C034 · Identifier lookup and voice query entry | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Resolve supported public IDs/addresses to profile result and offer deterministic voice-query success/cancel/unavailable. Do not request microphone in audit or fixture implementation. |
+| C031 · Cross-chat message-body results | Implemented; host verified | Open search, filter or result; modal Back dismisses first and result Back restores search | Grouped Chats/Messages/People span active-profile history, including archived and ended chats. Ordinary chat matches retain normal opening; authored body/attachment/link matches have centered snippets and exact-message navigation. Deleted/system/private-note data is excluded and Back restores query/filters. |
+| C032 · Filter global search by chats and senders | Implemented; host verified | Open search, filter or result; modal Back dismisses first and result Back restores search | Multi-select chat and sender filters use OR within and AND across categories. Searchable checkbox dialogs, removable chips, Clear All, saved state, profile reset and removed-ID reconciliation are connected. |
+| C033 · Global date and content filters | Implemented; host verified | Open search, filter or result; modal Back dismisses first and result Back restores search | Today/7-day/30-day/custom inclusive civil-date bounds and all six content categories combine with query/chat/sender filters. A fixed UTC fixture calendar preserves visible timeline labels; native DateRangePicker and DST/boundary tests cover dates, with Android desugaring retaining API 23 support. |
+| C034 · Identifier lookup and voice query entry | Implemented; host verified | Open search, filter or result; modal Back dismisses first and result Back restores search | Supported public keys, profile links and addresses reuse discovery with loading, invalid, unresolved, unavailable and retry states; unknown profiles have a readable name. Deterministic Voice Search success/cancel/unavailable/retry is guarded by owner/request/query and consumes no microphone or service. |
 | C035 · In-conversation search and target navigation | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Keep current highlighting/navigation; add loading older-result, failed-history, unavailable target and retry without blanking existing timeline. |
 
 ## Production integration seam
@@ -40,3 +40,13 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B07, B08. Decisions: None. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B07 implementation evidence
+
+C031–C034 are implemented and host-verified 2026-09-04. The
+[selected brief](../../../screens/global-search.md#implementation-evidence)
+records the global result/filter/lookup/voice contracts, fixed calendar and
+production integration seams. The clean gate passed 296 unit tests, both APKs
+and zero lint errors; eight new UI cases compile. C035 remains for B08's
+unloaded-history and target recovery. Device execution and visual acceptance
+remain separate.

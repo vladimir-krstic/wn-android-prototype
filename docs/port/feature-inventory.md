@@ -85,6 +85,14 @@ new device or visual acceptance is claimed. See
 
 ## Chats hub and creation
 
+2026-09-04 production B07: C031–C034 are implemented and host-verified.
+Chats search now has grouped chat/message/people results, exact-message targets,
+chat/sender/date/content filters, saved query/filter state, identifier lookup and
+deterministic voice entry. The fixed calendar, API 23 date compatibility and
+production seams are documented in [global-search.md](../screens/global-search.md).
+The clean gate passed 296 unit tests, zero lint errors and both APKs; eight new
+UI cases compile. Device/visual acceptance remains pending; B08 owns unloaded history.
+
 2026-09-04 production B06: C027–C029 are implemented and host-verified.
 Folders now has atomic New/Edit, descriptions, manual/automatic membership,
 searchable selectors and preview, editable defaults, delete/restore, bounded
@@ -96,7 +104,7 @@ Device/visual acceptance remains pending.
 2026-09-04 production B05: C024–C026 and C030 are implemented and host-verified.
 Selection, bulk updates with partial retry, pinned moves, explicit local/leave-first
 deletion, manual folder assignment/filtering and owned connection recovery
-extend Chats. C027–C029 are partial foundations only; B06 remains pending.
+extend Chats. C027–C029 were partial foundations in B05 and are completed by B06 above.
 See [chat-organization-and-recovery.md](../screens/chat-organization-and-recovery.md).
 The clean gate passed 262 unit tests, zero lint errors and both APKs; seven new
 UI cases compile. Device/visual acceptance remains pending.
