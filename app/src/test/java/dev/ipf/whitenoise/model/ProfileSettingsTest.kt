@@ -13,6 +13,23 @@ import org.junit.Test
 
 class ProfileSettingsTest {
     @Test
+    fun profileAndChatColorSettingsStayIndependentlyOwned() {
+        val profile = ProfileFixtures.marmota
+        val first = profile.chats[0]
+        val second = profile.chats[1]
+        val colors = profile.settings.colors.updateTheme(AppearanceColorTheme.Light) {
+            it.copy(actionArgb = 0xFF1D4ED8L, mineBubbleArgb = 0xFF15803DL)
+        }
+        val changed = profile.copy(
+            settings = profile.settings.copy(colors = colors),
+            chats = profile.chats.map { if (it.id == first.id) it.copy(bubbleColors = ChatBubbleColorOverrides(mineArgb = 0xFFB91C1CL)) else it },
+        )
+        assertEquals(0xFF1D4ED8L, changed.settings.colors.light.actionArgb)
+        assertEquals(0xFFB91C1CL, changed.chats[0].bubbleColors.mineArgb)
+        assertEquals(ChatBubbleColorOverrides(), changed.chats.first { it.id == second.id }.bubbleColors)
+        assertEquals(AppearanceColorPreferences(), profile.settings.colors)
+    }
+    @Test
     fun appearanceAndLanguageDefaultsMatchTheAcceptedProfilePreferences() {
         val settings = ProfileSettings()
         assertEquals(AppearancePreference.System, settings.appearance)
@@ -27,6 +44,10 @@ class ProfileSettingsTest {
                 "Italian",
                 "Portuguese",
                 "Serbian",
+                "Russian",
+                "Turkish",
+                "Chinese (Simplified)",
+                "Chinese (Traditional)",
             ),
             LanguagePreference.entries.map(LanguagePreference::label),
         )
@@ -183,5 +204,14 @@ class ProfileSettingsTest {
 
         assertEquals(defaultMatrix.width - 4, tightlyFramedMatrix.width)
         assertEquals(defaultMatrix.height - 4, tightlyFramedMatrix.height)
+    }
+
+    @Test
+    fun productionLanguageChoicesUseDistinctAndroidLocaleTags() {
+        assertEquals("ru", LanguagePreference.Russian.localeTag)
+        assertEquals("tr", LanguagePreference.Turkish.localeTag)
+        assertEquals("zh-CN", LanguagePreference.ChineseSimplified.localeTag)
+        assertEquals("zh-TW", LanguagePreference.ChineseTraditional.localeTag)
+        assertEquals(12, LanguagePreference.entries.map(LanguagePreference::localeTag).distinct().size)
     }
 }

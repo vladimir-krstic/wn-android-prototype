@@ -136,66 +136,66 @@ fun DeveloperToolsScreen(
     val capture = dev.ipf.whitenoise.ui.conversation.LocalComposerCapture.current
     var dictationOpen by remember { mutableStateOf(false) }
     var recordingOpen by remember { mutableStateOf(false) }
-    if (recordingOpen && capture != null) ScenarioChoiceDialog("Voice recording outcomes", dev.ipf.whitenoise.model.VoiceCaptureScenario.entries,
+    if (recordingOpen && capture != null) ScenarioChoiceDialog(stringResource(R.string.developer_voice_recording_outcomes), dev.ipf.whitenoise.model.VoiceCaptureScenario.entries,
         capture.voiceScenario, { it.developerLabel }, { capture.chooseVoiceScenario(it) }, { recordingOpen = false })
-    if (dictationOpen && capture != null) ScenarioChoiceDialog("Dictation outcomes", dev.ipf.whitenoise.model.DictationScenario.entries,
+    if (dictationOpen && capture != null) ScenarioChoiceDialog(stringResource(R.string.developer_dictation_outcomes), dev.ipf.whitenoise.model.DictationScenario.entries,
         capture.scenario, { it.developerLabel }, { capture.chooseScenario(it) }, { dictationOpen = false })
     var speechPreferencesOpen by remember { mutableStateOf(false) }
     if (speechPreferencesOpen && speech != null) SpeechDeveloperDialog(profile, speech) { speechPreferencesOpen = false }
-    if (speechOpen && speech != null) ScenarioChoiceDialog("Read Aloud history", dev.ipf.whitenoise.model.SpeechEdgeScenario.entries,
+    if (speechOpen && speech != null) ScenarioChoiceDialog(stringResource(R.string.developer_read_aloud_history), dev.ipf.whitenoise.model.SpeechEdgeScenario.entries,
         speech.edgeScenario, { it.name }, { speech.setEdgeScenario(profile.id, it) }, { speechOpen = false })
     var locationOpen by remember { mutableStateOf(false) }
-    if (locationOpen) ScenarioChoiceDialog("Location sharing", dev.ipf.whitenoise.model.LocationScenario.entries,
+    if (locationOpen) ScenarioChoiceDialog(stringResource(R.string.developer_location_sharing), dev.ipf.whitenoise.model.LocationScenario.entries,
         locationScenario, { it.developerLabel }, onLocationScenario, { locationOpen = false })
     var attachmentAccessOpen by remember { mutableStateOf(false) }
-    if (attachmentAccessOpen) ScenarioChoiceDialog("File opening", dev.ipf.whitenoise.model.AttachmentAccessScenario.entries,
+    if (attachmentAccessOpen) ScenarioChoiceDialog(stringResource(R.string.developer_file_opening), dev.ipf.whitenoise.model.AttachmentAccessScenario.entries,
         attachmentAccessScenario, { it.developerLabel }, onAttachmentAccessScenario, { attachmentAccessOpen = false })
-    if (photoEditorOpen) ScenarioChoiceDialog("Photo editor", dev.ipf.whitenoise.model.PhotoEditorScenario.entries,
+    if (photoEditorOpen) ScenarioChoiceDialog(stringResource(R.string.developer_photo_editor), dev.ipf.whitenoise.model.PhotoEditorScenario.entries,
         photoEditorScenario, { it.developerLabel }, onPhotoEditorScenario, { photoEditorOpen = false })
-    if (recentOpen) ScenarioChoiceDialog("Recent media access", dev.ipf.whitenoise.model.RecentMediaAccess.entries,
+    if (recentOpen) ScenarioChoiceDialog(stringResource(R.string.developer_recent_media_access), dev.ipf.whitenoise.model.RecentMediaAccess.entries,
         recentMediaAccess, { it.name }, onRecentMediaAccess, { recentOpen = false })
-    if (transferOpen) ScenarioChoiceDialog("Attachment transfer", dev.ipf.whitenoise.model.AttachmentTransferScenario.entries,
+    if (transferOpen) ScenarioChoiceDialog(stringResource(R.string.developer_attachment_transfer), dev.ipf.whitenoise.model.AttachmentTransferScenario.entries,
         attachmentTransferScenario, { it.developerLabel }, onAttachmentTransferScenario, { transferOpen = false })
     var forwardOpen by remember { mutableStateOf(false) }
-    if (deleteOpen) ScenarioChoiceDialog("Message deletion", dev.ipf.whitenoise.model.MessageDeleteScenario.entries,
+    if (deleteOpen) ScenarioChoiceDialog(stringResource(R.string.developer_message_deletion), dev.ipf.whitenoise.model.MessageDeleteScenario.entries,
         messageDeleteScenario, { it.developerLabel }, onMessageDeleteScenario, { deleteOpen = false })
-    if (forwardOpen) ScenarioChoiceDialog("Message forwarding", dev.ipf.whitenoise.model.MessageForwardScenario.entries,
+    if (forwardOpen) ScenarioChoiceDialog(stringResource(R.string.developer_message_forwarding), dev.ipf.whitenoise.model.MessageForwardScenario.entries,
         messageForwardScenario, { it.developerLabel }, onMessageForwardScenario, { forwardOpen = false })
-    if (editOpen) ScenarioChoiceDialog("Message editing", dev.ipf.whitenoise.model.MessageEditScenario.entries,
+    if (editOpen) ScenarioChoiceDialog(stringResource(R.string.developer_message_editing), dev.ipf.whitenoise.model.MessageEditScenario.entries,
         messageEditScenario, { it.developerLabel }, onMessageEditScenario, { editOpen = false })
-    if (historyOpen) ScenarioChoiceDialog("Conversation history", dev.ipf.whitenoise.model.HistoryScenario.entries,
+    if (historyOpen) ScenarioChoiceDialog(stringResource(R.string.developer_conversation_history), dev.ipf.whitenoise.model.HistoryScenario.entries,
         historyScenario, { it.developerLabel }, onHistoryScenario, { historyOpen = false })
     var globalVoiceOpen by remember { mutableStateOf(false) }
-    if (globalVoiceOpen) ScenarioChoiceDialog("Voice search", dev.ipf.whitenoise.model.GlobalVoiceScenario.entries,
+    if (globalVoiceOpen) ScenarioChoiceDialog(stringResource(R.string.developer_voice_search), dev.ipf.whitenoise.model.GlobalVoiceScenario.entries,
         globalVoiceScenario, { it.developerLabel }, onGlobalVoiceScenario, { globalVoiceOpen = false })
     var chatBatchOpen by remember { mutableStateOf(false) }
     var chatConnectionOpen by remember { mutableStateOf(false) }
-    if (chatBatchOpen) ScenarioChoiceDialog("Chat actions", dev.ipf.whitenoise.model.ChatBatchScenario.entries,
+    if (chatBatchOpen) ScenarioChoiceDialog(stringResource(R.string.developer_chat_actions), dev.ipf.whitenoise.model.ChatBatchScenario.entries,
         chatBatchScenario, { it.developerLabel }, onChatBatchScenario, { chatBatchOpen = false })
-    if (chatConnectionOpen) ScenarioChoiceDialog("Chat connection", dev.ipf.whitenoise.model.ChatConnectionScenario.entries,
+    if (chatConnectionOpen) ScenarioChoiceDialog(stringResource(R.string.developer_chat_connection), dev.ipf.whitenoise.model.ChatConnectionScenario.entries,
         if (profile.chatConnection.retryFails) dev.ipf.whitenoise.model.ChatConnectionScenario.RetryFailure
         else dev.ipf.whitenoise.model.ChatConnectionScenario.entries.first { it.name == profile.chatConnection.phase.name || (it == dev.ipf.whitenoise.model.ChatConnectionScenario.RetryFailure && profile.chatConnection.phase == dev.ipf.whitenoise.model.ChatConnectionPhase.Failed) },
         { it.developerLabel }, onChatConnectionScenario, { chatConnectionOpen = false })
     var profileSaveScenariosOpen by remember { mutableStateOf(false) }
-    if (profileSaveScenariosOpen) ScenarioChoiceDialog("Profile save", dev.ipf.whitenoise.model.ProfileSaveScenario.entries,
+    if (profileSaveScenariosOpen) ScenarioChoiceDialog(stringResource(R.string.developer_profile_save), dev.ipf.whitenoise.model.ProfileSaveScenario.entries,
         profileSaveScenario, { it.developerLabel }, onProfileSaveScenario, { profileSaveScenariosOpen = false })
     var peopleScenariosOpen by remember { mutableStateOf(false) }
     var groupScenariosOpen by remember { mutableStateOf(false) }
     val incoming = dev.ipf.whitenoise.ui.share.LocalIncoming.current
     val auditLogs = LocalAuditLogs.current
     var auditChoice by rememberSaveable(profile.id) { mutableStateOf(false) }
-    if (auditLogs != null && auditChoice) ScenarioChoiceDialog("Audit log outcome",dev.ipf.whitenoise.model.AuditLogScenario.entries,
+    if (auditLogs != null && auditChoice) ScenarioChoiceDialog(stringResource(R.string.developer_audit_log_outcome),dev.ipf.whitenoise.model.AuditLogScenario.entries,
         auditLogs.scenario,{it.label},auditLogs::choose,{auditChoice = false})
     val appLock = LocalAppLock.current
     var unlockChoice by rememberSaveable(profile.id) { mutableStateOf(false) }
-    if (appLock != null && unlockChoice) ScenarioChoiceDialog("App unlock outcome",dev.ipf.whitenoise.state.AppUnlockOutcome.entries,
+    if (appLock != null && unlockChoice) ScenarioChoiceDialog(stringResource(R.string.developer_app_unlock_outcome),dev.ipf.whitenoise.state.AppUnlockOutcome.entries,
         appLock.scenario,{it.label},appLock::choose,{unlockChoice = false})
     val notificationControls = LocalNotificationControls.current
     val notificationActions = LocalNotificationActions.current
     var actionChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
-    if (notificationActions != null && actionChoice == "outcome") ScenarioChoiceDialog("Notification action outcome",
+    if (notificationActions != null && actionChoice == "outcome") ScenarioChoiceDialog(stringResource(R.string.developer_notification_action_outcome),
         dev.ipf.whitenoise.state.NotificationActionScenario.entries,notificationActions.scenario,{it.label},notificationActions::choose,{actionChoice = null})
-    if (notificationActions != null && actionChoice == "action") ScenarioChoiceDialog("Notification action",
+    if (notificationActions != null && actionChoice == "action") ScenarioChoiceDialog(stringResource(R.string.notification_action_title),
         dev.ipf.whitenoise.model.NotificationActionKind.entries,dev.ipf.whitenoise.model.NotificationActionKind.Reply,{it.name},{ kind ->
             val entry = dev.ipf.whitenoise.model.IncomingExamples.entry(dev.ipf.whitenoise.model.IncomingExample.NotificationMessage,profile,listOf(profile)) as dev.ipf.whitenoise.model.IncomingEntry.Notification
             val generation = notificationActions.nextExampleId()
@@ -207,11 +207,11 @@ fun DeveloperToolsScreen(
     var notificationChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
     if (notificationControls != null) {
         when (notificationChoice) {
-            "outcome" -> ScenarioChoiceDialog("Notification settings outcomes",dev.ipf.whitenoise.state.NotificationScenario.entries,
+            "outcome" -> ScenarioChoiceDialog(stringResource(R.string.developer_notification_settings_outcomes),dev.ipf.whitenoise.state.NotificationScenario.entries,
                 notificationControls.scenario,{it.developerLabel},notificationControls::choose,{notificationChoice = null})
-            "push" -> ScenarioChoiceDialog("Native push availability",dev.ipf.whitenoise.model.PushAvailability.entries,
+            "push" -> ScenarioChoiceDialog(stringResource(R.string.developer_native_push_availability),dev.ipf.whitenoise.model.PushAvailability.entries,
                 notificationControls.environment.push,{it.name},{notificationControls.chooseEnvironment(notificationControls.environment.copy(push = it))},{notificationChoice = null})
-            "vibration" -> ScenarioChoiceDialog("Android vibration override",dev.ipf.whitenoise.model.AndroidVibrationOverride.entries,
+            "vibration" -> ScenarioChoiceDialog(stringResource(R.string.developer_android_vibration_override),dev.ipf.whitenoise.model.AndroidVibrationOverride.entries,
                 notificationControls.environment.vibrationOverride,{it.name},{notificationControls.chooseEnvironment(notificationControls.environment.copy(vibrationOverride = it))},{notificationChoice = null})
         }
     }
@@ -222,25 +222,25 @@ fun DeveloperToolsScreen(
     val transcript = dev.ipf.whitenoise.ui.conversation.LocalTranscript.current
     val groupWork = dev.ipf.whitenoise.ui.conversation.LocalGroupWork.current
     var groupWorkChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
-    if (incoming != null && incomingExampleOpen) ScenarioChoiceDialog("Incoming request", dev.ipf.whitenoise.model.IncomingExample.entries,
+    if (incoming != null && incomingExampleOpen) ScenarioChoiceDialog(stringResource(R.string.developer_incoming_request), dev.ipf.whitenoise.model.IncomingExample.entries,
         dev.ipf.whitenoise.model.IncomingExample.Text, { it.label }, { example -> incoming.receive(dev.ipf.whitenoise.model.IncomingExamples.entry(example,profile,incoming.signedProfiles())) }, { incomingExampleOpen = false })
-    if (incoming != null && incomingOutcomeOpen) ScenarioChoiceDialog("Incoming request outcome", dev.ipf.whitenoise.state.IncomingScenario.entries,
+    if (incoming != null && incomingOutcomeOpen) ScenarioChoiceDialog(stringResource(R.string.developer_incoming_request_outcome), dev.ipf.whitenoise.state.IncomingScenario.entries,
         incoming.scenario, { it.developerLabel }, incoming::choose, { incomingOutcomeOpen = false })
-    if (retention != null && groupWorkChoice == "retention") ScenarioChoiceDialog("Retention update", dev.ipf.whitenoise.state.RetentionScenario.entries, retention.scenario, { it.developerLabel }, retention::choose, { groupWorkChoice = null })
-    if (retention != null && groupWorkChoice == "expiry") ScenarioChoiceDialog("Retention example", dev.ipf.whitenoise.state.RetentionExample.entries, retention.example, { it.developerLabel }, retention::chooseExample, { groupWorkChoice = null })
-    if (groupLifecycle != null && groupWorkChoice == "lifecycle") ScenarioChoiceDialog("Group administration", dev.ipf.whitenoise.model.GroupLifecycleScenario.entries, groupLifecycle.scenario, { it.developerLabel }, groupLifecycle::choose, { groupWorkChoice = null })
-    if (groupLifecycle != null && groupWorkChoice == "groupState") ScenarioChoiceDialog("Group lifecycle", dev.ipf.whitenoise.model.GroupStateScenario.entries, groupLifecycle.stateScenario, { it.developerLabel }, groupLifecycle::chooseState, { groupWorkChoice = null })
-    if (transcript != null && groupWorkChoice == "transcript") ScenarioChoiceDialog("Transcript export", dev.ipf.whitenoise.model.TranscriptScenario.entries, transcript.scenario, { it.developerLabel }, transcript::choose, { groupWorkChoice = null })
+    if (retention != null && groupWorkChoice == "retention") ScenarioChoiceDialog(stringResource(R.string.developer_retention_update), dev.ipf.whitenoise.state.RetentionScenario.entries, retention.scenario, { it.developerLabel }, retention::choose, { groupWorkChoice = null })
+    if (retention != null && groupWorkChoice == "expiry") ScenarioChoiceDialog(stringResource(R.string.developer_retention_example), dev.ipf.whitenoise.state.RetentionExample.entries, retention.example, { it.developerLabel }, retention::chooseExample, { groupWorkChoice = null })
+    if (groupLifecycle != null && groupWorkChoice == "lifecycle") ScenarioChoiceDialog(stringResource(R.string.developer_group_administration), dev.ipf.whitenoise.model.GroupLifecycleScenario.entries, groupLifecycle.scenario, { it.developerLabel }, groupLifecycle::choose, { groupWorkChoice = null })
+    if (groupLifecycle != null && groupWorkChoice == "groupState") ScenarioChoiceDialog(stringResource(R.string.developer_group_lifecycle), dev.ipf.whitenoise.model.GroupStateScenario.entries, groupLifecycle.stateScenario, { it.developerLabel }, groupLifecycle::chooseState, { groupWorkChoice = null })
+    if (transcript != null && groupWorkChoice == "transcript") ScenarioChoiceDialog(stringResource(R.string.developer_transcript_export), dev.ipf.whitenoise.model.TranscriptScenario.entries, transcript.scenario, { it.developerLabel }, transcript::choose, { groupWorkChoice = null })
     if (groupWork != null) when (groupWorkChoice) {
-        "roster" -> ScenarioChoiceDialog("Group roster", dev.ipf.whitenoise.model.GroupRosterScenario.entries, groupWork.rosterScenario, { it.developerLabel }, groupWork::chooseRoster, { groupWorkChoice = null })
-        "members" -> ScenarioChoiceDialog("Group member updates", dev.ipf.whitenoise.model.GroupMutationScenario.entries, groupWork.mutationScenario, { it.developerLabel }, groupWork::chooseMutation, { groupWorkChoice = null })
-        "images" -> ScenarioChoiceDialog("Group images", dev.ipf.whitenoise.model.GroupImageScenario.entries, groupWork.imageScenario, { it.developerLabel }, groupWork::chooseImage, { groupWorkChoice = null })
-        "create" -> ScenarioChoiceDialog("Group creation", dev.ipf.whitenoise.model.GroupCreateScenario.entries, groupWork.createScenario, { it.developerLabel }, groupWork::chooseCreate, { groupWorkChoice = null })
+        "roster" -> ScenarioChoiceDialog(stringResource(R.string.developer_group_roster), dev.ipf.whitenoise.model.GroupRosterScenario.entries, groupWork.rosterScenario, { it.developerLabel }, groupWork::chooseRoster, { groupWorkChoice = null })
+        "members" -> ScenarioChoiceDialog(stringResource(R.string.developer_group_member_updates), dev.ipf.whitenoise.model.GroupMutationScenario.entries, groupWork.mutationScenario, { it.developerLabel }, groupWork::chooseMutation, { groupWorkChoice = null })
+        "images" -> ScenarioChoiceDialog(stringResource(R.string.developer_group_images), dev.ipf.whitenoise.model.GroupImageScenario.entries, groupWork.imageScenario, { it.developerLabel }, groupWork::chooseImage, { groupWorkChoice = null })
+        "create" -> ScenarioChoiceDialog(stringResource(R.string.developer_group_creation), dev.ipf.whitenoise.model.GroupCreateScenario.entries, groupWork.createScenario, { it.developerLabel }, groupWork::chooseCreate, { groupWorkChoice = null })
     }
 
-    if (peopleScenariosOpen) ScenarioChoiceDialog("People search", dev.ipf.whitenoise.model.PeopleSearchScenario.entries,
+    if (peopleScenariosOpen) ScenarioChoiceDialog(stringResource(R.string.developer_people_search), dev.ipf.whitenoise.model.PeopleSearchScenario.entries,
         peopleSearchScenario, { it.developerLabel }, onPeopleSearchScenario, { peopleScenariosOpen = false })
-    if (groupScenariosOpen) ScenarioChoiceDialog("Group contact actions", dev.ipf.whitenoise.model.GroupContactScenario.entries,
+    if (groupScenariosOpen) ScenarioChoiceDialog(stringResource(R.string.developer_group_contact_actions), dev.ipf.whitenoise.model.GroupContactScenario.entries,
         groupContactScenario, { it.developerLabel }, onGroupContactScenario, { groupScenariosOpen = false })
     var showAccessScenarios by rememberSaveable(profile.id) { mutableStateOf(false) }
     var showExitScenarios by rememberSaveable(profile.id) { mutableStateOf(false) }
@@ -263,11 +263,11 @@ fun DeveloperToolsScreen(
         }
         exportContent = ""
     }
-    SettingsScaffold(title = "Developer Tools", onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.developer_tools), onBack = onBack) {
         SettingsList {
             item {
                 SettingsCallout(
-                    title = "For development and testing only",
+                    title = stringResource(R.string.developer_for_development_and_testing_only),
                     text = "These tools can expose technical information and change how the app behaves.",
                     modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     leading = {
@@ -282,139 +282,139 @@ fun DeveloperToolsScreen(
             item {
                 SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
                     SettingsSwitch(
-                        title = "Developer Tools",
+                        title = stringResource(R.string.developer_tools),
                         checked = tools.isEnabled,
                         onCheckedChange = { onEnabled(it) },
                     )
                 }
-                SettingsExplainer("Enable technical tools for this profile.")
+                SettingsExplainer(stringResource(R.string.developer_enable_technical_tools_for_this_profile))
             }
             if (tools.isEnabled) {
                 if (parityController != null) item { DeveloperParityControls(profile, parityController) }
-                item { SettingsSection("Access testing") }
+                item { SettingsSection(stringResource(R.string.developer_access_testing)) }
                 item {
                     SettingsGroup {
                         if (speech != null) {
-                            SettingsLink("Read Aloud history outcomes", speech.edgeScenario.name, { speechOpen = true })
-                            SettingsLink("Read Aloud engine, audio and background outcomes", onClick = { speechPreferencesOpen = true })
+                            SettingsLink(stringResource(R.string.developer_read_aloud_history_outcomes), speech.edgeScenario.name, { speechOpen = true })
+                            SettingsLink(stringResource(R.string.developer_read_aloud_engine_audio_and_background_outcomes), onClick = { speechPreferencesOpen = true })
                         }
                         if (capture != null) {
-                            SettingsLink("Dictation outcomes", capture.scenario.developerLabel, { dictationOpen = true })
-                            SettingsLink("Voice recording outcomes", capture.voiceScenario.developerLabel, { recordingOpen = true })
+                            SettingsLink(stringResource(R.string.developer_dictation_outcomes), capture.scenario.developerLabel, { dictationOpen = true })
+                            SettingsLink(stringResource(R.string.developer_voice_recording_outcomes), capture.voiceScenario.developerLabel, { recordingOpen = true })
                         }
-                        SettingsLink("History loading scenarios", historyScenario.developerLabel, { historyOpen = true })
+                        SettingsLink(stringResource(R.string.developer_history_loading_scenarios), historyScenario.developerLabel, { historyOpen = true })
                         SettingsDivider()
-                        SettingsLink("Message edit outcomes", messageEditScenario.developerLabel, { editOpen = true })
-                        SettingsLink("Message deletion outcomes", messageDeleteScenario.developerLabel, { deleteOpen = true })
-                        SettingsLink("Recent media access", recentMediaAccess.name, { recentOpen = true })
+                        SettingsLink(stringResource(R.string.developer_message_edit_outcomes), messageEditScenario.developerLabel, { editOpen = true })
+                        SettingsLink(stringResource(R.string.developer_message_deletion_outcomes), messageDeleteScenario.developerLabel, { deleteOpen = true })
+                        SettingsLink(stringResource(R.string.developer_recent_media_access), recentMediaAccess.name, { recentOpen = true })
                         SettingsDivider()
-                        SettingsLink("Attachment transfer outcomes", attachmentTransferScenario.developerLabel, { transferOpen = true })
+                        SettingsLink(stringResource(R.string.developer_attachment_transfer_outcomes), attachmentTransferScenario.developerLabel, { transferOpen = true })
                         downloadExampleControls()
                         relayPublicationControls()
                         updateControls()
                         SettingsDivider()
-                        SettingsLink("Photo editor outcomes", photoEditorScenario.developerLabel, { photoEditorOpen = true })
+                        SettingsLink(stringResource(R.string.developer_photo_editor_outcomes), photoEditorScenario.developerLabel, { photoEditorOpen = true })
                         SettingsDivider()
-                        SettingsLink("Location sharing outcomes", locationScenario.developerLabel, { locationOpen = true })
-                        SettingsLink("File opening outcomes", attachmentAccessScenario.developerLabel, { attachmentAccessOpen = true })
+                        SettingsLink(stringResource(R.string.developer_location_sharing_outcomes), locationScenario.developerLabel, { locationOpen = true })
+                        SettingsLink(stringResource(R.string.developer_file_opening_outcomes), attachmentAccessScenario.developerLabel, { attachmentAccessOpen = true })
                         SettingsDivider()
-                        SettingsLink("Message forwarding outcomes", messageForwardScenario.developerLabel, { forwardOpen = true })
+                        SettingsLink(stringResource(R.string.developer_message_forwarding_outcomes), messageForwardScenario.developerLabel, { forwardOpen = true })
                         SettingsDivider()
-                        SettingsLink("Voice search scenarios", globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
+                        SettingsLink(stringResource(R.string.developer_voice_search_scenarios), globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
                         SettingsDivider()
-                        SettingsLink("Chat action scenarios", chatBatchScenario.developerLabel, { chatBatchOpen = true })
+                        SettingsLink(stringResource(R.string.developer_chat_action_scenarios), chatBatchScenario.developerLabel, { chatBatchOpen = true })
                         SettingsDivider()
-                        SettingsLink("Chat connection scenarios", profile.chatConnection.phase.name, { chatConnectionOpen = true })
+                        SettingsLink(stringResource(R.string.developer_chat_connection_scenarios), profile.chatConnection.phase.name, { chatConnectionOpen = true })
                         SettingsDivider()
-                        SettingsLink("Profile save scenarios", profileSaveScenario.developerLabel, { profileSaveScenariosOpen = true })
+                        SettingsLink(stringResource(R.string.developer_profile_save_scenarios), profileSaveScenario.developerLabel, { profileSaveScenariosOpen = true })
                         SettingsDivider()
-                        SettingsSwitch("Next profile image fails", profileImageFails, onProfileImageFails)
+                        SettingsSwitch(stringResource(R.string.developer_next_profile_image_fails), profileImageFails, onProfileImageFails)
                         SettingsDivider()
-                        SettingsLink("People search scenarios", peopleSearchScenario.developerLabel, { peopleScenariosOpen = true })
+                        SettingsLink(stringResource(R.string.developer_people_search_scenarios), peopleSearchScenario.developerLabel, { peopleScenariosOpen = true })
                         SettingsDivider()
-                        SettingsLink("Group contact scenarios", groupContactScenario.developerLabel, { groupScenariosOpen = true })
+                        SettingsLink(stringResource(R.string.developer_group_contact_scenarios), groupContactScenario.developerLabel, { groupScenariosOpen = true })
                         if (groupWork != null) {
-                            SettingsDivider(); SettingsLink("Group roster", groupWork.rosterScenario.developerLabel, { groupWorkChoice = "roster" })
-                            SettingsDivider(); SettingsLink("Group member updates", groupWork.mutationScenario.developerLabel, { groupWorkChoice = "members" })
-                            SettingsDivider(); SettingsLink("Group images", groupWork.imageScenario.developerLabel, { groupWorkChoice = "images" })
-                            SettingsDivider(); SettingsLink("Group creation", groupWork.createScenario.developerLabel, { groupWorkChoice = "create" })
+                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_roster), groupWork.rosterScenario.developerLabel, { groupWorkChoice = "roster" })
+                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_member_updates), groupWork.mutationScenario.developerLabel, { groupWorkChoice = "members" })
+                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_images), groupWork.imageScenario.developerLabel, { groupWorkChoice = "images" })
+                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_creation), groupWork.createScenario.developerLabel, { groupWorkChoice = "create" })
                             if (groupLifecycle != null) {
-                                SettingsDivider(); SettingsLink("Group administration", groupLifecycle.scenario.developerLabel, { groupWorkChoice = "lifecycle" })
-                                SettingsDivider(); SettingsLink("Group lifecycle", groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_administration), groupLifecycle.scenario.developerLabel, { groupWorkChoice = "lifecycle" })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_lifecycle), groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
                             }
-                            if (transcript != null) { SettingsDivider(); SettingsLink("Transcript export", transcript.scenario.developerLabel, { groupWorkChoice = "transcript" }) }
+                            if (transcript != null) { SettingsDivider(); SettingsLink(stringResource(R.string.developer_transcript_export), transcript.scenario.developerLabel, { groupWorkChoice = "transcript" }) }
                             if (auditLogs != null) {
-                                SettingsDivider(); SettingsLink("Audit log outcome",auditLogs.scenario.label,{auditChoice = true})
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_audit_log_outcome),auditLogs.scenario.label,{auditChoice = true})
                             }
                             if (appLock != null) {
-                                SettingsDivider(); SettingsLink("App unlock outcome",appLock.scenario.label,{unlockChoice = true})
-                                SettingsDivider(); SettingsLink("Lock now","Requires device authentication to be enabled",appLock::lockNow)
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_app_unlock_outcome),appLock.scenario.label,{unlockChoice = true})
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_lock_now),stringResource(R.string.developer_lock_now_help),appLock::lockNow)
                             }
                             if (notificationActions != null) {
-                                SettingsDivider(); SettingsLink("Notification action", "Reply, react or mark a message read", { actionChoice = "action" })
-                                SettingsDivider(); SettingsLink("Notification action outcome", notificationActions.scenario.label, { actionChoice = "outcome" })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.notification_action_title), stringResource(R.string.developer_notification_action_help), { actionChoice = "action" })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_notification_action_outcome), notificationActions.scenario.label, { actionChoice = "outcome" })
                             }
                             if (incoming != null) {
-                                SettingsDivider(); SettingsLink("Incoming request", "Open an owned share, notification, shortcut or profile link", { incomingExampleOpen = true })
-                                SettingsDivider(); SettingsLink("Incoming request outcome", incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
-                                SettingsDivider(); SettingsLink("Defer incoming requests", if (incoming.locked) "Locked" else "Unlocked", { incoming.chooseLock(!incoming.locked) })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_incoming_request), stringResource(R.string.developer_incoming_request_help), { incomingExampleOpen = true })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_incoming_request_outcome), incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_defer_incoming_requests), if (incoming.locked) "Locked" else "Unlocked", { incoming.chooseLock(!incoming.locked) })
                             }
                             if (notificationControls != null) {
-                                SettingsDivider(); SettingsLink("Notification outcomes",notificationControls.scenario.developerLabel,{notificationChoice = "outcome"})
-                                SettingsDivider(); SettingsLink("Native push availability",notificationControls.environment.push.name,{notificationChoice = "push"})
-                                SettingsDivider(); SettingsLink("Android vibration override",notificationControls.environment.vibrationOverride.name,{notificationChoice = "vibration"})
-                                SettingsDivider(); SettingsSwitch("Vibration preview available",notificationControls.environment.previewAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(previewAvailable = it))})
-                                SettingsDivider(); SettingsSwitch("App update distribution",notificationControls.environment.updatesAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(updatesAvailable = it))})
-                                SettingsDivider(); SettingsLink("Stop background connection","Report a runtime stop",notificationControls::stopBackground,enabled = notificationControls.backgroundConnection)
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_notification_outcomes),notificationControls.scenario.developerLabel,{notificationChoice = "outcome"})
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_native_push_availability),notificationControls.environment.push.name,{notificationChoice = "push"})
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_android_vibration_override),notificationControls.environment.vibrationOverride.name,{notificationChoice = "vibration"})
+                                SettingsDivider(); SettingsSwitch(stringResource(R.string.developer_vibration_preview_available),notificationControls.environment.previewAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(previewAvailable = it))})
+                                SettingsDivider(); SettingsSwitch(stringResource(R.string.developer_app_update_distribution),notificationControls.environment.updatesAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(updatesAvailable = it))})
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_stop_background_connection),stringResource(R.string.developer_stop_background_help),notificationControls::stopBackground,enabled = notificationControls.backgroundConnection)
                             }
                             if (retention != null) {
-                                SettingsDivider(); SettingsLink("Retention update", retention.scenario.developerLabel, { groupWorkChoice = "retention" })
-                                SettingsDivider(); SettingsLink("Retention example", retention.example.developerLabel, { groupWorkChoice = "expiry" })
-                                SettingsDivider(); SettingsLink("Advance expiry clock", "Add one minute to the local clock", { retention.advanceExampleClock(60_000) })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_retention_update), retention.scenario.developerLabel, { groupWorkChoice = "retention" })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_retention_example), retention.example.developerLabel, { groupWorkChoice = "expiry" })
+                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_advance_expiry_clock), stringResource(R.string.developer_advance_expiry_help), { retention.advanceExampleClock(60_000) })
                             }
                         }
                         SettingsDivider()
-                        SettingsSwitch("Next created chat cannot open", createdChatUnavailable, onCreatedChatUnavailable)
+                        SettingsSwitch(stringResource(R.string.developer_next_created_chat_cannot_open), createdChatUnavailable, onCreatedChatUnavailable)
                         SettingsDivider()
-                        SettingsLink("Access scenarios", accessScenario.developerLabel, { showAccessScenarios = true })
+                        SettingsLink(stringResource(R.string.developer_access_scenarios), accessScenario.developerLabel, { showAccessScenarios = true })
                         SettingsDivider()
-                        SettingsAction("Preview startup failure", onClick = onStartupFailure)
+                        SettingsAction(stringResource(R.string.developer_preview_startup_failure), onClick = onStartupFailure)
                         SettingsDivider()
-                        SettingsLink("Sign-out scenarios", exitScenario.developerLabel, { showExitScenarios = true })
+                        SettingsLink(stringResource(R.string.developer_sign_out_scenarios), exitScenario.developerLabel, { showExitScenarios = true })
                         if (profile.signingMode == dev.ipf.whitenoise.model.ProfileSigningMode.LocalKey) {
                             SettingsDivider()
-                            SettingsSwitch("Local key available", profile.localKeyAvailable, onLocalKeyAvailable)
+                            SettingsSwitch(stringResource(R.string.developer_local_key_available), profile.localKeyAvailable, onLocalKeyAvailable)
                         }
                     }
-                    SettingsExplainer("Choose a result, then use Add Profile or sign out without wiping to test retained-profile entry.")
+                    SettingsExplainer(stringResource(R.string.developer_choose_a_result_then_use_add_profile_or_sign_out_witho))
                 }
-                item { SettingsSection("Debugging") }
+                item { SettingsSection(stringResource(R.string.developer_debugging)) }
                 item {
                     SettingsGroup {
                         SettingsSwitch(
-                            title = "Debug Mode",
+                            title = stringResource(R.string.developer_debug_mode),
                             checked = tools.debugMode,
                             onCheckedChange = { onDebugMode(it) },
                         )
                         SettingsDivider()
-                        SettingsLink("Diagnostics", "Sanitized event console", onDiagnostics)
+                        SettingsLink(stringResource(R.string.developer_diagnostics), stringResource(R.string.developer_diagnostics_help), onDiagnostics)
                         SettingsDivider(); SettingsLink(stringResource(R.string.audit_logs_title),stringResource(R.string.audit_logs_sensitive),onAuditLogs)
                     }
                     SettingsExplainer(
-                        "Debug Mode adds technical details to supported conversations.",
+                        stringResource(R.string.developer_debug_mode_adds_technical_details_to_supported_convers),
                     )
                 }
                 item {
                     SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                        SettingsLink("Key Packages", "One current package", onKeyPackages)
+                        SettingsLink(stringResource(R.string.developer_key_packages), stringResource(R.string.developer_key_packages_help), onKeyPackages)
                     }
                 }
-                item { SettingsSection("Diagnostic Logs") }
+                item { SettingsSection(stringResource(R.string.developer_diagnostic_logs)) }
                 item {
                     val nonemptyRecords = profile.diagnostics.records.filter { it.byteCount > 0 }
                     SettingsGroup {
                         SettingsMetadata(
-                            title = "Diagnostic Logging",
+                            title = stringResource(R.string.developer_diagnostic_logging),
                             value = if (profile.diagnostics.loggingEnabled) "On" else "Off",
                         )
                         SettingsDivider()
@@ -440,7 +440,7 @@ fun DeveloperToolsScreen(
                         if (nonemptyRecords.isNotEmpty()) {
                             SettingsDivider()
                             SettingsAction(
-                                title = "Export Diagnostic Logs",
+                                title = stringResource(R.string.developer_export_diagnostic_logs),
                                 onClick = {
                                     exportContent = profile.diagnostics.diagnosticLogExportText
                                     exportLogs.launch("White Noise Diagnostic Logs.txt")
@@ -455,12 +455,12 @@ fun DeveloperToolsScreen(
                         }
                     }
                     SettingsExplainer(
-                        "Configure or clear diagnostic logs in Privacy & Security. " +
+                        stringResource(R.string.developer_configure_or_clear_diagnostic_logs_in_privacy_security) +
                             "Existing sanitized files remain available here after logging is turned off.",
                     )
                 }
             }
-            item { SettingsSection("About") }
+            item { SettingsSection(stringResource(R.string.about)) }
             item {
                 SettingsGroup {
                     SettingsMetadata("Version", "0.1 (1)")
@@ -473,11 +473,11 @@ fun DeveloperToolsScreen(
     if (saveErrorDialog) {
         AlertDialog(
             onDismissRequest = { saveErrorDialog = false },
-            title = { Text("Couldn’t Save Diagnostic Logs") },
-            text = { Text("Choose another location and try again.") },
+            title = { Text(stringResource(R.string.developer_couldnt_save_diagnostic_logs)) },
+            text = { Text(stringResource(R.string.developer_choose_another_location_and_try_again)) },
             confirmButton = {
                 TextButton(onClick = { saveErrorDialog = false }) {
-                    Text("Dismiss")
+                    Text(stringResource(R.string.batch_dismiss))
                 }
             },
         )
@@ -500,14 +500,14 @@ fun DiagnosticsScreen(
         parityController.work?.let { if (it.phase == dev.ipf.whitenoise.model.DeveloperPhase.Running) parityController.dismiss(it.id) }
     }
     if (!profile.developerTools.isEnabled) {
-        SettingsScaffold(title = "Diagnostics", onBack = onBack) { SettingsExplainer(stringResource(R.string.developer_disabled)) }
+        SettingsScaffold(title = stringResource(R.string.developer_diagnostics), onBack = onBack) { SettingsExplainer(stringResource(R.string.developer_disabled)) }
         return
     }
     val context = LocalContext.current
     val events = profile.developerTools.diagnosticEvents
     var actionsExpanded by remember { mutableStateOf(false) }
     SettingsScaffold(
-        title = "Diagnostics",
+        title = stringResource(R.string.developer_diagnostics),
         onBack = onBack,
         topBarActions = {
             Box {
@@ -517,7 +517,7 @@ fun DiagnosticsScreen(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_more_vert),
-                        contentDescription = "Diagnostic actions",
+                        contentDescription = stringResource(R.string.developer_diagnostic_actions),
                     )
                 }
                 WhiteNoiseDropdownMenu(
@@ -578,7 +578,7 @@ fun DiagnosticsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    "Events",
+                    stringResource(R.string.developer_events),
                     modifier = Modifier.testTag("diagnostics.events_title"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelLarge,
@@ -595,7 +595,7 @@ fun DiagnosticsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (events.isEmpty()) {
                         WhiteNoiseEmptyState(
-                            title = "No Events",
+                            title = stringResource(R.string.developer_no_events),
                             detail = "Run a diagnostic test to add a sanitized event.",
                         )
                     } else {
@@ -634,6 +634,7 @@ fun DiagnosticsScreen(
 
 @Composable
 private fun DiagnosticLiveIndicator() {
+    val liveEventStreamDescription = stringResource(R.string.developer_live_event_stream)
     val infiniteTransition = rememberInfiniteTransition(label = "diagnostics_live")
     val pulseAlpha by infiniteTransition.animateFloat(
         initialValue = 0.42f,
@@ -647,7 +648,7 @@ private fun DiagnosticLiveIndicator() {
     Row(
         modifier = Modifier
             .testTag("diagnostics.live_indicator")
-            .clearAndSetSemantics { contentDescription = "Live event stream" },
+            .clearAndSetSemantics { contentDescription = liveEventStreamDescription },
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -686,7 +687,7 @@ fun ConversationDebugScreen(
 ) {
     val context = LocalContext.current
     if (chat != null && parityController != null) DeveloperOperationHost(profile, "push:${chat.id}", parityController)
-    SettingsScaffold(title = "Conversation Debug", onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.conversation_debug), onBack = onBack) {
         when (chat?.let { ConversationDebugPolicy.access(profile, it.id) } ?: ConversationDebugAccess.Unavailable) {
             ConversationDebugAccess.Unavailable -> DebugUnavailable("Chat unavailable", "This conversation is no longer available for inspection.")
             ConversationDebugAccess.Disabled -> {
@@ -698,13 +699,13 @@ fun ConversationDebugScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     WhiteNoiseEmptyState(
-                        title = "Conversation Debugging Is Off",
+                        title = stringResource(R.string.developer_conversation_debugging_is_off),
                         detail = "Turn on Developer Tools and Debug Mode for this profile to inspect this chat.",
                     )
                     WhiteNoiseButton(
                         onClick = onOpenDeveloperTools,
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Open Developer Tools") }
+                    ) { Text(stringResource(R.string.developer_open_developer_tools)) }
                 }
             }
             ConversationDebugAccess.Enabled -> {
@@ -716,7 +717,7 @@ fun ConversationDebugScreen(
                     )
                 } else {
                     SettingsList {
-                    item { SettingsSection("Conversation") }
+                    item { SettingsSection(stringResource(R.string.developer_conversation)) }
                     item {
                         SettingsGroup {
                             DebugValue("State", info.lifecycle)
@@ -734,12 +735,12 @@ fun ConversationDebugScreen(
                             }
                         }
                     }
-                    item { SettingsSection("History examples") }
+                    item { SettingsSection(stringResource(R.string.developer_history_examples)) }
                     item {
                         SettingsGroup {
-                            SettingsLink("Add unread mention", "Return to the chat to inspect the preserved unread boundary", { onAddArrival(false) })
+                            SettingsLink(stringResource(R.string.developer_add_unread_mention), stringResource(R.string.developer_unread_mention_help), { onAddArrival(false) })
                             SettingsDivider()
-                            SettingsLink("Add streaming message", "Includes receipt, sender time and expiry metadata", { onAddArrival(true) })
+                            SettingsLink(stringResource(R.string.developer_add_streaming_message), stringResource(R.string.developer_streaming_message_help), { onAddArrival(true) })
                             SettingsDivider()
                             SettingsLink(
                                 stringResource(R.string.agent_examples_add),
@@ -753,9 +754,9 @@ fun ConversationDebugScreen(
                                 onAddNostrEventExamples,
                             )
                             SettingsDivider()
-                            SettingsLink("Add long document", "Markdown, selection and revision history", onAddReadingExample)
+                            SettingsLink(stringResource(R.string.developer_add_long_document), stringResource(R.string.developer_long_document_help), onAddReadingExample)
                             SettingsDivider()
-                            SettingsLink("Add file examples", "Text, Markdown, audio and package outcomes", onAddAttachmentExamples)
+                            SettingsLink(stringResource(R.string.developer_add_file_examples), stringResource(R.string.developer_file_examples_help), onAddAttachmentExamples)
                         }
                     }
                     if (parityController != null) item {
@@ -764,7 +765,7 @@ fun ConversationDebugScreen(
                         DeveloperResult(parityController)
                     }
                     if (parityController == null || parityController.work?.phase == dev.ipf.whitenoise.model.DeveloperPhase.Complete) {
-                    item { SettingsSection("Delivery & notifications") }
+                    item { SettingsSection(stringResource(R.string.developer_delivery_notifications)) }
                     item {
                         SettingsGroup {
                             DebugValue("Chat relays", info.relayCount.toString())
@@ -786,7 +787,7 @@ fun ConversationDebugScreen(
                         }
                     }
                     info.push.members.forEach { token -> item(key = "push-${token.memberId}") {
-                        SettingsSection("Member token · ${token.leaf}")
+                        SettingsSection(stringResource(R.string.developer_member_token, token.leaf))
                         SettingsGroup {
                             CopyableDebugValue("Member", token.memberId) { copyToClipboard(context, "Member", token.memberId) }
                             DebugValue("Platform", token.platform)
@@ -800,10 +801,10 @@ fun ConversationDebugScreen(
                         }
                     } }
                     }
-                    item { SettingsSection("Diagnostics") }
+                    item { SettingsSection(stringResource(R.string.developer_diagnostics)) }
                     item {
                         SettingsGroup {
-                            SettingsLink("Diagnostics", "Copy a sanitized summary or inspect events", onDiagnostics)
+                            SettingsLink(stringResource(R.string.developer_diagnostics), stringResource(R.string.developer_diagnostics_conversation_help), onDiagnostics)
                         }
                     }
                     }

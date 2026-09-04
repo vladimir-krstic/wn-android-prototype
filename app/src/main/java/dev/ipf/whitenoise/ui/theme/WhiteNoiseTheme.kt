@@ -5,8 +5,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import dev.ipf.whitenoise.model.AppearanceColorPolicy
+import dev.ipf.whitenoise.model.AppearanceColorPreferences
+import dev.ipf.whitenoise.model.AppearanceColorTheme
 import dev.ipf.whitenoise.model.AppearancePreference
+import dev.ipf.whitenoise.model.AppFontSize
+import dev.ipf.whitenoise.model.AppFontFamily
 
 internal val WhiteNoiseLightColors = lightColorScheme(
     primary = Color(0xFF171717),
@@ -110,20 +118,73 @@ internal val WhiteNoiseDarkColors = darkColorScheme(
     onTertiaryFixedVariant = Color(0xFF4D4D4D),
 )
 
+internal val WhiteNoiseAmoledColors = WhiteNoiseDarkColors.copy(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceDim = Color.Black,
+    surfaceContainerLowest = Color(0xFF080808),
+    surfaceContainerLow = Color.Black,
+    surfaceTint = Color.Transparent,
+)
+
+internal fun whiteNoiseColorScheme(appearance: AppearancePreference, systemDark: Boolean) = when (appearance) {
+    AppearancePreference.System -> if (systemDark) WhiteNoiseDarkColors else WhiteNoiseLightColors
+    AppearancePreference.Light -> WhiteNoiseLightColors
+    AppearancePreference.Dark -> WhiteNoiseDarkColors
+    AppearancePreference.Amoled -> WhiteNoiseAmoledColors
+}
+
+data class DefaultMessageBubbleColors(
+    val mineContainer: Color,
+    val mineContent: Color,
+    val otherContainer: Color,
+    val otherContent: Color,
+)
+
+val LocalAppearanceColorTheme = compositionLocalOf { AppearanceColorTheme.Light }
+val LocalDefaultMessageBubbleColors = compositionLocalOf {
+    DefaultMessageBubbleColors(Color.Black, Color.White, Color.LightGray, Color.Black)
+}
+
+internal fun colorFromOpaqueArgb(argb: Long): Color = Color(argb)
+
+internal fun withActionColor(
+    base: androidx.compose.material3.ColorScheme,
+    actionArgb: Long?,
+): androidx.compose.material3.ColorScheme {
+    val readable = AppearanceColorPolicy.readable(actionArgb) ?: return base
+    return base.copy(
+        primary = colorFromOpaqueArgb(readable.containerArgb),
+        onPrimary = colorFromOpaqueArgb(readable.contentArgb),
+    )
+}
+
 @Composable
 fun WhiteNoiseTheme(
     appearance: AppearancePreference = AppearancePreference.System,
+    fontSize: AppFontSize = AppFontSize.Default,
+    fontFamily: AppFontFamily = AppFontFamily.System,
+    colors: AppearanceColorPreferences = AppearanceColorPreferences(),
     content: @Composable () -> Unit,
 ) {
-    val darkTheme = when (appearance) {
-        AppearancePreference.System -> isSystemInDarkTheme()
-        AppearancePreference.Light -> false
-        AppearancePreference.Dark -> true
+    val systemDark = isSystemInDarkTheme()
+    val theme = AppearanceColorTheme.resolve(appearance, systemDark)
+    val base = whiteNoiseColorScheme(appearance, systemDark)
+    val scheme = withActionColor(base, colors.forTheme(theme).actionArgb)
+    CompositionLocalProvider(
+        LocalAppearanceColorTheme provides theme,
+        LocalDefaultMessageBubbleColors provides DefaultMessageBubbleColors(
+            mineContainer = base.primary,
+            mineContent = base.onPrimary,
+            otherContainer = base.surfaceContainerHigh,
+            otherContent = base.onSurface,
+        ),
+    ) {
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = remember(fontFamily, fontSize) { WhiteNoiseTypography.withAppFont(fontFamily).scaledBy(fontSize.factor) },
+            shapes = WhiteNoiseShapes,
+            content = content,
+        )
     }
-    MaterialTheme(
-        colorScheme = if (darkTheme) WhiteNoiseDarkColors else WhiteNoiseLightColors,
-        typography = WhiteNoiseTypography,
-        shapes = WhiteNoiseShapes,
-        content = content,
-    )
 }

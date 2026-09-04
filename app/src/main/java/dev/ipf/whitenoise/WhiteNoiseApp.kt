@@ -28,7 +28,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.ipf.whitenoise.navigation.WhiteNoiseNavHost
 import dev.ipf.whitenoise.state.AppViewModel
+import dev.ipf.whitenoise.ui.settings.AppLocale
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
+import dev.ipf.whitenoise.model.AppFontFamily
+import dev.ipf.whitenoise.model.AppFontSize
+import dev.ipf.whitenoise.model.AppearanceColorPreferences
+import dev.ipf.whitenoise.model.AppearancePreference
+import dev.ipf.whitenoise.model.LanguagePreference
 import dev.ipf.whitenoise.model.StartupPhase
 import dev.ipf.whitenoise.ui.onboarding.StartupScreen
 import kotlinx.coroutines.delay
@@ -86,25 +92,31 @@ fun WhiteNoiseApp(
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    WhiteNoiseTheme(appearance = profile?.settings?.appearance
-        ?: dev.ipf.whitenoise.model.AppearancePreference.System) {
-        val focusManager = LocalFocusManager.current
-        dev.ipf.whitenoise.ui.settings.IncognitoKeyboardScope(profile?.settings?.incognitoKeyboard == true,blocked = appLock.protects(profile) || appLock.shieldsBackground) {
-            dev.ipf.whitenoise.ui.settings.AuditLogHost(appViewModel.auditLogs) {
-                dev.ipf.whitenoise.ui.settings.AppLockScope(appLock,profile,
-                    onLeaveApp = { view.context.findActivity()?.moveTaskToBack(true) },
-                    changingConfiguration = { view.context.findActivity()?.isChangingConfigurations == true }) {
-                    Box(Modifier.fillMaxSize().clearFocusOnBackgroundTap(focusManager)) {
-                        if (startup.phase != StartupPhase.Ready) StartupScreen(
-                            phase = startup.phase,
-                            hasProfiles = appViewModel.uiState.profiles.isNotEmpty(),
-                            onRetry = appViewModel::retryStartup,
-                            onChooseProfile = appViewModel::recoverStartupProfiles,
-                        ) else WhiteNoiseNavHost(
-                            navController = navController,
-                            appViewModel = appViewModel,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+    AppLocale(settings?.language ?: LanguagePreference.System) {
+        WhiteNoiseTheme(
+            appearance = settings?.appearance ?: AppearancePreference.System,
+            fontSize = settings?.fontSize ?: AppFontSize.Default,
+            fontFamily = settings?.fontFamily ?: AppFontFamily.System,
+            colors = settings?.colors ?: AppearanceColorPreferences(),
+        ) {
+            val focusManager = LocalFocusManager.current
+            dev.ipf.whitenoise.ui.settings.IncognitoKeyboardScope(profile?.settings?.incognitoKeyboard == true,blocked = appLock.protects(profile) || appLock.shieldsBackground) {
+                dev.ipf.whitenoise.ui.settings.AuditLogHost(appViewModel.auditLogs) {
+                    dev.ipf.whitenoise.ui.settings.AppLockScope(appLock,profile,
+                        onLeaveApp = { view.context.findActivity()?.moveTaskToBack(true) },
+                        changingConfiguration = { view.context.findActivity()?.isChangingConfigurations == true }) {
+                        Box(Modifier.fillMaxSize().clearFocusOnBackgroundTap(focusManager)) {
+                            if (startup.phase != StartupPhase.Ready) StartupScreen(
+                                phase = startup.phase,
+                                hasProfiles = appViewModel.uiState.profiles.isNotEmpty(),
+                                onRetry = appViewModel::retryStartup,
+                                onChooseProfile = appViewModel::recoverStartupProfiles,
+                            ) else WhiteNoiseNavHost(
+                                navController = navController,
+                                appViewModel = appViewModel,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
             }

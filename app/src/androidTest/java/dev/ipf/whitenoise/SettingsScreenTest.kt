@@ -448,7 +448,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("appearance.theme.group").assertIsDisplayed()
         composeRule.onNodeWithText("Dark").performClick()
         composeRule.runOnIdle { check(selectedAppearance == AppearancePreference.Dark) }
-        composeRule.onNodeWithText("Language").performClick()
+        composeRule.onNodeWithText("Language").performScrollTo().performClick()
         composeRule.runOnIdle { check(openedLanguage) }
     }
 

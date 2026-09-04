@@ -727,6 +727,20 @@ class AppViewModel(
         return changed
     }
 
+    fun setChatBubbleColors(
+        profileId: String,
+        chatId: String,
+        colors: dev.ipf.whitenoise.model.ChatBubbleColorOverrides,
+    ): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val before = chat(chatId) ?: return false
+        if (before.bubbleColors == colors) return false
+        mutateChat(chatId) { current ->
+            if (current.id == before.id) current.copy(bubbleColors = colors) else current
+        }
+        return true
+    }
+
     private fun changeProfileRelays(profileId: String, transform: (List<ProfileRelay>) -> List<ProfileRelay>?): Boolean {
         if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return false
         val before = uiState.activeProfile?.settings?.relays ?: return false

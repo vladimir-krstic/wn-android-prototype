@@ -50,6 +50,8 @@ import dev.ipf.whitenoise.ui.onboarding.SignInScreen
 import dev.ipf.whitenoise.ui.onboarding.SignUpScreen
 import dev.ipf.whitenoise.ui.onboarding.WelcomeScreen
 import dev.ipf.whitenoise.ui.settings.AppearanceScreen
+import dev.ipf.whitenoise.ui.settings.ActionColorScreen
+import dev.ipf.whitenoise.ui.settings.ChatBubbleColorsScreen
 import dev.ipf.whitenoise.ui.settings.LanguageScreen
 import dev.ipf.whitenoise.ui.settings.DataUsageScreen
 import dev.ipf.whitenoise.ui.settings.DonateScreen
@@ -488,7 +490,36 @@ fun WhiteNoiseNavHost(
                     onBack = { navController.popBackStack() },
                     onChange = appViewModel::updateProfileSettings,
                     onLanguage = { navController.navigate(AppRoute.Language) },
+                    onActionColor = { navController.navigate(AppRoute.ActionColor) },
+                    onBubbleColors = { navController.navigate(AppRoute.ChatBubbleColors()) },
                 )
+            }
+        }
+        composable<AppRoute.ActionColor> {
+            uiState.activeProfile?.let { profile ->
+                ActionColorScreen(
+                    profile = profile,
+                    onBack = { navController.popBackStack() },
+                    onChange = appViewModel::updateProfileSettings,
+                )
+            }
+        }
+        composable<AppRoute.ChatBubbleColors> { entry ->
+            val route = entry.toRoute<AppRoute.ChatBubbleColors>()
+            val profile = uiState.activeProfile
+            val chat = route.chatId?.let(appViewModel::chat)
+            if (profile != null && (route.chatId == null || chat != null)) {
+                ChatBubbleColorsScreen(
+                    profile = profile,
+                    chat = chat,
+                    onBack = { navController.popBackStack() },
+                    onProfileChange = appViewModel::updateProfileSettings,
+                    onChatChange = { colors ->
+                        if (chat != null) appViewModel.setChatBubbleColors(profile.id, chat.id, colors)
+                    },
+                )
+            } else if (profile != null) {
+                LaunchedEffect(route.chatId) { navController.popBackStack() }
             }
         }
         composable<AppRoute.Language> {
@@ -938,6 +969,7 @@ fun WhiteNoiseNavHost(
                     onAddPeople = { navController.navigate(AppRoute.AddGroupMembers(chat.id)) },
                     onMute = { appViewModel.notificationControls.request(dev.ipf.whitenoise.state.NotificationChange.Mute(it),chat.id,profile.id) },
                     onNotifications = { navController.navigate(AppRoute.ConversationNotifications(chat.id)) },
+                    onBubbleColors = { navController.navigate(AppRoute.ChatBubbleColors(chat.id)) },
                     onDisappearing = { appViewModel.setChatDisappearing(chat.id, it) },
                     onArchive = { appViewModel.setChatArchived(chat.id, !chat.isArchived) },
                     onLeave = { appViewModel.leaveChat(chat.id) },

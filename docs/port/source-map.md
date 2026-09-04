@@ -361,6 +361,19 @@ seams are KeyPackagesScreen/AppState publication methods, DiagnosticsScreen,
 PerformanceDiagnostics, DeveloperScreen, GroupDetailsScreen push inspection and
 StreamDebug. The fixed local state is not a production engine or telemetry sink.
 
+## Production Android B26 — appearance, locale and input
+
+[The B26 brief](../screens/appearance-typography-and-input.md) maps
+AppearanceScreen, ActionColorScreen, ChatBubbleColorsScreen,
+FullSpectrumColorPicker, AppFont/AppFontScale, AppLanguage, EnterKeyBehavior and
+ComposerPills into AppearanceInput, ProfileSettings, WhiteNoiseTheme/Typography,
+AppLocale, AppearanceColorScreens, PreferenceScreens, ConversationScreen and
+ConversationComposer. Profile/theme/chat ownership follows the prototype rather
+than writing platform-wide preferences. Font provenance and reproducible static
+weights are in [font assets](../references/font-assets.md); four complete locale
+catalogs are checked by `scripts/verify_locale_resources.py`. C100–C104 are
+host-verified under the resolved Q01/Q09 choices.
+
 ## Production Android B27 — download matrix, queue and quality
 
 [Selected brief](../screens/downloads-and-media-quality.md) maps C105–C107 to

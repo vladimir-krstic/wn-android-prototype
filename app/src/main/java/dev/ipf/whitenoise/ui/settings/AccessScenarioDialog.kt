@@ -1,5 +1,9 @@
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.R
+
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,10 +52,10 @@ internal fun AccessScenarioDialog(current: AccessScenario, onSelect: (AccessScen
     var selected by remember(current) { mutableStateOf(current) }
     WhiteNoiseAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Access scenarios") },
+        title = { Text(stringResource(R.string.developer_access_scenarios)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-                Text("The next access attempt uses this one-shot result. Retry then continues with success. Use Amber scenarios with Amber sign-in.")
+                Text(stringResource(R.string.developer_the_next_access_attempt_uses_this_one_shot_result_retr))
                 LazyColumn(Modifier.weight(1f, fill = false)) {
                     items(AccessScenario.entries, key = { it.name }) { scenario ->
                         Row(
@@ -68,8 +72,8 @@ internal fun AccessScenarioDialog(current: AccessScenario, onSelect: (AccessScen
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onSelect(selected); onDismiss() }) { Text("Use scenario") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onSelect(selected); onDismiss() }) { Text(stringResource(R.string.developer_use_scenario)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -87,7 +91,7 @@ internal fun ProfileExitScenarioDialog(current: ProfileExitScenario, onSelect: (
     var selected by remember(current) { mutableStateOf(current) }
     WhiteNoiseAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Sign-out scenarios") },
+        title = { Text(stringResource(R.string.developer_sign_out_scenarios)) },
         text = {
             LazyColumn {
                 items(ProfileExitScenario.entries, key = { it.name }) { scenario ->
@@ -102,8 +106,8 @@ internal fun ProfileExitScenarioDialog(current: ProfileExitScenario, onSelect: (
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onSelect(selected); onDismiss() }) { Text("Use scenario") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onSelect(selected); onDismiss() }) { Text(stringResource(R.string.developer_use_scenario)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -119,6 +123,6 @@ internal fun <T> ScenarioChoiceDialog(title: String, choices: List<T>, selected:
                 }
             }
         } },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("Close") } },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text(stringResource(R.string.close)) } },
     )
 }

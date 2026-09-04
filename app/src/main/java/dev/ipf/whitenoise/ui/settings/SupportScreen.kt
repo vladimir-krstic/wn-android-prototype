@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.settings
 
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,7 +33,7 @@ fun SupportScreen(
     val canStart = hasExistingChat || profile.chatRelayUrls.isNotEmpty()
 
     SettingsScaffold(
-        title = "Chat with support",
+        title = stringResource(R.string.ui_chat_with_support),
         onBack = onBack,
     ) {
         SettingsList {
@@ -40,13 +42,13 @@ fun SupportScreen(
                     ListItem(
                         headlineContent = {
                             Text(
-                                "White Noise Support",
+                                stringResource(R.string.ui_white_noise_support),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                         },
                         supportingContent = {
                             Text(
-                                "Questions, problems, and suggestions",
+                                stringResource(R.string.ui_questions_problems_and_suggestions),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         },
@@ -68,22 +70,22 @@ fun SupportScreen(
                     )
                 }
                 SettingsExplainer(
-                    "Ask how something works, report a problem, or share a suggestion.",
+                    stringResource(R.string.ui_ask_how_something_works_report_a_problem_or_share_a_su),
                 )
             }
             if (!canStart) {
                 item {
                     SettingsCallout(
-                        title = "Profile relays need attention",
-                        text = "Choose a connected Chat Messages relay before starting a support chat.",
+                        title = stringResource(R.string.ui_profile_relays_need_attention),
+                        text = stringResource(R.string.support_chat_relay_required),
                         modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     )
                 }
                 item {
                     SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Related)) {
                         SettingsLink(
-                            title = "Open Relays",
-                            subtitle = "Review connection status and Chat Messages roles.",
+                            title = stringResource(R.string.ui_open_relays),
+                            subtitle = stringResource(R.string.ui_review_connection_status_and_chat_messages_roles),
                             onClick = onRelays,
                         )
                     }
@@ -99,7 +101,7 @@ fun SupportScreen(
                             vertical = WhiteNoiseSpacing.Section,
                         )
                         .fillMaxWidth(),
-                ) { Text("Start Chat") }
+                ) { Text(stringResource(R.string.ui_start_chat)) }
             }
         }
     }

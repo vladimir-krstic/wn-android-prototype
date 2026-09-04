@@ -1,0 +1,179 @@
+{
+  "production_baseline": "319454889f1c2494dec4a69b5577d98017f44eee",
+  "license_baseline": "dbe3d528ea82cfefb82ebc2f8e2ca55af7a1060f",
+  "generator": "fonttools==4.64.0",
+  "files": [
+    {
+      "file": "app/src/main/res/font/manrope_medium.ttf",
+      "family": "manrope",
+      "weight": 500,
+      "sha256": "88d3f8ef004b53483a202772d09acaab17ca99dd41905d9b4ab07ac635632378",
+      "source_file": "manrope_medium.ttf",
+      "source_sha256": "88d3f8ef004b53483a202772d09acaab17ca99dd41905d9b4ab07ac635632378",
+      "glyph_count": 740,
+      "copyright": "Copyright 2019 The Manrope Project Authors (https://github.com/sharanda/manrope)"
+    },
+    {
+      "file": "app/src/main/res/font/manrope_semibold.ttf",
+      "family": "manrope",
+      "weight": 600,
+      "sha256": "abbefa1f58c7355b663c19f29ffe4cd7fc8c93a9e5f8b68f08d1e9ba2bc4ba0d",
+      "source_file": "manrope_semibold.ttf",
+      "source_sha256": "abbefa1f58c7355b663c19f29ffe4cd7fc8c93a9e5f8b68f08d1e9ba2bc4ba0d",
+      "glyph_count": 740,
+      "copyright": "Copyright 2019 The Manrope Project Authors (https://github.com/sharanda/manrope)"
+    },
+    {
+      "file": "app/src/main/res/font/manrope_bold.ttf",
+      "family": "manrope",
+      "weight": 700,
+      "sha256": "4aed5d180a4f41ed21f07e678486f889bb40eb0ddf5f473769b6302f507d1e36",
+      "source_file": "manrope_bold.ttf",
+      "source_sha256": "4aed5d180a4f41ed21f07e678486f889bb40eb0ddf5f473769b6302f507d1e36",
+      "glyph_count": 740,
+      "copyright": "Copyright 2019 The Manrope Project Authors (https://github.com/sharanda/manrope)"
+    },
+    {
+      "file": "app/src/main/res/font/outfit_regular.ttf",
+      "family": "outfit",
+      "weight": 400,
+      "sha256": "4759accaac579123f050e169f46cbbcd6b8b82faf9e4bbd56a3488ca647842a5",
+      "source_file": "outfit_variable.ttf",
+      "source_sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade",
+      "glyph_count": 416,
+      "copyright": "Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)"
+    },
+    {
+      "file": "app/src/main/res/font/outfit_medium.ttf",
+      "family": "outfit",
+      "weight": 500,
+      "sha256": "68d0245451db7034854a1a2d69d6ec94e72fbc65e35f8a527177e153cd626188",
+      "source_file": "outfit_variable.ttf",
+      "source_sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade",
+      "glyph_count": 416,
+      "copyright": "Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)"
+    },
+    {
+      "file": "app/src/main/res/font/outfit_semibold.ttf",
+      "family": "outfit",
+      "weight": 600,
+      "sha256": "69909d169ccbc530d4719c1574d50b2e023f68f678f7e4294fac76e7ce3d37e2",
+      "source_file": "outfit_variable.ttf",
+      "source_sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade",
+      "glyph_count": 416,
+      "copyright": "Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)"
+    },
+    {
+      "file": "app/src/main/res/font/outfit_bold.ttf",
+      "family": "outfit",
+      "weight": 700,
+      "sha256": "9b6c93be941b849d9861914326314577a19f5d85498cc20ce48dcbd5fa03b48f",
+      "source_file": "outfit_variable.ttf",
+      "source_sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade",
+      "glyph_count": 416,
+      "copyright": "Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)"
+    },
+    {
+      "file": "app/src/main/res/font/urbanist_regular.ttf",
+      "family": "urbanist",
+      "weight": 400,
+      "sha256": "6f4cbfaa36e4d5dac00cf7fcc6d5b788d86fec420033e3d0f1c7614a908c6e0c",
+      "source_file": "urbanist_variable.ttf",
+      "source_sha256": "748362d51eb276840e9f0023cd2d98299bf709a95fb3a5ae4ffcb624c638ebb9",
+      "glyph_count": 496,
+      "copyright": "Copyright 2021 The Urbanist Project Authors (https://github.com/coreyhu/Urbanist)"
+    },
+    {
+      "file": "app/src/main/res/font/urbanist_medium.ttf",
+      "family": "urbanist",
+      "weight": 500,
+      "sha256": "ba4c246e46830aa15ef9f53410e327e7c632ef653d4d16b251de4c2db2131e10",
+      "source_file": "urbanist_variable.ttf",
+      "source_sha256": "748362d51eb276840e9f0023cd2d98299bf709a95fb3a5ae4ffcb624c638ebb9",
+      "glyph_count": 496,
+      "copyright": "Copyright 2021 The Urbanist Project Authors (https://github.com/coreyhu/Urbanist)"
+    },
+    {
+      "file": "app/src/main/res/font/urbanist_semibold.ttf",
+      "family": "urbanist",
+      "weight": 600,
+      "sha256": "a8a0866fdf19d399998a67d7993f03c0d5716f02e5f8e947709151b6c7845821",
+      "source_file": "urbanist_variable.ttf",
+      "source_sha256": "748362d51eb276840e9f0023cd2d98299bf709a95fb3a5ae4ffcb624c638ebb9",
+      "glyph_count": 496,
+      "copyright": "Copyright 2021 The Urbanist Project Authors (https://github.com/coreyhu/Urbanist)"
+    },
+    {
+      "file": "app/src/main/res/font/urbanist_bold.ttf",
+      "family": "urbanist",
+      "weight": 700,
+      "sha256": "0c1268031c6c2d71ed9a37f8fecdbb1b1f8207c9dfbe22efcb8b4b1907f8ea43",
+      "source_file": "urbanist_variable.ttf",
+      "source_sha256": "748362d51eb276840e9f0023cd2d98299bf709a95fb3a5ae4ffcb624c638ebb9",
+      "glyph_count": 496,
+      "copyright": "Copyright 2021 The Urbanist Project Authors (https://github.com/coreyhu/Urbanist)"
+    },
+    {
+      "file": "app/src/main/res/font/figtree_regular.ttf",
+      "family": "figtree",
+      "weight": 400,
+      "sha256": "a9aa39b7b6ceb178fd0c898861e469f01a50940f6163d43c937dccd29ab5a425",
+      "source_file": "figtree_variable.ttf",
+      "source_sha256": "26ad3db9b31ff7dde67a91ff515d022d2f495cd506590699cf264f0bfe6fb714",
+      "glyph_count": 459,
+      "copyright": "Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)"
+    },
+    {
+      "file": "app/src/main/res/font/figtree_medium.ttf",
+      "family": "figtree",
+      "weight": 500,
+      "sha256": "f3f24443acbea63632c146b2b71fab44273086e3e44c5386b5125c09f39070ad",
+      "source_file": "figtree_variable.ttf",
+      "source_sha256": "26ad3db9b31ff7dde67a91ff515d022d2f495cd506590699cf264f0bfe6fb714",
+      "glyph_count": 459,
+      "copyright": "Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)"
+    },
+    {
+      "file": "app/src/main/res/font/figtree_semibold.ttf",
+      "family": "figtree",
+      "weight": 600,
+      "sha256": "0583b7bc283958849d367b182262d5365390e03dd33568f77f6fedca64f80964",
+      "source_file": "figtree_variable.ttf",
+      "source_sha256": "26ad3db9b31ff7dde67a91ff515d022d2f495cd506590699cf264f0bfe6fb714",
+      "glyph_count": 459,
+      "copyright": "Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)"
+    },
+    {
+      "file": "app/src/main/res/font/figtree_bold.ttf",
+      "family": "figtree",
+      "weight": 700,
+      "sha256": "9167c86dde180f0aa8b4c18b1af5bef08f26fc8336a74e1d819c0f0b2ca8b75a",
+      "source_file": "figtree_variable.ttf",
+      "source_sha256": "26ad3db9b31ff7dde67a91ff515d022d2f495cd506590699cf264f0bfe6fb714",
+      "glyph_count": 459,
+      "copyright": "Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)"
+    }
+  ],
+  "licenses": [
+    {
+      "family": "manrope",
+      "sha256": "e01b637272e0cbdfb240184dd98ea5cc671556d9894dae2668d92ab2c906787c",
+      "source": "https://github.com/google/fonts/blob/dbe3d528ea82cfefb82ebc2f8e2ca55af7a1060f/ofl/manrope/OFL.txt"
+    },
+    {
+      "family": "outfit",
+      "sha256": "c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416",
+      "source": "https://github.com/google/fonts/blob/dbe3d528ea82cfefb82ebc2f8e2ca55af7a1060f/ofl/outfit/OFL.txt"
+    },
+    {
+      "family": "urbanist",
+      "sha256": "ee1221b1c2d08920e5f9ca764eb228dafa5c8090df9cf665373c2287b9cb8f49",
+      "source": "https://github.com/google/fonts/blob/dbe3d528ea82cfefb82ebc2f8e2ca55af7a1060f/ofl/urbanist/OFL.txt"
+    },
+    {
+      "family": "figtree",
+      "sha256": "140d37233e7f3ce7313798befa9600893bcceaf41a55fa0fa5ad52f7f657a268",
+      "source": "https://github.com/google/fonts/blob/dbe3d528ea82cfefb82ebc2f8e2ca55af7a1060f/ofl/figtree/OFL.txt"
+    }
+  ]
+}

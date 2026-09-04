@@ -77,6 +77,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ripple
 import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
+import dev.ipf.whitenoise.ui.theme.colorFromOpaqueArgb
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1623,7 +1624,7 @@ private fun ConversationTopBar(
         append(chat.title)
         if (chat.isGroup) append(", $memberLabel")
         if (chat.disappearingDuration != DisappearingDuration.Off) {
-            append(", ${stringResource(R.string.disappearing_header, chat.disappearingDuration.label)}")
+            append(", ${stringResource(R.string.disappearing_header, retentionLabel(chat.disappearingDuration))}")
         }
     }
     TopAppBar(
@@ -2174,6 +2175,7 @@ private fun MessageRow(
                         }
                         MessageBubbleWithMetadata(
                             profile = profile,
+                            chatBubbleColors = chat.bubbleColors,
                             message = message,
                             outgoing = outgoing,
                             item = item,
@@ -2299,6 +2301,7 @@ private fun messageMetadataGeometry(
 @Composable
 private fun MessageBubbleWithMetadata(
     profile: Profile,
+    chatBubbleColors: dev.ipf.whitenoise.model.ChatBubbleColorOverrides,
     message: ChatMessage,
     outgoing: Boolean,
     item: ConversationItem.MessageItem,
@@ -2341,6 +2344,7 @@ private fun MessageBubbleWithMetadata(
             val bubble = subcompose("bubble") {
                 MessageBubble(
                     profile = profile,
+                    chatBubbleColors = chatBubbleColors,
                     message = message,
                     outgoing = outgoing,
                     item = item,
@@ -2405,6 +2409,7 @@ private fun MessageBubbleWithMetadata(
         val bubble = subcompose("bubble") {
             MessageBubble(
                 profile = profile,
+                chatBubbleColors = chatBubbleColors,
                 message = message,
                 outgoing = outgoing,
                 item = item,
@@ -2475,6 +2480,7 @@ private fun MessageBubbleWithMetadata(
 @Composable
 private fun MessageBubble(
     profile: Profile,
+    chatBubbleColors: dev.ipf.whitenoise.model.ChatBubbleColorOverrides,
     message: ChatMessage,
     outgoing: Boolean,
     item: ConversationItem.MessageItem,
@@ -2527,18 +2533,27 @@ private fun MessageBubble(
             Unit
         }
     }
-    val bubbleContentColor = if (outgoing) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
+    val defaultBubbleColors = dev.ipf.whitenoise.ui.theme.LocalDefaultMessageBubbleColors.current
+    val globalBubbleColors = profile.settings.colors
+        .forTheme(dev.ipf.whitenoise.ui.theme.LocalAppearanceColorTheme.current)
+    val bubbleOverride = dev.ipf.whitenoise.model.AppearanceColorPolicy.effectiveBubble(
+        chatOverride = if (outgoing) chatBubbleColors.mineArgb else chatBubbleColors.otherArgb,
+        globalOverride = if (outgoing) globalBubbleColors.mineBubbleArgb else globalBubbleColors.otherBubbleArgb,
+    )
+    val readableBubble = dev.ipf.whitenoise.model.AppearanceColorPolicy.readable(bubbleOverride)
+    val bubbleContainerColor = readableBubble?.containerArgb
+        ?.let(::colorFromOpaqueArgb)
+        ?: if (outgoing) defaultBubbleColors.mineContainer else defaultBubbleColors.otherContainer
+    val bubbleContentColor = readableBubble?.contentArgb
+        ?.let(::colorFromOpaqueArgb)
+        ?: if (outgoing) defaultBubbleColors.mineContent else defaultBubbleColors.otherContent
     val hasRichContent = !message.isDeleted &&
         (message.replyToMessageId != null || message.attachments.isNotEmpty() || message.nostrEvents.isNotEmpty())
     val singleMediaSize = rememberTimelineSingleMediaSize(message.attachments.singleOrNull())
     val richCanvasWidth = richContentCanvasWidthDp(message.attachments, singleMediaSize).dp
     Surface(
         shape = bubbleShape,
-        color = if (outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = bubbleContainerColor,
         contentColor = bubbleContentColor,
         modifier = Modifier
             .testTag("conversation.message.bubble.${message.id}")

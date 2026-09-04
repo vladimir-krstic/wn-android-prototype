@@ -87,6 +87,17 @@ compile only. [Evidence](../screens/downloads-and-media-quality.md#implementatio
 No network, background worker, storage or voice encoder was added. Device and
 visual acceptance remain pending.
 
+## 2026-09-04 production B26
+
+C100–C104 are implemented and host-verified after integration through B32:
+AMOLED, optional action/global/per-chat colors, licensed fonts, scalable
+typography, complete Russian/Turkish/Simplified Chinese/Traditional Chinese
+locales and native Enter behavior. Monochrome defaults and neutral surfaces are
+unchanged. The final gate passes 892 unit tests with zero failures/errors/skips,
+zero lint errors and both debug APKs; ten UI cases compile only. Locale
+verification covers all 1,762 translatable resources. Q01 and Q09 are resolved.
+[Evidence](../screens/appearance-typography-and-input.md#implementation-evidence).
+
 ## 2026-09-04 production B25
 
 C080/C110/C111/C118/C119 are implemented and host-verified within the approved

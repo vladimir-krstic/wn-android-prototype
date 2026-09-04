@@ -29,13 +29,19 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B23: implemented and host-verified 2026-09-04; 748 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/notification-routing-and-actions.md). Commit title: `B23: Add notification routing and inline actions`. Q06 retains real delivery/workers/durable recovery outside scope.
 - B24: implemented and host-verified 2026-09-04 after B25 and B27–B32 integration; 870 unit tests, zero lint errors, both APKs and ten compiled UI cases. [Evidence](../../screens/app-lock-and-sensitive-privacy.md#implementation-evidence). Q02 is resolved by independent Recents-preview and chat-capture controls. Commit title: `B24: Add app lock and sensitive privacy controls`.
 - B25: implemented and host-verified 2026-09-04; 772 unit tests, zero lint errors, both APKs and six new compiled UI cases. [Selected brief and evidence](../../screens/key-packages-and-developer-diagnostics.md). Commit title: `B25: Expand key packages and developer diagnostics`. Q04 preserves the approved developer-only placement. Implemented in an isolated worktree so the pending B24 decision does not enter this commit.
+- B26: implemented and host-verified 2026-09-04 after B32 integration; 892
+  unit tests, zero lint errors, both debug APKs and ten compiled UI cases.
+  [Evidence](../../screens/appearance-typography-and-input.md#implementation-evidence).
+  Q01/Q09 are resolved by full optional colors with monochrome defaults,
+  licensed optional fonts and four complete locale catalogs. Commit title:
+  `B26: Add appearance, typography and input preferences`.
 - B27: implemented and host-verified 2026-09-04; 791 unit tests, zero lint errors, both APKs and six new compiled UI cases. [Evidence](../../screens/downloads-and-media-quality.md#implementation-evidence). Commit title: `B27: Add download rules, queue controls and media quality`. Isolated from pending B24 and B26 work.
 - B28: implemented and host-verified 2026-09-04; 809 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/relay-publication-and-validation.md#implementation-evidence). Commit title: `B28: Add relay publication readiness and recovery`. Existing three-role/general-URL capability is preserved; Q04 still governs future narrowing or relocation.
 - B29: implemented and host-verified 2026-09-04; 817 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). Commit title: `B29: Add AI agent setup and streaming operations`. Ordinary operations remain separate from developer stream records.
 - B30: implemented and host-verified 2026-09-04; 826 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/verified-event-cards-and-readers.md#implementation-evidence). Commit title: `B30: Add verified event cards and readers`. Public references remain in-app and all event/media content is deterministic and local.
 - B31: implemented and host-verified 2026-09-04; 829 unit tests, zero lint errors, both debug APKs, a release APK with generated notices and six new compiled UI cases. [Evidence](../../screens/help-about-and-licenses.md#implementation-evidence). Commit title: `B31: Add Help, About and open source licenses`.
 - B32: implemented and host-verified 2026-09-04; 837 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Evidence](../../screens/distribution-gated-app-updates.md#implementation-evidence). Commit title: `B32: Add distribution-gated app update flows`. Q06 retains real release lookup, download, verification, permission and installer work.
-- B24 is complete; B26 is the remaining implementation batch. Linked decisions apply only to their named capabilities.
+- B01–B32 are complete and host-verified. Linked decisions apply only to their named capabilities.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -64,10 +70,10 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Implemented; host verified; Q03 resolved |
 | **B21** | Inbound sharing, shortcuts and profile links | C084, C085, C086, C087, C088 | B01, B11 | Implemented; host verified; real receiving/publication remains outside Q06 scope |
 | **B22** | Global and per-chat notification settings | C089, C090, C091, C092, C093 | B05 | Implemented; host verified; real delivery/services remain outside Q06 scope |
-| **B23** | Notification routing and inline actions | C094 | B21, B22 | Blocked slices: Q06 |
+| **B23** | Notification routing and inline actions | C094 | B21, B22 | Implemented; host verified; real delivery/workers remain outside Q06 scope |
 | **B24** | App lock and sensitive privacy controls | C095, C096, C097, C098 | B01 | Implemented; host verified; real platform work remains outside Q06 |
-| **B25** | Key packages and developer diagnostics | C080, C110, C111, C118, C119 | B01 | Blocked slices: Q04 |
-| **B26** | Appearance, typography and input preferences | C100, C101, C102, C103, C104 | B01 | Blocked slices: Q01, Q09 |
+| **B25** | Key packages and developer diagnostics | C080, C110, C111, C118, C119 | B01 | Implemented; host verified; Q04 retains future ordinary placement only |
+| **B26** | Appearance, typography and input preferences | C100, C101, C102, C103, C104 | B01 | Implemented; host verified; Q01/Q09 resolved |
 | **B27** | Download matrix, queue and media quality | C105, C106, C107 | B11 | Implemented; host verified |
 | **B28** | Relay publication and managed-list differences | C108, C109 | B05 | Implemented; host verified; Q04 retained for future narrowing |
 | **B29** | AI-agent setup and streamed operation rows | C112, C113 | B03, B09 | Implemented; host verified |
@@ -491,11 +497,22 @@ Capabilities: C080, C110, C111, C118, C119. Dependencies: B01.
 
 ### B26 — Appearance, typography and input preferences
 
+**Status:** Implemented and host-verified; [selected brief](../../screens/appearance-typography-and-input.md#implementation-evidence). No device or visual verification.
+
 Capabilities: C100, C101, C102, C103, C104. Dependencies: B01.
 
-**Implementation:** Add optional pure-black theme using semantic roles, with contrast/state distinction and no default palette replacement. Add System/Manrope/Outfit/Urbanist/Figtree choices and 0.85/1/1.15/1.3 scale composed with system scale; font resources/provenance and approved default require Q09. Production has full-spectrum/hex customization by theme/profile and bubble side. This conflicts with monochrome identity; keep full capability recorded, block colored implementation pending Q01. Add input preference and IME/hardware Enter behavior while preserving multiline/dictation and accessible Send. Prototype offers a different language set and in-memory selection; add Russian/Turkish/Simplified/Traditional Chinese and determine translation scope Q09. Preserve existing Serbian and other prototype choices.
+**Implementation:** Add optional pure-black AMOLED roles with distinct neutral
+layers and no default replacement. Add System/Manrope/Outfit/Urbanist/Figtree
+and 0.85/1/1.15/1.3 scale, with pinned static resources/provenance. Add
+per-theme/profile action and sent/received bubble colors, per-chat bubble
+overrides, presets, HSV, normalized hex, preview, reset and readable foreground
+policy while preserving monochrome defaults and neutral surfaces. Add
+profile-owned input behavior with guarded IME/hardware Enter and native
+multiline/dictation behavior. Preserve every language and add complete Russian,
+Turkish, Simplified Chinese and Traditional Chinese catalogs with immediate
+profile-context application and verified key/token/plural parity.
 
-**Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/ProfileSettings.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationComposer.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/settings/PreferenceScreens.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/theme/WhiteNoiseTheme.kt`.
+**Prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/AppearanceInput.kt`, `app/src/main/java/dev/ipf/whitenoise/model/ProfileSettings.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationComposer.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationScreen.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/settings/PreferenceScreens.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/settings/AppearanceColorScreens.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/settings/AppLocale.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/theme/WhiteNoiseTheme.kt` and locale/font resources.
 
 **Fixture/state work:** Add profile/chat-owned immutable states for each named eligibility, progress, cancellation, success, partial, unavailable and failure result. Use a fixed clock/IDs where time or asynchronous ownership matters. Expose ordinary user copy only through resources; keep fixture controls developer-only.
 

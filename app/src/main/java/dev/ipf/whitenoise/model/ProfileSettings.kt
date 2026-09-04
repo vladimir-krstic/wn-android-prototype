@@ -4,17 +4,22 @@ enum class AppearancePreference(val label: String) {
     System("System default"),
     Light("Light"),
     Dark("Dark"),
+    Amoled("AMOLED"),
 }
 
-enum class LanguagePreference(val label: String) {
-    System("System default"),
-    English("English"),
-    German("German"),
-    Spanish("Spanish"),
-    French("French"),
-    Italian("Italian"),
-    Portuguese("Portuguese"),
-    Serbian("Serbian"),
+enum class LanguagePreference(val label: String, val localeTag: String?) {
+    System("System default", null),
+    English("English", "en"),
+    German("German", "de"),
+    Spanish("Spanish", "es"),
+    French("French", "fr"),
+    Italian("Italian", "it"),
+    Portuguese("Portuguese", "pt"),
+    Serbian("Serbian", "sr"),
+    Russian("Russian", "ru"),
+    Turkish("Turkish", "tr"),
+    ChineseSimplified("Chinese (Simplified)", "zh-CN"),
+    ChineseTraditional("Chinese (Traditional)", "zh-TW"),
 }
 
 enum class NotificationPreviewMode(val label: String) {
@@ -79,6 +84,10 @@ data class ProfileSettings(
     val nativePushNotifications: Boolean = true,
     val notificationPreviewMode: NotificationPreviewMode = NotificationPreviewMode.Generic,
     val appearance: AppearancePreference = AppearancePreference.System,
+    val fontFamily: AppFontFamily = AppFontFamily.System,
+    val fontSize: AppFontSize = AppFontSize.Default,
+    val enterKeyBehavior: EnterKeyBehavior = EnterKeyBehavior.NewLine,
+    val colors: AppearanceColorPreferences = AppearanceColorPreferences(),
     val language: LanguagePreference = LanguagePreference.System,
     val hideScreenInRecents: Boolean = false,
     val blockScreenshotsInChats: Boolean = false,

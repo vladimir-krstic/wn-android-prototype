@@ -81,9 +81,9 @@ internal fun RelayPublicationRows(profile: Profile, controller: RelayPublication
 @Composable
 internal fun RelayPublicationDeveloperControls(controller: RelayPublicationController, onImport: () -> Unit = {}) {
     var open by remember { mutableStateOf(false) }
-    SettingsLink("Relay publication outcome", controller.scenario.developerLabel, { open = true })
-    SettingsAction("Load imported relay issue", onImport,
-        subtitle = "Adds one invalid imported address without removing its roles.")
+    SettingsLink(stringResource(R.string.ui_relay_publication_outcome), controller.scenario.developerLabel, { open = true })
+    SettingsAction(stringResource(R.string.ui_load_imported_relay_issue), onImport,
+        subtitle = stringResource(R.string.ui_adds_one_invalid_imported_address_without_removing_its))
     if (open) ChoiceDialog("Relay publication outcome", RelayPublicationScenario.entries,
         controller.scenario, RelayPublicationScenario::developerLabel,
         onDismiss = { open = false }, onSelect = { controller.chooseScenario(it); open = false })

@@ -105,7 +105,7 @@ fun ProfileRelaysScreen(
     }
     publication?.let { RelayPublicationHost(profile.id, publicationSurface, it) }
     SettingsScaffold(
-        title = "Relays",
+        title = stringResource(R.string.relays),
         onBack = onBack,
     ) {
         SettingsList {
@@ -121,7 +121,7 @@ fun ProfileRelaysScreen(
             if (recovery != null) {
                 item {
                     SettingsCallout(
-                        title = "Profile relays need attention",
+                        title = stringResource(R.string.ui_profile_relays_need_attention),
                         text = recovery,
                         modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     )
@@ -138,7 +138,7 @@ fun ProfileRelaysScreen(
                     dev.ipf.whitenoise.model.RelayProjectionPhase.Unavailable -> stringResource(R.string.relay_lists_unavailable_help)
                 }) }
             }
-            item { SettingsSection("Profile relays") }
+            item { SettingsSection(stringResource(R.string.ui_profile_relays)) }
             item {
                 SettingsGroup(modifier = Modifier.testTag("relays.group")) {
                     profile.settings.relays.forEachIndexed { index, relay ->
@@ -151,7 +151,7 @@ fun ProfileRelaysScreen(
                         )
                     }
                     SettingsAction(
-                        title = "Add Relay",
+                        title = stringResource(R.string.add_relay),
                         leading = {
                             Icon(
                                 painterResource(R.drawable.ic_add),
@@ -164,7 +164,7 @@ fun ProfileRelaysScreen(
             }
             item {
                 SettingsExplainer(
-                    "Relays let your profile publish information, receive chat invitations, and deliver messages.",
+                    stringResource(R.string.ui_relays_let_your_profile_publish_information_receive_ch),
                 )
             }
             item {
@@ -179,14 +179,14 @@ fun ProfileRelaysScreen(
                         )
                         .testTag("relays.restore"),
                     enabled = profile.settings.relays != ProfileRelayFixtures.defaults,
-                ) { Text("Restore Default Relays") }
+                ) { Text(stringResource(R.string.restore_default_relays)) }
             }
             item {
                 SettingsExplainer(
                     if (profile.settings.relays == ProfileRelayFixtures.defaults) {
-                        "The default relays and role assignments are already in use."
+                        stringResource(R.string.relay_defaults_in_use)
                     } else {
-                        "Restores the default relays and role assignments for this profile."
+                        stringResource(R.string.relay_restore_help)
                     },
                 )
             }
@@ -205,20 +205,19 @@ fun ProfileRelaysScreen(
     if (restoreDialog) {
         AlertDialog(
             onDismissRequest = { restoreDialog = false },
-            title = { Text("Restore default relays?") },
+            title = { Text(stringResource(R.string.ui_restore_default_relays)) },
             text = {
                 Text(
-                    "This replaces this profile’s relay list and role assignments with the defaults. " +
-                        "Custom relays will be removed.",
+                    stringResource(R.string.relay_restore_detail),
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     onRestore()
                     restoreDialog = false
-                }) { Text("Restore Defaults", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.ui_restore_defaults), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { restoreDialog = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { restoreDialog = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -231,7 +230,7 @@ fun ProfileRelayDetailsScreen(
     onRemove: () -> Boolean,
 ) {
     var removeDialog by remember { mutableStateOf(false) }
-    SettingsScaffold(title = "Relay", onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.ui_relay), onBack = onBack) {
         SettingsList {
             item {
                 SettingsGroup(
@@ -239,35 +238,33 @@ fun ProfileRelayDetailsScreen(
                         .padding(top = WhiteNoiseSpacing.Section)
                         .testTag("relay.details.metadata"),
                 ) {
-                    RelayMetadataRow("Name", relay.name)
+                    RelayMetadataRow(stringResource(R.string.name), relay.name)
                     SettingsDivider()
                     RelayMetadataRow(
-                        title = "URL",
+                        title = stringResource(R.string.url),
                         value = relay.url,
                     )
                     SettingsDivider()
                     RelayMetadataRow(
-                        title = "Status",
-                        value = relay.status.label,
+                        title = stringResource(R.string.message_status),
+                        value = relayStatusLabel(relay.status),
                         status = relay.status,
                     )
                 }
             }
-            item { SettingsSection("Use For") }
+            item { SettingsSection(stringResource(R.string.ui_use_for)) }
             item {
                 SettingsGroup(modifier = Modifier.testTag("relay.details.roles")) {
                     RelayRole.entries.forEachIndexed { index, role ->
                         SettingsSwitch(
-                            title = role.label,
+                            title = relayRoleLabel(role),
                             checked = role in relay.roles,
                             enabled = !relay.isReadOnly,
                             onCheckedChange = { onSetRole(role, it) },
                             subtitle = when (role) {
-                                RelayRole.Profile -> "Publish your profile and connection information."
-                                RelayRole.Inbox -> "Receive invitations to new chats and groups."
-                                RelayRole.ChatMessages -> {
-                                    "Use for messages in chats you create. Existing chats keep their current relays."
-                                }
+                                RelayRole.Profile -> stringResource(R.string.relay_role_profile_help)
+                                RelayRole.Inbox -> stringResource(R.string.relay_role_inbox_help)
+                                RelayRole.ChatMessages -> stringResource(R.string.relay_role_chat_messages_help)
                             },
                         )
                         if (index != RelayRole.entries.lastIndex) {
@@ -280,14 +277,14 @@ fun ProfileRelayDetailsScreen(
             }
             if (relay.isReadOnly) item {
                 SettingsExplainer(
-                    "This relay is read only, so this profile can’t use it to send data.",
+                    stringResource(R.string.ui_this_relay_is_read_only_so_this_profile_cant_use_it_to),
                 )
             }
             if (!relay.isReadOnly) {
                 item {
                     SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
                         SettingsAction(
-                            title = "Remove Relay",
+                            title = stringResource(R.string.remove_relay),
                             onClick = { removeDialog = true },
                             destructive = true,
                         )
@@ -299,17 +296,17 @@ fun ProfileRelayDetailsScreen(
     if (removeDialog) {
         AlertDialog(
             onDismissRequest = { removeDialog = false },
-            title = { Text("Remove ${relay.name}?") },
+            title = { Text(stringResource(R.string.remove_named_relay, relay.name)) },
             text = {
-                Text("This profile will stop using this relay. Existing chats keep their current relays.")
+                Text(stringResource(R.string.ui_this_profile_will_stop_using_this_relay_existing_chats))
             },
             confirmButton = {
                 TextButton(onClick = {
                     if (onRemove()) onBack()
                     removeDialog = false
-                }) { Text("Remove Relay", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.remove_relay), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { removeDialog = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { removeDialog = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -317,8 +314,10 @@ fun ProfileRelayDetailsScreen(
 @Composable
 private fun RelayListRow(relay: ProfileRelay, onClick: () -> Unit) {
     val needsAttention = stringResource(R.string.relay_needs_attention)
+    val readOnly = stringResource(R.string.read_only)
+    val status = relayStatusLabel(relay.status)
     val capability = buildString {
-        if (relay.isReadOnly) append(" · Read only")
+        if (relay.isReadOnly) append(" · $readOnly")
         if (ProfileRelayFixtures.importedAddressNeedsAttention(relay)) append(" · $needsAttention")
     }
     ListItem(
@@ -350,8 +349,8 @@ private fun RelayListRow(relay: ProfileRelay, onClick: () -> Unit) {
             .semantics {
                 role = Role.Button
                 stateDescription = buildString {
-                    append(relay.status.label)
-                    if (relay.isReadOnly) append(", Read only")
+                    append(status)
+                    if (relay.isReadOnly) append(", $readOnly")
                     if (ProfileRelayFixtures.importedAddressNeedsAttention(relay)) append(", $needsAttention")
                 }
             }
@@ -459,7 +458,7 @@ private fun AddRelaySheet(
                 .fillMaxWidth()
                 .fillMaxHeight(0.94f),
         ) {
-            WhiteNoiseSheetHeader(title = "Add Relay", onClose = onDismiss)
+            WhiteNoiseSheetHeader(title = stringResource(R.string.add_relay), onClose = onDismiss)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -472,45 +471,43 @@ private fun AddRelaySheet(
                         .fillMaxWidth()
                         .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
                         .testTag("relay.add.url"),
-                    label = { Text("Relay URL") },
+                    label = { Text(stringResource(R.string.relay_url)) },
                     placeholder = { Text("wss://relay.example.com") },
                     lineLimits = TextFieldLineLimits.SingleLine,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     isError = duplicate || rejected,
-                    errorMessage = "Enter a unique wss:// relay URL.",
+                    errorMessage = stringResource(R.string.relay_unique_url_error),
                     supportingText = {
                         Text(
                             if (duplicate || rejected) {
-                                "Enter a unique wss:// relay URL."
+                                stringResource(R.string.relay_unique_url_error)
                             } else {
-                                "Enter a relay URL beginning with wss://."
+                                stringResource(R.string.relay_url_help)
                             },
                         )
                     },
                 )
-                SettingsSection("Use For")
+                SettingsSection(stringResource(R.string.ui_use_for))
                 SettingsGroup(modifier = Modifier.testTag("relay.add.roles")) {
                     RelayRole.entries.forEachIndexed { index, role ->
                         SettingsSwitch(
-                            title = role.label,
+                            title = relayRoleLabel(role),
                             checked = role in roles,
                             onCheckedChange = { selected ->
                                 roles = if (selected) roles + role else roles - role
                                 rejectedValue = null
                             },
                             subtitle = when (role) {
-                                RelayRole.Profile -> "Publish your profile and connection information."
-                                RelayRole.Inbox -> "Receive invitations to new chats and groups."
-                                RelayRole.ChatMessages -> {
-                                    "Use for messages in chats you create. Existing chats keep their current relays."
-                                }
+                                RelayRole.Profile -> stringResource(R.string.relay_role_profile_help)
+                                RelayRole.Inbox -> stringResource(R.string.relay_role_inbox_help)
+                                RelayRole.ChatMessages -> stringResource(R.string.relay_role_chat_messages_help)
                             },
                         )
                         if (index != RelayRole.entries.lastIndex) SettingsDivider()
                     }
                 }
                 if (roles.isEmpty()) {
-                    SettingsExplainer("Choose at least one role.")
+                    SettingsExplainer(stringResource(R.string.ui_choose_at_least_one_role))
                 }
             }
             SettingsBottomAction(
@@ -525,16 +522,13 @@ private fun AddRelaySheet(
                         .fillMaxWidth()
                         .testTag("relay.add.submit"),
                     enabled = canAdd,
-                ) { Text("Add Relay") }
+                ) { Text(stringResource(R.string.add_relay)) }
             }
         }
     }
 }
 
-private enum class DonationMethod(val label: String) {
-    Lightning("Lightning"),
-    Bitcoin("Bitcoin"),
-}
+private enum class DonationMethod { Lightning, Bitcoin }
 
 private val DonationIdentityGap = 1.dp
 private val DonationCaptionPullUp = 4.dp
@@ -546,6 +540,11 @@ fun DonateScreen(onBack: () -> Unit) {
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var copiedMethod by rememberSaveable { mutableIntStateOf(-1) }
     val method = DonationMethod.entries[selected]
+    val methodLabel = donationMethodLabel(method)
+    val donationAddress = stringResource(R.string.donation_address, methodLabel)
+    val donationQrDescription = stringResource(R.string.donation_qr_code, methodLabel)
+    val copyDonationAddress = stringResource(R.string.donation_copy_address, methodLabel)
+    val donationAddressCopied = stringResource(R.string.donation_address_copied, methodLabel)
     val value = when (method) {
         DonationMethod.Lightning -> "lnurl1dp68gurn8ghj7mrww4exctnrdakj7mrww4exctn0d3sk6urvv5hxxmmd9ashq6f0wcc"
         DonationMethod.Bitcoin -> "bc1q2z9k7x5m3v8c4n6p1s7h9d2f5j8a3e6u4w7r9t"
@@ -585,7 +584,7 @@ fun DonateScreen(onBack: () -> Unit) {
                                 modifier = Modifier
                                     .semantics { role = Role.RadioButton }
                                     .testTag("donate.method.$index"),
-                            ) { Text(candidate.label) }
+                            ) { Text(donationMethodLabel(candidate)) }
                         }
                     }
                 },
@@ -638,12 +637,12 @@ fun DonateScreen(onBack: () -> Unit) {
                             modifier = Modifier.size(40.dp),
                         )
                         Text(
-                            "Support White Noise",
+                            stringResource(R.string.ui_support_white_noise),
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.titleLarge,
                         )
                         Text(
-                            "White Noise is free and open source. Donations help us improve it and keep it available to everyone.",
+                            stringResource(R.string.ui_white_noise_is_free_and_open_source_donations_help_us_),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium,
@@ -652,7 +651,7 @@ fun DonateScreen(onBack: () -> Unit) {
                     IdentityQrCodeSurface(
                         value = value,
                         availableWidth = availableWidth,
-                        contentDescription = "${method.label} donation QR code",
+                        contentDescription = donationQrDescription,
                         testTag = "donate.qr_surface",
                         modifier = Modifier.padding(top = 40.dp),
                     )
@@ -660,21 +659,21 @@ fun DonateScreen(onBack: () -> Unit) {
                         value = value,
                         copied = copiedMethod == selected,
                         onCopy = {
-                            copyToClipboard(context, "${method.label} donation address", value)
+                            copyToClipboard(context, donationAddress, value)
                             copiedMethod = selected
                         },
-                        copyContentDescription = "Copy ${method.label} address",
-                        copiedContentDescription = "${method.label} address copied",
-                        notCopiedStateDescription = "Not copied",
-                        copiedStateDescription = "Copied",
+                        copyContentDescription = copyDonationAddress,
+                        copiedContentDescription = donationAddressCopied,
+                        notCopiedStateDescription = stringResource(R.string.not_copied),
+                        copiedStateDescription = stringResource(R.string.copied),
                         targetTestTag = "donate.copy_address",
                         visualTestTag = "donate.copy_address.visual",
                         modifier = Modifier.padding(top = DonationIdentityGap),
                     )
                     Text(
                         text = when (method) {
-                            DonationMethod.Lightning -> "Lightning Address"
-                            DonationMethod.Bitcoin -> "Bitcoin Silent Payment"
+                            DonationMethod.Lightning -> stringResource(R.string.donation_lightning_address)
+                            DonationMethod.Bitcoin -> stringResource(R.string.donation_bitcoin_silent_payment)
                         },
                         modifier = Modifier
                             .padding(top = DonationIdentityGap)
@@ -688,3 +687,29 @@ fun DonateScreen(onBack: () -> Unit) {
         }
     }
 }
+
+@Composable
+private fun relayRoleLabel(role: RelayRole): String = stringResource(
+    when (role) {
+        RelayRole.Profile -> R.string.ui_profile
+        RelayRole.Inbox -> R.string.relay_role_inbox
+        RelayRole.ChatMessages -> R.string.relay_role_chat_messages
+    },
+)
+
+@Composable
+private fun relayStatusLabel(status: RelayConnectionStatus): String = stringResource(
+    when (status) {
+        RelayConnectionStatus.Connected -> R.string.relay_status_connected
+        RelayConnectionStatus.Reconnecting -> R.string.relay_status_reconnecting
+        RelayConnectionStatus.Disconnected -> R.string.relay_status_disconnected
+    },
+)
+
+@Composable
+private fun donationMethodLabel(method: DonationMethod): String = stringResource(
+    when (method) {
+        DonationMethod.Lightning -> R.string.donation_lightning
+        DonationMethod.Bitcoin -> R.string.donation_bitcoin
+    },
+)

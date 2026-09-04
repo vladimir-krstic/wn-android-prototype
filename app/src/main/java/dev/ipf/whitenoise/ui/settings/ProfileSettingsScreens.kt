@@ -167,7 +167,7 @@ fun SettingsScreen(
         profileCardExpanded = false
     }
     SettingsScaffold(
-        title = "Settings",
+        title = stringResource(R.string.ui_settings),
         onBack = onBack,
         prominentTitle = true,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -205,16 +205,16 @@ fun SettingsScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
                     SettingsHubLink(
-                        title = "Profile",
+                        title = stringResource(R.string.ui_profile),
                         icon = R.drawable.ic_settings_account_circle,
                         iconTag = "profile",
                         onClick = onEditProfile,
-                        subtitle = if (canEditProfile) null else "Choose a connected Profile relay to edit",
+                        subtitle = if (canEditProfile) null else stringResource(R.string.profile_relay_required_to_edit),
                         enabled = canEditProfile,
                     )
                     SettingsDivider(Modifier.testTag("settings.destinations.divider.0"))
                     SettingsHubLink(
-                        title = "Profile Keys",
+                        title = stringResource(R.string.ui_profile_keys),
                         icon = R.drawable.ic_settings_key,
                         iconTag = "profile_keys",
                         onClick = onProfileKeys,
@@ -230,7 +230,7 @@ fun SettingsScreen(
                     SettingsHubLink(title = stringResource(R.string.chat_folders), icon = R.drawable.ic_filter_list, iconTag = "folders", onClick = onFolders)
                     SettingsDivider()
                     SettingsHubLink(
-                        title = "Notifications",
+                        title = stringResource(R.string.notification_controls_title),
                         icon = R.drawable.ic_settings_notifications,
                         iconTag = "notifications",
                         onClick = onNotifications,
@@ -247,28 +247,28 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsHubLink(
-                        title = "Appearance",
+                        title = stringResource(R.string.appearance_title),
                         icon = R.drawable.ic_settings_contrast,
                         iconTag = "appearance",
                         onClick = onAppearance,
                     )
                     SettingsDivider()
                     SettingsHubLink(
-                        title = "Privacy & Security",
+                        title = stringResource(R.string.ui_privacy_security),
                         icon = R.drawable.ic_settings_front_hand,
                         iconTag = "privacy_security",
                         onClick = onPrivacy,
                     )
                     SettingsDivider()
                     SettingsHubLink(
-                        title = "Data Usage",
+                        title = stringResource(R.string.data_usage_title),
                         icon = R.drawable.ic_settings_hard_drive,
                         iconTag = "data_usage",
                         onClick = onDataUsage,
                     )
                     SettingsDivider()
                     SettingsHubLink(
-                        title = "Relays",
+                        title = stringResource(R.string.relays),
                         icon = R.drawable.ic_settings_cell_tower,
                         iconTag = "relays",
                         onClick = onRelays,
@@ -304,21 +304,21 @@ fun SettingsScreen(
                     )
                     SettingsDivider(Modifier.testTag("settings.help.divider.help"))
                     SettingsHubLink(
-                        title = "Chat with support",
+                        title = stringResource(R.string.ui_chat_with_support),
                         icon = R.drawable.ic_settings_chat_bubble_outline,
                         iconTag = "support",
                         onClick = onSupport,
                     )
                     SettingsDivider(Modifier.testTag("settings.help.divider.0"))
                     SettingsHubLink(
-                        title = "Donate",
+                        title = stringResource(R.string.ui_donate),
                         icon = R.drawable.ic_settings_favorite_border,
                         iconTag = "donate",
                         onClick = onDonate,
                     )
                     SettingsDivider()
                     SettingsHubLink(
-                        title = "Developer Tools",
+                        title = stringResource(R.string.developer_tools),
                         icon = R.drawable.ic_settings_handyman,
                         iconTag = "developer_tools",
                         onClick = onDeveloperTools,
@@ -331,7 +331,7 @@ fun SettingsScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
                     SettingsHubLink(
-                        title = "Sign Out",
+                        title = stringResource(R.string.ui_sign_out),
                         icon = R.drawable.ic_settings_logout,
                         iconTag = "sign_out",
                         onClick = { signOutOpen = true },
@@ -752,8 +752,8 @@ fun EditProfileScreen(
         dev.ipf.whitenoise.model.ProfileSaveFailure.PublishFailed -> R.string.profile_publish_failed
         null -> null
     }
-    SettingsScaffold(title = "Profile", onBack = ::handleBack, topBarActions = {
-        if (!isEditing) TextButton(onClick = ::beginEditing) { Text("Edit") }
+    SettingsScaffold(title = stringResource(R.string.ui_profile), onBack = ::handleBack, topBarActions = {
+        if (!isEditing) TextButton(onClick = ::beginEditing) { Text(stringResource(R.string.message_edit)) }
     }, bottomBar = {
         if (isEditing) SettingsBottomAction(tonalElevation = 0.dp) {
             WhiteNoiseButton(onClick = {
@@ -767,7 +767,7 @@ fun EditProfileScreen(
             }, enabled = name.text.isNotBlank() && ProfileSettingsPolicy.isValidNostrAddress(address.text.toString()) && lightningValid && imageBusy.isEmpty() && !busy,
                 loading = busy, loadingLabel = if (saveAttempt?.phase == dev.ipf.whitenoise.model.ProfileSavePhase.CheckingLightning) stringResource(R.string.profile_lightning_checking) else stringResource(R.string.profile_saving),
                 modifier = Modifier.fillMaxWidth().testTag("profile.save"),
-            ) { Text(if (saveFailure != null) stringResource(R.string.people_retry) else "Save") }
+            ) { Text(if (saveFailure != null) stringResource(R.string.people_retry) else stringResource(R.string.save)) }
         }
     }) {
         Column(Modifier.fillMaxSize().whiteNoiseVerticalScroll(rememberScrollState()).padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Section),
@@ -783,16 +783,16 @@ fun EditProfileScreen(
                 onChange = { avatar = it ?: ProfileAvatar.Monogram; onRetainImages(avatar, banner) },
                 onBusyChanged = { imageBusy = if (it) imageBusy + "avatar" else imageBusy - "avatar" }, consumeFailure = consumeImageFailure)
             WhiteNoiseTextField(name, Modifier.fillMaxWidth().testTag("profile.name_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                enabled = !busy, readOnly = !isEditing, label = { Text("Name") }, lineLimits = TextFieldLineLimits.SingleLine,
+                enabled = !busy, readOnly = !isEditing, label = { Text(stringResource(R.string.name)) }, lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next))
             if (isEditing) TextButton(onClick = {
                 val suggestion = dev.ipf.whitenoise.model.ProfileNameSuggestions.next(name.text.toString(), suggestionIndex++)
                 name.edit { replace(0, length, suggestion) }
             }, enabled = !busy, modifier = Modifier.testTag("profile.suggest_name")) { Text(stringResource(R.string.profile_suggest_name)) }
             WhiteNoiseTextField(address, Modifier.fillMaxWidth().testTag("profile.address_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                enabled = !busy, readOnly = !isEditing, label = { Text("Verified Nostr Address") },
+                enabled = !busy, readOnly = !isEditing, label = { Text(stringResource(R.string.ui_verified_nostr_address)) },
                 trailingIcon = if (profile.isNostrAddressVerified && address.text.toString() == profile.nostrAddress) {
-                    { Icon(painterResource(R.drawable.ic_verified_filled), "Verified", tint = MaterialTheme.colorScheme.onSurface) }
+                    { Icon(painterResource(R.drawable.ic_verified_filled), stringResource(R.string.verified), tint = MaterialTheme.colorScheme.onSurface) }
                 } else null, lineLimits = TextFieldLineLimits.SingleLine, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next))
             WhiteNoiseTextField(lightning, Modifier.fillMaxWidth().testTag("profile.lightning_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 enabled = !busy, readOnly = !isEditing, label = { Text(stringResource(R.string.profile_lightning_address)) },
@@ -800,7 +800,7 @@ fun EditProfileScreen(
                 supportingText = { Text(stringResource(if (!lightningValid) R.string.profile_lightning_invalid else R.string.profile_lightning_hint)) },
                 lineLimits = TextFieldLineLimits.SingleLine, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next))
             WhiteNoiseTextField(about, Modifier.fillMaxWidth().testTag("profile.about_field"), containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                enabled = !busy, readOnly = !isEditing, label = { Text("About") }, placeholder = { Text("A little about you") },
+                enabled = !busy, readOnly = !isEditing, label = { Text(stringResource(R.string.about)) }, placeholder = { Text(stringResource(R.string.about_prompt)) },
                 lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6))
             if (error || failureRes != null) Text(stringResource(failureRes ?: R.string.profile_publish_failed), color = MaterialTheme.colorScheme.error)
         }
@@ -812,6 +812,14 @@ fun EditProfileScreen(
 @Composable
 fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Unit = {}) {
     val context = LocalContext.current
+    val publicKeyLabel = stringResource(R.string.ui_public_key)
+    val privateKeyLabel = stringResource(R.string.ui_private_key)
+    val publicKeyCopied = stringResource(R.string.profile_public_key_copied)
+    val copyPublicKey = stringResource(R.string.profile_copy_public_key)
+    val privateKeyRevealed = stringResource(R.string.profile_private_key_revealed)
+    val privateKeyHidden = stringResource(R.string.profile_private_key_hidden)
+    val hidePrivateKey = stringResource(R.string.profile_hide_private_key)
+    val showPrivateKey = stringResource(R.string.profile_show_private_key)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val hasLocalKey = profile.signingMode == dev.ipf.whitenoise.model.ProfileSigningMode.LocalKey
     val canReadKey = ProfileKeyAccessPolicy.canRead(profile)
@@ -899,14 +907,14 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
     }
 
     SettingsScaffold(
-        title = "Profile Keys",
+        title = stringResource(R.string.ui_profile_keys),
         onBack = onBack,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBarContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBarScrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         SettingsList {
-            item { SettingsSection("Public key") }
+            item { SettingsSection(stringResource(R.string.ui_public_key)) }
             item {
                 SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
                     ProfileKeyValueRow(
@@ -915,7 +923,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                         trailingAction = {
                             IconButton(
                                 onClick = {
-                                    copyToClipboard(context, "Public key", profile.publicKey)
+                                    copyToClipboard(context, publicKeyLabel, profile.publicKey)
                                     copiedKey = CopiedProfileKey.Public
                                 },
                             ) {
@@ -924,7 +932,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                                     painter = painterResource(
                                         if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
                                     ),
-                                    contentDescription = if (copied) "Public key copied" else "Copy public key",
+                                    contentDescription = if (copied) publicKeyCopied else copyPublicKey,
                                 )
                             }
                         },
@@ -932,7 +940,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                 }
             }
             item {
-                ProfileKeySupportingText("Share this key so people can find and connect with you.")
+                ProfileKeySupportingText(stringResource(R.string.profile_public_key_help))
             }
             if (!hasLocalKey) {
                 item { SettingsSection(stringResource(R.string.access_signing)) }
@@ -941,7 +949,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                 item { SettingsExplainer(stringResource(R.string.key_access_unavailable)) }
                 item { SettingsAction(stringResource(R.string.try_again), onClick = onRetryKey) }
             } else {
-                item { SettingsSection("Private key") }
+                item { SettingsSection(stringResource(R.string.ui_private_key)) }
                 item {
                     SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
                         ProfileKeyValueRow(
@@ -959,9 +967,9 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                                 .testTag("profile_keys.private_key_value")
                                 .clearAndSetSemantics {
                                     contentDescription = if (showPrivate) {
-                                        "Private key revealed. Use the copy action to retrieve it."
+                                        privateKeyRevealed
                                     } else {
-                                        "Private key hidden"
+                                        privateKeyHidden
                                     }
                                 },
                             trailingAction = {
@@ -975,9 +983,9 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                                             },
                                         ),
                                         contentDescription = if (showPrivate) {
-                                            "Hide private key"
+                                            hidePrivateKey
                                         } else {
-                                            "Show private key"
+                                            showPrivateKey
                                         },
                                     )
                                 }
@@ -985,11 +993,11 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                         )
                         SettingsDivider()
                         SettingsAction(
-                            title = "Copy Private Key",
+                            title = stringResource(R.string.ui_copy_private_key),
                             onClick = {
                                 copyToClipboard(
                                     context = context,
-                                    label = "Private key",
+                                    label = privateKeyLabel,
                                     text = ProfileKeyFixtures.PRIVATE_KEY,
                                     isSensitive = true,
                                 )
@@ -1009,14 +1017,14 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                 }
                 item {
                     ProfileKeySupportingText(
-                        "Keep this key private. Anyone with it can use your profile, and White Noise can’t recover it.",
+                        stringResource(R.string.profile_private_key_help),
                     )
                 }
-                item { SettingsSection("Export") }
+                item { SettingsSection(stringResource(R.string.ui_export)) }
                 item {
                     SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
                         SettingsAction(
-                            title = "Export Encrypted Private Key",
+                            title = stringResource(R.string.ui_export_encrypted_private_key),
                             enabled = pendingExport == null,
                             onClick = { passwordDialog = true },
                             leading = {
@@ -1028,7 +1036,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                         )
                         SettingsDivider()
                         SettingsAction(
-                            title = "Export Private Key",
+                            title = stringResource(R.string.ui_export_private_key),
                             enabled = pendingExport == null,
                             onClick = { rawExportDialog = true },
                             modifier = Modifier.testTag("profile_keys.export_raw"),
@@ -1047,10 +1055,10 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
     if (rawExportDialog && canReadKey) {
         AlertDialog(
             onDismissRequest = { rawExportDialog = false },
-            title = { Text("Keep Your Private Key Safe") },
+            title = { Text(stringResource(R.string.ui_keep_your_private_key_safe)) },
             text = {
                 Text(
-                    "Store this file somewhere secure. The encrypted export or a trusted password manager is safer.",
+                    stringResource(R.string.ui_store_this_file_somewhere_secure_the_encrypted_export_),
                 )
             },
             confirmButton = {
@@ -1060,12 +1068,12 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                     },
                 ) {
                     Text(
-                        text = "Export Private Key",
+                        text = stringResource(R.string.ui_export_private_key),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
-            dismissButton = { TextButton(onClick = { rawExportDialog = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { rawExportDialog = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (passwordDialog && canReadKey) {
@@ -1074,7 +1082,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                 passwordDialog = false
                 clearExportPassword()
             },
-            title = { Text("Encrypted Private Key") },
+            title = { Text(stringResource(R.string.ui_encrypted_private_key)) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -1085,7 +1093,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("profile_keys.export_password"),
-                        label = { Text("Password") },
+                        label = { Text(stringResource(R.string.ui_password)) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Next,
@@ -1096,7 +1104,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("profile_keys.export_confirmation"),
-                        label = { Text("Confirm password") },
+                        label = { Text(stringResource(R.string.ui_confirm_password)) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Done,
@@ -1107,9 +1115,9 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                         passwordValue != confirmationValue
                     Text(
                         text = if (passwordsMismatch) {
-                            "Passwords don’t match."
+                            stringResource(R.string.profile_passwords_mismatch)
                         } else {
-                            "Use a long, unique password. You’ll need it to open the encrypted file."
+                            stringResource(R.string.profile_export_password_help)
                         },
                         color = if (passwordsMismatch) {
                             MaterialTheme.colorScheme.error
@@ -1129,7 +1137,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                     onClick = {
                         beginExport(ProfileKeyExportKind.Encrypted)
                     },
-                ) { Text("Export") }
+                ) { Text(stringResource(R.string.ui_export)) }
             },
             dismissButton = {
                 TextButton(
@@ -1137,17 +1145,17 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                         passwordDialog = false
                         clearExportPassword()
                     },
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
     if (saveErrorDialog) {
         AlertDialog(
             onDismissRequest = { saveErrorDialog = false },
-            title = { Text("Couldn’t Save File") },
-            text = { Text("Choose another location and try again.") },
+            title = { Text(stringResource(R.string.ui_couldnt_save_file)) },
+            text = { Text(stringResource(R.string.developer_choose_another_location_and_try_again)) },
             confirmButton = {
-                TextButton(onClick = { saveErrorDialog = false }) { Text("OK") }
+                TextButton(onClick = { saveErrorDialog = false }) { Text(stringResource(R.string.ui_ok)) }
             },
         )
     }
@@ -1176,8 +1184,8 @@ private fun ExportPasswordStrengthIndicator(strength: ExportPasswordStrength) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("Strength", style = MaterialTheme.typography.labelLarge)
-            Text(strength.label, color = color, style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.ui_strength), style = MaterialTheme.typography.labelLarge)
+            Text(exportPasswordStrengthLabel(strength), color = color, style = MaterialTheme.typography.labelLarge)
         }
         LinearProgressIndicator(
             progress = { strength.completedSteps / 3f },
@@ -1188,6 +1196,15 @@ private fun ExportPasswordStrengthIndicator(strength: ExportPasswordStrength) {
         )
     }
 }
+
+@Composable
+private fun exportPasswordStrengthLabel(strength: ExportPasswordStrength): String = stringResource(
+    when (strength) {
+        ExportPasswordStrength.Low -> R.string.profile_password_strength_low
+        ExportPasswordStrength.Fair -> R.string.profile_password_strength_fair
+        ExportPasswordStrength.Strong -> R.string.profile_password_strength_strong
+    },
+)
 
 @Composable
 private fun ProfileKeyValueRow(
@@ -1238,7 +1255,7 @@ private enum class CopiedProfileKey { Public, Private }
 internal fun ProfileCode(
     value: String,
     modifier: Modifier = Modifier,
-    contentDescription: String = "Profile QR code",
+    contentDescription: String,
     marginModules: Int = 2,
 ) {
     val matrix = remember(value, marginModules) { qrMatrix(value, marginModules) }

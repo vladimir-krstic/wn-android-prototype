@@ -4169,6 +4169,40 @@ single-artifact behavior in WN-ANDROID-0076; its native presentation remains.
 Evidence: [B25 brief](screens/key-packages-and-developer-diagnostics.md),
 DeveloperParityController, DeveloperParityUi, DeveloperModels and the state/UI tests.
 
+## WN-ANDROID-0146 — Appearance, locale and native Enter preferences preserve defaults
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B26 contract; host verified
+
+System appearance, System typeface, Default font size and New line remain the
+starting choices. AMOLED selects black app/canvas roles with neutral layered
+surfaces and unchanged Material semantic/error colors. App font/size and Enter
+behavior use the established Material choice-dialog language. Optional bundled
+families are licensed/static resources; they do not add runtime downloads or
+libraries. Scale every regular/emphasized Material role's explicit sp size and
+line height without overriding platform density or font conversion.
+
+Enter-to-send is opt-in and uses the existing guarded composer Send callback.
+Shift+Enter, active IME composition and normal multiline editing remain native;
+held-key repeats and key release cannot submit a second message. Selecting a
+language applies immediately to the active profile's localized application
+context. System keeps the device locale. Russian, Turkish, Simplified Chinese
+and Traditional Chinese each cover every translatable resource with verified
+format-token and locale plural parity.
+
+Optional action and sent/received bubble colors preserve monochrome defaults.
+Action color changes primary roles only, leaving neutral surfaces unchanged.
+Global values are owned by profile and theme; chat values override both bubble
+sides for that chat. Presets, HSV and normalized hex share preview, validation
+and Reset. Text uses a deterministic black-or-white contrast policy, and stale
+profile/chat mutations are rejected.
+
+Evidence: [B26 brief](screens/appearance-typography-and-input.md),
+[font provenance](references/font-assets.md), AppearanceInput, WhiteNoiseTheme,
+WhiteNoiseTypography, AppLocale, AppearanceColorScreens,
+ComposerEnterPolicyTest, AppearanceColorPolicyTest, AppearanceTypographyTest,
+the locale resource validator and AppearanceInputInteractionTest.
+
 ## WN-ANDROID-0147 — Download admission and media quality preserve prepared work
 
 - Date: 2026-09-04

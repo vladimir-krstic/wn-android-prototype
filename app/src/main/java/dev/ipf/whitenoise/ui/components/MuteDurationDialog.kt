@@ -79,7 +79,7 @@ fun MuteDurationDialog(
         text = {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).selectableGroup()) {
                 MuteDuration.entries.filter { it != MuteDuration.Custom }.forEach { duration ->
-                    WhiteNoiseDialogChoiceRow(title = duration.label,selected = duration == selectedDuration,
+                    WhiteNoiseDialogChoiceRow(title = muteDurationLabel(duration),selected = duration == selectedDuration,
                         onClick = { onSelect(duration) },modifier = Modifier.testTag("mute.duration.${duration.name}"))
                 }
                 if (onCustomSelect != null) WhiteNoiseDialogChoiceRow(title = stringResource(R.string.notification_custom_time),
@@ -90,3 +90,15 @@ fun MuteDurationDialog(
         modifier = Modifier.testTag("mute.duration.dialog"),
     )
 }
+
+@Composable
+private fun muteDurationLabel(duration: MuteDuration): String = stringResource(
+    when (duration) {
+        MuteDuration.OneHour -> R.string.mute_one_hour
+        MuteDuration.EightHours -> R.string.mute_eight_hours
+        MuteDuration.OneDay -> R.string.mute_one_day
+        MuteDuration.OneWeek -> R.string.mute_one_week
+        MuteDuration.Always -> R.string.mute_always
+        MuteDuration.Custom -> R.string.notification_custom_time
+    },
+)

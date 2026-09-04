@@ -38,6 +38,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AppearancePreference
+import dev.ipf.whitenoise.model.AppFontSize
+import dev.ipf.whitenoise.model.AppFontFamily
+import dev.ipf.whitenoise.model.EnterKeyBehavior
 import dev.ipf.whitenoise.model.AutoLockDuration
 import dev.ipf.whitenoise.model.LanguagePreference
 import dev.ipf.whitenoise.model.NotificationPreviewMode
@@ -63,7 +66,7 @@ fun NotificationsScreen(
     var settingsResult by rememberSaveable(profile.id) { mutableStateOf<NotificationSettingsOpen?>(null) }
     val context = LocalContext.current
     val localNotificationsEnabled = notificationsAllowed && settings.localNotifications
-    SettingsScaffold(title = "Notifications", onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.notification_controls_title), onBack = onBack) {
         SettingsList {
             if (!notificationsAllowed) {
                 item {
@@ -72,16 +75,16 @@ fun NotificationsScreen(
                     ) {
                         when (permissionStatus) {
                             NotificationPermissionStatus.NotRequested -> SettingsAction(
-                                title = "Allow notifications",
-                                subtitle = "Get notified about new messages and use these options.",
+                                title = stringResource(R.string.ui_allow_notifications),
+                                subtitle = stringResource(R.string.ui_get_notified_about_new_messages_and_use_these_options),
                                 onClick = permissionAccess.requestPermission,
                                 leading = {
                                     NotificationPermissionIcon(R.drawable.ic_settings_notifications)
                                 },
                             )
                             NotificationPermissionStatus.Blocked -> SettingsLink(
-                                title = "Notifications are off",
-                                subtitle = "Turn them on in Android Settings to use these options.",
+                                title = stringResource(R.string.ui_notifications_are_off),
+                                subtitle = stringResource(R.string.ui_turn_them_on_in_android_settings_to_use_these_options),
                                 onClick = permissionAccess.openSettings,
                                 leading = {
                                     NotificationPermissionIcon(R.drawable.ic_notifications_off)
@@ -92,11 +95,11 @@ fun NotificationsScreen(
                     }
                 }
             }
-            item { SettingsSection("Delivery") }
+            item { SettingsSection(stringResource(R.string.ui_delivery)) }
             item {
                 SettingsGroup {
                     SettingsSwitch(
-                        title = "Local notifications",
+                        title = stringResource(R.string.ui_local_notifications),
                         checked = localNotificationsEnabled,
                         enabled = notificationsAllowed,
                         onCheckedChange = {
@@ -104,11 +107,11 @@ fun NotificationsScreen(
                             else onChange(settings.copy(localNotifications = it,
                                 nativePushNotifications = settings.nativePushNotifications && it))
                         },
-                        subtitle = "Create message notifications on this device. Without native push, delivery may wait until White Noise is active.",
+                        subtitle = stringResource(R.string.ui_create_message_notifications_on_this_device_without_na),
                     )
                     SettingsDivider(Modifier.testTag("notifications.delivery.divider"))
                     SettingsSwitch(
-                        title = "Native push",
+                        title = stringResource(R.string.ui_native_push),
                         checked = NotificationControls.pushEnabled(settings,notificationsAllowed,environment.push),
                         enabled = localNotificationsEnabled && environment.push == PushAvailability.Available,
                         onCheckedChange = {
@@ -116,12 +119,12 @@ fun NotificationsScreen(
                             else onChange(settings.copy(nativePushNotifications = it))
                         },
                         subtitle = when {
-                            !notificationsAllowed -> "Allow notifications first."
-                            !settings.localNotifications -> "Turn on local notifications first."
+                            !notificationsAllowed -> stringResource(R.string.notification_allow_first)
+                            !settings.localNotifications -> stringResource(R.string.notification_local_first)
                             environment.push == PushAvailability.BuildNotConfigured -> stringResource(R.string.notification_push_build)
                             environment.push == PushAvailability.PlayServicesMissing -> stringResource(R.string.notification_push_services)
                             environment.push == PushAvailability.ProviderNotInitialized -> stringResource(R.string.notification_push_provider)
-                            else -> "Use a generic wake-up signal to check for new messages in the background. Message details stay on this device."
+                            else -> stringResource(R.string.notification_push_detail)
                         },
                     )
                 }
@@ -136,7 +139,7 @@ fun NotificationsScreen(
                 item { SettingsExplainer(stringResource(if (NotificationControls.backgroundEnabled(controller.backgroundConnection,notificationsAllowed))
                     R.string.notification_background_on else R.string.notification_background_off)) }
             }
-            item { SettingsSection("Preview") }
+            item { SettingsSection(stringResource(R.string.preview)) }
             item {
                 SettingsGroup(
                     modifier = Modifier.testTag("notifications.preview.group"),
@@ -151,7 +154,7 @@ fun NotificationsScreen(
                                 SettingsDivider()
                             }
                             SettingsChoice(
-                                title = mode.label,
+                                title = notificationPreviewLabel(mode),
                                 selected = settings.notificationPreviewMode == mode,
                                 enabled = localNotificationsEnabled,
                                 highlightSelected = false,
@@ -163,7 +166,7 @@ fun NotificationsScreen(
                     }
                     SettingsDivider()
                     NotificationPreviewExample(
-                        example = settings.notificationPreviewMode.example,
+                        example = notificationPreviewExample(settings.notificationPreviewMode),
                         enabled = localNotificationsEnabled,
                     )
                 }
@@ -171,9 +174,9 @@ fun NotificationsScreen(
             item {
                 SettingsExplainer(
                     when {
-                        !notificationsAllowed -> "Allow notifications to change message previews."
-                        !settings.localNotifications -> "Turn on local notifications to change message previews."
-                        else -> "Choose how much message information appears in notifications."
+                        !notificationsAllowed -> stringResource(R.string.notification_preview_allow_first)
+                        !settings.localNotifications -> stringResource(R.string.notification_preview_local_first)
+                        else -> stringResource(R.string.notification_preview_help)
                     },
                 )
             }
@@ -230,11 +233,28 @@ fun AppearanceScreen(
     onBack: () -> Unit,
     onChange: (ProfileSettings) -> Unit,
     onLanguage: () -> Unit,
+    onActionColor: () -> Unit = {},
+    onBubbleColors: () -> Unit = {},
 ) {
     val settings = profile.settings
-    SettingsScaffold(title = "Appearance", onBack = onBack) {
+    var fontFamilyOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var fontSizeOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var enterOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
+    val familyLabels = AppFontFamily.entries.associateWith { stringResource(it.labelRes) }
+    val fontLabels = AppFontSize.entries.associateWith { stringResource(it.labelRes) }
+    val enterLabels = EnterKeyBehavior.entries.associateWith { stringResource(it.labelRes) }
+    if (fontFamilyOpen) ChoiceDialog(stringResource(R.string.appearance_font_family), AppFontFamily.entries, settings.fontFamily,
+        { familyLabels.getValue(it) }, onDismiss = { fontFamilyOpen = false },
+        onSelect = { fontFamilyOpen = false; onChange(settings.copy(fontFamily = it)) })
+    if (fontSizeOpen) ChoiceDialog(stringResource(R.string.appearance_font_size), AppFontSize.entries, settings.fontSize,
+        { fontLabels.getValue(it) }, supportingText = stringResource(R.string.appearance_font_size_help), onDismiss = { fontSizeOpen = false },
+        onSelect = { fontSizeOpen = false; onChange(settings.copy(fontSize = it)) })
+    if (enterOpen) ChoiceDialog(stringResource(R.string.appearance_enter_behavior), EnterKeyBehavior.entries, settings.enterKeyBehavior,
+        { enterLabels.getValue(it) }, supportingText = stringResource(R.string.appearance_enter_help), onDismiss = { enterOpen = false },
+        onSelect = { enterOpen = false; onChange(settings.copy(enterKeyBehavior = it)) })
+    SettingsScaffold(title = stringResource(R.string.appearance_title), onBack = onBack) {
         SettingsList {
-            item { SettingsSection("Theme") }
+            item { SettingsSection(stringResource(R.string.appearance_theme)) }
             item {
                 SettingsGroup(
                     modifier = Modifier.testTag("appearance.theme.group"),
@@ -249,7 +269,7 @@ fun AppearanceScreen(
                                 SettingsDivider()
                             }
                             SettingsChoice(
-                                title = preference.label,
+                                title = stringResource(preference.labelResource()),
                                 selected = settings.appearance == preference,
                                 highlightSelected = false,
                                 onClick = { onChange(settings.copy(appearance = preference)) },
@@ -260,16 +280,38 @@ fun AppearanceScreen(
             }
             item {
                 SettingsExplainer(
-                    "System default follows your device appearance. Light and Dark keep the selected appearance.",
+                    stringResource(R.string.appearance_theme_help),
                 )
+            }
+            item {
+                SettingsGroup {
+                    SettingsLink(
+                        title = stringResource(R.string.action_color),
+                        onClick = onActionColor,
+                    )
+                    SettingsDivider()
+                    SettingsLink(
+                        title = stringResource(R.string.chat_bubble_colors),
+                        onClick = onBubbleColors,
+                    )
+                }
+            }
+            item {
+                SettingsGroup {
+                    SettingsLink(stringResource(R.string.appearance_font_family), value = familyLabels.getValue(settings.fontFamily), onClick = { fontFamilyOpen = true })
+                    SettingsDivider()
+                    SettingsLink(stringResource(R.string.appearance_font_size), value = fontLabels.getValue(settings.fontSize), onClick = { fontSizeOpen = true })
+                    SettingsDivider()
+                    SettingsLink(stringResource(R.string.appearance_enter_behavior), value = enterLabels.getValue(settings.enterKeyBehavior), onClick = { enterOpen = true })
+                }
             }
             item {
                 SettingsGroup(
                     modifier = Modifier.testTag("appearance.language.group"),
                 ) {
                     SettingsLink(
-                        title = "Language",
-                        value = settings.language.label,
+                        title = stringResource(R.string.language_title),
+                        value = stringResource(settings.language.labelResource()),
                         onClick = onLanguage,
                     )
                 }
@@ -285,7 +327,7 @@ fun LanguageScreen(
     onChange: (ProfileSettings) -> Unit,
 ) {
     val settings = profile.settings
-    SettingsScaffold(title = "Language", onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.language_title), onBack = onBack) {
         SettingsList {
             item {
                 SettingsGroup(
@@ -303,7 +345,7 @@ fun LanguageScreen(
                                 SettingsDivider()
                             }
                             SettingsChoice(
-                                title = preference.label,
+                                title = stringResource(preference.labelResource()),
                                 selected = settings.language == preference,
                                 highlightSelected = false,
                                 onClick = { onChange(settings.copy(language = preference)) },
@@ -314,6 +356,28 @@ fun LanguageScreen(
             }
         }
     }
+}
+
+private fun LanguagePreference.labelResource(): Int = when (this) {
+    LanguagePreference.System -> R.string.language_system
+    LanguagePreference.English -> R.string.language_english
+    LanguagePreference.German -> R.string.language_german
+    LanguagePreference.Spanish -> R.string.language_spanish
+    LanguagePreference.French -> R.string.language_french
+    LanguagePreference.Italian -> R.string.language_italian
+    LanguagePreference.Portuguese -> R.string.language_portuguese
+    LanguagePreference.Serbian -> R.string.language_serbian
+    LanguagePreference.Russian -> R.string.language_russian
+    LanguagePreference.Turkish -> R.string.language_turkish
+    LanguagePreference.ChineseSimplified -> R.string.language_chinese_simplified
+    LanguagePreference.ChineseTraditional -> R.string.language_chinese_traditional
+}
+
+private fun AppearancePreference.labelResource(): Int = when (this) {
+    AppearancePreference.System -> R.string.language_system
+    AppearancePreference.Light -> R.string.theme_light
+    AppearancePreference.Dark -> R.string.theme_dark
+    AppearancePreference.Amoled -> R.string.appearance_amoled
 }
 
 @Composable
@@ -333,21 +397,22 @@ fun PrivacySecurityScreen(
     var eraseOpen by remember { mutableStateOf(false) }
     val settings = profile.settings
     val authenticationEnabled = secure && settings.requireDeviceAuthentication
+    val autoLockLabels = AutoLockDuration.entries.associateWith { autoLockLabel(it) }
     LaunchedEffect(authenticationEnabled) {
         if (!authenticationEnabled) autoLockPicker = false
     }
-    SettingsScaffold(title = "Privacy & Security", onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.ui_privacy_security), onBack = onBack) {
         SettingsList {
-            item { SettingsSection("Device protection") }
+            item { SettingsSection(stringResource(R.string.ui_device_protection)) }
             item {
                 SettingsGroup(
                     modifier = Modifier.testTag("privacy.device_protection.group"),
                 ) {
                     SettingsSwitch(
-                        title = "Hide Screen in Recents",
+                        title = stringResource(R.string.ui_hide_screen_in_recents),
                         checked = settings.hideScreenInRecents,
                         onCheckedChange = { onChange(settings.copy(hideScreenInRecents = it)) },
-                        subtitle = "Hide conversations and profile details in the Recents preview while White Noise is in the background.",
+                        subtitle = stringResource(R.string.ui_hide_conversations_and_profile_details_in_the_recents_),
                     )
                     SettingsDivider(Modifier.testTag("privacy.device_protection.divider.recents"))
                     SettingsSwitch(
@@ -366,55 +431,55 @@ fun PrivacySecurityScreen(
                     )
                     SettingsDivider()
                     SettingsSwitch(
-                        title = "Require device authentication",
+                        title = stringResource(R.string.ui_require_device_authentication),
                         checked = authenticationEnabled,
                         enabled = secure,
                         onCheckedChange = { onChange(settings.copy(requireDeviceAuthentication = it)) },
                         subtitle = if (secure) {
-                            "Use the device screen lock when returning to White Noise."
+                            stringResource(R.string.app_lock_enabled_detail)
                         } else {
-                            "Set a device screen lock first."
+                            stringResource(R.string.app_lock_setup_detail)
                         },
                     )
                     if (!secure) {
                         SettingsDivider(Modifier.testTag("privacy.device_protection.divider.security_settings"))
                         SettingsAction(
-                            title = "Open Android security settings",
+                            title = stringResource(R.string.ui_open_android_security_settings),
                             onClick = { context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
                         )
                     }
                     if (authenticationEnabled) {
                         SettingsDivider(Modifier.testTag("privacy.device_protection.divider.auto_lock"))
                         SettingsLink(
-                            title = "Auto-lock",
-                            value = settings.autoLockDuration.label,
+                            title = stringResource(R.string.ui_auto_lock),
+                            value = autoLockLabel(settings.autoLockDuration),
                             onClick = { autoLockPicker = true },
                         )
                     }
                 }
             }
-            item { SettingsSection("Diagnostics") }
+            item { SettingsSection(stringResource(R.string.developer_diagnostics)) }
             item {
                 SettingsGroup(
                     modifier = Modifier.testTag("privacy.diagnostics.group"),
                 ) {
                     SettingsLink(
-                        title = "Diagnostics & Improvements",
+                        title = stringResource(R.string.diagnostics_improvements),
                         value = profile.diagnostics.summary,
                         onClick = onDiagnosticsImprovements,
                     )
                 }
             }
             item {
-                SettingsExplainer("Control optional analytics and diagnostic logs for this profile.")
+                SettingsExplainer(stringResource(R.string.ui_control_optional_analytics_and_diagnostic_logs_for_thi))
             }
-            item { SettingsSection("Device data") }
+            item { SettingsSection(stringResource(R.string.ui_device_data)) }
             item {
                 SettingsGroup(
                     modifier = Modifier.testTag("privacy.erase.group"),
                 ) {
                     SettingsAction(
-                        title = "Erase App Data",
+                        title = stringResource(R.string.ui_erase_app_data),
                         onClick = { eraseOpen = true },
                         destructive = true,
                     )
@@ -422,17 +487,17 @@ fun PrivacySecurityScreen(
             }
             item {
                 SettingsExplainer(
-                    "Signs out every profile and permanently removes all White Noise data from this device.",
+                    stringResource(R.string.ui_signs_out_every_profile_and_permanently_removes_all_wh),
                 )
             }
         }
     }
     if (autoLockPicker) {
         ChoiceDialog(
-            title = "Auto-lock",
+            title = stringResource(R.string.ui_auto_lock),
             values = AutoLockDuration.entries,
             selected = settings.autoLockDuration,
-            label = AutoLockDuration::label,
+            label = { autoLockLabels.getValue(it) },
             onDismiss = { autoLockPicker = false },
             onSelect = {
                 onChange(settings.copy(autoLockDuration = it))
@@ -448,6 +513,35 @@ fun PrivacySecurityScreen(
         )
     }
 }
+
+@Composable
+private fun notificationPreviewLabel(mode: NotificationPreviewMode): String = stringResource(
+    when (mode) {
+        NotificationPreviewMode.SenderAndMessage -> R.string.notification_preview_sender_message
+        NotificationPreviewMode.SenderOnly -> R.string.notification_preview_sender_only
+        NotificationPreviewMode.Generic -> R.string.notification_preview_generic
+    },
+)
+
+@Composable
+private fun notificationPreviewExample(mode: NotificationPreviewMode): String = stringResource(
+    when (mode) {
+        NotificationPreviewMode.SenderAndMessage -> R.string.notification_preview_example_sender_message
+        NotificationPreviewMode.SenderOnly -> R.string.notification_preview_example_sender_only
+        NotificationPreviewMode.Generic -> R.string.notification_preview_example_generic
+    },
+)
+
+@Composable
+private fun autoLockLabel(duration: AutoLockDuration): String = stringResource(
+    when (duration) {
+        AutoLockDuration.Immediately -> R.string.auto_lock_immediately
+        AutoLockDuration.OneMinute -> R.string.auto_lock_one_minute
+        AutoLockDuration.FiveMinutes -> R.string.auto_lock_five_minutes
+        AutoLockDuration.FifteenMinutes -> R.string.auto_lock_fifteen_minutes
+        AutoLockDuration.ThirtyMinutes -> R.string.auto_lock_thirty_minutes
+    },
+)
 
 @Composable
 internal fun <T> ChoiceDialog(
@@ -489,6 +583,6 @@ internal fun <T> ChoiceDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

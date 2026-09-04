@@ -147,6 +147,7 @@ fun ChatInfoScreen(
     onAddToFolder: (String) -> Boolean = { false },
     onCollapseLongMessages: (Boolean) -> Unit = {},
     onNotifications: (() -> Unit)? = null,
+    onBubbleColors: () -> Unit = {},
 ) {
     var folderPicker by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var folderFailed by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
@@ -320,6 +321,8 @@ fun ChatInfoScreen(
                 if (onNotifications != null) item(key = "notification_controls") {
                     dev.ipf.whitenoise.ui.settings.SettingsGroup {
                         dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.notification_sounds_title),onClick = onNotifications)
+                        dev.ipf.whitenoise.ui.settings.SettingsDivider()
+                        dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.chat_bubble_colors),onClick = onBubbleColors)
                     }
                 }
                 item(key = "retention_work") { RetentionWorkPanel(profile, chat) }

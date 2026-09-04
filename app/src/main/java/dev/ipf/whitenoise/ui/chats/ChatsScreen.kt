@@ -534,7 +534,7 @@ private fun ChatsTopBar(
 ) {
     val filterDescription = stringResource(R.string.filter_chats)
     val folder = profile?.chatFolders?.firstOrNull { it.id == folderId }
-    val scopeTitle = folder?.name ?: if (scope == ChatScope.Chats) stringResource(R.string.chats) else scope.label
+    val scopeTitle = folder?.name ?: chatScopeLabel(scope)
     val selectedScopeDescription = stringResource(R.string.selected_chat_scope, scopeTitle)
     val settingsDescription = profile?.let {
         stringResource(R.string.open_settings_for, it.name)
@@ -603,11 +603,11 @@ private fun ChatsTopBar(
                     onDismissRequest = { onFilterMenuOpenChange(false) },
                     modifier = Modifier.testTag("chats.filterMenu"),
                     items = listOf(
-                        WhiteNoiseMenuItem(label = ChatScope.Chats.label, onClick = { onScopeChange(ChatScope.Chats) }, selected = scope == ChatScope.Chats && folder == null),
+                        WhiteNoiseMenuItem(label = chatScopeLabel(ChatScope.Chats), onClick = { onScopeChange(ChatScope.Chats) }, selected = scope == ChatScope.Chats && folder == null),
                     ) + profile?.chatFolders.orEmpty().map { candidate ->
                         WhiteNoiseMenuItem(label = candidate.name, onClick = { onFolderChange(candidate.id) }, selected = candidate.id == folderId)
                     } + listOf(
-                        WhiteNoiseMenuItem(label = ChatScope.Left.label, onClick = { onScopeChange(ChatScope.Left) }, selected = scope == ChatScope.Left && folder == null),
+                        WhiteNoiseMenuItem(label = chatScopeLabel(ChatScope.Left), onClick = { onScopeChange(ChatScope.Left) }, selected = scope == ChatScope.Left && folder == null),
                         WhiteNoiseMenuItem(label = stringResource(R.string.chat_folders), icon = R.drawable.ic_filter_list, onClick = { onFilterMenuOpenChange(false); onFolders() }),
                     ),
                 )
@@ -623,6 +623,16 @@ private fun ChatsTopBar(
         ),
     )
 }
+
+@Composable
+private fun chatScopeLabel(scope: ChatScope): String = stringResource(
+    when (scope) {
+        ChatScope.Chats -> R.string.chats
+        ChatScope.Unread -> R.string.unread
+        ChatScope.Archived -> R.string.archived
+        ChatScope.Left -> R.string.left_chats
+    },
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

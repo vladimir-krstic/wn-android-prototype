@@ -104,6 +104,18 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import dev.ipf.whitenoise.model.EnterKeyBehavior
+import dev.ipf.whitenoise.model.ComposerEnterDecision
+import dev.ipf.whitenoise.model.ComposerEnterPolicy
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
@@ -1070,6 +1082,7 @@ fun FullConversationComposer(
                         DictationActiveControls(captureOwner)
                         when (val state = voiceState) {
                             ComposerVoiceState.Idle, is ComposerVoiceState.Recording -> ComposerTextInput(
+                                enterKeyBehavior = profile.settings.enterKeyBehavior,
                                 value = editorValue,
                                 onValueChanged = { value -> composerValue = value; if (value.text != chat.draftText) onDraftTextChanged(value.text) },
                                 onSend = {
@@ -1266,6 +1279,7 @@ fun FullConversationComposer(
 
 @Composable
 private fun ComposerTextInput(
+    enterKeyBehavior: EnterKeyBehavior,
     value: androidx.compose.ui.text.input.TextFieldValue,
     onValueChanged: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
     onSend: () -> Unit,
@@ -1326,10 +1340,27 @@ private fun ComposerTextInput(
                 .focusRequester(focusRequester)
                 .heightIn(min = 48.dp)
                 .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
-                .testTag("conversation.composer.editor"),
+                .testTag("conversation.composer.editor")
+                .onPreviewKeyEvent { event ->
+                    when (ComposerEnterPolicy.decide(enterKeyBehavior,
+                        isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter,
+                        isKeyDown = event.type == KeyEventType.KeyDown,
+                        shift = event.isShiftPressed,
+                        otherModifier = event.isCtrlPressed || event.isAltPressed || event.isMetaPressed,
+                        repeated = event.nativeKeyEvent.repeatCount > 0,
+                        composing = value.composition != null,
+                        enabled = enabled, sendable = sendable,
+                    )) {
+                        ComposerEnterDecision.Native -> false
+                        ComposerEnterDecision.Consume -> true
+                        ComposerEnterDecision.Send -> { onSend(); true }
+                    }
+                },
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-            keyboardActions = KeyboardActions(),
+            keyboardOptions = KeyboardOptions(imeAction = if (enterKeyBehavior == EnterKeyBehavior.SendMessage) ImeAction.Send else ImeAction.Default),
+            keyboardActions = KeyboardActions(onSend = {
+                if (enterKeyBehavior == EnterKeyBehavior.SendMessage && enabled && sendable && value.composition == null) onSend()
+            }),
             minLines = 1,
             maxLines = if (expanded) Int.MAX_VALUE else ComposerExpansionPolicy.compactLineLimit(hasAttachments),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),

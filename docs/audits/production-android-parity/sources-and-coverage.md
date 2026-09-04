@@ -193,6 +193,22 @@ and timed performance contracts therefore remain the B25 authority.
 records host evidence. Broader startup/windows, Nostr, installer and Amber/contact
 source drift still awaits its relevant batch/final reconciliation.
 
+## Implementation drift check — B26, 2026-09-04
+
+Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`; no main.
+The seven-commit comparison changes no AppearanceScreen, FontSizeScreen, AppFont,
+AppFontScale, AppLanguage, EnterKeyBehavior, ComposerPills, Theme or Type contract.
+AppState's appearance/font/input setters are absent from the diff. Pinned source
+therefore governs the optional AMOLED mode, app font/scale, language choices and
+Shift+Enter/IME behavior. Production's default Manrope and warm AMOLED colors
+are translated to the already-approved System typeface and monochrome identity.
+[The completed brief](../../screens/appearance-typography-and-input.md#implementation-evidence)
+records 892 tests after B32 integration, ten compiled UI cases, four complete
+1,762-resource locale catalogs and the Q01/Q09 decisions. Pinned font assets,
+color/ownership policy and locale key/token/plural coverage are host-verified.
+Device rendering, system keyboard behavior and visual acceptance are not
+inferred from compilation.
+
 ## Implementation drift check — B27, 2026-09-04
 
 `git ls-remote` still resolves master to `911040c7e1c31652638c8cfd72812d1f3a694b9b`

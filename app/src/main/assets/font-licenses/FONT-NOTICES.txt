@@ -1,0 +1,7 @@
+Copyright 2019 The Manrope Project Authors (https://github.com/sharanda/manrope)
+
+Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)
+
+Copyright 2021 The Urbanist Project Authors (https://github.com/coreyhu/Urbanist)
+
+Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)

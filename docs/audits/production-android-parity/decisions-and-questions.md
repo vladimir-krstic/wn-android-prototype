@@ -8,8 +8,11 @@ These questions affect only the linked capability slices. The recommendation is 
 
 - **Conflict:** C102 exposes production full-spectrum accent and per-side/global/per-chat bubble colors; the approved prototype identity is monochrome.
 - **Recommendation:** Preserve monochrome defaults and app chrome. If full capability is required, allow optional bubble/content customization and a restrained semantic action accent without changing neutral surfaces; verify contrast per chosen color.
-- **Blocks:** the color-customization slice of B26, not AMOLED, input or other typography work.
-- **User decision:** Whether full-spectrum action chrome is required, bubble colors only are sufficient, or the production feature should remain documented for later migration.
+- **Resolved in B26:** The user selected the recommendation. Every theme/profile
+  can optionally set the primary action and global sent/received bubble colors;
+  each chat can override both bubble sides. Defaults and neutral surfaces remain
+  monochrome, text uses the verified contrast policy and Reset removes the
+  relevant override.
 
 <a id="q02"></a>
 
@@ -79,7 +82,13 @@ default nor the scope of real external operations.
 
 - **Conflict:** C101/C104 production offers multiple bundled families and additional languages; the prototype has an approved typography system and different language list.
 - **Recommendation:** Keep the existing typeface/scale and language default. Add optional choices only after verifying font licensing/resources, and preserve every current language while adding production languages with real translated resources in separate bounded work.
-- **Blocks:** font-family asset import and claiming translated language coverage in B26. Font-scale behavior and selector states can proceed.
+- **Resolved in B26:** The user selected the recommendation and complete locale
+  coverage. System remains the approved font and device-locale default. Pinned
+  OFL metadata, full family licenses and reproducible API-23-compatible static
+  instances are documented in [font assets](../../references/font-assets.md).
+  Every existing language remains, and Russian, Turkish, Simplified Chinese and
+  Traditional Chinese each provide all 1,762 translatable resources with
+  verified format-token and plural parity.
 
 ## Nonblocking evidence uncertainties
 

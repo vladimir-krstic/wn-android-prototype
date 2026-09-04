@@ -99,9 +99,9 @@ fun SignOutSheet(
         confirmValueChange = confirmSheetValueChange,
     )
     val wipeExplanation = if (wipeData) {
-        "This profile and all local data will be permanently removed. Previous chats won’t return."
+        stringResource(R.string.sign_out_wipe_detail)
     } else {
-        "This profile and its local data will stay on this device."
+        stringResource(R.string.sign_out_keep_detail)
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(attempt?.id, attempt?.currentStep, lifecycle) {
@@ -122,7 +122,7 @@ fun SignOutSheet(
                 .fillMaxHeight(0.94f),
         ) {
             WhiteNoiseSheetHeader(
-                title = "Sign Out",
+                title = stringResource(R.string.ui_sign_out),
                 onClose = onDismiss,
                 closeEnabled = !busy,
             )
@@ -164,7 +164,7 @@ fun SignOutSheet(
                         }
                         SettingsDivider(Modifier.testTag("sign_out.profile.divider"))
                         SettingsSwitch(
-                            title = "Wipe Data From This Device",
+                            title = stringResource(R.string.ui_wipe_data_from_this_device),
                             checked = wipeData,
                             onCheckedChange = {
                                 wipeData = it
@@ -186,13 +186,13 @@ fun SignOutSheet(
                     SettingsExplainer(wipeExplanation)
                     if (!wipeData) SettingsExplainer(stringResource(R.string.exit_remove_connection_help))
                     if (wipeData) {
-                        SettingsSection("Enter Profile Name")
+                        SettingsSection(stringResource(R.string.ui_enter_profile_name))
                         WhiteNoiseTextField(
                             state = confirmation,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-                            label = { Text("Profile name") },
+                            label = { Text(stringResource(R.string.ui_profile_name)) },
                             lineLimits = TextFieldLineLimits.SingleLine,
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Words,
@@ -201,7 +201,7 @@ fun SignOutSheet(
                             onKeyboardAction = { focusManager.clearFocus() },
                         )
                         SettingsExplainer(
-                            "Type “${profile.name}” to confirm permanent removal of this profile and its local data.",
+                            stringResource(R.string.remove_profile_confirmation, profile.name),
                         )
                     }
                 }
@@ -210,14 +210,14 @@ fun SignOutSheet(
                     tonalElevation = 0.dp,
                 ) {
                     DestructiveButton(
-                        label = "Sign Out",
+                        label = stringResource(R.string.ui_sign_out),
                         onClick = {
                             focusManager.clearFocus()
                             onComplete(SignOutOptions(wipeData, deleteConnectionInformation, confirmationValue))
                         },
                         enabled = !wipeData || WipeConfirmationPhrase.matches(confirmationValue, profile.name),
-                        actionDescription = if (wipeData) "Sign Out and Wipe Data" else "Sign Out",
-                        unavailableDescription = if (wipeData) "Profile name required" else null,
+                        actionDescription = if (wipeData) stringResource(R.string.sign_out_and_wipe) else stringResource(R.string.ui_sign_out),
+                        unavailableDescription = if (wipeData) stringResource(R.string.profile_name_required) else null,
                     )
                 }
             }
@@ -256,12 +256,12 @@ fun EraseAppDataSheet(
                 .fillMaxHeight(0.94f),
         ) {
             WhiteNoiseSheetHeader(
-                title = "Erase App Data",
+                title = stringResource(R.string.ui_erase_app_data),
                 onClose = onDismiss,
                 closeEnabled = !erasing,
             )
             if (erasing) {
-                DestructiveProgress("Erasing app data…", Modifier.weight(1f))
+                DestructiveProgress(stringResource(R.string.erasing_app_data), Modifier.weight(1f))
             } else {
                 Column(
                     modifier = Modifier
@@ -271,8 +271,8 @@ fun EraseAppDataSheet(
                 ) {
                     SettingsCallout(
                         modifier = Modifier.testTag("erase.warning"),
-                        title = "This can’t be undone",
-                        text = "Every profile and all local chats, media, drafts, keys, and settings will be removed from this device.",
+                        title = stringResource(R.string.ui_this_cant_be_undone),
+                        text = stringResource(R.string.erase_app_data_detail),
                         isError = true,
                         leading = {
                             Icon(
@@ -281,7 +281,7 @@ fun EraseAppDataSheet(
                             )
                         },
                     )
-                    SettingsSection("Type these words to confirm")
+                    SettingsSection(stringResource(R.string.ui_type_these_words_to_confirm))
                     SettingsGroup(
                         modifier = Modifier.testTag("erase.phrase"),
                     ) {
@@ -305,9 +305,9 @@ fun EraseAppDataSheet(
                                 vertical = WhiteNoiseSpacing.FormField,
                             )
                             .testTag("erase.confirmation"),
-                        label = { Text("Confirmation phrase") },
+                        label = { Text(stringResource(R.string.ui_confirmation_phrase)) },
                         lineLimits = TextFieldLineLimits.SingleLine,
-                        supportingText = { Text("Enter the three words exactly to continue.") },
+                        supportingText = { Text(stringResource(R.string.ui_enter_the_three_words_exactly_to_continue)) },
                     )
                 }
                 SettingsBottomAction(
@@ -315,11 +315,11 @@ fun EraseAppDataSheet(
                     tonalElevation = 0.dp,
                 ) {
                     DestructiveButton(
-                        label = "Erase",
+                        label = stringResource(R.string.erase),
                         onClick = { erasing = true },
                         enabled = WipeConfirmationPhrase.matches(confirmationValue, phrase),
-                        actionDescription = "Erase App Data",
-                        unavailableDescription = "Confirmation phrase required",
+                        actionDescription = stringResource(R.string.ui_erase_app_data),
+                        unavailableDescription = stringResource(R.string.confirmation_phrase_required),
                     )
                 }
             }
@@ -336,17 +336,17 @@ fun ManageProfilesScreen(
 ) {
     var target by remember { mutableStateOf<Profile?>(null) }
     val removable = profiles.filterNot { it.id == activeProfileId }
-    SettingsScaffold(title = "Manage Profiles", onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.ui_manage_profiles), onBack = onBack) {
         SettingsList {
             if (removable.isEmpty()) {
                 item {
                     WhiteNoiseEmptyState(
-                        title = "No other profiles",
-                        detail = "There are no other stored profiles to remove.",
+                        title = stringResource(R.string.ui_no_other_profiles),
+                        detail = stringResource(R.string.no_other_profiles_detail),
                     )
                 }
             } else {
-                item { SettingsSection("Stored profiles") }
+                item { SettingsSection(stringResource(R.string.ui_stored_profiles)) }
                 item {
                     SettingsGroup {
                         removable.forEach { profile ->
@@ -363,7 +363,7 @@ fun ManageProfilesScreen(
                                 },
                                 trailingContent = {
                                     TextButton(onClick = { target = profile }) {
-                                        Text("Remove", color = MaterialTheme.colorScheme.error)
+                                        Text(stringResource(R.string.ui_remove), color = MaterialTheme.colorScheme.error)
                                     }
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -374,7 +374,7 @@ fun ManageProfilesScreen(
             }
             item {
                 SettingsExplainer(
-                    "Removing another profile signs it out and permanently deletes its local chats, drafts, keys, settings, and developer artifacts from this device.",
+                    stringResource(R.string.ui_removing_another_profile_signs_it_out_and_permanently_),
                 )
             }
         }
@@ -400,7 +400,7 @@ private fun RemoveProfileDialog(
     val confirmationValue = confirmation.text.toString()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Remove profile?") },
+        title = { Text(stringResource(R.string.ui_remove_profile)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField)) {
                 Row(
@@ -425,10 +425,10 @@ private fun RemoveProfileDialog(
                 WhiteNoiseTextField(
                     state = confirmation,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Profile name") },
+                    label = { Text(stringResource(R.string.ui_profile_name)) },
                     lineLimits = TextFieldLineLimits.SingleLine,
                     supportingText = {
-                        Text("Type “${profile.name}” to permanently remove this profile and its local data.")
+                        Text(stringResource(R.string.remove_profile_permanent_confirmation, profile.name))
                     },
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
@@ -440,9 +440,9 @@ private fun RemoveProfileDialog(
             TextButton(
                 onClick = { onRemove(confirmationValue) },
                 enabled = WipeConfirmationPhrase.matches(confirmationValue, profile.name),
-            ) { Text("Remove Profile", color = MaterialTheme.colorScheme.error) }
+            ) { Text(stringResource(R.string.ui_remove_profile_2), color = MaterialTheme.colorScheme.error) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -471,6 +471,7 @@ private fun DestructiveButton(
     actionDescription: String,
     unavailableDescription: String?,
 ) {
+    val readyDescription = stringResource(R.string.ready)
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -480,7 +481,7 @@ private fun DestructiveButton(
             .semantics {
                 role = Role.Button
                 contentDescription = actionDescription
-                stateDescription = if (enabled) "Ready" else unavailableDescription.orEmpty()
+                stateDescription = if (enabled) readyDescription else unavailableDescription.orEmpty()
             },
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error,

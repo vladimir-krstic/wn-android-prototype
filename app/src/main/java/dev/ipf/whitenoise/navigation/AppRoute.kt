@@ -97,6 +97,12 @@ sealed interface AppRoute {
     data object Appearance : AppRoute
 
     @Serializable
+    data object ActionColor : AppRoute
+
+    @Serializable
+    data class ChatBubbleColors(val chatId: String? = null) : AppRoute
+
+    @Serializable
     data object ReadAloud : AppRoute
 
     @Serializable

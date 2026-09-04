@@ -17,12 +17,12 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B25 and B27–B32 are implemented and host-verified.
+Production Android parity batches B01–B32 are implemented and host-verified.
 [B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 adds publication/rotation/deletion recovery, detailed push inspection, streaming
 status controls, relay health, self-send outcomes and timed performance state.
-The latest integrated host gate passes 870 unit tests, zero lint errors and both APKs.
-Ten B24 UI cases compile only; device and visual acceptance remain pending.
+The latest integrated host gate passes 892 unit tests, zero lint errors and both
+debug APKs. Ten B26 UI cases compile only; device and visual acceptance remain pending.
 The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
 tracks B26 and every per-batch commit.
@@ -31,6 +31,13 @@ B24 is complete: app lock, incognito keyboard, independent Recents and chat
 screenshot controls, and sensitive audit logs are implemented and host-verified.
 After integration with B25 and B27–B32, the batch passes 870 unit tests, lint and
 both APK builds. See the [B24 brief](docs/screens/app-lock-and-sensitive-privacy.md#implementation-evidence).
+
+B26 completes AMOLED, licensed optional fonts, in-app font size, native Enter
+behavior, per-theme action/global bubble colors, per-chat bubble overrides and
+complete Russian, Turkish, Simplified Chinese and Traditional Chinese catalogs.
+Monochrome defaults and neutral surfaces remain unchanged. The integrated gate
+passes 892 unit tests, lint and both debug APKs; ten interaction cases compile
+only. See the [B26 brief](docs/screens/appearance-typography-and-input.md#implementation-evidence).
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
@@ -150,6 +157,7 @@ iOS commits do not expand Android scope without explicit approval.
 Run from the repository root:
 
 ```bash
+./scripts/verify_locale_resources.py
 ./gradlew assembleDebug
 ./gradlew lintDebug
 ./gradlew testDebugUnitTest

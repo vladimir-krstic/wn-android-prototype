@@ -68,7 +68,7 @@ fun KeyPackagesScreen(profile: Profile, controller: DeveloperParityController, o
     val w = controller.work
     val busy = w?.phase in listOf(DeveloperPhase.Running, DeveloperPhase.Confirm)
     val enabled = profile.developerTools.isEnabled && !busy
-    SettingsScaffold(title = "Key Packages", onBack = onBack, topBarActions = {
+    SettingsScaffold(title = stringResource(R.string.developer_key_packages), onBack = onBack, topBarActions = {
         TextButton(onClick = { controller.begin(DeveloperOperation.RefreshPackages) }, enabled = enabled) { Text(stringResource(R.string.developer_refresh)) }
     }) {
         SettingsList {
@@ -151,7 +151,7 @@ internal fun DiagnosticHealthSheet(profile: Profile, controller: DeveloperParity
                 TextButton(onClick = { controller.begin(DeveloperOperation.SendToSelf) }, enabled = !busy) { Text(stringResource(R.string.developer_self_send)) }
             }
             if (profile.developerTools.health != null && controller.work?.let { it.operation == DeveloperOperation.RefreshHealth && it.phase != DeveloperPhase.Complete } == true) {
-                SettingsExplainer("Showing the last successful health snapshot.")
+                SettingsExplainer(stringResource(R.string.developer_showing_the_last_successful_health_snapshot))
             }
             DeveloperResult(controller)
             if (controller.performanceAvailable) {
@@ -171,13 +171,13 @@ internal fun DiagnosticHealthSheet(profile: Profile, controller: DeveloperParity
 internal fun DeveloperParityControls(profile: Profile, controller: DeveloperParityController) {
     var choose by remember { mutableStateOf(false) }
     var inventory by remember { mutableStateOf(false) }
-    SettingsSection("Inspection controls")
+    SettingsSection(stringResource(R.string.developer_inspection_controls))
     SettingsGroup {
         SettingsSwitch(stringResource(R.string.developer_streaming), checked = profile.developerTools.streamingDebug, onCheckedChange = controller::streaming)
-        SettingsLink("Inspection operation outcome", controller.outcome.name, { choose = true })
-        SettingsLink("Key-package inventory example", onClick = { inventory = true })
+        SettingsLink(stringResource(R.string.developer_inspection_operation_outcome), controller.outcome.name, { choose = true })
+        SettingsLink(stringResource(R.string.developer_key_package_inventory_example), onClick = { inventory = true })
     }
     SettingsExplainer(stringResource(R.string.developer_streaming_help))
-    if (inventory) ScenarioChoiceDialog("Key-package inventory example", PackageInventoryExample.entries, PackageInventoryExample.Published, { it.name }, controller::inventoryExample, { inventory = false })
-    if (choose) ScenarioChoiceDialog("Inspection operation outcome", DeveloperOutcome.entries, controller.outcome, { it.name }, controller::chooseOutcome, { choose = false })
+    if (inventory) ScenarioChoiceDialog(stringResource(R.string.developer_key_package_inventory_example), PackageInventoryExample.entries, PackageInventoryExample.Published, { it.name }, controller::inventoryExample, { inventory = false })
+    if (choose) ScenarioChoiceDialog(stringResource(R.string.developer_inspection_operation_outcome), DeveloperOutcome.entries, controller.outcome, { it.name }, controller::chooseOutcome, { choose = false })
 }

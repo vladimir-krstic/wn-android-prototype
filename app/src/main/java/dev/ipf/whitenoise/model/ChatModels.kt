@@ -239,6 +239,7 @@ data class Chat(
     val pinnedOrder: Int? = null,
     val readState: ConversationReadState? = null,
     val collapseLongMessages: Boolean = true,
+    val bubbleColors: ChatBubbleColorOverrides = ChatBubbleColorOverrides(),
     val messageDeletion: MessageDeleteOperation? = null,
     val groupRoster: GroupRoster = GroupRoster(),
     val publicInviteAvatar: ProfileAvatar = avatar,

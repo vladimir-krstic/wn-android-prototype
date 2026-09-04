@@ -60,6 +60,7 @@ import dev.ipf.whitenoise.model.ChatListPresentation
 import dev.ipf.whitenoise.model.ChatListStatus
 import dev.ipf.whitenoise.model.DisappearingDuration
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.conversation.retentionLabel
 
 internal val ChatRowHorizontalInset = 8.dp
 
@@ -91,7 +92,7 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
                             RowStatusIcon(R.drawable.ic_notifications_off, stringResource(R.string.muted), Modifier.testTag("chat.muted.${chat.id}"))
                         }
                         if (chat.disappearingDuration != DisappearingDuration.Off) {
-                            RowStatusIcon(R.drawable.ic_timer, stringResource(R.string.disappearing_messages, chat.disappearingDuration.label), Modifier.testTag("chat.timer.${chat.id}"))
+                            RowStatusIcon(R.drawable.ic_timer, stringResource(R.string.disappearing_messages, retentionLabel(chat.disappearingDuration)), Modifier.testTag("chat.timer.${chat.id}"))
                         }
                         if (chat.hasEndedMembership) {
                             RowStatusIcon(R.drawable.ic_logout, chat.visiblePreview, Modifier.testTag("chat.membership.${chat.id}"))
