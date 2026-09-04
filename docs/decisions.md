@@ -4110,3 +4110,27 @@ services, encrypted/durable stores and process-death recovery remain Q06 seams.
 The [selected brief](screens/notification-routing-and-actions.md#implementation-evidence)
 records production callbacks, drift and validation: 748 passing unit tests, zero
 lint errors and both APKs; seven new UI cases compile only.
+
+## WN-ANDROID-0145 — Key-package and diagnostic state stays behind the developer gate
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B25 contract
+
+Keep the approved developer toggle and contextual publication button. Q04 blocks
+only ordinary Settings relocation. Key-package inventory separates publication
+from retained local material. Republish keeps identity; rotation retains previous
+local material; confirmed deletion removes only the target publication. Partial
+relay retries keep accepted work and the same candidate. Route/profile/gate and
+source-revision leases prevent late writes. Errors remain visible and recoverable.
+
+Diagnostics keeps one console and its overflow commands; Health & Performance
+uses a scrollable Material sheet. Performance is opt-in, debug-build-only and
+expires against monotonic elapsed time after 30 minutes, including time away.
+No log sink or telemetry is added. Detailed push identity remains developer-only;
+summary copy remains sanitized. Streaming Debug adds read-only status outside
+message controls and never adds canonical timeline entries. B29 owns ordinary
+agent streaming operations. The new publication state contract supersedes the
+single-artifact behavior in WN-ANDROID-0076; its native presentation remains.
+
+Evidence: [B25 brief](screens/key-packages-and-developer-diagnostics.md),
+DeveloperParityController, DeveloperParityUi, DeveloperModels and the state/UI tests.

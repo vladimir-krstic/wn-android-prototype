@@ -27,7 +27,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B21: implemented and host-verified 2026-09-04; 693 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/incoming-sharing-and-profile-links.md). Commit title: `B21: Add incoming sharing, shortcuts and profile links`. Q06 retains real exported receiving/publication outside scope.
 - B22: implemented and host-verified 2026-09-04; 714 unit tests, zero lint errors, both APKs and ten new compiled UI/platform cases. [Selected brief and evidence](../../screens/notification-controls.md). Commit title: `B22: Add global and per-chat notification settings`. Q06 retains real delivery/services/publication/vibration outside scope.
 - B23: implemented and host-verified 2026-09-04; 748 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/notification-routing-and-actions.md). Commit title: `B23: Add notification routing and inline actions`. Q06 retains real delivery/workers/durable recovery outside scope.
-- B24–B32: pending; linked decisions apply only to their named slices.
+- B25: implemented and host-verified 2026-09-04; 772 unit tests, zero lint errors, both APKs and six new compiled UI cases. [Selected brief and evidence](../../screens/key-packages-and-developer-diagnostics.md). Commit title: `B25: Expand key packages and developer diagnostics`. Q04 preserves the approved developer-only placement. Implemented in an isolated worktree so the pending B24 decision does not enter this commit.
+- B24 and B26–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence

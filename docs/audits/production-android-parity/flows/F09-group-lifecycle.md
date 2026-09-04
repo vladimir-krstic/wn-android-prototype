@@ -72,3 +72,11 @@ owned Android Files destination with distinct cancellation/failure/Saved outcome
 The [selected brief](../../../screens/group-administration-and-transcript.md#implementation-evidence)
 records 617 passing unit tests, zero lint errors, both APKs and nine new compiled
 UI cases. Device/visual acceptance is pending. Q04/C080 remains B25 scope.
+
+## B25 implementation evidence — 2026-09-04
+
+C080 is implemented and host-verified within the approved Developer Tools
+gate. [The B25 brief](../../../screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
+records 772 passing unit tests, zero lint errors and six compiled UI cases.
+Q04 remains about ordinary Settings relocation; new states preserve the existing
+placement. No device or visual acceptance is claimed.

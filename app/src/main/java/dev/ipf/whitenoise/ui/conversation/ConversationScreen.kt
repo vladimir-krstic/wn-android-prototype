@@ -957,6 +957,13 @@ fun ConversationScreen(
                                         searchResults.size,
                                     )
                                 }
+                                if (profile.developerTools.isEnabled && profile.developerTools.streamingDebug && !item.message.isDeleted) {
+                                    dev.ipf.whitenoise.model.DeveloperInspection.streamDetails(item.message)?.let { details ->
+                                        Text(details, style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin).testTag("conversation.stream_debug.${item.id}"))
+                                    }
+                                }
                                 MessageRow(
                                     profile = profile,
                                     chat = chat,

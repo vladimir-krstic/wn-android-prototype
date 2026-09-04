@@ -1,5 +1,9 @@
 # Developer and destructive flows
 
+2026-09-04: [B25](key-packages-and-developer-diagnostics.md) supersedes the
+single-key-package mutation and expands diagnostics/push/stream state. The
+approved developer gate, console and contextual publication presentation remain.
+
 2026-09-04: production B02 extends keys/sign-out/wipe behavior as recorded in
 [keys-and-profile-exit.md](keys-and-profile-exit.md). Its lifecycle and staged
 outcome contract supersedes earlier immediate-success descriptions here; the

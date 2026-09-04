@@ -16,6 +16,17 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-09-04 production B25
+
+C080/C110/C111/C118/C119 are implemented and host-verified within the approved
+Developer Tools gate. Key Packages gains separate republish/rotate/refresh/delete,
+retained provenance and partial recovery. Conversation inspection gains detailed
+push states; Diagnostics gains health/self-send/30-minute performance states.
+772 unit tests, zero lint errors and both APKs pass; six UI cases compile only.
+[Implementation evidence](../screens/key-packages-and-developer-diagnostics.md#implementation-evidence).
+Q04 concerns ordinary Settings exposure; no telemetry, transport or persistence
+was added. Device and user visual acceptance remain pending.
+
 ## 2026-08-31 cross-app hardening evidence
 
 The repository-wide hardening pass completed the clean host gate with 139 unit

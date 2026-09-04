@@ -326,3 +326,14 @@ notification methods. `NotificationActionsUi` owns app status; Developer Tools
 owns examples. Real exported intents, RemoteInput, delivery, workers, services and
 process-death persistence remain outside Q06 local coverage. Current route test
 drift preserves one mounted controller while moving to authoritative windows.
+
+## Production Android B25 — key packages and developer diagnostics
+
+[Selected brief](../screens/key-packages-and-developer-diagnostics.md) maps C080,
+C110/C111 and C118/C119 to model/DeveloperParity.kt, DeveloperModels.kt,
+state/DeveloperParityController.kt and ui/settings/DeveloperParityUi.kt.
+DeveloperScreens retains the console and enriched push details; ConversationScreen
+renders developer-only stream status outside message controls. Native source
+seams are KeyPackagesScreen/AppState publication methods, DiagnosticsScreen,
+PerformanceDiagnostics, DeveloperScreen, GroupDetailsScreen push inspection and
+StreamDebug. The fixed local state is not a production engine or telemetry sink.

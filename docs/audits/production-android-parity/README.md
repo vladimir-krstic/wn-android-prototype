@@ -1,6 +1,6 @@
 # Production Android parity audit
 
-Status: **B01–B23 implemented and host-verified; B24–B32 pending**
+Status: **B01–B23 and B25 implemented and host-verified; B24 and B26–B32 pending**
 
 Production source is [`marmot-protocol/whitenoise-android`](https://github.com/marmot-protocol/whitenoise-android) `master` at [`319454889f1c2494dec4a69b5577d98017f44eee`](https://github.com/marmot-protocol/whitenoise-android/commit/319454889f1c2494dec4a69b5577d98017f44eee). The initial comparison target was this prototype's working tree based on `4c3f7366bcb738839f4969d762403adfc023b8a3`, reconciled on 2026-09-03 after concurrent local work completed; generated audit files are excluded from its hash manifest.
 
@@ -16,15 +16,15 @@ The [capability matrix](capability-matrix.md) contains **122** user-outcome capa
 
 | Status | Count |
 | --- | ---: |
-| covered | 95 |
-| partial | 10 |
+| covered | 100 |
+| partial | 5 |
 | missing | 12 |
 | behavioral divergence | 4 |
 | unverified | 0 |
 | excluded with reason | 1 |
 
 
-After B23, 26 of the 122 rows still require implementation work. **16** are ready within the established prototype boundary; **10** require a linked product/platform decision. Q03 is resolved by the separate policy-pruning and message-countdown paths. A decision blocks only the named slice, so other batches can proceed. Covered C049, C058, C059, C066, C070, C084, C086 and C090 retain Q06 for real library access, location/maps, installation, background services, real speech recognition, exported receiving, shortcut publication and background notification services outside prototype scope; C053 links to the now-recorded Q07 document-destination choice.
+After B25, 21 of the 122 rows still require implementation work. **13** are ready within the established prototype boundary; **8** require a linked product/platform decision. Q03 is resolved by the separate policy-pruning and message-countdown paths. A decision blocks only the named slice, so other batches can proceed. Covered C049, C058, C059, C066, C070, C084, C086 and C090 retain Q06 for real library access, location/maps, installation, background services, real speech recognition, exported receiving, shortcut publication and background notification services outside prototype scope; C053 links to the now-recorded Q07 document-destination choice.
 
 ## Proposed destination changes
 
@@ -46,3 +46,6 @@ New top-level or detail destinations are needed for Folders, Folder editor, glob
 At the initial audit on 2026-09-03, document validation passed: all 122 capability rows map to their flow specifications, all 105 actionable rows map to the 32 batches, and all nine decision scopes agree with the matrix. The pinned archive checksum, 311 production source links, 415 local links and line references, 360 prototype file hashes, and documentation whitespace checks passed.
 
 The initial audit was static; subsequent host verification is tracked in each implementation brief. No device, emulator, `adb`, production network runtime, external signer, notification, background service, installer or visual inspection has been run for this implementation goal. Production's Marmot binding artifact and live relay/store behavior were not executed; user-visible states that cross those boundaries are specified as deterministic fixtures and their real integration seams are cited. Source presence and existing tests are evidence of an implemented code path, not proof that it works on every device. Visual acceptance remains a separate user-led gate.
+
+B25 completes key-package and developer inspection states within the approved gate.
+[Its evidence](../../screens/key-packages-and-developer-diagnostics.md#implementation-evidence) records 772 passing unit tests and six compiled UI cases. Q04 retains only ordinary Settings relocation/relay-policy decisions; it does not block the implemented developer states.

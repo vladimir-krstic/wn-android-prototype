@@ -164,3 +164,16 @@ records these local mappings and 748 passing unit tests/seven compiled UI cases.
 Real subscriptions, encrypted/durable worker recovery and system notification
 presentation remain explicit production seams. Broader startup/window, Nostr,
 installer and Amber/contact drift remains for later/final reconciliation.
+
+## Implementation drift check — B25, 2026-09-04
+
+Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`; no main.
+The seven-commit comparison changes none of KeyPackagesScreen, DiagnosticsScreen,
+DeveloperScreen, GroupInfoScreen, StreamDebug or PerformanceDiagnostics. AppState
+changes none of its B25 package/developer methods. GroupDetailsScreen changes
+warm roster presentation and timing, already reconciled in B18, not push details.
+The pinned publication/delete/provenance, health, stream gating, push inspection
+and timed performance contracts therefore remain the B25 authority.
+[The brief](../../screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
+records host evidence. Broader startup/windows, Nostr, installer and Amber/contact
+source drift still awaits its relevant batch/final reconciliation.

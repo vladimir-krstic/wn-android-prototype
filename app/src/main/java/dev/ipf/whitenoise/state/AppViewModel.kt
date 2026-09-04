@@ -226,6 +226,15 @@ class AppViewModel(
             })
     }
 
+    val developerParity: DeveloperParityController by lazy {
+        DeveloperParityController(performanceAvailable = dev.ipf.whitenoise.BuildConfig.DEBUG, active = { uiState.activeProfile }, signedIn = { it in uiState.signedInProfileIds },
+            profileCount = { uiState.signedInProfileIds.size },
+            update = { id, reduce ->
+                if (uiState.activeProfileId != id || id !in uiState.signedInProfileIds) false
+                else { updateActiveProfile(reduce); true }
+            })
+    }
+
     val incoming: IncomingController by lazy {
         IncomingController(profiles = { uiState.profiles }, activeId = { uiState.activeProfileId },
             signedIn = { it in uiState.signedInProfileIds },
@@ -437,6 +446,7 @@ class AppViewModel(
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
+        developerParity.cancel()
         uiState = uiState.copy(activeProfileId = profileId, pendingDiagnosticsProfileId = null)
         updateActiveProfile { it.copy(chatConnection = it.chatConnection.copy(generation = it.chatConnection.generation + 1)) }
     }
@@ -774,6 +784,7 @@ class AppViewModel(
     }
 
     fun setDeveloperToolsEnabled(enabled: Boolean): Boolean {
+        if (!enabled) developerParity.cancel()
         var changed = false
         updateActiveProfile { profile ->
             val tools = profile.developerTools.withEnabled(enabled)
@@ -818,17 +829,6 @@ class AppViewModel(
         return changed
     }
 
-    fun publishKeyPackage(): Boolean {
-        val profile = uiState.activeProfile ?: return false
-        if (!profile.developerTools.isEnabled ||
-            (profile.connectionInformationPublished && profile.developerTools.keyPackage == KeyPackage.PublishedFixture)) return false
-        updateActiveProfile { it.copy(
-            connectionInformationPublished = true,
-            developerTools = it.developerTools.copy(keyPackage = KeyPackage.PublishedFixture),
-        ) }
-        return true
-    }
-
     fun clearDiagnosticEvents(): Boolean = updateDeveloperTools { tools ->
         if (!tools.isEnabled || tools.diagnosticEvents.isEmpty()) tools else tools.copy(diagnosticEvents = emptyList())
     }
@@ -850,6 +850,7 @@ class AppViewModel(
 
     fun signOutActiveProfile(wipeData: Boolean): ProfileExitDestination? {
         val activeId = uiState.activeProfileId ?: return null
+        developerParity.cancel()
         interruptMessageEdits()
         interruptMessageOperations()
         cancelCreatedChatOpen()
@@ -1009,6 +1010,7 @@ class AppViewModel(
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
+        developerParity.cancel()
         uiState = AppUiState()
         notificationControls.eraseAppData()
         notificationActions.erase()

@@ -567,6 +567,7 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.DeveloperTools> {
             uiState.activeProfile?.let { profile ->
                 DeveloperToolsScreen(
+                    parityController = appViewModel.developerParity,
                     profile = profile,
                     onBack = { navController.popBackStack() },
                     onEnabled = appViewModel::setDeveloperToolsEnabled,
@@ -619,6 +620,7 @@ fun WhiteNoiseNavHost(
             val route = entry.toRoute<AppRoute.Diagnostics>()
             uiState.activeProfile?.let { profile ->
                 DiagnosticsScreen(
+                    parityController = appViewModel.developerParity,
                     profile = profile,
                     diagnosticSummary = route.chatId?.let(appViewModel::conversationDebugSnapshot)?.diagnosticSummary,
                     onBack = { navController.popBackStack() },
@@ -630,9 +632,9 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.KeyPackages> {
             uiState.activeProfile?.let { profile ->
                 KeyPackagesScreen(
+                    controller = appViewModel.developerParity,
                     profile = profile,
                     onBack = { navController.popBackStack() },
-                    onPublish = appViewModel::publishKeyPackage,
                 )
             }
         }
@@ -640,6 +642,7 @@ fun WhiteNoiseNavHost(
             val route = entry.toRoute<AppRoute.ConversationDebug>()
             uiState.activeProfile?.let { profile ->
                 ConversationDebugScreen(
+                    parityController = appViewModel.developerParity,
                     profile = profile,
                     chat = appViewModel.chat(route.chatId),
                     snapshot = appViewModel.conversationDebugSnapshot(route.chatId),

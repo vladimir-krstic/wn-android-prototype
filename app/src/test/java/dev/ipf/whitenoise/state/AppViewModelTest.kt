@@ -623,10 +623,14 @@ class AppViewModelTest {
     @Test
     fun diagnosticConsoleAndKeyPackageMutationsRespectDeveloperGate() {
         val viewModel = signedInMarmota()
-        assertFalse(viewModel.publishKeyPackage())
+        assertFalse(viewModel.developerParity.begin(dev.ipf.whitenoise.model.DeveloperOperation.PublishNew))
         assertFalse(viewModel.runDiagnosticTest())
         assertTrue(viewModel.setDeveloperToolsEnabled(true))
-        assertTrue(viewModel.publishKeyPackage())
+        val controller = viewModel.developerParity
+        controller.open(viewModel.uiState.activeProfileId!!, "packages")
+        controller.complete(controller.work!!.id)
+        assertTrue(controller.begin(dev.ipf.whitenoise.model.DeveloperOperation.PublishNew))
+        controller.complete(controller.work!!.id)
         assertEquals(dev.ipf.whitenoise.model.KeyPackage.PublishedFixture, viewModel.uiState.activeProfile!!.developerTools.keyPackage)
         assertTrue(viewModel.clearDiagnosticEvents())
         assertTrue(viewModel.runDiagnosticTest())

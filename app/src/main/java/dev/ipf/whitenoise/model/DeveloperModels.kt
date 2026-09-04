@@ -4,6 +4,8 @@ data class KeyPackage(
     val id: String,
     val published: String,
     val size: String,
+    val local: Boolean = true,
+    val relays: List<String> = emptyList(),
 ) {
     companion object {
         val Fixture = KeyPackage("a17c2e93d8f4b1", "Today at 18:05", "4 KB")
@@ -19,6 +21,11 @@ data class DiagnosticEvent(
 data class DeveloperToolsState(
     val isEnabled: Boolean = false,
     val debugMode: Boolean = false,
+    val streamingDebug: Boolean = false,
+    val keyPackages: List<KeyPackage>? = null,
+    val packageRevision: Int = 0,
+    val health: DeveloperHealth? = null,
+    val performanceUntilMillis: Long? = null,
     val keyPackage: KeyPackage = KeyPackage.Fixture,
     val diagnosticEvents: List<DiagnosticEvent> = defaultDiagnosticEvents,
 ) {
@@ -31,6 +38,8 @@ data class DeveloperToolsState(
         copy(
             isEnabled = false,
             debugMode = false,
+            streamingDebug = false,
+            performanceUntilMillis = null,
         )
     }
 
@@ -54,6 +63,14 @@ data class ConversationPushDebugInfo(
     val registrationStatus: String,
     val staleTokenCount: Int,
     val missingRelayHintCount: Int,
+    val totalTokenCount: Int = 0,
+    val activeTokenCount: Int = 0,
+    val localNotifications: Boolean = false,
+    val shareable: Boolean = false,
+    val localLeaf: Int? = null,
+    val localTokenCached: Boolean = false,
+    val updatedAt: String = "2026-09-04 18:42 UTC",
+    val members: List<PushMemberDebug> = emptyList(),
 )
 
 data class ConversationDebugSnapshot(
@@ -106,7 +123,7 @@ object ConversationDebugPolicy {
             ChatKind.Group -> (chat.members.map(GroupMember::personId) + profile.id).distinct().size
         }
         val canRegister = chat.membership == ChatMembership.Active &&
-            chat.relayUrls.isNotEmpty() && profile.settings.nativePushNotifications
+            chat.relayUrls.isNotEmpty() && profile.settings.nativePushNotifications && profile.settings.localNotifications
         val seed = stableNumber(chat.id)
         return ConversationDebugSnapshot(
             chatId = chat.id,
@@ -129,6 +146,19 @@ object ConversationDebugPolicy {
                 registrationStatus = if (canRegister) "Registered" else "Not Registered",
                 staleTokenCount = if (chat.id == "weekend-walks") 1 else 0,
                 missingRelayHintCount = if (chat.relayUrls.isEmpty()) participantCount else 0,
+                totalTokenCount = participantCount,
+                activeTokenCount = participantCount - if (chat.id == "weekend-walks") 1 else 0,
+                localNotifications = profile.settings.localNotifications,
+                shareable = canRegister,
+                localLeaf = 0.takeIf { chat.membership == ChatMembership.Active },
+                localTokenCached = canRegister,
+                members = (if (chat.isGroup) (listOf(profile.id) + chat.members.map { it.personId }).distinct()
+                    else listOf(profile.id, "peer-$seed")).mapIndexed { index, member ->
+                    val stale = chat.id == "weekend-walks" && index == 1
+                    PushMemberDebug(member, index, if (index == 0) "Android" else "iOS",
+                        "fingerprint-$seed-$index", "server-public-$seed", chat.relayUrls.isNotEmpty(),
+                        !stale, !stale, member == profile.id, "2026-09-04 18:42 UTC")
+                },
             ),
         )
     }

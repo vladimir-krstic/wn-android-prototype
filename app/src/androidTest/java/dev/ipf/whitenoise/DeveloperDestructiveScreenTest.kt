@@ -167,10 +167,14 @@ class DeveloperDestructiveScreenTest {
         )
         var showKeyPackages by mutableStateOf(false)
         var published = false
+        val controller = dev.ipf.whitenoise.state.DeveloperParityController(
+            active = { profile }, signedIn = { true }, profileCount = { 1 },
+            update = { _, reduce -> published = reduce(profile).developerTools.keyPackage != profile.developerTools.keyPackage; true },
+        )
         composeRule.setContent {
             WhiteNoiseTheme {
                 if (showKeyPackages) {
-                    KeyPackagesScreen(profile, {}, { published = true; true })
+                    KeyPackagesScreen(profile, controller, {})
                 } else {
                     DiagnosticsScreen(profile, null, {}, { true }, { true })
                 }
@@ -181,7 +185,9 @@ class DeveloperDestructiveScreenTest {
         composeRule.onNodeWithText("Clear Events").assertIsNotEnabled()
 
         composeRule.runOnIdle { showKeyPackages = true }
+        composeRule.waitUntil { controller.work?.phase == dev.ipf.whitenoise.model.DeveloperPhase.Complete }
         composeRule.onNodeWithTag("key_packages.publish").assertIsEnabled().performClick()
+        composeRule.waitUntil { published }
         composeRule.runOnIdle { check(published) }
     }
 
@@ -197,8 +203,8 @@ class DeveloperDestructiveScreenTest {
             }
         }
         composeRule.onNodeWithText("Conversation").assertIsDisplayed()
-        composeRule.onNodeWithText("Delivery & notifications").assertIsDisplayed()
-        composeRule.onNodeWithText("Chat relays").assertIsDisplayed()
+        composeRule.onNodeWithText("Delivery & notifications").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Chat relays").performScrollTo().assertIsDisplayed()
     }
 
     @Test

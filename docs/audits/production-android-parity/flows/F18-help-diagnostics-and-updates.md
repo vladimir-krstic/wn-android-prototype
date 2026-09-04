@@ -42,3 +42,11 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B25, B31, B32. Decisions: Q06. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B25 implementation evidence — 2026-09-04
+
+C118/C119 is implemented and host-verified within the approved Developer Tools
+gate. [The B25 brief](../../../screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
+records 772 passing unit tests, zero lint errors and six compiled UI cases.
+Q04 remains about ordinary Settings relocation; new states preserve the existing
+placement. No device or visual acceptance is claimed.

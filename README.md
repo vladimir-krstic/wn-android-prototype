@@ -17,16 +17,15 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B23 are implemented and host-verified.
-[B23 notification routing and actions](docs/screens/notification-routing-and-actions.md#implementation-evidence)
-adds owned message/invite/role/list entry, exact read-through, inline actions,
-lock deferral and accepted cleanup/retry that preserves drafts and newer arrivals.
-The latest host gate passes 748 unit tests, zero lint errors and both APKs.
-Seven new UI cases compile only; device and visual acceptance remain pending.
-Real notification delivery, workers/services and durable recovery remain production
-integration seams within the existing deterministic prototype boundary.
+Production Android parity batches B01–B23 and B25 are implemented and host-verified.
+[B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
+adds publication/rotation/deletion recovery, detailed push inspection, streaming
+status controls, relay health, self-send outcomes and timed performance state.
+The latest host gate passes 772 unit tests, zero lint errors and both APKs.
+Six new UI cases compile only; device and visual acceptance remain pending.
+The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks the remaining B24–B32 batches and per-batch commits.
+tracks B24 and B26–B32 and the per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`

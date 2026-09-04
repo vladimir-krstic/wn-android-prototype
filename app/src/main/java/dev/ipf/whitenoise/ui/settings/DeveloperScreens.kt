@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -73,6 +74,7 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
+    parityController: dev.ipf.whitenoise.state.DeveloperParityController? = null,
     historyScenario: dev.ipf.whitenoise.model.HistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success,
     onHistoryScenario: (dev.ipf.whitenoise.model.HistoryScenario) -> Unit = {},
     messageEditScenario: dev.ipf.whitenoise.model.MessageEditScenario = dev.ipf.whitenoise.model.MessageEditScenario.Success,
@@ -274,6 +276,7 @@ fun DeveloperToolsScreen(
                 SettingsExplainer("Enable technical tools for this profile.")
             }
             if (tools.isEnabled) {
+                if (parityController != null) item { DeveloperParityControls(profile, parityController) }
                 item { SettingsSection("Access testing") }
                 item {
                     SettingsGroup {
@@ -463,7 +466,18 @@ fun DiagnosticsScreen(
     onBack: () -> Unit,
     onTest: () -> Boolean,
     onClear: () -> Boolean,
+    parityController: dev.ipf.whitenoise.state.DeveloperParityController? = null,
 ) {
+    if (parityController != null) DeveloperOperationHost(profile, "diagnostics", parityController)
+    var showHealth by rememberSaveable(profile.id) { mutableStateOf(false) }
+    if (showHealth && parityController != null && profile.developerTools.isEnabled) DiagnosticHealthSheet(profile, parityController) {
+        showHealth = false
+        parityController.work?.let { if (it.phase == dev.ipf.whitenoise.model.DeveloperPhase.Running) parityController.dismiss(it.id) }
+    }
+    if (!profile.developerTools.isEnabled) {
+        SettingsScaffold(title = "Diagnostics", onBack = onBack) { SettingsExplainer(stringResource(R.string.developer_disabled)) }
+        return
+    }
     val context = LocalContext.current
     val events = profile.developerTools.diagnosticEvents
     var actionsExpanded by remember { mutableStateOf(false) }
@@ -486,6 +500,10 @@ fun DiagnosticsScreen(
                     onDismissRequest = { actionsExpanded = false },
                     modifier = Modifier.testTag("diagnostics.actions.menu"),
                     items = buildList {
+                        if (parityController != null && profile.developerTools.isEnabled) add(WhiteNoiseMenuItem(
+                            label = stringResource(R.string.developer_health), icon = R.drawable.ic_bug_report,
+                            onClick = { showHealth = true }, modifier = Modifier.testTag("diagnostics.action.health"),
+                        ))
                         diagnosticSummary?.let { summary ->
                             add(
                                 WhiteNoiseMenuItem(
@@ -627,65 +645,6 @@ private fun DiagnosticLiveIndicator() {
 private val DiagnosticLiveGreen = Color(0xFF188038)
 
 @Composable
-fun KeyPackagesScreen(
-    profile: Profile,
-    onBack: () -> Unit,
-    onPublish: () -> Boolean,
-) {
-    val keyPackage = profile.developerTools.keyPackage
-    SettingsScaffold(
-        title = "Key Packages",
-        onBack = onBack,
-    ) {
-        SettingsList {
-            item { SettingsSection("Current key package") }
-            item {
-                SettingsGroup {
-                    ListItem(
-                        headlineContent = {
-                            Text(keyPackage.id, fontFamily = FontFamily.Monospace)
-                        },
-                        supportingContent = {
-                            Text(if (profile.connectionInformationPublished) "Published ${keyPackage.published} · ${keyPackage.size}" else "Not published · ${keyPackage.size}")
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
-                }
-            }
-            item {
-                SettingsExplainer(
-                    if (profile.connectionInformationPublished) "This profile uses the current package to receive group invitations."
-                    else "No key package is currently published. Publish one to receive new group invitations.",
-                )
-            }
-            item {
-                WhiteNoiseFilledTonalButton(
-                    onClick = { onPublish() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            start = WhiteNoiseSpacing.CompactScreenMargin,
-                            top = WhiteNoiseSpacing.Section,
-                            end = WhiteNoiseSpacing.CompactScreenMargin,
-                        )
-                        .testTag("key_packages.publish"),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_settings_key),
-                        contentDescription = null,
-                    )
-                    Spacer(Modifier.size(WhiteNoiseSpacing.Related))
-                    Text("Publish New Key Package")
-                }
-                SettingsExplainer(
-                    "Publishing replaces the current package so this profile can receive new group invitations.",
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun ConversationDebugScreen(
     profile: Profile,
     chat: Chat?,
@@ -696,8 +655,10 @@ fun ConversationDebugScreen(
     onAddArrival: (Boolean) -> Unit = {},
     onAddReadingExample: () -> Unit = {},
     onAddAttachmentExamples: () -> Unit = {},
+    parityController: dev.ipf.whitenoise.state.DeveloperParityController? = null,
 ) {
     val context = LocalContext.current
+    if (chat != null && parityController != null) DeveloperOperationHost(profile, "push:${chat.id}", parityController)
     SettingsScaffold(title = "Conversation Debug", onBack = onBack) {
         when (chat?.let { ConversationDebugPolicy.access(profile, it.id) } ?: ConversationDebugAccess.Unavailable) {
             ConversationDebugAccess.Unavailable -> DebugUnavailable("Chat unavailable", "This conversation is no longer available for inspection.")
@@ -736,7 +697,8 @@ fun ConversationDebugScreen(
                             info.memberCount?.let { DebugValue("MLS members", it.toString()) }
                             info.adminCount?.let { DebugValue("Admins", it.toString()) }
                             info.currentRole?.let { DebugValue("Your role", it) }
-                            DebugValue("Event kinds", "${info.requiredEventKinds.size} required")
+                            DebugValue("Event kinds", info.requiredEventKinds.joinToString())
+                            DebugValue("Required components", dev.ipf.whitenoise.model.DeveloperInspection.requiredComponents.joinToString("\n"))
                             CopyableDebugValue("MLS group ID", info.mlsGroupId) {
                                 copyToClipboard(context, "MLS group ID", info.mlsGroupId)
                             }
@@ -757,12 +719,25 @@ fun ConversationDebugScreen(
                             SettingsLink("Add file examples", "Text, Markdown, audio and package outcomes", onAddAttachmentExamples)
                         }
                     }
+                    if (parityController != null) item {
+                        SettingsGroup { TextButton(onClick = { parityController.begin(dev.ipf.whitenoise.model.DeveloperOperation.RefreshPush) },
+                            enabled = parityController.work?.phase != dev.ipf.whitenoise.model.DeveloperPhase.Running) { Text(stringResource(R.string.developer_refresh)) } }
+                        DeveloperResult(parityController)
+                    }
+                    if (parityController == null || parityController.work?.phase == dev.ipf.whitenoise.model.DeveloperPhase.Complete) {
                     item { SettingsSection("Delivery & notifications") }
                     item {
                         SettingsGroup {
                             DebugValue("Chat relays", info.relayCount.toString())
                             DebugValue("Notifications", if (info.push.notificationsEnabled) "On" else "Off")
                             DebugValue("Push", info.push.registrationStatus)
+                            DebugValue("Total tokens", info.push.totalTokenCount.toString())
+                            DebugValue("Active tokens", info.push.activeTokenCount.toString())
+                            DebugValue("Local notifications", info.push.localNotifications.toString())
+                            DebugValue("Shareable", info.push.shareable.toString())
+                            DebugValue("Local leaf", info.push.localLeaf?.toString() ?: "Unavailable")
+                            DebugValue("Local token cached", info.push.localTokenCached.toString())
+                            DebugValue("Token list updated", info.push.updatedAt)
                             if (info.push.staleTokenCount > 0) {
                                 DebugValue("Push tokens", "${info.push.staleTokenCount} stale")
                             }
@@ -770,6 +745,21 @@ fun ConversationDebugScreen(
                                 DebugValue("Relay hints", "${info.push.missingRelayHintCount} missing")
                             }
                         }
+                    }
+                    info.push.members.forEach { token -> item(key = "push-${token.memberId}") {
+                        SettingsSection("Member token · ${token.leaf}")
+                        SettingsGroup {
+                            CopyableDebugValue("Member", token.memberId) { copyToClipboard(context, "Member", token.memberId) }
+                            DebugValue("Platform", token.platform)
+                            DebugValue("Fingerprint", token.fingerprint)
+                            CopyableDebugValue("Push server public key", token.serverKey) { copyToClipboard(context, "Push server public key", token.serverKey) }
+                            DebugValue("Relay hint", token.relayHint.toString())
+                            DebugValue("Active leaf", token.activeLeaf.toString())
+                            DebugValue("Matches active leaf", token.matchesLeaf.toString())
+                            DebugValue("Local member", token.localMember.toString())
+                            DebugValue("Updated", token.updatedAt)
+                        }
+                    } }
                     }
                     item { SettingsSection("Diagnostics") }
                     item {
