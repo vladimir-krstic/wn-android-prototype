@@ -195,6 +195,14 @@ fun WhiteNoiseNavHost(
         } }
     }
 
+    dev.ipf.whitenoise.ui.conversation.ReadAloudHost(uiState.activeProfile, onSource = { target ->
+        if (dev.ipf.whitenoise.model.SpeechOwnership.owns(appViewModel.uiState.activeProfile, target)) {
+            navController.navigate(AppRoute.Conversation(target.owner.chatId!!, targetMessageId = target.message.id)) {
+                popUpTo<AppRoute.SignedIn> { inclusive = false }
+                launchSingleTop = true
+            }
+        }
+    }, modifier = modifier) { speechModifier ->
     MessageOperationsHost(
         profile = uiState.activeProfile, forward = uiState.activeProfileId?.let { appViewModel.messageForwards[it] },
         onAdvanceForward = { id, revision -> uiState.activeProfileId?.let { appViewModel.advanceMessageForward(it, id, revision) } },
@@ -202,7 +210,7 @@ fun WhiteNoiseNavHost(
         onRetry = { id -> uiState.activeProfileId?.let { appViewModel.retryMessageForward(it, id) } },
         onCancel = { id -> uiState.activeProfileId?.let { appViewModel.cancelMessageForward(it, id) } },
         onDismiss = { id -> uiState.activeProfileId?.let { appViewModel.dismissMessageForward(it, id) } },
-        modifier = modifier,
+        modifier = speechModifier,
         onAutomaticRetry = { id, revision -> uiState.activeProfileId?.let { appViewModel.retryMessageForward(it, id, automatic = true, expectedRevision = revision) } },
     ) { operationModifier ->
     NavHost(
@@ -910,6 +918,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
     }
 }

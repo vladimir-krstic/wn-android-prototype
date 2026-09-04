@@ -139,3 +139,11 @@ source replacement, byte-preserving GIF export and a narrow 200% RTL reader.
 Existing gallery cases now scroll to their exact frame and assert all 40 items.
 These cases have not run on a device; no playback, speech, system surface,
 accessibility, layout or visual acceptance is claimed from compilation.
+
+### B15 speech extension
+
+The [Read Aloud transport brief](read-aloud-transport.md#implementation-evidence)
+now governs the shared engine, pause/resume, sentence/message controls and
+source-aware seeking/following. Original copy/selection and file-reader source,
+dismissal and background boundaries remain. B15's 465-test host gate passes;
+15 new UI/platform cases compile without device execution.

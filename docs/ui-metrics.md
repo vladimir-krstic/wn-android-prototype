@@ -820,3 +820,15 @@ enlarge or reposition the system splash to imitate the Welcome composition.
 - [Material Button defaults](https://developer.android.com/reference/kotlin/androidx/compose/material3/ButtonDefaults)
 - [Material menu specifications](https://m3.material.io/components/menus/specs)
 - [Photo Picker navigation buttons (AOSP)](https://android.googlesource.com/platform/packages/providers/MediaProvider/+/refs/heads/main/photopicker/src/com/android/photopicker/features/navigationbar/NavigationBar.kt)
+
+## Read Aloud transport
+
+The shared transport uses the existing surfaceContainerHigh, adaptive content
+bound, native 48 dp minimum icon controls, wrapping text actions and 16 dp outer
+inset. Native components own state and measurement. A scrollable transport has a
+45%-of-window height budget (at least two touch targets); a full reader's combined
+transport/selection actions have a 55% budget, retaining scrollable reading space
+in short windows and at large type. Use current window dimensions, not physical
+screen metrics. The app shell reserves transport space and owns its navigation
+bar/IME padding; descendants consume those insets once. There is no overlay on
+top of the composer and no new permanent speech command inside message bubbles.

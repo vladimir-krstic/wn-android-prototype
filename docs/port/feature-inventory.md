@@ -122,6 +122,17 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B15: C061/C062 are implemented and host-verified. One
+foreground engine serves message/file reading with an owned immutable queue,
+pause/resume/stop, sentence/message transport, history edge loading/retry and
+source-validated return. Native timing maps to authored/Markdown passage offsets;
+chunk boundaries remain the fallback. Read from here, Choose sentence and Resume
+following preserve native selection and avoid speech-driven unread acknowledgement.
+Manual profile change/background stops playback; text files retain reader-owned
+cancellation. The host gate passes 465 unit tests, zero lint errors and both APKs;
+15 new UI/platform cases compile. No device speech/visual result is claimed. See
+[read-aloud-transport.md](../screens/read-aloud-transport.md#implementation-evidence).
+
 2026-09-04 production B14: C058 is implemented and host-verified within Q06.
 Composer Location adds coordinate/current-state selection, review, bounds and
 accuracy, owned cancellation, reply/draft-safe sending and Retry. Location-only

@@ -17,8 +17,8 @@ These labels are the audit recommendation and follow current prototype terminolo
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
 | C060 · Read an authored message aloud and stop | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C061 · Speech transport queue and return to source | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add pause/resume/stop, previous/next sentence/message, progress, lazy history edges and return to owning message across routes/profile changes. |
-| C062 · Speech passage highlighting and seeking | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Map authored/markdown source offsets to current spoken passage; add accessible seek/read-from-here and resume-follow without mandatory gestures. |
+| C061 · Speech transport queue and return to source | B15 implemented; host verified | Existing message/reader actions; Back keeps navigation; Stop ends queue | Shared foreground sentence/message transport, paused navigation, bounded history/retry and source-validated return. Profile/sign-out/background changes cancel playback and stale return. |
+| C062 · Speech passage highlighting and seeking | B15 implemented; host verified | Native selection, Read from here or Choose sentence; manual scroll suspends follow | Exact authored/Markdown offsets, optional word timing with chunk fallback, pause-frozen progress, accessible sentence choice and Resume following. Speech positioning does not acknowledge unseen messages. |
 | C063 · Engine and offline voice selection with availability | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | New Read Aloud settings: discovering/none/usable, per-engine voice, offline-only eligibility, saved voice fallback, unknown engine trust consent and settings recovery. |
 | C064 · Speech rate and media mixing | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | System/preset/custom rate plus explicit speech-over-media setting and quiet/medium/loud; deterministic audio-focus/other-media states without background services. |
 | C065 · Global and per-chat automatic reading | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Global default plus per-chat inherit/on/off and arrival cursor. Suppress duplicates, history replay and reading after lock/sign-out. |
@@ -42,3 +42,15 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B15, B16. Decisions: Q06. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B15 implementation evidence
+
+The [selected brief](../../../screens/read-aloud-transport.md#implementation-evidence)
+records the queue/controller/transport/document/navigation seams, 33 new host
+rules and 15 compiled UI/platform cases. The host gate passes 465 unit tests,
+zero lint errors and both APKs. One foreground engine now serves conversation
+and file readers. File speech remains reader-scoped; ordinary navigation can
+retain a conversation queue. The local profile-change cancellation contract
+supersedes production's optional account-switch resolver. Engine preferences,
+auto-read and background-control fixtures remain B16. No device/visual result
+or background-service capability is claimed.

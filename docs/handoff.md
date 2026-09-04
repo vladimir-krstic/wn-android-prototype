@@ -1,10 +1,10 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B14 are implemented and host-verified.
+2026-09-04: production parity B01–B15 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. Continue with B15. Q05 is resolved by the approved checked wipe
+record evidence. Continue with B16. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -43,11 +43,19 @@ send/retry. Location-only wire bodies render offline cards with explicit Maps
 handoff/error/Copy; accepted messages are revealed from older history. See
 `docs/screens/location-sharing.md`. Thirteen new UI/platform cases compile.
 Q06 real GPS/map tiles/geocoding and permissions remain outside scope.
-Latest clean gate: 432 unit tests, zero lint errors, both APKs;
+B15 adds a single foreground Read Aloud engine/session, sentence/message transport,
+source-safe return, history retry and exact authored/Markdown passage seeking.
+Pause freezes current progress; resume restarts the sentence. Native word timing
+or chunk fallback drives highlighting/following. Manual scroll suspends follow;
+profile/background boundaries clear playback. File reading remains scoped to its
+reader. See `docs/screens/read-aloud-transport.md`. Fifteen new UI/platform cases
+compile. B16 owns engine/voice/rate/mixing/auto-read preferences and background
+control fixtures; real services remain outside scope.
+Latest host gate: 465 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B15–B32. This
+boundary. Production Android parity remains in progress through B16–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

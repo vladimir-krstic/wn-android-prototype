@@ -412,6 +412,11 @@ fun ConversationScreen(
     val messageBounds = remember(chat.id) { mutableStateMapOf<String, Rect>() }
     val context = LocalContext.current
     val readAloudController = rememberReadAloudController()
+    val standaloneSpeechProfile = rememberUpdatedState(profile.copy(chats = profile.chats.filterNot { it.id == chat.id } + chat))
+    if (LocalReadAloudController.current == null) androidx.compose.runtime.SideEffect {
+        readAloudController.profile = { standaloneSpeechProfile.value }; readAloudController.reconcile()
+    }
+    val speechSession = readAloudController.session?.takeIf { it.owner.profileId == profile.id && it.owner.chatId == chat.id }
     val attachmentReaderPresented = LocalAttachmentAccess.current.presented
     LaunchedEffect(attachmentReaderPresented) { if (attachmentReaderPresented) readAloudController.stop() }
     var localVoiceTranscripts by remember(chat.id) { mutableStateOf(emptyMap<String, String>()) }
@@ -496,7 +501,7 @@ fun ConversationScreen(
     fun speechActionState(message: ChatMessage): MessageSpeechActionState = MessageSpeechActionState(
         transcriptAvailable = resolvedVoiceTranscript(message) != null,
         transcriptVisible = message.id in visibleVoiceTranscriptIds,
-        reading = readAloudController.activeMessageId == message.id,
+        reading = speechSession != null && readAloudController.activeMessageId == message.id,
         canReadAloud = readAloudController.ready,
     )
 
@@ -536,10 +541,7 @@ fun ConversationScreen(
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.text))
             }
-            MessageAction.ReadAloud -> readAloudController.toggle(
-                message.id,
-                message.plainVisibleText(profile.id),
-            )
+            MessageAction.ReadAloud -> readAloudController.startConversation(profile, chat, message.id)
             MessageAction.StopReading -> readAloudController.stop()
             MessageAction.Transcribe -> {
                 localVoiceTranscripts = localVoiceTranscripts +
@@ -674,7 +676,7 @@ fun ConversationScreen(
     }
     val currentItems by rememberUpdatedState(items)
     val currentVisibleCallback by rememberUpdatedState(onMessagesVisible)
-    val canRead by rememberUpdatedState(initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
+    val canRead by rememberUpdatedState((speechSession?.following != true || speechSession.phase == dev.ipf.whitenoise.model.SpeechPhase.Completed) && initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
         editMessageId == null && readerMessageId == null && historyMessageId == null && exportMessageId == null &&
         !attachmentReaderPresented && !operationCovered && viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
         !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
@@ -698,12 +700,13 @@ fun ConversationScreen(
     }
 
     val pendingEdits = messages.mapNotNull { message -> message.editAttempt?.takeIf { it.phase == dev.ipf.whitenoise.model.MessageEditPhase.Pending }?.let { message.id to it.id } }
-    var spokenSource by remember { mutableStateOf<Pair<String, String>?>(null) }
-    LaunchedEffect(readAloudController.activeMessageId, chat.timeline) {
-        val id = readAloudController.activeMessageId
-        val source = messages.firstOrNull { it.id == id && !it.isDeleted }?.text
-        if (id != null && (source == null || (spokenSource?.first == id && spokenSource?.second != source))) readAloudController.stop()
-        spokenSource = if (id == null || source == null) null else id to source
+    LaunchedEffect(speechSession?.id, speechSession?.current?.item?.id, speechSession?.following,
+        initialViewportSettled, readerMessageId != null, isSearching, isSelecting, focusedMessageId) {
+        val speech = speechSession ?: return@LaunchedEffect
+        if (!speech.following || speech.phase in setOf(dev.ipf.whitenoise.model.SpeechPhase.Unavailable, dev.ipf.whitenoise.model.SpeechPhase.Completed) ||
+            !initialViewportSettled || isSearching || isSelecting || focusedMessageId != null) return@LaunchedEffect
+        if (readerMessageId != null) readerMessageId = speech.current.item.id
+        else history.target(chat, speech.current.item.id, HistoryScenario.Success, highlight = false)
     }
     LaunchedEffect(profile.id, chat.id, pendingEdits, lifecycle) {
         if (pendingEdits.isNotEmpty()) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -718,7 +721,7 @@ fun ConversationScreen(
         if (readerMessageId !in available) readerMessageId = null
         if (historyMessageId !in available) historyMessageId = null
     }
-    CompositionLocalProvider(LocalMessageReading provides MessageReadingActions(
+    CompositionLocalProvider(LocalSpeechOwner provides dev.ipf.whitenoise.model.SpeechOwner(profile.id, chat.id), LocalMessageReading provides MessageReadingActions(
         collapse = chat.collapseLongMessages && !isSearching,
         canWrite = chat.composerAvailability(profile) == ComposerAvailability.Available,
         open = { history.cancel(); pendingInitialMessageId = null; initialViewportSettled = true; readerStartsSelection = false; readerMessageId = it },
@@ -856,7 +859,7 @@ fun ConversationScreen(
         ) {
             AdaptiveContent(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
-                    modifier = Modifier
+                    modifier = Modifier.observeSpeechScroll(readAloudController, speechSession != null)
                         .fillMaxSize()
                         .testTag("conversation.timeline")
                         .graphicsLayer {
@@ -2595,7 +2598,10 @@ private fun MessageBubbleText(
             var overflow by remember(text, limitPx) { mutableStateOf(false) }
             Box(if (reading.collapse) Modifier.heightIn(max = limit).clipToBounds() else Modifier) {
                 MessageDocumentContent(document, profile.people, onOpenPersonProfile,
-                    Modifier.wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged { overflow = it.height > limitPx })
+                    Modifier.wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged { overflow = it.height > limitPx },
+                    spokenRange = readAloudController.session?.takeIf { it.owner == LocalSpeechOwner.current && it.current.item.id == message.id && it.current.item.authored == text }
+                        ?.passage?.let { it.sourceStart until it.sourceEnd },
+                    followSpeech = readAloudController.session?.following == true)
             }
             if (overflow && reading.collapse) TextButton(onClick = { reading.open(message.id) }, modifier = Modifier.testTag("message.readMore.${message.id}"),
                 colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.LocalContentColor.current)) {

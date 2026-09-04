@@ -3860,3 +3860,30 @@ draft. Coordinate synchronization must not silently discard reported accuracy.
 Evidence and current official sources: [location sharing brief](screens/location-sharing.md#implementation-evidence).
 The clean gate passes 432 unit tests, both APKs and zero lint errors. Thirteen new
 UI/platform cases compile; no native Maps execution or visual result is claimed.
+
+## WN-ANDROID-0135 — One foreground speech queue preserves source ownership
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B15; host verified, device/visual acceptance pending.
+
+Read Aloud now belongs to the app shell and survives ordinary navigation. The
+existing message and file readers share its native engine; file playback still
+ends when its reader closes. A session owns immutable profile/chat/source IDs,
+a bounded prepared history window and generation-checked native callbacks.
+Pause freezes progress; resume restarts the sentence because Android TTS stop
+clears queued utterances. Word timing is optional, with engine-sized chunks as
+the fallback. Native sentence choice and selection-based Read from here use
+exact authored offsets rather than matching repeated visible strings.
+
+Keep ordinary bubbles free of permanent speech commands. Focused readers and
+the shared transport own controls, while native source-aware spans mark the
+current passage. Manual scroll suspends following and Resume following restores
+it. Speech-driven scrolling never acknowledges unseen messages. Return validates
+the current source immediately before targeted navigation. Following F07's
+explicit local contract, manual profile changes, sign-out and background/lock
+clear speech and return ownership; do not silently switch back to an old profile.
+No service, new permission or external audio/network capability is introduced.
+
+The [selected brief](screens/read-aloud-transport.md#implementation-evidence)
+records official Android sources and exact evidence. The host gate passes 465
+unit tests, zero lint errors and both APKs; 15 new UI/platform cases compile only.

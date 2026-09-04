@@ -880,4 +880,25 @@
     <string name="location_source_changed">This chat or reply has changed. Close this view and choose the location again.</string>
     <string name="location_latitude_sign">Change latitude sign</string>
     <string name="location_longitude_sign">Change longitude sign</string>
+    <string name="speech_position">Sentence %1$d of %2$d · Message %3$d of %4$d</string>
+    <string name="speech_paused">Reading paused</string>
+    <string name="speech_loading_earlier">Loading earlier messages…</string>
+    <string name="speech_loading_later">Loading later messages…</string>
+    <string name="speech_history_error">Couldn’t load more messages.</string>
+    <string name="speech_engine_error">Couldn’t read this text aloud.</string>
+    <string name="speech_source_unavailable">This message is no longer available.</string>
+    <string name="speech_finished">Reading finished.</string>
+    <string name="speech_return">Return to spoken message</string>
+    <string name="speech_previous_sentence">Previous sentence</string>
+    <string name="speech_next_sentence">Next sentence</string>
+    <string name="speech_previous_message">Previous message</string>
+    <string name="speech_next_message">Next message</string>
+    <string name="speech_pause">Pause reading</string>
+    <string name="speech_resume">Resume reading</string>
+    <string name="speech_pause_follow">Pause following</string>
+    <string name="speech_resume_follow">Resume following</string>
+    <string name="speech_choose_sentence">Choose sentence</string>
+    <string name="speech_from_here">Read from here</string>
+    <string name="speech_read_sentence">Read from sentence %1$d</string>
+    <string name="speech_current_sentence">Current spoken sentence</string>
 </resources>

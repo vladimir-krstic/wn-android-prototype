@@ -136,20 +136,30 @@ internal fun MessageEditHistoryDialog(message: ChatMessage, onDismiss: () -> Uni
 }
 
 private data object MessageSelectionSpeechKey
+private data object MessageSelectionFromHereKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MessageReaderDialog(profile: Profile, chat: Chat, message: ChatMessage, initialSelection: Boolean,
     speech: MessageSpeechActionState, readAloud: ReadAloudController, onDismiss: () -> Unit,
     onAction: (MessageAction) -> Unit, onReact: () -> Unit, onPerson: (String) -> Unit) {
+    ReadAloudModal(readAloud)
     val selection = rememberSelectionState()
+    var chooser by remember { mutableStateOf(false) }
     val document = remember(message.text) { MessageDocuments.parse(message.text) }
     val passage = selectedMessagePassage(message.text, selection.selectedTexts)
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
     fun leave() { if (selection.selectedTexts.isNotEmpty()) selection.clear() else onDismiss() }
-    fun speak() { selectedMessagePassage(message.text, selection.selectedTexts)?.let { readAloud.speakPassage(message.id, it) } }
+    fun speak() { selectedMessagePassage(message.text, selection.selectedTexts)?.let { readAloud.speakPassage(profile, chat, message.id, it) } }
+    fun fromHere() { selectedMessagePassage(message.text, selection.selectedTexts)?.let {
+        readAloud.startConversation(profile, chat, message.id, sourceOffset = it.sourceStart); selection.clear()
+    } }
+    LaunchedEffect(selection.selectedTexts.isNotEmpty()) { if (selection.selectedTexts.isNotEmpty()) readAloud.follow(false) }
     LaunchedEffect(message.text) { selection.clear() }
+    if (chooser) SpeechSentenceChooser(message, onRead = { offset ->
+        chooser = false; selection.clear(); readAloud.startConversation(profile, chat, message.id, sourceOffset = offset)
+    }, onDismiss = { chooser = false })
     LaunchedEffect(Unit) { if (initialSelection) { repeat(2) { withFrameNanos { } }; selection.extendSelectionByWord() } }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, decorFitsSystemWindows = false)) {
         BackHandler(onBack = ::leave)
@@ -173,12 +183,18 @@ internal fun MessageReaderDialog(profile: Profile, chat: Chat, message: ChatMess
                 }
             })
         }, bottomBar = {
-            Column(Modifier.navigationBarsPadding().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)) {
-                ReadAloudProgress(message.id, readAloud)
+            ReadAloudReaderBar {
+                ReadAloudTransport(readAloud, onReturn = { onDismiss(); readAloud.returnToSource() }, onResumeFollowing = {})
+                TextButton(onClick = { chooser = true }, enabled = readAloud.ready, modifier = Modifier.testTag("speech.choose")) {
+                    Text(stringResource(R.string.speech_choose_sentence))
+                }
                 if (passage != null) FlowRow(horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                     TextButton(onClick = { (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                         .setPrimaryClip(ClipData.newPlainText("Message", passage.text)) }, modifier = Modifier.testTag("message.selection.copy")) {
                         Text(stringResource(R.string.message_selection_copy))
+                    }
+                    TextButton(onClick = ::fromHere, enabled = readAloud.ready, modifier = Modifier.testTag("message.selection.fromHere")) {
+                        Text(stringResource(R.string.speech_from_here))
                     }
                     TextButton(onClick = ::speak, enabled = readAloud.ready, modifier = Modifier.testTag("message.selection.speak")) {
                         Text(stringResource(R.string.message_selection_read))
@@ -187,11 +203,17 @@ internal fun MessageReaderDialog(profile: Profile, chat: Chat, message: ChatMess
             }
         }) { padding -> AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
             val speakLabel = stringResource(R.string.read_aloud)
+            val fromHereLabel = stringResource(R.string.speech_from_here)
             SelectionContainer(state = selection, modifier = Modifier.fillMaxSize().appendTextContextMenuComponents {
-                if (readAloud.ready) { separator(); item(MessageSelectionSpeechKey, speakLabel) { speak(); close() } }
+                if (readAloud.ready) {
+                    separator(); item(MessageSelectionSpeechKey, speakLabel) { speak(); close() }
+                    item(MessageSelectionFromHereKey, fromHereLabel) { fromHere(); close() }
+                }
             }) {
                 MessageDocumentContent(document, profile.people, onPerson,
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(WhiteNoiseSpacing.CompactScreenMargin), annotateSource = true)
+                    Modifier.fillMaxSize().observeSpeechScroll(readAloud).verticalScroll(rememberScrollState()).padding(WhiteNoiseSpacing.CompactScreenMargin), annotateSource = true,
+                    spokenRange = readAloud.session?.takeIf { it.owner == SpeechOwner(profile.id, chat.id) && it.current.item.id == message.id && it.current.item.authored == message.text }
+                        ?.passage?.let { it.sourceStart until it.sourceEnd }, followSpeech = readAloud.session?.following == true && passage == null)
             }
         } }
     }

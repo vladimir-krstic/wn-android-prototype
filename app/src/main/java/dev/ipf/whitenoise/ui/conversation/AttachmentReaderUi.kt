@@ -91,6 +91,7 @@ internal fun AttachmentReaderDialog(profile: Profile, message: ChatMessage?, exp
     val scope = rememberCoroutineScope()
     val liveCurrent = rememberUpdatedState(current)
     val readAloud = rememberReadAloudController()
+    ReadAloudModal(readAloud)
     var attempt by rememberSaveable { mutableIntStateOf(0) }
     var result by remember { mutableStateOf<TextAttachmentResult?>(null) }
     var presentation by remember { mutableStateOf<TextAttachmentPresentation?>(null) }
@@ -105,6 +106,7 @@ internal fun AttachmentReaderDialog(profile: Profile, message: ChatMessage?, exp
     val candidate = remember(expected) { expected?.let(TextAttachments::candidate) }
     val isPackage = expected?.let(PackageAttachments::candidate) == true
     val requestId = "attachment:${profile.id}:${message?.id}:${expected?.id}"
+    DisposableEffect(readAloud, requestId) { onDispose { readAloud.stopAttachment(requestId) } }
     val currentAvailable = current?.bytesAvailable == true
     fun copy(text: String) {
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("File",text)); copied = true
@@ -163,8 +165,8 @@ internal fun AttachmentReaderDialog(profile: Profile, message: ChatMessage?, exp
                         WhiteNoiseMenuItem(stringResource(R.string.attachment_save_file),{ more = false; save = true },enabled = currentAvailable),
                     ))
                 } }) }, bottomBar = {
-                    Column(Modifier.navigationBarsPadding().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)) {
-                        ReadAloudProgress(requestId,readAloud)
+                    ReadAloudReaderBar {
+                        ReadAloudTransport(readAloud)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                             val ready = result as? TextAttachmentResult.Ready
                             TextButton({ copy(selection.selectedTexts.joinToString("\n") { it.text }.ifEmpty { ready?.text.orEmpty() }) }, enabled = ready?.text?.isNotEmpty() == true,

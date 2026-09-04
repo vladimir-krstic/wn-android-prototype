@@ -138,3 +138,11 @@ speech output and visual acceptance remain pending until explicitly requested.
   remain unverified until the user requests inspection.
 
 Commit title: `B09: Add message editing and full reading`.
+
+### B15 speech extension
+
+The [Read Aloud transport brief](read-aloud-transport.md#implementation-evidence)
+now governs the shared engine, pause/resume, sentence/message controls and
+source-aware seeking/following. Original copy/selection and file-reader source,
+dismissal and background boundaries remain. B15's 465-test host gate passes;
+15 new UI/platform cases compile without device execution.

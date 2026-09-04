@@ -190,3 +190,16 @@ text wire form; explicit map opening reuses Android ACTION_VIEW. The prototype
 uses manual point entry and developer-only one-shot current-location examples;
 production must reconnect grants/provider cancellation, map selection and send
 acceptance. No in-memory scenario state should migrate into a location service.
+
+## Production B15 Read Aloud transport and source navigation
+
+`docs/screens/read-aloud-transport.md` maps pinned TtsPlaybackQueue/TtsChunker,
+TtsHistorySession, TtsTransportBar, TtsDestinationNavigation, TtsSpeakFromHere and
+TtsVisibleSentenceMapping into `SpeechPlayback.kt`, `ReadAloudController.kt`,
+`ReadAloudUi.kt`, the NavHost and existing message/document/file readers. One
+foreground engine consumes generation-owned local queue events. SourceText
+retains authored offsets through Markdown, sentence splitting and native chunks;
+range timing refines the current passage. Production reconnects its authoritative
+history projection and playback controller. Profile/background boundaries cancel
+the local queue and return ownership; B16 owns preferences/auto-read and Q06's
+background integration boundary.

@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +34,9 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
+private data class DocumentSpeech(val range: IntRange?, val follow: Boolean)
+private val LocalDocumentSpeech = staticCompositionLocalOf { DocumentSpeech(null, false) }
+
 internal const val MessageSourceAnnotation = "white-noise-source-range"
 
 internal fun selectedMessagePassage(source: String, fragments: List<AnnotatedString>): MessagePassage? {
@@ -47,7 +52,7 @@ internal fun selectedMessagePassage(source: String, fragments: List<AnnotatedStr
 @Composable
 internal fun MessageDocumentContent(
     document: MessageDocument, people: List<Person>, onOpenPerson: (String) -> Unit,
-    modifier: Modifier = Modifier, annotateSource: Boolean = false,
+    modifier: Modifier = Modifier, annotateSource: Boolean = false, spokenRange: IntRange? = null, followSpeech: Boolean = false,
 ) {
     var pendingLink by rememberSaveable(document.source) { mutableStateOf<String?>(null) }
     var failedLink by remember { mutableStateOf(false) }
@@ -57,7 +62,9 @@ internal fun MessageDocumentContent(
         if (named) pendingLink = destination
         else if (runCatching { uri.openUri(destination) }.isFailure) failedLink = true
     }
-    DocumentBlocks(document.blocks, people, onOpenPerson, open, annotateSource, modifier)
+    CompositionLocalProvider(LocalDocumentSpeech provides DocumentSpeech(spokenRange, followSpeech)) {
+        DocumentBlocks(document.blocks, people, onOpenPerson, open, annotateSource, modifier)
+    }
     pendingLink?.let { destination ->
         AlertDialog(onDismissRequest = { pendingLink = null }, title = { Text(stringResource(R.string.message_open_link)) },
             text = { Text(destination) }, confirmButton = {
@@ -129,12 +136,16 @@ private fun DocumentBlocks(blocks: List<DocumentBlock>, people: List<Person>, on
                 }
                 is DocumentBlock.Details -> {
                     var expanded by rememberSaveable(block) { mutableStateOf(block.initiallyOpen) }
+                    val spoken = LocalDocumentSpeech.current
+                    LaunchedEffect(spoken.range, spoken.follow) {
+                        if (spoken.follow && spoken.range != null && block.blocks.any { blockSourceIntersects(it, spoken.range) }) expanded = true
+                    }
                     Column {
                         DisableSelection {
                             val state = stringResource(if (expanded) R.string.message_expanded else R.string.message_collapsed)
                             TextButton(onClick = { expanded = !expanded }, modifier = Modifier.semantics { stateDescription = state },
                                 colors = ButtonDefaults.textButtonColors(contentColor = LocalContentColor.current)) {
-                                Text(block.summary.joinToString("") { it.source.text })
+                                DocumentText(block.summary, people, onPerson, onLink, annotate, linksEnabled = false)
                             }
                         }
                         if (expanded) DocumentBlocks(block.blocks, people, onPerson, onLink, annotate)
@@ -150,8 +161,22 @@ private fun DocumentBlocks(blocks: List<DocumentBlock>, people: List<Person>, on
 @Composable
 private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson: (String) -> Unit,
     onLink: (String, Boolean) -> Unit, annotate: Boolean, modifier: Modifier = Modifier,
-    style: TextStyle = MaterialTheme.typography.bodyLarge, align: TextAlign? = null) {
+    style: TextStyle = MaterialTheme.typography.bodyLarge, align: TextAlign? = null, linksEnabled: Boolean = true) {
     val color = LocalContentColor.current
+    val spoken = LocalDocumentSpeech.current
+    val mapped = remember(runs) { runs.fold(SourceText.from("")) { a, b -> a + b.source } }
+    val hit = spoken.range?.let { range -> mapped.offsets.indices.filter {
+        mapped.offsets[it] >= 0 && mapped.offsets[it] <= range.last && mapped.ends[it] > range.first
+    }.firstOrNull() }
+    val requester = remember { BringIntoViewRequester() }
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    LaunchedEffect(spoken.range, spoken.follow, layout) {
+        val current = layout
+        if (spoken.follow && hit != null && current != null && hit < current.layoutInput.text.length) {
+            requester.bringIntoView(current.getBoundingBox(hit))
+        }
+    }
+    val currentSentenceLabel = stringResource(R.string.speech_current_sentence)
     val text = buildAnnotatedString {
         runs.forEach { run ->
             val start = length
@@ -161,11 +186,11 @@ private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson
                 textDecoration = if (run.style.strike) TextDecoration.LineThrough else null,
                 background = if (run.style.code) color.copy(alpha = 0.08f) else Color.Unspecified)
             withStyle(span) {
-                if (run.destination != null) withLink(LinkAnnotation.Url(run.destination,
+                if (linksEnabled && run.destination != null) withLink(LinkAnnotation.Url(run.destination,
                     TextLinkStyles(SpanStyle(color = color, textDecoration = TextDecoration.Underline))) { onLink(run.destination, run.namedLink) }) { append(run.source.text) }
                 else append(run.source.text)
             }
-            if (run.destination == null && !run.style.code) {
+            if (linksEnabled && run.destination == null && !run.style.code) {
                 val mentionRanges = mutableListOf<IntRange>()
                 people.flatMap { person -> listOf(person.name, person.displayName).distinct().map { person to "@$it" } }
                     .sortedByDescending { it.second.length }.forEach { (person, mention) ->
@@ -181,10 +206,30 @@ private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson
                         }
                     }
             }
+            spoken.range?.let { range ->
+                val highlighted = run.source.offsets.indices.filter {
+                    run.source.offsets[it] >= 0 && run.source.offsets[it] <= range.last && run.source.ends[it] > range.first
+                }
+                if (highlighted.isNotEmpty()) addStyle(SpanStyle(background = color.copy(alpha = 0.16f), fontWeight = FontWeight.SemiBold),
+                    start + highlighted.first(), start + highlighted.last() + 1)
+            }
             if (annotate) run.source.offsets.indices.forEach { i ->
                 addStringAnnotation(MessageSourceAnnotation, "${run.source.offsets[i]}:${run.source.ends[i]}", start + i, start + i + 1)
             }
         }
     }
-    Text(text, modifier, color = color, style = style, textAlign = align)
+    Text(text, modifier.bringIntoViewRequester(requester).semantics {
+        if (hit != null) stateDescription = currentSentenceLabel
+    }, color = color, style = style, textAlign = align, onTextLayout = { layout = it })
+}
+
+private fun blockSourceIntersects(block: DocumentBlock, range: IntRange): Boolean = when (block) {
+    is DocumentBlock.Paragraph -> block.runs.any { SpeechDocuments.overlaps(it.source, range) }
+    is DocumentBlock.Heading -> block.runs.any { SpeechDocuments.overlaps(it.source, range) }
+    is DocumentBlock.Code -> SpeechDocuments.overlaps(block.source, range)
+    is DocumentBlock.Quote -> block.blocks.any { blockSourceIntersects(it, range) }
+    is DocumentBlock.ListBlock -> block.items.any { it.blocks.any { child -> blockSourceIntersects(child, range) } }
+    is DocumentBlock.Table -> (listOf(block.header) + block.rows).flatten().flatten().any { SpeechDocuments.overlaps(it.source, range) }
+    is DocumentBlock.Details -> block.summary.any { SpeechDocuments.overlaps(it.source, range) } || block.blocks.any { blockSourceIntersects(it, range) }
+    is DocumentBlock.Blank, DocumentBlock.Divider -> false
 }

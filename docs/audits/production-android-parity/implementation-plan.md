@@ -18,7 +18,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B12: implemented and host-verified 2026-09-04; 399 unit tests, zero lint errors, both APKs and nine new compiled UI/platform cases. [Selected brief and evidence](../../screens/draft-photo-editor.md). Commit title: `B12: Add reversible draft photo editing`.
 - B13: implemented and host-verified 2026-09-04; 414 unit tests, zero lint errors, both APKs and 13 new compiled UI/platform cases. [Selected brief and evidence](../../screens/text-attachments-and-shared-content.md). Commit title: `B13: Add text attachment reading and shared media libraries`.
 - B14: implemented and host-verified 2026-09-04; 432 unit tests, zero lint errors, both APKs and 13 new compiled UI/platform cases. [Selected brief and evidence](../../screens/location-sharing.md). Commit title: `B14: Add location selection and sharing`.
-- B15–B32: pending; linked decisions apply only to their named slices.
+- B15: implemented and host-verified 2026-09-04; 465 unit tests, zero lint errors, both APKs and 15 new compiled UI/platform cases. [Selected brief and evidence](../../screens/read-aloud-transport.md). Commit title: `B15: Add Read Aloud transport and source navigation`.
+- B16–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -39,7 +40,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B12** | Draft photo editor | C050 | B11 | Implemented; host verified |
 | **B13** | Text attachment reader and expanded shared media | C055, C056, C059 | B11 | Implemented; host verified; real installation remains outside Q06 scope |
 | **B14** | Location sharing state flow | C058 | B11 | Implemented; host verified; real location/map integration remains outside Q06 scope |
-| **B15** | Read Aloud transport and source navigation | C061, C062 | B08 | Ready |
+| **B15** | Read Aloud transport and source navigation | C061, C062 | B08 | Implemented; host verified |
 | **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Blocked slices: Q06 |
 | **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Blocked slices: Q06 |
 | **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Ready |
@@ -271,6 +272,8 @@ Capabilities: C058. Dependencies: B11.
 ### B15 — Read Aloud transport and source navigation
 
 Capabilities: C061, C062. Dependencies: B08.
+
+**Status:** Implemented and host-verified; [evidence](../../screens/read-aloud-transport.md#implementation-evidence). One foreground queue, paused transport/seek, bounded history and retry, source-safe return, native range/chunk highlighting and accessible following are implemented. 465 host unit tests pass; 15 new UI/platform cases compile. Profile/background boundaries clear playback and return ownership. Device speech and visual acceptance remain pending.
 
 **Implementation:** Add pause/resume/stop, previous/next sentence/message, progress, lazy history edges and return to owning message across routes/profile changes. Map authored/markdown source offsets to current spoken passage; add accessible seek/read-from-here and resume-follow without mandatory gestures.
 
