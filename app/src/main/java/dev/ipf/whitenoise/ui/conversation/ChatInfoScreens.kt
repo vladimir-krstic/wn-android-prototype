@@ -278,6 +278,7 @@ fun ChatInfoScreen(
                                         SharedContentCategory.Media -> R.string.photos_and_videos
                                         SharedContentCategory.Links -> R.string.links
                                         SharedContentCategory.Documents -> R.string.documents
+                                        SharedContentCategory.Voice -> R.string.shared_voice
                                     },
                                 ),
                                 subtitle = pluralStringResource(
@@ -289,6 +290,7 @@ fun ChatInfoScreen(
                                     SharedContentCategory.Media -> R.drawable.ic_image
                                     SharedContentCategory.Links -> R.drawable.ic_link
                                     SharedContentCategory.Documents -> R.drawable.ic_description
+                                    SharedContentCategory.Voice -> R.drawable.ic_mic
                                 },
                                 onClick = { onSharedContent(category) },
                             )
@@ -752,119 +754,26 @@ fun SharedContentScreen(
     onForwardMediaToProfile: ((ConversationMediaKey, String, List<String>, String) -> Boolean)? = null,
     onGoToMessage: (String) -> Unit = {},
 ) {
-    val content = remember(chat.timeline, category) {
-        SharedContentProjection.items(chat, profile, category)
-    }
-    val media = remember(chat.timeline, profile.people) {
-        ConversationMediaProjection.items(chat, profile)
-    }
+    val content = remember(chat.timeline, profile.id, profile.people, category) { SharedContentProjection.items(chat, profile, category) }
+    val media = remember(chat.timeline, profile.id, profile.people) { ConversationMediaProjection.items(chat, profile) }
     var viewerSelection by remember { mutableStateOf<ConversationMediaSelection?>(null) }
     var forwardMediaKey by remember { mutableStateOf<ConversationMediaKey?>(null) }
-    val title = when (category) {
-        SharedContentCategory.Media -> stringResource(R.string.photos_and_videos)
-        SharedContentCategory.Links -> stringResource(R.string.links)
-        SharedContentCategory.Documents -> stringResource(R.string.documents)
-    }
-    Scaffold(
-        contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = { WhiteNoiseTopBar(title, onBack) },
-    ) { padding ->
+    val title = stringResource(when (category) {
+        SharedContentCategory.Media -> R.string.photos_and_videos
+        SharedContentCategory.Links -> R.string.links
+        SharedContentCategory.Documents -> R.string.documents
+        SharedContentCategory.Voice -> R.string.shared_voice
+    })
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = { WhiteNoiseTopBar(title, onBack) }) { padding ->
         AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
-            when {
-                content.isEmpty() -> {
-                    WhiteNoiseEmptyState(
-                        title = stringResource(R.string.no_shared_content),
-                        detail = stringResource(R.string.shared_content_empty_detail),
-                        modifier = Modifier.align(Alignment.Center),
-                    )
-                }
-                category == SharedContentCategory.Media -> {
-                    val gridState = rememberLazyGridState()
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        state = gridState,
-                        modifier = Modifier.fillMaxSize().trackWhiteNoiseHeader(gridState),
-                        contentPadding = PaddingValues(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        items(
-                            count = media.size,
-                            key = { index -> media[index].key.stableId },
-                        ) { index ->
-                            val item = media[index]
-                            Box(
-                                modifier = Modifier
-                                    .aspectRatio(1f)
-                                    .testTag("conversation.shared.media.${item.key.stableId}")
-                                    .clickable(role = Role.Button) {
-                                        viewerSelection = ConversationMediaSelection(media, item.key)
-                                    },
-                                contentAlignment = Alignment.BottomStart,
-                            ) {
-                                item.image?.let { image ->
-                                    ComposerImage(image, Modifier.fillMaxSize())
-                                }
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-                                ) {
-                                    Text(
-                                        text = item.senderName,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
-                    ) {
-                        items(content, key = { it.id }) { item ->
-                            ListItem(
-                                headlineContent = {
-                                    TimelineAttachmentContent(
-                                        attachments = listOf(item.attachment),
-                                        outgoing = false,
-                                        onOpenMedia = {},
-                                        people = profile.people,
-                                    )
-                                },
-                                supportingContent = {
-                                    Text(
-                                        "${item.senderName} · ${item.sentLabel}",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
+            SharedContentLibrary(content, category, media, { viewerSelection = it }, onGoToMessage)
         }
     }
-    viewerSelection?.let { selection ->
-        ReadOnlyMediaViewer(
-            selection = selection,
-            onDismiss = { viewerSelection = null },
-            onForward = { item ->
-                forwardMediaKey = item.key
-                viewerSelection = null
-            },
-            onGoToMessage = { item ->
-                viewerSelection = null
-                onGoToMessage(item.message.id)
-            },
-        )
+    LaunchedEffect(media) { if (media.isEmpty()) viewerSelection = null }
+    viewerSelection?.takeIf { media.isNotEmpty() }?.let { selection ->
+        ReadOnlyMediaViewer(selection = selection.copy(items = media), onDismiss = { viewerSelection = null },
+            onForward = { item -> forwardMediaKey = item.key; viewerSelection = null },
+            onGoToMessage = { item -> viewerSelection = null; onGoToMessage(item.message.id) })
     }
     forwardMediaKey?.let { key ->
         ForwardMessagesSheet(

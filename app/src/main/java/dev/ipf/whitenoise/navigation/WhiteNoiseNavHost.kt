@@ -541,6 +541,8 @@ fun WhiteNoiseNavHost(
                     onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
                     photoEditorScenario = appViewModel.nextPhotoEditorScenario,
                     onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
+                    attachmentAccessScenario = appViewModel.nextAttachmentAccessScenario,
+                    onAttachmentAccessScenario = appViewModel::selectAttachmentAccessScenario,
                     onMessageForwardScenario = appViewModel::selectMessageForwardScenario,
                     globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
                     onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
@@ -590,6 +592,7 @@ fun WhiteNoiseNavHost(
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics(route.chatId)) },
                     onAddArrival = { streaming -> appViewModel.addConversationArrival(profile.id, route.chatId, streaming) },
                     onAddReadingExample = { appViewModel.addMessageReadingExample(profile.id, route.chatId) },
+                    onAddAttachmentExamples = { appViewModel.addAttachmentReadingExamples(profile.id, route.chatId) },
                 )
             }
         }
@@ -715,6 +718,9 @@ fun WhiteNoiseNavHost(
                         replacePhotos = { expected, quality, prepared -> appViewModel.replaceDraftPhotos(profile.id, chat.id, expected, quality, prepared) },
                         transfer = { messageId, attachmentId, action, revision -> appViewModel.attachmentTransferAction(profile.id, chat.id, messageId, attachmentId, action, revision) },
                     )) {
+                dev.ipf.whitenoise.ui.conversation.AttachmentReaderScope(profile, chat,
+                    nextScenario = { appViewModel.consumeAttachmentAccessScenario(profile.id) },
+                    onPerson = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) }) {
                 ConversationScreen(
                     profile = profile,
                     chat = chat,
@@ -775,6 +781,7 @@ fun WhiteNoiseNavHost(
                 )
                 }
                 }
+                }
             }
         }
         composable<AppRoute.ChatInfo> { entry ->
@@ -820,6 +827,9 @@ fun WhiteNoiseNavHost(
             val chat = appViewModel.chat(route.chatId)
             val category = runCatching { SharedContentCategory.valueOf(route.category) }.getOrNull()
             if (profile != null && chat != null && category != null) {
+                dev.ipf.whitenoise.ui.conversation.AttachmentReaderScope(profile, chat,
+                    nextScenario = { appViewModel.consumeAttachmentAccessScenario(profile.id) },
+                    onPerson = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) }) {
                 SharedContentScreen(
                     profile = profile,
                     chat = chat,
@@ -839,6 +849,7 @@ fun WhiteNoiseNavHost(
                         }
                     },
                 )
+                }
             }
         }
         composable<AppRoute.EditGroup> { entry ->

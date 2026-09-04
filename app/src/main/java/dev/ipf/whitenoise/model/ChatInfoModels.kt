@@ -6,6 +6,7 @@ enum class SharedContentCategory(val label: String) {
     Media("Photos & Videos"),
     Links("Links"),
     Documents("Documents"),
+    Voice("Voice"),
 }
 
 data class SharedContentItem(
@@ -14,6 +15,8 @@ data class SharedContentItem(
     val attachment: MessageAttachment,
     val senderName: String,
     val sentLabel: String,
+    val recordedAtMillis: Long = 0,
+    val mediaKey: ConversationMediaKey? = null,
 )
 
 data class ConversationMediaKey(
@@ -34,11 +37,11 @@ data class ConversationMediaItem(
     val sentLabel: String,
 ) {
     val mimeType: String
-        get() = if (attachment.kind == MessageAttachmentKind.Video) "video/mp4" else "image/jpeg"
+        get() = when (attachment.kind) { MessageAttachmentKind.Video -> "video/mp4"; MessageAttachmentKind.Gif -> "image/gif"; else -> "image/jpeg" }
 
     val suggestedFileName: String
         get() {
-            val extension = if (attachment.kind == MessageAttachmentKind.Video) "mp4" else "jpg"
+            val extension = when (attachment.kind) { MessageAttachmentKind.Video -> "mp4"; MessageAttachmentKind.Gif -> "gif"; else -> "jpg" }
             val fallback = if (attachment.kind == MessageAttachmentKind.Video) "Video" else "Photo"
             val stem = attachment.label
                 .substringBeforeLast('.', attachment.label)
@@ -56,6 +59,10 @@ data class ConversationMediaSelection(
     val items: List<ConversationMediaItem>,
     val initialKey: ConversationMediaKey,
 ) {
+    fun containsSource(item: ConversationMediaItem): Boolean = items.any {
+        it.key == item.key && it.attachment == item.attachment && it.image == item.image && it.attachment.bytesAvailable
+    }
+
     val initialIndex: Int
         get() = items.indexOfFirst { it.key == initialKey }.coerceAtLeast(0)
 }
@@ -64,7 +71,7 @@ object ConversationMediaProjection {
     fun items(chat: Chat, profile: Profile): List<ConversationMediaItem> =
         chat.timeline.filterIsInstance<ChatTimelineEntry.Message>()
             .map(ChatTimelineEntry.Message::message)
-            .filterNot(ChatMessage::isDeleted)
+            .filter { !it.isDeleted && (it.expiresAtMillis?.let { expiry -> expiry > MessageForwarding.nowMillis } != false) }
             .flatMap { message ->
                 message.attachments.flatMap { attachment ->
                     if (!attachment.bytesAvailable) return@flatMap emptyList()
@@ -74,6 +81,7 @@ object ConversationMediaProjection {
                         -> attachment.images.mapIndexed { imageIndex, image ->
                             item(chat, profile, message, attachment, image, imageIndex)
                         }
+                        MessageAttachmentKind.Gif -> listOf(item(chat, profile, message, attachment, attachment.images.firstOrNull(), 0))
                         MessageAttachmentKind.Video -> {
                             if (attachment.externalUri == null && attachment.images.isEmpty()) {
                                 emptyList()
@@ -125,47 +133,50 @@ object ConversationMediaProjection {
     )
 }
 
+enum class SharedMediaFilter { All, Images, Videos }
+data class SharedContentMonth(val key: java.time.YearMonth, val items: List<SharedContentItem>)
+
 object SharedContentProjection {
-    fun items(chat: Chat, profile: Profile, category: SharedContentCategory): List<SharedContentItem> {
-        if (category == SharedContentCategory.Media) {
-            return ConversationMediaProjection.items(chat, profile).map { media ->
-                SharedContentItem(
-                    id = media.key.stableId,
-                    messageId = media.message.id,
-                    attachment = media.attachment.copy(images = listOfNotNull(media.image)),
-                    senderName = media.senderName,
-                    sentLabel = media.sentLabel,
-                )
-            }
-        }
-        return chat.timeline.filterIsInstance<ChatTimelineEntry.Message>()
-            .map(ChatTimelineEntry.Message::message)
-            .filterNot(ChatMessage::isDeleted)
-            .flatMap { message ->
-                message.attachments.mapIndexedNotNull { index, attachment ->
-                    val included = when (category) {
-                        SharedContentCategory.Media -> error("Media uses ConversationMediaProjection")
-                        SharedContentCategory.Links -> attachment.kind == MessageAttachmentKind.Link
-                        SharedContentCategory.Documents -> attachment.kind == MessageAttachmentKind.File
+    fun isAudio(attachment: MessageAttachment): Boolean = attachment.kind == MessageAttachmentKind.Voice ||
+        (attachment.kind == MessageAttachmentKind.File && (TextAttachments.normalizedMime(attachment.mimeType).startsWith("audio/") ||
+            TextAttachments.safeName(attachment.label).substringAfterLast('.', "").lowercase(java.util.Locale.ROOT) in setOf("mp3", "m4a", "wav", "ogg", "opus", "aac", "flac")))
+    fun timestamp(message: ChatMessage) = message.createdAtMillis ?: GlobalSearchClock.timestamp(message)
+    fun items(chat: Chat, profile: Profile, category: SharedContentCategory): List<SharedContentItem> =
+        chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().map { it.message }
+            .filter { !it.isDeleted && (it.expiresAtMillis?.let { expiry -> expiry > MessageForwarding.nowMillis } != false) }
+            .sortedByDescending(::timestamp).flatMap { message ->
+                val sender = if (message.authorId == profile.id) "You" else profile.people.firstOrNull { it.id == message.authorId }?.displayName ?: chat.title
+                fun entry(attachment: MessageAttachment, index: Int, frame: Int? = null): SharedContentItem {
+                    val key = frame?.let { ConversationMediaKey(message.id, attachment.id, it) }
+                    return SharedContentItem(key?.stableId ?: "${message.id.length}:${message.id}|${attachment.id.length}:${attachment.id}|$index",
+                        message.id, if (frame == null) attachment else attachment.copy(images = listOfNotNull(attachment.images.getOrNull(frame))),
+                        sender, "${message.dayLabel}, ${message.timeLabel}", timestamp(message), key)
+                }
+                val attachments = message.attachments.flatMapIndexed { index, attachment ->
+                    when (category) {
+                        SharedContentCategory.Media -> if (attachment.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos, MessageAttachmentKind.Video, MessageAttachmentKind.Gif))
+                            (0 until (if (attachment.kind in setOf(MessageAttachmentKind.Video, MessageAttachmentKind.Gif)) 1 else attachment.images.size.coerceAtLeast(1))).map { frame -> entry(attachment, index, frame) } else emptyList()
+                        SharedContentCategory.Voice -> if (isAudio(attachment)) listOf(entry(attachment,index)) else emptyList()
+                        SharedContentCategory.Documents -> if (attachment.kind == MessageAttachmentKind.File && !isAudio(attachment)) listOf(entry(attachment,index)) else emptyList()
+                        SharedContentCategory.Links -> if (attachment.kind == MessageAttachmentKind.Link) listOf(entry(attachment,index)) else emptyList()
                     }
-                    if (!included) return@mapIndexedNotNull null
-                    SharedContentItem(
-                        id = "${message.id}-${attachment.id}-$index",
-                        messageId = message.id,
-                        attachment = attachment,
-                        senderName = if (message.authorId == profile.id) {
-                            "You"
-                        } else {
-                            profile.people.firstOrNull { it.id == message.authorId }?.displayName ?: chat.title
-                        },
-                        sentLabel = "${message.dayLabel}, ${message.timeLabel}",
-                    )
+                }
+                if (category != SharedContentCategory.Links) attachments else {
+                    val existing = attachments.mapNotNull { it.attachment.externalUri }.toSet()
+                    val urls = MessageDocuments.inline(message.text).mapNotNull { it.destination }
+                        .filter { it.startsWith("https://",true) || it.startsWith("http://",true) }.distinct().filterNot { it in existing }
+                    attachments + urls.mapIndexed { index, url -> entry(MessageAttachment("body-link-$index", MessageAttachmentKind.Link, url,
+                        externalUri = url, linkTitle = url, linkDomain = runCatching { URI(url).host }.getOrNull()), message.attachments.size + index) }
                 }
             }
-    }
 
-    fun counts(chat: Chat, profile: Profile): Map<SharedContentCategory, Int> =
-        SharedContentCategory.entries.associateWith { items(chat, profile, it).size }
+    fun filtered(items: List<SharedContentItem>, filter: SharedMediaFilter): List<SharedContentItem> = items.filter {
+        when (filter) { SharedMediaFilter.All -> true; SharedMediaFilter.Images -> it.attachment.kind != MessageAttachmentKind.Video; SharedMediaFilter.Videos -> it.attachment.kind == MessageAttachmentKind.Video }
+    }
+    fun months(items: List<SharedContentItem>, zone: java.time.ZoneId): List<SharedContentMonth> = items.groupBy {
+        java.time.YearMonth.from(java.time.Instant.ofEpochMilli(it.recordedAtMillis).atZone(zone))
+    }.map { (month, rows) -> SharedContentMonth(month,rows) }
+    fun counts(chat: Chat, profile: Profile): Map<SharedContentCategory, Int> = SharedContentCategory.entries.associateWith { items(chat, profile, it).size }
 }
 
 object ChatRelayPolicy {

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.ForcedSize
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.Density
@@ -264,6 +265,7 @@ class ChatInfoScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("shared.media.grid").performScrollToNode(hasTestTag("conversation.shared.media.${selected.key.stableId}"))
         composeRule.onNodeWithTag(
             "conversation.shared.media.${selected.key.stableId}",
         ).performClick()
@@ -286,22 +288,23 @@ class ChatInfoScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("shared.media.grid").performScrollToNode(hasTestTag("conversation.shared.media.${first.key.stableId}"))
         composeRule.onNodeWithTag(
             "conversation.shared.media.${first.key.stableId}",
         ).performClick()
         composeRule.onNodeWithTag("conversation.media.viewer.sender")
-            .assertTextContains("Media - Gallery Layouts")
+            .assertTextContains("You")
         composeRule.onNodeWithTag("conversation.media.viewer.position")
-            .assertTextContains("Today, 10:00 AM · 1 of 27")
+            .assertTextContains("Yesterday, 10:00 AM · 1 of 40")
 
         repeat(2) {
             composeRule.onNodeWithTag("conversation.media.viewer.pager")
                 .performTouchInput { swipeLeft() }
             composeRule.waitForIdle()
         }
-        composeRule.onNodeWithTag("conversation.media.viewer.sender").assertTextContains("You")
+        composeRule.onNodeWithTag("conversation.media.viewer.sender").assertTextContains("Media - Gallery Layouts")
         composeRule.onNodeWithTag("conversation.media.viewer.position")
-            .assertTextContains("Today, 10:08 AM · 3 of 27")
+            .assertTextContains("Yesterday, 10:03 AM · 3 of 40")
     }
 
     @Test

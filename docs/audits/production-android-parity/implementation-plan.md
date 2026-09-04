@@ -16,7 +16,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B10: implemented and host-verified 2026-09-04; 361 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/message-moderation-and-forwarding.md). Commit title: `B10: Add message moderation and forwarding recovery`.
 - B11: implemented and host-verified 2026-09-04; 381 unit tests, zero lint errors, both APKs and 11 new compiled UI/platform cases. [Selected brief and evidence](../../screens/composer-attachment-actions.md). Commit title: `B11: Add composer media acquisition and attachment actions`. Q06 remains outside the deterministic recent-media scope.
 - B12: implemented and host-verified 2026-09-04; 399 unit tests, zero lint errors, both APKs and nine new compiled UI/platform cases. [Selected brief and evidence](../../screens/draft-photo-editor.md). Commit title: `B12: Add reversible draft photo editing`.
-- B13–B32: pending; linked decisions apply only to their named slices.
+- B13: implemented and host-verified 2026-09-04; 414 unit tests, zero lint errors, both APKs and 13 new compiled UI/platform cases. [Selected brief and evidence](../../screens/text-attachments-and-shared-content.md). Commit title: `B13: Add text attachment reading and shared media libraries`.
+- B14–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -35,7 +36,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B10** | Moderation deletion and resilient forwarding | C043, C044, C045 | B09 | Implemented; host verified |
 | **B11** | Composer media acquisition and attachment actions | C046, C049, C051, C052, C054, C057 | B08 | Implemented; host verified; real library access remains outside Q06 scope |
 | **B12** | Draft photo editor | C050 | B11 | Implemented; host verified |
-| **B13** | Text attachment reader and expanded shared media | C055, C056, C059 | B11 | Blocked slices: Q06 |
+| **B13** | Text attachment reader and expanded shared media | C055, C056, C059 | B11 | Implemented; host verified; real installation remains outside Q06 scope |
 | **B14** | Location sharing state flow | C058 | B11 | Blocked slices: Q06 |
 | **B15** | Read Aloud transport and source navigation | C061, C062 | B08 | Ready |
 | **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Blocked slices: Q06 |
@@ -237,6 +238,8 @@ Capabilities: C050. Dependencies: B11.
 ### B13 — Text attachment reader and expanded shared media
 
 Capabilities: C055, C056, C059. Dependencies: B11.
+
+**Status:** Implemented and host-verified; [evidence](../../screens/text-attachments-and-shared-content.md#implementation-evidence). Strict bounded reading, Copy/selection/speech, newest-first media filters/month groups, source-owned voice playback and local package outcomes are implemented. 414 host unit tests pass; 13 new UI/platform cases compile. Q06 still excludes real installation; device/visual acceptance remains pending.
 
 **Implementation:** Add full filename, size, loading/empty/error, bounded 512 KiB preview, unsupported encoding/truncation fallback, copy/read-aloud and Open in another app. Existing Media/Files/Links grouping lacks separate images/video/voice views and voice library playback, grouping and fallback metadata. Extend existing Shared Content destinations. Represent valid/invalid package, unsupported installer, permission-required and Play-build fallback. No real installation or new installer permission in prototype.
 

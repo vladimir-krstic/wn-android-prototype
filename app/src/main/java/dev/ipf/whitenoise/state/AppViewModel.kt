@@ -731,6 +731,8 @@ class AppViewModel(
         nextMessageForwardScenario = MessageForwardScenario.Success
         photoEditorSession = null
         nextPhotoEditorScenario = PhotoEditorScenario.Success
+        nextAttachmentAccessScenario = dev.ipf.whitenoise.model.AttachmentAccessScenario.Success
+        attachmentAccessScenarioOwner = null
         recentMediaAccess = dev.ipf.whitenoise.model.RecentMediaAccess.Full
         attachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success
         messageForwards = emptyMap()
@@ -1319,6 +1321,30 @@ class AppViewModel(
             if (changed) chat.copy(timeline = timeline, deliveryState = ChatDeliveryState.None) else chat
         }
         return changed
+    }
+
+    private var attachmentAccessScenarioOwner: String? = null
+    var nextAttachmentAccessScenario by mutableStateOf(dev.ipf.whitenoise.model.AttachmentAccessScenario.Success)
+        private set
+    fun selectAttachmentAccessScenario(value: dev.ipf.whitenoise.model.AttachmentAccessScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) { attachmentAccessScenarioOwner = uiState.activeProfileId; nextAttachmentAccessScenario = value }
+    }
+    fun consumeAttachmentAccessScenario(profileId: String): dev.ipf.whitenoise.model.AttachmentAccessScenario {
+        if (profileId != uiState.activeProfileId) return dev.ipf.whitenoise.model.AttachmentAccessScenario.LoadFailure
+        if (attachmentAccessScenarioOwner != profileId) return dev.ipf.whitenoise.model.AttachmentAccessScenario.Success
+        return nextAttachmentAccessScenario.also { nextAttachmentAccessScenario = dev.ipf.whitenoise.model.AttachmentAccessScenario.Success; attachmentAccessScenarioOwner = null }
+    }
+    fun addAttachmentReadingExamples(profileId: String, chatId: String): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId && it.developerTools.isEnabled } ?: return false
+        val chat = chat(chatId)?.takeIf { it.composerAvailability(profile) == ComposerAvailability.Available } ?: return false
+        val (day, minute) = nextTimelinePosition(chat)
+        val sequence = createdChatSequence++
+        val messages = dev.ipf.whitenoise.model.AttachmentReadingExamples.attachments().mapIndexed { index, attachment ->
+            ChatTimelineEntry.Message(ChatMessage("$chatId-document-$sequence-$index", profileId, day, "Today", minute, "Now",
+                attachments = listOf(attachment.copy(id = "${attachment.id}-$sequence"))))
+        }
+        mutateChat(chatId) { it.copy(timeline = it.timeline + messages, preview = "Shared files", previewAuthor = "You", timestamp = "Now") }
+        return true
     }
 
     private var messageEditGeneration = 0L

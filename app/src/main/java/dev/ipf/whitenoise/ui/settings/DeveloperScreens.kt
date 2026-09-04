@@ -86,6 +86,8 @@ fun DeveloperToolsScreen(
     onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
     photoEditorScenario: dev.ipf.whitenoise.model.PhotoEditorScenario = dev.ipf.whitenoise.model.PhotoEditorScenario.Success,
     onPhotoEditorScenario: (dev.ipf.whitenoise.model.PhotoEditorScenario) -> Unit = {},
+    attachmentAccessScenario: dev.ipf.whitenoise.model.AttachmentAccessScenario = dev.ipf.whitenoise.model.AttachmentAccessScenario.Success,
+    onAttachmentAccessScenario: (dev.ipf.whitenoise.model.AttachmentAccessScenario) -> Unit = {},
     onMessageForwardScenario: (dev.ipf.whitenoise.model.MessageForwardScenario) -> Unit = {},
     globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
     onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
@@ -119,6 +121,9 @@ fun DeveloperToolsScreen(
     var recentOpen by remember { mutableStateOf(false) }
     var transferOpen by remember { mutableStateOf(false) }
     var photoEditorOpen by remember { mutableStateOf(false) }
+    var attachmentAccessOpen by remember { mutableStateOf(false) }
+    if (attachmentAccessOpen) ScenarioChoiceDialog("File opening", dev.ipf.whitenoise.model.AttachmentAccessScenario.entries,
+        attachmentAccessScenario, { it.developerLabel }, onAttachmentAccessScenario, { attachmentAccessOpen = false })
     if (photoEditorOpen) ScenarioChoiceDialog("Photo editor", dev.ipf.whitenoise.model.PhotoEditorScenario.entries,
         photoEditorScenario, { it.developerLabel }, onPhotoEditorScenario, { photoEditorOpen = false })
     if (recentOpen) ScenarioChoiceDialog("Recent media access", dev.ipf.whitenoise.model.RecentMediaAccess.entries,
@@ -214,6 +219,8 @@ fun DeveloperToolsScreen(
                         SettingsLink("Attachment transfer outcomes", attachmentTransferScenario.developerLabel, { transferOpen = true })
                         SettingsDivider()
                         SettingsLink("Photo editor outcomes", photoEditorScenario.developerLabel, { photoEditorOpen = true })
+                        SettingsDivider()
+                        SettingsLink("File opening outcomes", attachmentAccessScenario.developerLabel, { attachmentAccessOpen = true })
                         SettingsDivider()
                         SettingsLink("Message forwarding outcomes", messageForwardScenario.developerLabel, { forwardOpen = true })
                         SettingsDivider()
@@ -579,6 +586,7 @@ fun ConversationDebugScreen(
     onDiagnostics: () -> Unit,
     onAddArrival: (Boolean) -> Unit = {},
     onAddReadingExample: () -> Unit = {},
+    onAddAttachmentExamples: () -> Unit = {},
 ) {
     val context = LocalContext.current
     SettingsScaffold(title = "Conversation Debug", onBack = onBack) {
@@ -636,6 +644,8 @@ fun ConversationDebugScreen(
                             SettingsLink("Add streaming message", "Includes receipt, sender time and expiry metadata", { onAddArrival(true) })
                             SettingsDivider()
                             SettingsLink("Add long document", "Markdown, selection and revision history", onAddReadingExample)
+                            SettingsDivider()
+                            SettingsLink("Add file examples", "Text, Markdown, audio and package outcomes", onAddAttachmentExamples)
                         }
                     }
                     item { SettingsSection("Delivery & notifications") }

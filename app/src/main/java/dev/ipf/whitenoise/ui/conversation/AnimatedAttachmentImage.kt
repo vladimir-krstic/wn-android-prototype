@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 
 @Composable
-internal fun AnimatedAttachmentImage(attachment: MessageAttachment, modifier: Modifier = Modifier) {
+internal fun AnimatedAttachmentImage(attachment: MessageAttachment, modifier: Modifier = Modifier, active: Boolean = true) {
     val resources = LocalResources.current
     val owner = LocalLifecycleOwner.current
     var finished by remember(attachment.id, attachment.images, attachment.bytesAvailable) { mutableStateOf(false) }
@@ -53,10 +53,10 @@ internal fun AnimatedAttachmentImage(attachment: MessageAttachment, modifier: Mo
         finished = true
     }
     val description = stringResource(if (drawable == null) R.string.attachment_gif_unavailable else if (Build.VERSION.SDK_INT >= 28 && drawable is AnimatedImageDrawable) R.string.attachment_gif_description else R.string.attachment_gif_static)
-    DisposableEffect(drawable, owner) {
+    DisposableEffect(drawable, owner, active) {
         val animated = if (Build.VERSION.SDK_INT >= 28) drawable as? AnimatedImageDrawable else null
         val observer = object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) { if (Build.VERSION.SDK_INT >= 28 && ValueAnimator.areAnimatorsEnabled()) animated?.start() }
+            override fun onStart(owner: LifecycleOwner) { if (active && Build.VERSION.SDK_INT >= 28 && ValueAnimator.areAnimatorsEnabled()) animated?.start() }
             override fun onStop(owner: LifecycleOwner) { if (Build.VERSION.SDK_INT >= 28) animated?.stop() }
         }
         owner.lifecycle.addObserver(observer)

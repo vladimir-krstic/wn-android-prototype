@@ -3809,3 +3809,29 @@ a separate annotation layer, preserving the source photo.
 Evidence and current official guidance: [draft photo editor brief](screens/draft-photo-editor.md#implementation-evidence).
 The clean gate passes 399 unit tests, both APKs and zero lint errors; nine new
 UI/rendering cases compile. No device/visual verification is claimed.
+
+## WN-ANDROID-0133 — Attachment reading and shared content preserve source identity
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B13; host verified, device/visual acceptance pending.
+
+Read text only after strict bounded decoding; distinguish unavailable, encoding,
+binary and size failures. Render budgets preserve full original Copy and expose
+truncation/external fallback. Native selection and engine-sized speech chunks
+reuse the established document interaction. The reader's metadata scrolls with
+its body; native app-bar overflow contains external Open/Save.
+
+Keep Chat Info disclosure rows and add Voice. Photos & Videos contains All,
+Images and Videos filters. Newest-first month grouping does not change exact
+message/album-frame identity or chronological viewer order. Unknown audio remains
+unavailable; a single foreground player owns actual local bytes and invalidates
+old callbacks/source replacements. Both viewers use fresh source projections.
+
+Q06 covers app-owned package validity/distribution/permission/installer outcomes
+only. Archive-shape validation is not signature verification or installation.
+Save file/Close is the local fallback; even provider-refined package MIME cannot
+dispatch installation. Existing system surfaces retain platform appearance.
+
+Evidence and official guidance: [attachment reading brief](screens/text-attachments-and-shared-content.md#implementation-evidence).
+The clean gate passes 414 unit tests, both APKs and zero lint errors. Thirteen
+new UI/platform cases compile; no device playback/speech/visual result is claimed.

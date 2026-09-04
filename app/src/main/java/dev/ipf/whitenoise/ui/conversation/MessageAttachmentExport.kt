@@ -84,15 +84,9 @@ internal suspend fun exportAttachment(context: Context, attachment: MessageAttac
                 mime = context.contentResolver.getType(uri) ?: mime
                 context.contentResolver.openInputStream(uri) ?: return@withContext null
             }
-            attachment.kind == MessageAttachmentKind.File -> {
-                val resource = when (attachment.label.lowercase()) {
-                    "project brief.pdf" -> R.raw.project_brief
-                    "project notes.pdf" -> R.raw.project_notes
-                    "trail plan.pdf" -> R.raw.trail_plan
-                    "weekend notes.pdf" -> R.raw.weekend_notes
-                    else -> return@withContext null
-                }
-                mime = "application/pdf"; context.resources.openRawResource(resource)
+            attachment.kind == MessageAttachmentKind.File || attachment.kind == MessageAttachmentKind.Voice -> {
+                mime = AttachmentSources.mime(attachment)
+                AttachmentSources.open(context, attachment) ?: return@withContext null
             }
             else -> return@withContext null
         }

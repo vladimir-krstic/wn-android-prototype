@@ -122,6 +122,16 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B13: C055/C056/C059 are implemented and host-verified
+within the prototype boundary. Strict bounded text/Markdown reading, native
+selection/full Copy/speech, newest-first month-grouped image/video/voice content,
+actual local audio playback and typed package-open outcomes extend Conversation
+and Shared Content. Source/profile guards revoke stale readers/playback/exports;
+GIF save/share retains animation. Q06 still excludes actual installation and new
+permissions. The clean gate passes 414 unit tests, both APKs and zero lint errors;
+13 new UI/platform cases compile. Device and visual acceptance remain pending.
+See [text-attachments-and-shared-content.md](../screens/text-attachments-and-shared-content.md#implementation-evidence).
+
 2026-09-04 production B12: C050 is implemented and host-verified. Selected draft
 and album-frame editing adds crop presets, rotation, ink/erase, undo/redo/reset,
 dirty discard, bounded rendering and load/save recovery. Original sources and

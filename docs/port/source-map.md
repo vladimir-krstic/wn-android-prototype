@@ -167,3 +167,15 @@ recipes; send/forward strips original sources and edit metadata. Production
 reconnects its draft source/staging/commit stores rather than copying in-memory
 fixtures into persistence. App chrome stays monochrome; five ink colors describe
 photo content, independently of the B26 appearance decision.
+
+## Production B13 attachment reading and shared content
+
+`docs/screens/text-attachments-and-shared-content.md` maps pinned production
+TextAttachmentPreviewPolicy/ReaderState/Reader/Fallback and MediaFileAccess/MediaIo
+into `AttachmentReadingModels.kt`, `AttachmentSources.kt` and
+`AttachmentReaderUi.kt`. MediaLibrary maps to `SharedContentProjection`,
+`SharedContentLibrary.kt`, the refreshed media viewer and the existing Media3
+boundary. AppViewModel owns developer examples/one-shot outcomes; source IDs own
+reader/player lifetime. Production reconnects authoritative attachment cache,
+voice sources and distribution/installer outcomes. Real installation and new
+permissions remain outside Q06 prototype coverage.

@@ -1,10 +1,10 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B12 are implemented and host-verified.
+2026-09-04: production parity B01–B13 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. Continue with B13. Q05 is resolved by the approved checked wipe
+record evidence. Continue with B14. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -33,11 +33,16 @@ ink-only erasing, undo/redo/reset, dirty discard and retry. Source images and
 recipes remain in memory; per-frame quality preserves siblings, whole-draft
 quality replays edits, and send/forward drops private originals and recipes.
 See `docs/screens/draft-photo-editor.md`. Nine new UI/bitmap cases compile.
-Latest clean gate: 399 unit tests, zero lint errors, both APKs;
+B13 adds strict bounded text/Markdown reading, full Copy/selection/native speech,
+shared media filters/month groups/Voice, source-owned audio controls and package
+fallback states. Real installation remains outside Q06. See
+`docs/screens/text-attachments-and-shared-content.md`. Thirteen new UI/platform
+cases compile; profile/source/lifecycle changes invalidate stale content.
+Latest clean gate: 414 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B13–B32. This
+boundary. Production Android parity remains in progress through B14–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

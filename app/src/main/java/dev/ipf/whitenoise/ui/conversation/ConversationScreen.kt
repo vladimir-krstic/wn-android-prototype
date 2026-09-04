@@ -411,6 +411,8 @@ fun ConversationScreen(
     val messageBounds = remember(chat.id) { mutableStateMapOf<String, Rect>() }
     val context = LocalContext.current
     val readAloudController = rememberReadAloudController()
+    val attachmentReaderPresented = LocalAttachmentAccess.current.presented
+    LaunchedEffect(attachmentReaderPresented) { if (attachmentReaderPresented) readAloudController.stop() }
     var localVoiceTranscripts by remember(chat.id) { mutableStateOf(emptyMap<String, String>()) }
     var visibleVoiceTranscriptIds by remember(chat.id) { mutableStateOf(emptySet<String>()) }
     val density = LocalDensity.current
@@ -666,7 +668,7 @@ fun ConversationScreen(
     val currentVisibleCallback by rememberUpdatedState(onMessagesVisible)
     val canRead by rememberUpdatedState(initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
         editMessageId == null && readerMessageId == null && historyMessageId == null && exportMessageId == null &&
-        !operationCovered && viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
+        !attachmentReaderPresented && !operationCovered && viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
         !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
         !composerPresentationActive && !composerOverlayActive && history.request == null && history.readyTarget == null)
     val relatedPx = with(density) { WhiteNoiseSpacing.Related.roundToPx() }
@@ -1052,9 +1054,11 @@ fun ConversationScreen(
         )
     }
 
-    viewerSelection?.let { selection ->
+    val viewerMedia = remember(chat.timeline, profile.id, profile.people) { ConversationMediaProjection.items(chat, profile) }
+    LaunchedEffect(viewerMedia) { if (viewerMedia.isEmpty()) viewerSelection = null }
+    viewerSelection?.takeIf { viewerMedia.isNotEmpty() }?.let { selection ->
         ReadOnlyMediaViewer(
-            selection = selection,
+            selection = selection.copy(items = viewerMedia),
             onDismiss = { viewerSelection = null },
             onForward = { item ->
                 forwardMediaKey = item.key

@@ -13,15 +13,15 @@ class ChatInfoModelsTest {
         val rich = profile.chats.first { it.id == "catalog-media-rich" }
         val gallery = profile.chats.first { it.id == "catalog-media-gallery" }
 
-        assertEquals(listOf("LINK-01", "LINK-02", "LINK-03"), SharedContentProjection.items(rich, profile, SharedContentCategory.Links).map { it.messageId })
+        assertEquals(listOf("LINK-03", "LINK-02", "LINK-01"), SharedContentProjection.items(rich, profile, SharedContentCategory.Links).map { it.messageId })
         assertEquals(
-            listOf("FILE-01", "FILE-02", "FILE-03", "FILE-04", "FILE-05", "FILE-06"),
+            listOf("FILE-06", "FILE-05", "FILE-04", "FILE-03", "FILE-02", "FILE-01"),
             SharedContentProjection.items(rich, profile, SharedContentCategory.Documents).map { it.messageId },
         )
         val media = SharedContentProjection.items(gallery, profile, SharedContentCategory.Media)
         assertEquals(40, media.size)
         assertEquals(media.size, media.map { it.id }.distinct().size)
-        assertTrue(media.none { it.attachment.kind == MessageAttachmentKind.Gif })
+        assertTrue(SharedContentProjection.items(rich, profile, SharedContentCategory.Media).any { it.attachment.kind == MessageAttachmentKind.Gif })
     }
 
     @Test
@@ -95,6 +95,7 @@ class ChatInfoModelsTest {
             listOf(
                 ConversationMediaKey("first", "album", 0),
                 ConversationMediaKey("first", "album", 1),
+                ConversationMediaKey("first", "gif", 0),
                 ConversationMediaKey("second", "photo", 0),
             ),
             media.map { it.key },

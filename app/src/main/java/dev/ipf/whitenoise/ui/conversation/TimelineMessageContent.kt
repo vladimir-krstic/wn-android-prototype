@@ -119,7 +119,7 @@ internal fun TimelineAttachmentContent(
                 MessageAttachmentKind.Link -> LinkMessageCard(attachment, outgoing, searchQuery)
                 MessageAttachmentKind.File,
                 MessageAttachmentKind.Contact,
-                -> DocumentOrContactCard(attachment, outgoing, searchQuery, people, onOpenPerson)
+                -> DocumentOrContactCard(attachment, outgoing, searchQuery, people, onOpenPerson, messageId)
                 else -> Unit
             }
         }
@@ -444,8 +444,10 @@ private fun DocumentOrContactCard(
     searchQuery: String,
     people: List<Person>,
     onOpenPerson: ((String) -> Unit)?,
+    messageId: String?,
 ) {
     val context = LocalContext.current
+    val attachmentAccess = LocalAttachmentAccess.current
     val bundled = bundledResource(attachment.label)
     val canOpenFile = attachment.kind == MessageAttachmentKind.File && attachment.bytesAvailable && (
         attachment.externalUri?.let {
@@ -456,6 +458,7 @@ private fun DocumentOrContactCard(
     val canOpenPerson = attachment.kind == MessageAttachmentKind.Contact && person != null && onOpenPerson != null
     val openAction: (() -> Unit)? = when {
         canOpenPerson -> ({ onOpenPerson(person.id) })
+        attachment.kind == MessageAttachmentKind.File && attachmentAccess.open != null -> ({ attachmentAccess.open.invoke(messageId, attachment) })
         canOpenFile -> ({
             if (bundled != null) {
                 openBundledResource(context, bundled.first, bundled.second, bundled.third)
@@ -543,10 +546,12 @@ private fun DocumentOrContactCard(
     }
 }
 
+@Composable
 private fun fileMetadata(attachment: MessageAttachment): String {
     val fileType = attachment.label.substringAfterLast('.', missingDelimiterValue = "").uppercase()
-    val bytes = attachment.fileSizeBytes ?: 0
+    val bytes = attachment.fileSizeBytes?.coerceAtLeast(0)
     val size = when {
+        bytes == null -> stringResource(R.string.shared_file_size_unknown)
         bytes >= 1_000_000 -> "${bytes / 1_000_000} MB"
         bytes >= 1_000 -> "${bytes / 1_000} kB"
         else -> "$bytes B"
@@ -664,6 +669,10 @@ internal fun formatMessageDuration(seconds: Int): String {
 internal class ReadAloudController {
     var ready by mutableStateOf(false)
         private set
+    var initializationComplete by mutableStateOf(false)
+        private set
+    var failed by mutableStateOf(false)
+        private set
     var activeMessageId by mutableStateOf<String?>(null)
         private set
     var progress by mutableFloatStateOf(0f)
@@ -671,134 +680,102 @@ internal class ReadAloudController {
     var activePassage by mutableStateOf<dev.ipf.whitenoise.model.MessagePassage?>(null)
         private set
     private var utteranceGeneration = 0L
-    private var activeUtteranceId: String? = null
-
+    private var lastUtteranceId: String? = null
+    private val utteranceRanges = mutableMapOf<String, IntRange>()
+    private var textLength = 0
     private var engine: TextToSpeech? = null
     private var closed = true
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun initialize(context: Context) {
-        shutdown()
-        closed = false
+        shutdown(); closed = false; initializationComplete = false
         var created: TextToSpeech? = null
         created = TextToSpeech(context.applicationContext) { status ->
             val initialized = created
             if (closed || initialized == null || engine !== initialized) return@TextToSpeech
-            val languageStatus = if (status == TextToSpeech.SUCCESS) {
-                initialized.setLanguage(Locale.getDefault())
-            } else {
-                TextToSpeech.ERROR
-            }
-            postUpdate { ready = languageStatus >= TextToSpeech.LANG_AVAILABLE }
+            val localVoiceReady = status == TextToSpeech.SUCCESS && runCatching {
+                val locale = Locale.getDefault()
+                if (initialized.setLanguage(locale) < TextToSpeech.LANG_AVAILABLE) return@runCatching false
+                fun installedLocal(voice: android.speech.tts.Voice) = !voice.isNetworkConnectionRequired &&
+                    voice.features?.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) != true
+                val voice = initialized.voice?.takeIf(::installedLocal) ?: initialized.voices.orEmpty()
+                    .filter { installedLocal(it) && it.locale.language == locale.language }
+                    .sortedWith(compareByDescending<android.speech.tts.Voice> { it.locale == locale }.thenBy { it.name })
+                    .firstOrNull()
+                voice != null && initialized.setVoice(voice) == TextToSpeech.SUCCESS
+            }.getOrDefault(false)
+            postUpdate { if (engine === initialized) { ready = localVoiceReady; initializationComplete = true } }
         }
         engine = created
         created.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = postUpdate {
-                if (utteranceId == activeUtteranceId) progress = 0f
+                utteranceRanges[utteranceId]?.let { progress = it.first.toFloat() / textLength.coerceAtLeast(1) }
             }
-
-            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
-                postUpdate {
-                    if (utteranceId == activeUtteranceId) {
-                        val spokenTextLength = utteranceId
-                            ?.let(utteranceLengths::get)
-                            ?.coerceAtLeast(1)
-                            ?: 1
-                        progress = (end.toFloat() / spokenTextLength).coerceIn(0f, 1f)
-                    }
+            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) = postUpdate {
+                utteranceRanges[utteranceId]?.let { range -> progress = ((range.first + end).toFloat() / textLength.coerceAtLeast(1)).coerceIn(0f,1f) }
+            }
+            override fun onDone(utteranceId: String?) = postUpdate {
+                val range = utteranceRanges.remove(utteranceId)
+                if (range != null) {
+                    progress = (range.last+1).toFloat()/textLength.coerceAtLeast(1)
+                    if (utteranceId == lastUtteranceId) clear()
                 }
             }
-
-            override fun onDone(utteranceId: String?) = finish(utteranceId)
-
             @Deprecated("Platform callback")
-            override fun onError(utteranceId: String?) = finish(utteranceId)
+            override fun onError(utteranceId: String?) = postUpdate {
+                if (utteranceId in utteranceRanges) { stop(); failed = true }
+            }
         })
     }
-
-    private val utteranceLengths = mutableMapOf<String, Int>()
-
     fun toggle(messageId: String, text: String) {
-        if (!ready) return
-        if (activeMessageId == messageId) {
-            stop()
-            return
-        }
-        speak(messageId, text, null)
+        if (activeMessageId == messageId) stop() else if (ready && text.isNotBlank()) speak(messageId,text,null)
     }
-
     fun speakPassage(messageId: String, passage: dev.ipf.whitenoise.model.MessagePassage) {
-        if (ready && passage.text.isNotBlank()) speak(messageId, passage.text, passage)
+        if (ready && passage.text.isNotBlank()) speak(messageId,passage.text,passage)
     }
-
     private fun speak(messageId: String, text: String, passage: dev.ipf.whitenoise.model.MessagePassage?) {
         val currentEngine = engine ?: return
-        val utteranceId = "$messageId:${++utteranceGeneration}"
-        activeUtteranceId?.let(utteranceLengths::remove)
-        activeUtteranceId = utteranceId
-        utteranceLengths[utteranceId] = text.length
-        val result = currentEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-        if (result == TextToSpeech.SUCCESS) {
-            activeMessageId = messageId
-            activePassage = passage
-            progress = 0f
-        } else {
-            utteranceLengths.remove(utteranceId)
-            activeUtteranceId = null
-            activeMessageId = null
-            activePassage = null
-            progress = 0f
+        if (currentEngine.voice?.isNetworkConnectionRequired != false) { stop(); ready = false; failed = true; return }
+        val chunks = dev.ipf.whitenoise.model.SpeechTextChunks.split(text,TextToSpeech.getMaxSpeechInputLength().coerceAtLeast(3)-1)
+        stop(); failed = false
+        val generation = ++utteranceGeneration
+        textLength = text.length; activeMessageId = messageId; activePassage = passage
+        var offset = 0
+        val requests = chunks.mapIndexed { index, chunk ->
+            val id = "$messageId:$generation:$index"
+            utteranceRanges[id] = offset until offset+chunk.length; offset += chunk.length
+            id to chunk
+        }
+        lastUtteranceId = requests.lastOrNull()?.first
+        requests.forEachIndexed { index, (id, chunk) ->
+            if (currentEngine.speak(chunk,if (index == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,null,id) != TextToSpeech.SUCCESS) {
+                stop(); failed = true; return
+            }
         }
     }
-
-    fun stop() {
-        engine?.stop()
-        activeUtteranceId?.let(utteranceLengths::remove)
-        activeUtteranceId = null
-        activeMessageId = null
-        activePassage = null
-        progress = 0f
+    private fun clear() {
+        utteranceRanges.clear(); activeMessageId = null; lastUtteranceId = null; activePassage = null; progress = 0f; textLength = 0
     }
-
+    fun stop() { engine?.stop(); clear() }
     fun shutdown() {
-        closed = true
-        engine?.stop()
-        engine?.shutdown()
-        engine = null
-        utteranceLengths.clear()
-        ready = false
-        activeMessageId = null
-        activeUtteranceId = null
-        activePassage = null
-        progress = 0f
+        closed = true; engine?.stop(); engine?.shutdown(); engine = null
+        ready = false; initializationComplete = false; failed = false; clear()
     }
-
-    private fun finish(utteranceId: String?) = postUpdate {
-        utteranceId?.let(utteranceLengths::remove)
-        if (utteranceId == activeUtteranceId) {
-            activeMessageId = null
-            activeUtteranceId = null
-            activePassage = null
-            progress = 0f
-        }
-    }
-
-    private fun postUpdate(update: () -> Unit) {
-        mainHandler.post {
-            if (!closed) update()
-        }
-    }
+    private fun postUpdate(update: () -> Unit) { mainHandler.post { if (!closed) update() } }
 }
 
 @Composable
 internal fun rememberReadAloudController(): ReadAloudController {
     val context = LocalContext.current
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val controller = remember { ReadAloudController() }
-    DisposableEffect(context, controller) {
+    DisposableEffect(context, controller, owner) {
         controller.initialize(context)
-        onDispose {
-            controller.shutdown()
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) controller.stop()
         }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer); controller.shutdown() }
     }
     return controller
 }

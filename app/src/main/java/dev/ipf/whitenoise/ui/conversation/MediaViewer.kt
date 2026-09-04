@@ -38,6 +38,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import java.util.UUID
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -95,6 +99,8 @@ internal fun ReadOnlyMediaViewer(
     val context = LocalContext.current
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
+    val liveSelection = rememberUpdatedState(selection)
+    val owner = LocalLifecycleOwner.current
     val touchExplorationEnabled = remember(context) {
         context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
     }
@@ -116,6 +122,10 @@ internal fun ReadOnlyMediaViewer(
         val item = pendingSave
         pendingSave = null
         if (uri == null || item == null) return
+        if (!liveSelection.value.containsSource(item)) {
+            Toast.makeText(context, R.string.media_save_error, Toast.LENGTH_LONG).show()
+            return
+        }
         coroutineScope.launch {
             val saved = withContext(Dispatchers.IO) {
                 runCatching {
@@ -136,6 +146,7 @@ internal fun ReadOnlyMediaViewer(
         ActivityResultContracts.CreateDocument("image/jpeg"),
         ::saveTo,
     )
+    val gifSaveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/gif"), ::saveTo)
     val videoSaveLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("video/mp4"),
         ::saveTo,
@@ -155,7 +166,7 @@ internal fun ReadOnlyMediaViewer(
         onDismissRequest = ::dismissOrReset,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        val currentItem = selection.items[pagerState.currentPage]
+        val currentItem = selection.items.getOrNull(pagerState.currentPage) ?: selection.items.last()
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -178,8 +189,9 @@ internal fun ReadOnlyMediaViewer(
             ) { page ->
                 val item = selection.items[page]
                 val isCurrentPage = pagerState.currentPage == page
-                val stillImage = item.attachment.kind != MessageAttachmentKind.Video
-                if (!stillImage) {
+                val video = item.attachment.kind == MessageAttachmentKind.Video
+                val stillImage = !video && item.attachment.kind != MessageAttachmentKind.Gif
+                if (video) {
                     MediaViewerVideo(
                         item = item,
                         active = pagerState.settledPage == page && !pagerState.isScrollInProgress,
@@ -287,7 +299,8 @@ internal fun ReadOnlyMediaViewer(
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    item.image?.let { image ->
+                    if (item.attachment.kind == MessageAttachmentKind.Gif) AnimatedAttachmentImage(item.attachment, Modifier.fillMaxSize(), active = isCurrentPage)
+                    else item.image?.let { image ->
                         ComposerImage(
                             image = image,
                             modifier = Modifier
@@ -318,6 +331,8 @@ internal fun ReadOnlyMediaViewer(
                         pendingSave = currentItem
                         if (currentItem.attachment.kind == MessageAttachmentKind.Video) {
                             videoSaveLauncher.launch(currentItem.suggestedFileName)
+                        } else if (currentItem.attachment.kind == MessageAttachmentKind.Gif) {
+                            gifSaveLauncher.launch(currentItem.suggestedFileName)
                         } else {
                             imageSaveLauncher.launch(currentItem.suggestedFileName)
                         }
@@ -328,7 +343,9 @@ internal fun ReadOnlyMediaViewer(
                 MediaViewerBottomChrome(
                     onShare = {
                         coroutineScope.launch {
-                            val shared = shareMedia(context, currentItem)
+                            val shared = shareMedia(context, currentItem) {
+                                liveSelection.value.containsSource(currentItem) && owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+                            }
                             if (!shared) {
                                 Toast.makeText(context, R.string.media_share_error, Toast.LENGTH_LONG).show()
                             }
@@ -520,16 +537,18 @@ private fun fittedMediaContentSize(
     )
 }
 
-private suspend fun shareMedia(context: Context, item: ConversationMediaItem): Boolean {
-    val uri = withContext(Dispatchers.IO) {
+internal suspend fun shareMedia(context: Context, item: ConversationMediaItem, canDispatch: () -> Boolean): Boolean {
+    val file = withContext(Dispatchers.IO) {
         runCatching {
             val directory = File(context.cacheDir, "shared").apply { mkdirs() }
-            val file = File(directory, item.suggestedFileName)
+            val file = File(directory, "${UUID.randomUUID()}-${item.suggestedFileName}")
             file.outputStream().use { copyMedia(context, item, it) }
-            FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+            file
         }.getOrNull()
     } ?: return false
+    if (!canDispatch()) { file.delete(); return false }
     return runCatching {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
         val send = Intent(Intent.ACTION_SEND).apply {
             type = item.mimeType
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -540,7 +559,12 @@ private suspend fun shareMedia(context: Context, item: ConversationMediaItem): B
     }.isSuccess
 }
 
-private fun copyMedia(context: Context, item: ConversationMediaItem, output: OutputStream) {
+internal fun copyMedia(context: Context, item: ConversationMediaItem, output: OutputStream) {
+    if (item.attachment.kind == MessageAttachmentKind.Gif) {
+        val input = (item.attachment.images.firstOrNull() as? ProfileAvatar.DeviceImage)?.bytes?.inputStream()
+            ?: context.resources.openRawResource(R.raw.chat_animation)
+        input.use { it.copyTo(output) }; return
+    }
     if (item.attachment.kind == MessageAttachmentKind.Video) {
         val external = item.attachment.externalUri
         val input = if (external?.startsWith("content:") == true) {
