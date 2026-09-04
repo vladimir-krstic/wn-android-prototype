@@ -16,6 +16,17 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-09-04 production B32
+
+C120/C121 are implemented and host-verified within Q06. One app-wide update
+controller covers self-managed and store-managed distribution; unknown, checking,
+failure, current and available status; per-version dismissal; persistent important
+warnings, and distinct resolution/download/verification/permission/handoff states.
+837 unit tests pass; eight UI cases compile, zero lint errors and both debug APKs
+build. [Evidence](../screens/distribution-gated-app-updates.md#implementation-evidence).
+No release lookup, network, APK/file, digest, permission, notification or installer
+operation was added; device and visual acceptance remain pending.
+
 ## 2026-09-04 production B31
 
 C117 is implemented and host-verified. Settings now opens Help, a review-first

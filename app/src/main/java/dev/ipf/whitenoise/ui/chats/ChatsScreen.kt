@@ -88,6 +88,7 @@ import dev.ipf.whitenoise.model.ChatScope
 import dev.ipf.whitenoise.model.MuteDuration
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.state.AppUiState
+import dev.ipf.whitenoise.state.AppUpdateController
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll
 import dev.ipf.whitenoise.ui.components.MuteDurationDialog
@@ -100,6 +101,7 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseContentMaxWidth
 import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import dev.ipf.whitenoise.ui.updates.AppUpdateBanner
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -134,6 +136,7 @@ fun ChatsScreen(
     onOpenGroup: (String) -> Unit = {},
     onRetryConnection: () -> Unit = {},
     onAdvanceConnection: (String, Long, ChatConnectionPhase) -> Boolean = { _, _, _ -> false },
+    appUpdates: AppUpdateController? = null,
 ) {
     val profile = uiState.activeProfile
     val searchChatsDescription = stringResource(R.string.search_chats)
@@ -364,6 +367,17 @@ fun ChatsScreen(
                     if (isSearching || selecting) WhiteNoiseSpacing.CompactScreenMargin
                     else 56.dp + WhiteNoiseSpacing.CompactScreenMargin * 2),
             ) {
+                appUpdates?.state?.let { update ->
+                    if (dev.ipf.whitenoise.model.AppUpdates.showsBanner(update)) {
+                        item(key = "app-update") {
+                            AppUpdateBanner(
+                                state = update,
+                                onUpdate = appUpdates::beginSelfUpdate,
+                                onDismiss = appUpdates::dismissBanner,
+                            )
+                        }
+                    }
+                }
                 if (isSearching && !selecting && profile != null) item(key = "search-filters") {
                     GlobalSearchFilterBar(profile, searchFilters, onChange = { searchFilters = it }, onOpen = { searchFilterDialog = true; focusManager.clearFocus(); keyboardController?.hide() })
                 }

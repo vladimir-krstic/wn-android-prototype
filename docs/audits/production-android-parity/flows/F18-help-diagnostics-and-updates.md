@@ -20,8 +20,8 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C117 · Help, bug report, About, licenses and privacy policy | Implemented; host verified | Settings → Help → Report a bug/About; Back returns one level; browser/license failures retain the detail | Separate typed destinations, package version/build, generated release notices and reviewed HTTPS handoffs. Bug reports attach nothing and explicitly exclude messages, media, contacts, profile details, keys and logs. [B31 evidence](../../../screens/help-about-and-licenses.md#implementation-evidence). |
 | C118 · Developer unlock and diagnostics/stream controls | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Production version-tap unlock and inline stream debugging differ from prototype enabled toggle/debug snapshots. Preserve approved developer entry while adding explicit streaming-event controls. |
 | C119 · Diagnostics health, send-to-self and timed performance logs | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add loading/error refresh, connection attempts/successes, self-send outcome and 30-minute performance-logging state; retain sanitized copy boundary and no telemetry/network execution. |
-| C120 · Update availability and version warning | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add version/checking/failure/current/available states in Chats and Settings and source-defined dismissibility. Store-managed fixture must have no in-app update entry. |
-| C121 · Verified APK update download/install state flow | Decision required | Trigger its named entry/action; cancel with Back where available | Model resolve/confirm/download/verify/ready/install-permission/error/retry/cancel without fetching APKs or invoking installer. Keep verification distinct from download completion. |
+| C120 · Update availability and version warning | Implemented; host verified | Self-managed Settings row checks/retries or begins review; Chats Update now begins the same review; eligible Dismiss hides only that latest version | Unknown/checking/failure/current/available facts, one-version dismissal, persistent three-release warning and complete store-managed absence are app-wide deterministic state. [B32 evidence](../../../screens/distribution-gated-app-updates.md#implementation-evidence). |
+| C121 · Verified APK update download/install state flow | Implemented deterministic state; real platform work outside Q06 | Update now → resolve → confirm → download → verify → ready; Back/Cancel stops; Retry creates a fresh generation | Download completion and verification remain separate. Permission and install-handoff outcomes are modeled without network, files, digests, permission or installer execution. [B32 evidence](../../../screens/distribution-gated-app-updates.md#implementation-evidence). |
 | C122 · Protocol/database/push/crypto production infrastructure | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Explicit prototype boundary excludes real services, signing, encryption and persistence. User-visible states are mapped above; production migration must reuse Marmot/SQLite authority, not copy fixture state as a second database. |
 
 ## Production integration seam
@@ -41,7 +41,7 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B25, B31, B32. Decisions: Q06. B31 is implemented and host-verified under [WN-ANDROID-0151](../../../decisions.md#wn-android-0151--help-handoffs-attach-no-app-data-and-licenses-keep-api-23). Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+Batches: B25, B31, B32. Decisions: Q06. B31 is implemented and host-verified under [WN-ANDROID-0151](../../../decisions.md#wn-android-0151--help-handoffs-attach-no-app-data-and-licenses-keep-api-23). B32 is implemented and host-verified under [WN-ANDROID-0152](../../../decisions.md#wn-android-0152--update-state-is-app-wide-and-real-installation-stays-outside-the-prototype). Facts are the matrix's cited production behavior and current prototype evidence.
 
 ## B25 implementation evidence — 2026-09-04
 
@@ -55,3 +55,8 @@ placement. No device or visual acceptance is claimed.
 ## B31 implementation evidence — 2026-09-04
 
 C117 is implemented and host-verified. [The B31 brief](../../../screens/help-about-and-licenses.md#implementation-evidence) records 829 passing unit tests, zero lint errors, six compiled UI cases, both debug APKs and a release APK with generated dependency notices. Browser and license activity execution and visual acceptance remain pending because no device work was requested.
+
+
+## B32 implementation evidence — 2026-09-04
+
+C120/C121 are implemented and host-verified within Q06. [The B32 brief](../../../screens/distribution-gated-app-updates.md#implementation-evidence) records 837 passing unit tests, zero lint errors, eight compiled UI cases and both APKs. No update network, file, cryptographic, permission, notification or installer operation was added. Device and visual acceptance remain pending.

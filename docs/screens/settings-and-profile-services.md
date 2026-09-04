@@ -109,6 +109,15 @@ badges capped at 99+, and a pinned Add Profile action.
 Diagnostics and destructive-task sheets use the same shared presentation;
 their profile ownership and dismissal/confirmation behavior are unchanged.
 
+2026-09-04 production-parity B32 follow-up: one app-wide update controller
+adds a self-managed **App updates** group and the matching Chats warning. The
+Settings row covers checking, current, available and retry states before opening
+the shared review flow. Store-managed distribution removes both entry points.
+One- and two-release warnings can be dismissed for the exact latest version;
+warnings three or more releases behind cannot. The prototype models review,
+download, verification, permission and installer-handoff states without running
+the external operations retained by Q06.
+
 Status: Main Settings/profile switching statically verified on 2026-08-26.
 The Settings hub and Privacy & Security passed current Pixel 8a inspection on
 2026-08-31, including 200% type and dark appearance; uninspected consumer
@@ -144,7 +153,8 @@ without adding a backend or hidden global state.
 This batch includes the Settings hub, Share & Connect, profile editing and
 address verification, profile-key presentation/export, Notifications,
 Appearance, Privacy & Security, Data Usage, profile Relays, support-chat
-creation, and Donate. Developer controls, sign-out, removal, and device-wide
+creation, Donate, and distribution-gated App updates. Developer controls,
+sign-out, removal, and device-wide
 erase remain in the separate visual-polish Batch 10. Preferences are in-memory
 state; notification delivery, biometric authentication, real cryptography,
 relay networking, and payments remain excluded.
@@ -199,6 +209,12 @@ relay networking, and payments remain excluded.
   type, automatic-queue stop/restart and four global photo/voice quality modes.
   Native dialogs, separated groups, local help and default-aware reset preserve
   the approved composition. See `downloads-and-media-quality.md` for current behavior.
+- App updates appears only for the self-managed distribution fixture. Its
+  Settings status and Chats banner share one app-wide state, version-specific
+  dismissal and important-warning rule. Review keeps release resolution,
+  confirmation, download, verification, ready, permission and failure separate;
+  exact-generation cancellation/retry prevents stale work from advancing. See
+  `distribution-gated-app-updates.md` for the complete B32 contract.
 - Seven deterministic profile relay records expose connected, reconnecting,
   disconnected, read-only, custom, and unassigned states plus Profile, Inbox,
   and Chat Messages roles. Only connected Chat Messages relays are
@@ -221,14 +237,18 @@ save returns to Profile read mode; Back then returns to Settings. Support exits
 into the unique conversation.
 The app-owned scanner and system-owned picker, Sharesheet, document creator,
 notification settings, and device-security settings return to the originating
-route.
+route. An eligible Settings update row or Chats banner opens the same app-owned
+review flow; cancel returns to its current route with canonical update state.
 
 ## Exact product copy
 
 Primary route titles are **Settings**, **Share & Connect**, **Profile**,
 **Profile Keys**, **Notifications**, **Appearance**, **Language**,
 **Privacy & Security**, **Data Usage**, **Relays**, **Chat with support**, and
-**Donate**. Share &
+**Donate**. The self-managed update section is **App updates**, with the
+**Zapstore release** row. Update actions use **Update now**, **Download**,
+**Install**, **Open settings**, **Retry**, and **Cancel** with the state-specific
+consequence copy in `strings.xml`. Share &
 Connect exposes the explicit task label **Scan QR Code**. Relay roles are
 **Profile**, **Inbox**, and **Chat Messages**. Unavailable states explain the
 affected publishing, invitation, or new-chat function and route recovery.

@@ -4257,3 +4257,31 @@ and license text rather than the debug placeholder.
 
 Evidence: [B31 brief](screens/help-about-and-licenses.md), HelpAbout policy/UI,
 typed navigation, generated release resources and state/Compose tests.
+
+
+## WN-ANDROID-0152 — Update state is app-wide and real installation stays outside the prototype
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B32 contract; host verified
+
+Own update availability, dismissal and review with one app-wide
+`AppUpdateController`. A self-managed distribution exposes update status in
+Settings and an available-release banner in Chats. A store-managed distribution
+exposes no app-owned update row, banner or review flow. One- and two-release
+warnings may be dismissed for that exact latest version; a warning three or more
+releases behind remains visible.
+
+Keep checking, release resolution, confirmation, download, verification, ready,
+install-permission and failure as distinct immutable phases. Every asynchronous
+completion must match the active generation. A completed download does not become
+installable until verification succeeds. Cancel and retry create deterministic
+local outcomes without retaining stale progress.
+
+B32 models the complete user-visible contract with developer-only fixtures. It
+does not fetch release metadata, download or store an APK, calculate a digest,
+request package-install access, start an installer, post a notification, persist
+state or add a network permission. Q06 retains those real Android operations for
+a separately authorized production integration.
+
+Evidence: [B32 brief](screens/distribution-gated-app-updates.md#implementation-evidence),
+AppUpdates, AppUpdateController, AppUpdateUi and the state/Compose tests.

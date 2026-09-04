@@ -153,6 +153,7 @@ class AppViewModel(
     initialAccessScenario: AccessScenario = AccessScenario.Success,
     startupFails: Boolean = false,
 ) : ViewModel() {
+    val appUpdates = AppUpdateController(dev.ipf.whitenoise.BuildConfig.VERSION_NAME)
     private var createdChatSequence = 0
     private var accessGeneration = 0L
 

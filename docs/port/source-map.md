@@ -416,3 +416,18 @@ Browser access remains a user-initiated Android activity handoff; the app owns
 neither its network session nor GitHub authentication. Keep the HTTPS
 scheme/host/path allowlist and explicit unavailable recovery when this work is
 migrated to production.
+
+
+## Production Android B32 — distribution-gated app updates
+
+[Selected brief](../screens/distribution-gated-app-updates.md) maps C120/C121 to
+model/AppUpdates.kt, state/AppUpdateController.kt, ui/updates/AppUpdateUi.kt and
+the Chats/Settings entry points. Production AppUpdateModels, AppUpdateBanner,
+AppSelfUpdateFlow and AppSelfUpdateDialog provide the distribution, release-count,
+dismissal, progress, verification, permission and installation seams.
+
+Reconnect the production release source, file destination, digest verification,
+unknown-sources permission and installer only at the controller's typed phase
+boundaries. Preserve exact-generation ownership, a separate verification phase,
+store-managed absence and per-version dismissal. The prototype fixtures perform
+no network, file, cryptographic, permission, notification or installer operation.

@@ -33,7 +33,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B29: implemented and host-verified 2026-09-04; 817 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). Commit title: `B29: Add AI agent setup and streaming operations`. Ordinary operations remain separate from developer stream records.
 - B30: implemented and host-verified 2026-09-04; 826 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/verified-event-cards-and-readers.md#implementation-evidence). Commit title: `B30: Add verified event cards and readers`. Public references remain in-app and all event/media content is deterministic and local.
 - B31: implemented and host-verified 2026-09-04; 829 unit tests, zero lint errors, both debug APKs, a release APK with generated notices and six new compiled UI cases. [Evidence](../../screens/help-about-and-licenses.md#implementation-evidence). Commit title: `B31: Add Help, About and open source licenses`.
-- B24, B26 and B32: pending; linked decisions apply only to their named slices.
+- B32: implemented and host-verified 2026-09-04; 837 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Evidence](../../screens/distribution-gated-app-updates.md#implementation-evidence). Commit title: `B32: Add distribution-gated app update flows`. Q06 retains real release lookup, download, verification, permission and installer work.
+- B24 and B26 retain unresolved decision slices; linked decisions apply only to their named capabilities.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -71,7 +72,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B29** | AI-agent setup and streamed operation rows | C112, C113 | B03, B09 | Implemented; host verified |
 | **B30** | Verified Nostr event cards and readers | C114, C115 | B09, B13 | Implemented; host verified |
 | **B31** | Help, About, licenses and external support | C117 | B01 | Implemented; host verified |
-| **B32** | Distribution-gated update experience | C120, C121 | B05 | Blocked slices: Q06 |
+| **B32** | Distribution-gated update experience | C120, C121 | B05 | Implemented; host verified; real platform work remains outside Q06 |
 
 ## Batch details
 
@@ -592,3 +593,5 @@ Capabilities: C120, C121. Dependencies: B05.
 **Acceptance and validation:** C120 satisfies its matrix contract. C121 satisfies its matrix contract. Preserve all existing flow behavior. Add rule/ownership unit tests and durable Compose interaction/semantics tests; run targeted host tests and the complete static gate at the end. Device/system-surface and visual acceptance remain separate.
 
 **Non-goals:** No backend, network transport, Marmot, real signing/encryption, persistence, installer, notification delivery, background service or device automation unless a later explicit request expands the selected batch. Do not restyle system-owned surfaces or redesign unrelated screens.
+
+**Implementation evidence:** Implemented and host-verified under [the B32 brief](../../screens/distribution-gated-app-updates.md#implementation-evidence). App-wide deterministic state covers both distribution policies, per-version/important dismissal, stale generations and every named review phase. Q06 retains all real platform operations.

@@ -17,15 +17,15 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B23 and B25–B31 are implemented and host-verified.
+Production Android parity batches B01–B23 and B25–B32 are implemented and host-verified.
 [B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 adds publication/rotation/deletion recovery, detailed push inspection, streaming
 status controls, relay health, self-send outcomes and timed performance state.
-The latest host gate passes 829 unit tests, zero lint errors and both APKs.
-Six new B31 UI cases compile only; device and visual acceptance remain pending.
+The latest host gate passes 837 unit tests, zero lint errors and both APKs.
+Eight new B32 UI cases compile only; device and visual acceptance remain pending.
 The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks B24, B26 and B32 and the per-batch commits.
+tracks the pending B24/B26 decision slices and every per-batch commit.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
@@ -209,3 +209,9 @@ B31 adds [Help, About and open source licenses](docs/screens/help-about-and-lice
 The review-first bug report sends no app data, version/build values come from
 the package, and reviewed browser links fail safely. Release builds generate
 the bundled dependency notices; six UI cases compile.
+
+B32 adds [distribution-gated app updates](docs/screens/distribution-gated-app-updates.md#implementation-evidence).
+Self-managed builds expose dismissible or persistent release warnings and a
+separate download/verification/permission/handoff state flow. Store-managed
+builds expose no update UI. Eight UI cases compile; no network, APK, permission
+or installer capability was added.

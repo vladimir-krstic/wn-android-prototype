@@ -75,6 +75,7 @@ import dev.ipf.whitenoise.ui.settings.DiagnosticsImprovementsScreen
 import dev.ipf.whitenoise.ui.settings.DiagnosticsPromptHost
 import dev.ipf.whitenoise.ui.settings.ProfileExitReportDialog
 import dev.ipf.whitenoise.ui.conversation.MessageOperationsHost
+import dev.ipf.whitenoise.ui.updates.AppUpdateHost
 
 @Composable
 fun WhiteNoiseNavHost(
@@ -359,6 +360,7 @@ fun WhiteNoiseNavHost(
                 onOpenGroup = { navController.navigate(AppRoute.ChatInfo(it)) },
                 onRetryConnection = { uiState.activeProfileId?.let(appViewModel::retryChatConnection) },
                 onAdvanceConnection = appViewModel::advanceChatConnection,
+                appUpdates = appViewModel.appUpdates,
             )
             DiagnosticsPromptHost(
                 uiState = uiState,
@@ -388,6 +390,7 @@ fun WhiteNoiseNavHost(
                 onRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 onSupport = { navController.navigate(AppRoute.Support) },
                 onHelp = { navController.navigate(AppRoute.Help) },
+                appUpdates = appViewModel.appUpdates,
                 onDonate = { navController.navigate(AppRoute.Donate) },
                 onDeveloperTools = { navController.navigate(AppRoute.DeveloperTools) },
                 onSignOut = { appViewModel.beginProfileExit(it) },
@@ -637,6 +640,7 @@ fun WhiteNoiseNavHost(
                         appViewModel.downloadNetworkExample, appViewModel.downloadTransfersHeld,
                         appViewModel::chooseDownloadNetwork, appViewModel::loadDownloadQueueExample, appViewModel::holdDownloadTransfers) },
                     relayPublicationControls = { dev.ipf.whitenoise.ui.settings.RelayPublicationDeveloperControls(appViewModel.relayPublication, appViewModel::loadRelayImportExample) },
+                    updateControls = { dev.ipf.whitenoise.ui.settings.AppUpdateDeveloperControls(appViewModel.appUpdates) },
                     photoEditorScenario = appViewModel.nextPhotoEditorScenario,
                     onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
                     locationScenario = appViewModel.nextLocationScenario,
@@ -1015,6 +1019,7 @@ fun WhiteNoiseNavHost(
             }
         }
     }
+    AppUpdateHost(appViewModel.appUpdates)
     }
     }
     }

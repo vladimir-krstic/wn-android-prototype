@@ -89,6 +89,8 @@ import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.BuildConfig
+import dev.ipf.whitenoise.state.AppUpdateController
+import dev.ipf.whitenoise.ui.updates.AppUpdateSettingsGroup
 import dev.ipf.whitenoise.model.AvatarWebImageCatalog
 import dev.ipf.whitenoise.model.ExportPasswordStrength
 import dev.ipf.whitenoise.model.Profile
@@ -139,6 +141,7 @@ fun SettingsScreen(
     onDictation: () -> Unit = {},
     onAiAgents: () -> Unit = {},
     onHelp: () -> Unit = {},
+    appUpdates: AppUpdateController? = null,
     initiallyShowSwitcher: Boolean = false,
     exitAttempt: dev.ipf.whitenoise.model.ProfileExitAttempt? = null,
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
@@ -270,6 +273,22 @@ fun SettingsScreen(
                         iconTag = "relays",
                         onClick = onRelays,
                     )
+                }
+            }
+            appUpdates?.state?.let { update ->
+                if (dev.ipf.whitenoise.model.AppUpdates.showsSettings(update)) {
+                    item {
+                        AppUpdateSettingsGroup(
+                            state = update,
+                            onAction = {
+                                if (dev.ipf.whitenoise.model.AppUpdates.isAvailable(appUpdates.state)) {
+                                    appUpdates.beginSelfUpdate()
+                                } else {
+                                    appUpdates.beginCheck()
+                                }
+                            },
+                        )
+                    }
                 }
             }
             item {

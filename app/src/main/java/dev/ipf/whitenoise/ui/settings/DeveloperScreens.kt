@@ -88,6 +88,7 @@ fun DeveloperToolsScreen(
     onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
     downloadExampleControls: @Composable () -> Unit = {},
     relayPublicationControls: @Composable () -> Unit = {},
+    updateControls: @Composable () -> Unit = {},
     photoEditorScenario: dev.ipf.whitenoise.model.PhotoEditorScenario = dev.ipf.whitenoise.model.PhotoEditorScenario.Success,
     onPhotoEditorScenario: (dev.ipf.whitenoise.model.PhotoEditorScenario) -> Unit = {},
     locationScenario: dev.ipf.whitenoise.model.LocationScenario = dev.ipf.whitenoise.model.LocationScenario.Unavailable,
@@ -299,6 +300,7 @@ fun DeveloperToolsScreen(
                         SettingsLink("Attachment transfer outcomes", attachmentTransferScenario.developerLabel, { transferOpen = true })
                         downloadExampleControls()
                         relayPublicationControls()
+                        updateControls()
                         SettingsDivider()
                         SettingsLink("Photo editor outcomes", photoEditorScenario.developerLabel, { photoEditorOpen = true })
                         SettingsDivider()
