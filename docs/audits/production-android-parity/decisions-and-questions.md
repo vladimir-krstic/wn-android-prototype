@@ -17,7 +17,7 @@ These questions affect only the linked capability slices. The recommendation is 
 
 - **Conflict:** C097 production labels one secure-window control as blocking screenshots and hiding Recents; the prototype deliberately promises only Recents snapshot privacy.
 - **Recommendation:** Keep **Hide Screen in Recents** and add **Block screenshots in chats** as a separate setting with an exact scope and non-color state.
-- **Blocks:** only secure-window behavior in B24.
+- **Resolved in B24:** The user selected the recommendation. **Hide Screen in Recents** secures the paused task preview, while **Block screenshots in chats** secures conversation and chat-detail routes during use. App-lock protection remains independent.
 
 <a id="q03"></a>
 

@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.settings
 
+import androidx.compose.ui.res.stringResource
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -75,6 +77,7 @@ fun DeveloperToolsScreen(
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
     parityController: dev.ipf.whitenoise.state.DeveloperParityController? = null,
+    onAuditLogs: () -> Unit = {},
     historyScenario: dev.ipf.whitenoise.model.HistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success,
     onHistoryScenario: (dev.ipf.whitenoise.model.HistoryScenario) -> Unit = {},
     messageEditScenario: dev.ipf.whitenoise.model.MessageEditScenario = dev.ipf.whitenoise.model.MessageEditScenario.Success,
@@ -179,6 +182,14 @@ fun DeveloperToolsScreen(
     var peopleScenariosOpen by remember { mutableStateOf(false) }
     var groupScenariosOpen by remember { mutableStateOf(false) }
     val incoming = dev.ipf.whitenoise.ui.share.LocalIncoming.current
+    val auditLogs = LocalAuditLogs.current
+    var auditChoice by rememberSaveable(profile.id) { mutableStateOf(false) }
+    if (auditLogs != null && auditChoice) ScenarioChoiceDialog("Audit log outcome",dev.ipf.whitenoise.model.AuditLogScenario.entries,
+        auditLogs.scenario,{it.label},auditLogs::choose,{auditChoice = false})
+    val appLock = LocalAppLock.current
+    var unlockChoice by rememberSaveable(profile.id) { mutableStateOf(false) }
+    if (appLock != null && unlockChoice) ScenarioChoiceDialog("App unlock outcome",dev.ipf.whitenoise.state.AppUnlockOutcome.entries,
+        appLock.scenario,{it.label},appLock::choose,{unlockChoice = false})
     val notificationControls = LocalNotificationControls.current
     val notificationActions = LocalNotificationActions.current
     var actionChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
@@ -332,6 +343,13 @@ fun DeveloperToolsScreen(
                                 SettingsDivider(); SettingsLink("Group lifecycle", groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
                             }
                             if (transcript != null) { SettingsDivider(); SettingsLink("Transcript export", transcript.scenario.developerLabel, { groupWorkChoice = "transcript" }) }
+                            if (auditLogs != null) {
+                                SettingsDivider(); SettingsLink("Audit log outcome",auditLogs.scenario.label,{auditChoice = true})
+                            }
+                            if (appLock != null) {
+                                SettingsDivider(); SettingsLink("App unlock outcome",appLock.scenario.label,{unlockChoice = true})
+                                SettingsDivider(); SettingsLink("Lock now","Requires device authentication to be enabled",appLock::lockNow)
+                            }
                             if (notificationActions != null) {
                                 SettingsDivider(); SettingsLink("Notification action", "Reply, react or mark a message read", { actionChoice = "action" })
                                 SettingsDivider(); SettingsLink("Notification action outcome", notificationActions.scenario.label, { actionChoice = "outcome" })
@@ -380,6 +398,7 @@ fun DeveloperToolsScreen(
                         )
                         SettingsDivider()
                         SettingsLink("Diagnostics", "Sanitized event console", onDiagnostics)
+                        SettingsDivider(); SettingsLink(stringResource(R.string.audit_logs_title),stringResource(R.string.audit_logs_sensitive),onAuditLogs)
                     }
                     SettingsExplainer(
                         "Debug Mode adds technical details to supported conversations.",

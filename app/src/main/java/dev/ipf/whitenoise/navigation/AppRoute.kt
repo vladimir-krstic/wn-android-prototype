@@ -142,6 +142,9 @@ sealed interface AppRoute {
     data object DeveloperTools : AppRoute
 
     @Serializable
+    data object AuditLogs : AppRoute
+
+    @Serializable
     data class Diagnostics(val chatId: String? = null) : AppRoute
 
     @Serializable

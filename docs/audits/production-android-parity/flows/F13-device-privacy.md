@@ -1,5 +1,10 @@
 # F13 — Device privacy and sensitive diagnostics
 
+C095–C098 are implemented and host-verified;
+[the B24 brief](../../../screens/app-lock-and-sensitive-privacy.md#implementation-evidence) records 870 passing unit tests and ten compiled UI cases.
+Q02 is resolved by separate paused-Recents and active-chat capture controls.
+Device/visual acceptance and real authentication/audit-engine integration remain outstanding.
+
 ## Purpose and current composition
 
 Privacy settings and lock screen use semantic error/recovery states. Never reveal chats behind lock or place sensitive exports in transient logs. Back cannot bypass authentication.
@@ -8,7 +13,7 @@ Prototype surface: `ui/settings/PreferenceScreens.kt; DiagnosticsImprovementsScr
 
 ## Required content and proposed copy
 
-Use **App lock**, **Lock when**, **Incognito keyboard**, **Hide Screen in Recents**, proposed **Block screenshots in chats**, **Audit logs**, **Export audit logs**, and **Delete audit logs**. Sensitive-export copy names message, identity and device data.
+Use **App lock**, **Lock when**, **Incognito keyboard**, **Hide Screen in Recents**, **Block screenshots in chats**, **Audit logs**, **Export audit logs**, and **Delete audit logs**. Sensitive-export copy names message, identity and device data.
 
 These labels are the audit recommendation and follow current prototype terminology. Validate exact surrounding help/error copy in the selected screen brief against each matrix source link; preserve production security and destructive consequences without exposing implementation terms.
 
@@ -16,10 +21,10 @@ These labels are the audit recommendation and follow current prototype terminolo
 
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
-| C095 · App lock return flow and retry | Decision required | Trigger its named entry/action; cancel with Back where available | Prototype configures device-authentication preference but lacks lock surface/session gating. Add deterministic locked/authenticating/cancel/failure/unlocked states, background timing and no-data flash. |
-| C096 · Incognito keyboard preference | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add learning-request preference and coverage for relevant app-owned inputs; wording must say request, not guarantee about keyboard behavior. |
-| C097 · Screenshot security versus Recents privacy | Decision required | Trigger its named entry/action; cancel with Back where available | Production combines screenshot blocking and Recents with secure windows; prototype explicitly promises Recents-only privacy. Preserve current setting and propose a separate screenshot option pending decision. |
-| C098 · Sensitive audit-log recording/export/delete | Decision required | Trigger its named entry/action; cancel with Back where available | Existing diagnostic exports are sanitized. Production forensic files may contain message/identity/device data. Keep consent, sensitive export and sanitized diagnostics separate; do not reuse reassurance copy. |
+| C095 · App lock return flow and retry | Protected profile and credential/evaluation state | Return, unlock, cancel/retry, or leave with Back | Exact time-away grace, retained navigation with protected placement/semantics/input suppressed, owned prompt outcomes and incoming/action deferral. Real authentication remains Q06. |
+| C096 · Incognito keyboard preference | Saved per-profile choice and platform support | Toggle without remounting navigation | All app-owned text input requests no personalized learning on API 26+, preserving field options and explaining that keyboards may ignore the hint. |
+| C097 · Screenshot security versus Recents privacy | Active profile; optional independent controls | Toggle either setting and navigate/background | Recents-only protection is applied synchronously while paused. Screenshot/recording protection applies to conversation and chat-detail routes only. App-lock protection overrides both. |
+| C098 · Sensitive audit-log recording/export/delete | Distinct developer-only app-wide state | Confirm recording/export/delete, cancel or retry | Sensitive local session samples, retained files on stop, owned ZIP/document export, partial deletion and continued recording; sanitized diagnostics are preserved. Q08 ordinary-settings placement is not introduced. |
 
 ## Production integration seam
 
@@ -38,4 +43,4 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B24. Decisions: Q02, Q06, Q08. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+Batches: B24. Decisions: Q02 resolved; Q06 and Q08 remain as documented platform/product seams. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.

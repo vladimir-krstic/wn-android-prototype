@@ -204,6 +204,17 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B24: C095–C098 are implemented and host-verified with
+870 unit tests and zero lint errors; both APKs build and ten UI cases compile only.
+The return lock preserves navigation, hides protected placement/semantics/input,
+measures time away and gates incoming requests/actions. Incognito keyboard applies
+the API 26+ learning request across app input. Independent controls now hide the
+paused Recents preview or block capture only on active chat/detail routes; app-lock
+protection overrides both. Developer-only Audit logs has separate sensitive
+recording/export consent, app-wide recording, per-profile files and owned
+ZIP/delete recovery. Sanitized diagnostics remain unchanged. See the
+[B24 brief](../screens/app-lock-and-sensitive-privacy.md#implementation-evidence).
+
 2026-09-04 production B23: C094 is implemented and host-verified locally.
 Notification message/invite/role/list entry preserves original profile ownership,
 exact history/read boundaries and bounded invitation recovery. Inline actions

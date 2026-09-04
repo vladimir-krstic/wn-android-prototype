@@ -38,11 +38,12 @@ enum class SentMediaQuality(val label: String, val photoQuality: PhotoQuality, v
     Original("Original", PhotoQuality.Original, 96_000),
 }
 
-enum class AutoLockDuration(val label: String) {
-    Immediately("Immediately"),
-    OneMinute("After 1 minute"),
-    FiveMinutes("After 5 minutes"),
-    ThirtyMinutes("After 30 minutes"),
+enum class AutoLockDuration(val label: String, val delayMillis: Long) {
+    Immediately("Immediately", 0L),
+    OneMinute("After 1 minute", 60_000L),
+    FiveMinutes("After 5 minutes", 5 * 60_000L),
+    FifteenMinutes("After 15 minutes", 15 * 60_000L),
+    ThirtyMinutes("After 30 minutes", 30 * 60_000L),
 }
 
 enum class RelayRole(val label: String) {
@@ -80,7 +81,9 @@ data class ProfileSettings(
     val appearance: AppearancePreference = AppearancePreference.System,
     val language: LanguagePreference = LanguagePreference.System,
     val hideScreenInRecents: Boolean = false,
+    val blockScreenshotsInChats: Boolean = false,
     val requireDeviceAuthentication: Boolean = false,
+    val incognitoKeyboard: Boolean = false,
     val autoLockDuration: AutoLockDuration = AutoLockDuration.Immediately,
     val downloadMatrix: MediaDownloadMatrix = MediaDownloadMatrix(),
     val automaticDownloadsPaused: Boolean = false,

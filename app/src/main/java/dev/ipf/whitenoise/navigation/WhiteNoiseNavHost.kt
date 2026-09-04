@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.navigation
 
+import dev.ipf.whitenoise.R
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -205,13 +207,14 @@ fun WhiteNoiseNavHost(
         } }
     }
 
+    androidx.compose.runtime.SideEffect { appViewModel.auditLogs.observeRoute(currentBackStackEntry?.id) }
     dev.ipf.whitenoise.ui.settings.NotificationActionsHost(appViewModel.notificationActions,uiState.activeProfileId,appViewModel.incoming.locked) {
     dev.ipf.whitenoise.ui.settings.NotificationControlsHost(appViewModel.notificationControls,currentBackStackEntry?.id) {
     dev.ipf.whitenoise.ui.share.IncomingHost(appViewModel.incoming, currentBackStackEntry?.id,
         currentBackStackEntry?.destination?.route?.substringBefore('/')?.substringBefore('?') in onboardingRouteNames,
         onOpen = { opening ->
             appViewModel.selectProfile(opening.profileId)
-            if (appViewModel.uiState.activeProfileId != opening.profileId) false else {
+            if (appViewModel.uiState.activeProfileId != opening.profileId || appViewModel.appLock.blocked) false else {
                 val target = opening.target
                 if (opening.chatList) { showSignedInRoot(); true }
                 else if (target != null && appViewModel.chat(target.chatId) != null) {
@@ -606,6 +609,13 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+        composable<AppRoute.AuditLogs> {
+            if (uiState.activeProfile?.developerTools?.isEnabled == true)
+                dev.ipf.whitenoise.ui.settings.AuditLogsScreen(appViewModel.auditLogs) { navController.popBackStack() }
+            else dev.ipf.whitenoise.ui.settings.SettingsScaffold(title = androidx.compose.ui.res.stringResource(R.string.audit_logs_title),onBack = { navController.popBackStack() }) {
+                dev.ipf.whitenoise.ui.settings.SettingsExplainer(androidx.compose.ui.res.stringResource(R.string.audit_logs_developer_only))
+            }
+        }
         composable<AppRoute.DeveloperTools> {
             uiState.activeProfile?.let { profile ->
                 DeveloperToolsScreen(
@@ -616,6 +626,7 @@ fun WhiteNoiseNavHost(
                     onDebugMode = appViewModel::setDebugMode,
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics()) },
                     onKeyPackages = { navController.navigate(AppRoute.KeyPackages) },
+                    onAuditLogs = { navController.navigate(AppRoute.AuditLogs) },
                     accessScenario = appViewModel.nextAccessScenario,
                     onAccessScenario = appViewModel::selectAccessScenario,
                     onStartupFailure = appViewModel::previewStartupFailure,

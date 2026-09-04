@@ -4111,6 +4111,40 @@ The [selected brief](screens/notification-routing-and-actions.md#implementation-
 records production callbacks, drift and validation: 748 passing unit tests, zero
 lint errors and both APKs; seven new UI cases compile only.
 
+## WN-ANDROID-0144 — Protected return flow, keyboard requests and separate audit logs
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B24 contract; host verified
+
+Return protection keeps the established profile-owned device-authentication
+preference. Add the production 15-minute delay while preserving 30 minutes.
+An owned local lock controller measures time away, protects unknown evaluation,
+invalidates stale prompts and keeps cancellation/failure locked. The protected
+navigation tree remains mounted but unplaced, excluded from accessibility and
+capped at CREATED lifecycle state. Input sessions and visible-read acknowledgments
+are blocked while hidden. Recents window protection begins synchronously at pause.
+A separate profile-owned control blocks screenshots and screen recording only on
+conversation and chat-detail routes; lock protection overrides both. No real
+authentication is added.
+
+Incognito keyboard is a per-profile request applied through one stable Compose
+text-input interceptor. It preserves each field's existing options, requires API
+26+ and explicitly allows for keyboards ignoring the hint. System-owned input
+surfaces remain outside the app interceptor.
+
+Q08's permitted developer-only scope is implemented as a separate Audit logs
+screen. Recording is app-wide; sensitive local session files remain profile-owned.
+Recording and export have separate consent. ZIP/document export checks request
+and retry-attempt ownership, cleans failed destinations and clears transient
+buffers. Partial deletion retries remaining files without stopping recording;
+profile wipe removes its files and app erase resets the entire store. Sanitized
+Diagnostic Logs and their privacy copy remain unchanged. Real logging, persistence
+and production file-sharing adapters remain migration seams.
+
+The [selected brief](screens/app-lock-and-sensitive-privacy.md#implementation-evidence)
+records 870 passing unit tests, zero lint errors and both APK builds; ten UI cases
+compile only. No device, emulator or visual verification was performed.
+
 ## WN-ANDROID-0145 — Key-package and diagnostic state stays behind the developer gate
 
 - Date: 2026-09-04

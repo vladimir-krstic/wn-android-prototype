@@ -165,6 +165,21 @@ Real subscriptions, encrypted/durable worker recovery and system notification
 presentation remain explicit production seams. Broader startup/window, Nostr,
 installer and Amber/contact drift remains for later/final reconciliation.
 
+## Implementation drift check — B24, 2026-09-04
+
+Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`, without main.
+The seven-commit diff changes no AppLockSettings/AppLockScreen, DevicePrivacyScreen,
+IncognitoKeyboard, WindowSecureFlag or audit-log helper contract. AppState adds
+an installer handoff guard requiring foreground/unlocked state; it remains a later
+installer reconciliation seam. Existing return rules use time away, a protected
+unknown-baseline evaluation and exact authentication-request ownership.
+
+The [working brief](../../screens/app-lock-and-sensitive-privacy.md#implementation-evidence)
+records C095–C098 host evidence: 870 passing unit tests, zero lint errors,
+both APK builds and ten compiled UI cases. Q02 is resolved with independent
+paused-Recents and active-chat capture controls. No device, biometric prompt,
+IME/provider execution, real audit recording or process-death recovery is claimed.
+
 ## Implementation drift check — B25, 2026-09-04
 
 Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`; no main.

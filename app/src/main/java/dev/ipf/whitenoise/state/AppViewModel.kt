@@ -224,6 +224,16 @@ class AppViewModel(
         )
     }
 
+    val auditLogs: AuditLogController by lazy {
+        AuditLogController(profiles = { uiState.profiles },activeId = { uiState.activeProfileId },
+            signedIn = { it in uiState.signedInProfileIds },locked = { appLock.blocked || appLock.shieldsBackground })
+    }
+
+    val appLock: AppLockController by lazy {
+        AppLockController(active = { uiState.activeProfile },signedIn = { it in uiState.signedInProfileIds },
+            gateChanged = { blocked -> incoming.applySessionLock(blocked); notificationActions.reconcile(); auditLogs.reconcile() })
+    }
+
     val notificationControls: NotificationController by lazy {
         NotificationController(active = { uiState.activeProfile }, signedIn = { it in uiState.signedInProfileIds }, now = { retention.nowMillis },
             settings = { profileId, reduce ->
@@ -858,6 +868,8 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        appLock.sync()
+        auditLogs.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
         notificationActions.reconcile()
@@ -959,6 +971,8 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        appLock.sync()
+        auditLogs.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
         notificationActions.reconcile()
@@ -1005,12 +1019,16 @@ class AppViewModel(
         uiState = AppUiState()
         notificationControls.eraseAppData()
         notificationActions.erase()
+        appLock.erase()
+        auditLogs.erase()
         notificationReadTargets.clear()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        appLock.sync()
+        auditLogs.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
         notificationActions.reconcile()
@@ -1039,7 +1057,7 @@ class AppViewModel(
     }
 
     fun markConversationVisible(profileId: String, chatId: String, messageIds: Set<String>): Boolean {
-        if (uiState.activeProfileId != profileId || messageIds.isEmpty()) return false
+        if (uiState.activeProfileId != profileId || messageIds.isEmpty() || appLock.blocked || appLock.shieldsBackground) return false
         val chat = chat(chatId) ?: return false
         val visible = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().filter { it.id in messageIds && !it.message.isDeleted }.mapTo(hashSetOf()) { it.id }
         if (visible.isEmpty()) return false
@@ -2773,6 +2791,8 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        appLock.sync()
+        auditLogs.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
         notificationActions.reconcile()
@@ -2824,6 +2844,8 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        appLock.sync()
+        auditLogs.reconcile()
         incoming.reconcile()
         notificationControls.reconcile()
         notificationActions.reconcile()

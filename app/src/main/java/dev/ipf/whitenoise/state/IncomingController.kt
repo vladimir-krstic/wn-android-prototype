@@ -23,7 +23,10 @@ class IncomingController(
     private val stage: (Long, String, List<String>, PreparedIncoming) -> IncomingCommit?,
 ) {
     var work by mutableStateOf<IncomingWork?>(null); private set
-    var locked by mutableStateOf(false); private set
+    private var developerLocked by mutableStateOf(false)
+    private var sessionLocked by mutableStateOf(false)
+    val locked get() = developerLocked || sessionLocked
+    fun applySessionLock(value: Boolean) { sessionLocked = value; reconcile() }
     var scenario by mutableStateOf(IncomingScenario.Success); private set
     private var scenarioProfile: String? = null
     private var lockProfile: String? = null
@@ -36,7 +39,7 @@ class IncomingController(
     private fun developer() = profile(activeId())?.developerTools?.isEnabled == true
     fun choose(value: IncomingScenario) { if (developer()) { scenarioProfile = activeId(); scenario = value } }
     fun chooseLock(value: Boolean) {
-        if (developer()) { lockProfile = activeId().takeIf { value }; locked = value }
+        if (developer()) { lockProfile = activeId().takeIf { value }; developerLocked = value }
     }
     fun targets(profileId: String) = profile(profileId)?.let { p -> p.chats.filter { IncomingSharing.canStage(p,it) }.sortedWith(compareBy<Chat> { it.isArchived }.thenBy { it.originalOrder }) }.orEmpty()
     fun observeRoute(token: String?, onboarding: Boolean) {
@@ -60,7 +63,7 @@ class IncomingController(
     }
     fun reconcile() {
         if (scenarioProfile != null && (scenarioProfile != activeId() || !developer())) { scenarioProfile = null; scenario = IncomingScenario.Success }
-        if (lockProfile != null && (lockProfile != activeId() || !developer())) { lockProfile = null; locked = false }
+        if (lockProfile != null && (lockProfile != activeId() || !developer())) { lockProfile = null; developerLocked = false }
         val w = work ?: return
         // Only the controller's issued navigation may activate the chosen destination profile.
         val openingDestination = w.phase == IncomingPhase.Opening && navigating == w.id && activeId() == w.selectedProfileId
@@ -178,6 +181,9 @@ class IncomingController(
     fun opened(id: Long, accepted: Boolean) {
         val w = work?.takeIf { it.id == id && it.phase == IncomingPhase.Opening && navigating == id } ?: return
         navigating = null
+        if (locked && activeId() == w.selectedProfileId && profile(w.selectedProfileId) != null) {
+            work = w.copy(receivingProfileId = w.selectedProfileId); return
+        }
         if (accepted && activeId() == w.selectedProfileId && profile(w.selectedProfileId) != null && !locked && ready())
             work = w.copy(phase = IncomingPhase.Complete, receivingProfileId = w.selectedProfileId) else fail(w,IncomingFailure.Open)
     }

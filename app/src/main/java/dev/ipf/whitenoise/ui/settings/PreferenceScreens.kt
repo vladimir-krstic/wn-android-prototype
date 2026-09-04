@@ -347,9 +347,24 @@ fun PrivacySecurityScreen(
                         title = "Hide Screen in Recents",
                         checked = settings.hideScreenInRecents,
                         onCheckedChange = { onChange(settings.copy(hideScreenInRecents = it)) },
-                        subtitle = "Hide conversations and profile details in Recents.",
+                        subtitle = "Hide conversations and profile details in the Recents preview while White Noise is in the background.",
                     )
                     SettingsDivider(Modifier.testTag("privacy.device_protection.divider.recents"))
+                    SettingsSwitch(
+                        title = stringResource(R.string.block_screenshots_in_chats),
+                        checked = settings.blockScreenshotsInChats,
+                        onCheckedChange = { onChange(settings.copy(blockScreenshotsInChats = it)) },
+                        subtitle = stringResource(R.string.block_screenshots_in_chats_detail),
+                    )
+                    SettingsDivider(Modifier.testTag("privacy.device_protection.divider.screenshots"))
+                    SettingsSwitch(
+                        title = stringResource(R.string.incognito_keyboard),
+                        checked = settings.incognitoKeyboard,
+                        enabled = android.os.Build.VERSION.SDK_INT >= 26,
+                        onCheckedChange = { onChange(settings.copy(incognitoKeyboard = it)) },
+                        subtitle = stringResource(if (android.os.Build.VERSION.SDK_INT >= 26) R.string.incognito_keyboard_detail else R.string.incognito_keyboard_unavailable),
+                    )
+                    SettingsDivider()
                     SettingsSwitch(
                         title = "Require device authentication",
                         checked = authenticationEnabled,

@@ -329,6 +329,27 @@ owns examples. Real exported intents, RemoteInput, delivery, workers, services a
 process-death persistence remain outside Q06 local coverage. Current route test
 drift preserves one mounted controller while moving to authoritative windows.
 
+## Production Android B24 — app lock, keyboard and sensitive privacy
+
+`docs/screens/app-lock-and-sensitive-privacy.md` maps AppLockSettings, AppLockScreen
+and AppState's credential/foreground/background/unlock methods to
+`AppLockController.kt`, `AppLockUi.kt` and `WhiteNoiseApp.kt`. The local gate retains
+navigation with protected placement/semantics/input suppressed, suspends the child
+lifecycle and feeds B21 incoming/B23 notification readiness. Real credential
+prompting and persisted baseline loading remain Q06 seams.
+
+Production IncognitoKeyboard maps to the stable local interceptor in
+`ui/settings/IncognitoKeyboard.kt`, with the prototype's API 23–25 fallback and
+explicit request-only copy. DevicePrivacyScreen's audit settings/consent and
+AppState's prepare/delete methods map to `AuditLogs.kt`, `AuditLogController.kt`
+and `AuditLogsUi.kt`. The developer-only route preserves sanitized diagnostics,
+models app-wide recording, per-profile files, sensitive export/partial deletion
+and exact callback leases. Real engine recording/file staging remains a seam.
+C097 maps the production secure-window behavior to two truthful controls:
+`hideScreenInRecents` asserts protection while paused, while
+`blockScreenshotsInChats` asserts it on conversation and chat-detail routes.
+App-lock evaluation/background protection remains an independent override.
+
 ## Production Android B25 — key packages and developer diagnostics
 
 [Selected brief](../screens/key-packages-and-developer-diagnostics.md) maps C080,

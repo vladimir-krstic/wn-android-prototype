@@ -17,15 +17,20 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B23 and B25–B32 are implemented and host-verified.
+Production Android parity batches B01–B25 and B27–B32 are implemented and host-verified.
 [B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 adds publication/rotation/deletion recovery, detailed push inspection, streaming
 status controls, relay health, self-send outcomes and timed performance state.
-The latest host gate passes 837 unit tests, zero lint errors and both APKs.
-Eight new B32 UI cases compile only; device and visual acceptance remain pending.
+The latest integrated host gate passes 870 unit tests, zero lint errors and both APKs.
+Ten B24 UI cases compile only; device and visual acceptance remain pending.
 The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks the pending B24/B26 decision slices and every per-batch commit.
+tracks B26 and every per-batch commit.
+
+B24 is complete: app lock, incognito keyboard, independent Recents and chat
+screenshot controls, and sensitive audit logs are implemented and host-verified.
+After integration with B25 and B27–B32, the batch passes 870 unit tests, lint and
+both APK builds. See the [B24 brief](docs/screens/app-lock-and-sensitive-privacy.md#implementation-evidence).
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
