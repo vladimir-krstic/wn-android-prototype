@@ -363,3 +363,20 @@ owned Refresh/Publish work. Production managed-host validation becomes a named
 compatibility issue without narrowing accepted general `wss://` support or
 silently cleaning three-role imports. Reconnect Marmot I/O, DNS/SSRF checks,
 event publication and durable state only in production.
+
+## Production Android B29 — AI agents and streaming operations
+
+[Selected brief](../screens/ai-agents-and-streaming-operations.md) maps C112/C113
+to model/AgentOperations.kt, ui/settings/AiAgentsScreen.kt,
+ui/conversation/AgentOperationUi.kt, ChatMessage, AppViewModel and the typed
+navigation destination. Production AiAgentsScreen/AgentConnector maps to the
+four public-key prompt definitions, manual contact guidance and user-initiated
+browser handoff. Production AgentOperationPresentation/AgentOperationRow maps to
+the immutable ordinary operation projection; StreamDebug maps only to the
+existing developer-only record surface.
+
+Reconnect real account records, stream updates and Marmot operation payloads at
+the AppViewModel/model boundary during production migration. Preserve exact
+profile/chat ownership and do not make ordinary operation visibility depend on
+Developer Tools. The prototype examples are local records and do not define a
+wire schema, install connectors, create accounts, start networking or persist.

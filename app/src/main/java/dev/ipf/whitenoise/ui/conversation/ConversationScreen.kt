@@ -2489,6 +2489,18 @@ private fun MessageBubble(
         append(", ${message.timeLabel}")
         message.reactions.forEach { append(", ${it.emoji}, ${it.personIds.size}") }
     }
+    message.agentOperation?.takeIf { !message.isDeleted && searchQuery.isBlank() }?.let { operation ->
+        AgentOperationCard(
+            messageId = message.id,
+            operation = operation,
+            onLongPress = onLongPress,
+            modifier = Modifier
+                .testTag("conversation.message.bubble.${message.id}")
+                .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
+                .semantics(mergeDescendants = true) { contentDescription = description },
+        )
+        return
+    }
     val bubbleShape = MaterialTheme.shapes.large
     val currentLongPress = rememberUpdatedState(onLongPress)
     val bubbleLongPress = remember(message.id) {

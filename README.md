@@ -17,15 +17,15 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B23 and B25–B28 are implemented and host-verified.
+Production Android parity batches B01–B23 and B25–B29 are implemented and host-verified.
 [B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 adds publication/rotation/deletion recovery, detailed push inspection, streaming
 status controls, relay health, self-send outcomes and timed performance state.
-The latest host gate passes 809 unit tests, zero lint errors and both APKs.
-Six new UI cases compile only; device and visual acceptance remain pending.
+The latest host gate passes 817 unit tests, zero lint errors and both APKs.
+Seven new B29 UI cases compile only; device and visual acceptance remain pending.
 The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks B24, B26 and B29–B32 and the per-batch commits.
+tracks B24, B26 and B30–B32 and the per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
@@ -192,3 +192,8 @@ B28 adds [relay publication readiness and recovery](docs/screens/relay-publicati
 Where I post/receive state remains independent from socket status, and invalid
 imports keep their roles until explicit recovery. Seven UI cases compile; no
 network publication, device inspection or persistence was added.
+
+B29 adds [AI agent setup and streaming operations](docs/screens/ai-agents-and-streaming-operations.md#implementation-evidence).
+Four public-key-only connector guides live in Settings, while streaming text
+and typed operation progress remain ordinary conversation content. Seven UI
+cases compile; no connector installation, transport or agent account was added.

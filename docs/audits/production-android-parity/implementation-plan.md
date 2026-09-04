@@ -30,7 +30,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B25: implemented and host-verified 2026-09-04; 772 unit tests, zero lint errors, both APKs and six new compiled UI cases. [Selected brief and evidence](../../screens/key-packages-and-developer-diagnostics.md). Commit title: `B25: Expand key packages and developer diagnostics`. Q04 preserves the approved developer-only placement. Implemented in an isolated worktree so the pending B24 decision does not enter this commit.
 - B27: implemented and host-verified 2026-09-04; 791 unit tests, zero lint errors, both APKs and six new compiled UI cases. [Evidence](../../screens/downloads-and-media-quality.md#implementation-evidence). Commit title: `B27: Add download rules, queue controls and media quality`. Isolated from pending B24 and B26 work.
 - B28: implemented and host-verified 2026-09-04; 809 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/relay-publication-and-validation.md#implementation-evidence). Commit title: `B28: Add relay publication readiness and recovery`. Existing three-role/general-URL capability is preserved; Q04 still governs future narrowing or relocation.
-- B24, B26 and B29–B32: pending; linked decisions apply only to their named slices.
+- B29: implemented and host-verified 2026-09-04; 817 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). Commit title: `B29: Add AI agent setup and streaming operations`. Ordinary operations remain separate from developer stream records.
+- B24, B26 and B30–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -65,7 +66,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B26** | Appearance, typography and input preferences | C100, C101, C102, C103, C104 | B01 | Blocked slices: Q01, Q09 |
 | **B27** | Download matrix, queue and media quality | C105, C106, C107 | B11 | Implemented; host verified |
 | **B28** | Relay publication and managed-list differences | C108, C109 | B05 | Implemented; host verified; Q04 retained for future narrowing |
-| **B29** | AI-agent setup and streamed operation rows | C112, C113 | B03, B09 | Ready |
+| **B29** | AI-agent setup and streamed operation rows | C112, C113 | B03, B09 | Implemented; host verified |
 | **B30** | Verified Nostr event cards and readers | C114, C115 | B09, B13 | Ready |
 | **B31** | Help, About, licenses and external support | C117 | B01 | Ready |
 | **B32** | Distribution-gated update experience | C120, C121 | B05 | Blocked slices: Q06 |
@@ -533,6 +534,8 @@ Capabilities: C108, C109. Dependencies: B05.
 ### B29 — AI-agent setup and streamed operation rows
 
 Capabilities: C112, C113. Dependencies: B03, B09.
+
+**Status:** Implemented and host-verified 2026-09-04; [evidence](../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). The Settings guide, public-key-only prompt copy, external documentation recovery, streaming text and all typed operation states are complete within the deterministic boundary.
 
 **Implementation:** New AI Agents screen with Hermes/OpenClaw/OpenCode/Codex prompt preview/copy and docs/manual contact setup. Public key only; no installation or account connection is performed. Add streaming text, operation summary/details/status/progress and failure/cancelled outcomes; distinguish ordinary operation presentation from developer stream events.
 

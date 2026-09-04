@@ -112,6 +112,7 @@ class SettingsScreenTest {
         listOf(
             Triple("profile", "Profile", null),
             Triple("profile_keys", "Profile Keys", "View, copy, and export your keys"),
+            Triple("ai_agents", "AI Agents", "Connect an agent you run and trust"),
             Triple("notifications", "Notifications", "Local and native push preferences"),
             Triple("appearance", "Appearance", null),
             Triple("privacy_security", "Privacy & Security", "Device protection and auto-lock"),

@@ -4183,3 +4183,27 @@ DNS, event publication, persistence or background worker is added.
 
 Evidence: [B28 brief](screens/relay-publication-and-validation.md#implementation-evidence),
 RelayPublication model/controller/UI and state/Compose tests.
+
+## WN-ANDROID-0149 — Agent operations are ordinary content; raw streams stay developer-only
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B29 contract; host verified
+
+Expose AI Agents as an ordinary active-profile Settings destination. Connector
+prompts may contain only the complete public `npub`, must be reviewable before
+copy, and must tell the external agent to explain changes and request approval.
+The app performs no installation or account connection. Android `ACTION_VIEW`
+owns the explicit documentation handoff and reports unavailable handling.
+
+Project partial text as an ordinary Streaming message. Project typed agent
+operations as ordinary neutral timeline cards with named queued/running/success,
+failure, cancellation and unavailable phases, bounded progress and expandable
+request/result/status/duration. These cards do not require Developer Tools.
+Raw protocol stream records retain the B25 Streaming Debug gate and stay outside
+message controls. Stable local example insertion remains developer-only and
+requires the exact active profile/chat and active membership. No transport,
+Marmot, signing, encryption, persistence, background service or new permission
+is added.
+
+Evidence: [B29 brief](screens/ai-agents-and-streaming-operations.md),
+AgentOperations, AiAgentsScreen, AgentOperationUi and the state/Compose tests.

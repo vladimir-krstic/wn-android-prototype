@@ -16,8 +16,8 @@ These labels are the audit recommendation and follow current prototype terminolo
 
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
-| C112 · AI-agent connector setup guide | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | New AI Agents screen with Hermes/OpenClaw/OpenCode/Codex prompt preview/copy and docs/manual contact setup. Public key only; no installation or account connection is performed. |
-| C113 · Streaming agent messages and operation rows | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add streaming text, operation summary/details/status/progress and failure/cancelled outcomes; distinguish ordinary operation presentation from developer stream events. |
+| C112 · AI-agent connector setup guide | Active-profile public key or unavailable-key recovery | Open Settings → AI Agents; reveal/copy a connector prompt; open documentation; Back returns to Settings | Hermes/OpenClaw/OpenCode/Codex prompts contain only the exact public key, manual setup and browser failure are explicit, and no installation or connection runs. [B29 evidence](../../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). |
+| C113 · Streaming agent messages and operation rows | Ordinary partial text plus typed operation phases | Expand an operation for details; message actions remain available; developer injection replaces its owned rows | Streaming text and queued/running/completed/failed/cancelled/unavailable rows use text, progress and details independent of Streaming Debug. [B29 evidence](../../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). |
 | C114 · Verified Nostr event cards and recovery | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Typed fixtures for supported note/article/image/video/document/event kinds, loading/not-found/invalid/unavailable/retry; preserve authored reference and Copy. No relay/network resolution. |
 | C115 · Article reader and referenced-video viewer | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Reuse rich reader and native local-video viewer for event content, loaded metadata and retry states; remote video remains a local fixture. |
 
@@ -38,4 +38,4 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B29, B30. Decisions: None. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+Batches: B29, B30. Decisions: None. B29 is implemented and host-verified under [WN-ANDROID-0149](../../../decisions.md#wn-android-0149--agent-operations-are-ordinary-content-raw-streams-stay-developer-only); B30 remains. Facts are the matrix's cited production behavior and current prototype evidence.

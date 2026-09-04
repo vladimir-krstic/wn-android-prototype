@@ -85,6 +85,9 @@ sealed interface AppRoute {
     data object ProfileKeys : AppRoute
 
     @Serializable
+    data object AiAgents : AppRoute
+
+    @Serializable
     data object Notifications : AppRoute
 
     @Serializable

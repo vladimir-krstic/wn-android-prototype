@@ -659,6 +659,7 @@ fun ConversationDebugScreen(
     onAddArrival: (Boolean) -> Unit = {},
     onAddReadingExample: () -> Unit = {},
     onAddAttachmentExamples: () -> Unit = {},
+    onAddAgentExamples: () -> Unit = {},
     parityController: dev.ipf.whitenoise.state.DeveloperParityController? = null,
 ) {
     val context = LocalContext.current
@@ -717,6 +718,12 @@ fun ConversationDebugScreen(
                             SettingsLink("Add unread mention", "Return to the chat to inspect the preserved unread boundary", { onAddArrival(false) })
                             SettingsDivider()
                             SettingsLink("Add streaming message", "Includes receipt, sender time and expiry metadata", { onAddArrival(true) })
+                            SettingsDivider()
+                            SettingsLink(
+                                stringResource(R.string.agent_examples_add),
+                                stringResource(R.string.agent_examples_add_detail),
+                                onAddAgentExamples,
+                            )
                             SettingsDivider()
                             SettingsLink("Add long document", "Markdown, selection and revision history", onAddReadingExample)
                             SettingsDivider()

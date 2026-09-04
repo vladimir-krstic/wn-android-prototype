@@ -55,6 +55,7 @@ import dev.ipf.whitenoise.ui.settings.EditProfileScreen
 import dev.ipf.whitenoise.ui.settings.NotificationsScreen
 import dev.ipf.whitenoise.ui.settings.PrivacySecurityScreen
 import dev.ipf.whitenoise.ui.settings.ProfileKeysScreen
+import dev.ipf.whitenoise.ui.settings.AiAgentsScreen
 import dev.ipf.whitenoise.ui.settings.ProfileRelayDetailsScreen
 import dev.ipf.whitenoise.ui.settings.ProfileRelaysScreen
 import dev.ipf.whitenoise.ui.settings.ChatFoldersScreen
@@ -374,6 +375,7 @@ fun WhiteNoiseNavHost(
                 onShareConnect = { navController.navigate(AppRoute.ShareConnect) },
                 onEditProfile = { navController.navigate(AppRoute.EditProfile) },
                 onProfileKeys = { navController.navigate(AppRoute.ProfileKeys) },
+                onAiAgents = { navController.navigate(AppRoute.AiAgents) },
                 onNotifications = { navController.navigate(AppRoute.Notifications) },
                 onAppearance = { navController.navigate(AppRoute.Appearance) },
                 onReadAloud = { navController.navigate(AppRoute.ReadAloud) },
@@ -396,6 +398,11 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.Dictation> {
             uiState.activeProfile?.let { profile ->
                 dev.ipf.whitenoise.ui.settings.DictationSettingsScreen(profile, onBack = { navController.popBackStack() })
+            }
+        }
+        composable<AppRoute.AiAgents> {
+            uiState.activeProfile?.let { profile ->
+                AiAgentsScreen(profile, onBack = { navController.popBackStack() })
             }
         }
         composable<AppRoute.ReadAloud> {
@@ -667,6 +674,7 @@ fun WhiteNoiseNavHost(
                     onAddArrival = { streaming -> appViewModel.addConversationArrival(profile.id, route.chatId, streaming) },
                     onAddReadingExample = { appViewModel.addMessageReadingExample(profile.id, route.chatId) },
                     onAddAttachmentExamples = { appViewModel.addAttachmentReadingExamples(profile.id, route.chatId) },
+                    onAddAgentExamples = { appViewModel.addAgentConversationExamples(profile.id, route.chatId) },
                 )
             }
         }

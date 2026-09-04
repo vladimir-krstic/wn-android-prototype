@@ -136,6 +136,7 @@ fun SettingsScreen(
     onFolders: () -> Unit = {},
     onReadAloud: () -> Unit = {},
     onDictation: () -> Unit = {},
+    onAiAgents: () -> Unit = {},
     initiallyShowSwitcher: Boolean = false,
     exitAttempt: dev.ipf.whitenoise.model.ProfileExitAttempt? = null,
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
@@ -212,6 +213,13 @@ fun SettingsScreen(
                         icon = R.drawable.ic_settings_key,
                         iconTag = "profile_keys",
                         onClick = onProfileKeys,
+                    )
+                    SettingsDivider()
+                    SettingsHubLink(
+                        title = stringResource(R.string.ai_agents_title),
+                        icon = R.drawable.ic_settings_person_add,
+                        iconTag = "ai_agents",
+                        onClick = onAiAgents,
                     )
                     SettingsDivider()
                     SettingsHubLink(title = stringResource(R.string.chat_folders), icon = R.drawable.ic_filter_list, iconTag = "folders", onClick = onFolders)
