@@ -10,6 +10,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -38,7 +40,9 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.LanguagePreference
-import dev.ipf.whitenoise.model.MediaDownloadPolicy
+import dev.ipf.whitenoise.model.MediaDownloadMatrix
+import dev.ipf.whitenoise.model.DownloadMediaType
+import dev.ipf.whitenoise.model.DownloadNetwork
 import dev.ipf.whitenoise.model.NotificationPreviewMode
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.model.ProfileSettings
@@ -449,60 +453,29 @@ class SettingsScreenTest {
 
     @Test
     fun dataUsageUsesSeparatedGroupsImmediateDialogsAndDefaultAwareReset() {
-        var changedSettings: ProfileSettings? = null
         var profile by mutableStateOf(ProfileFixtures.marmota)
-        composeRule.setContent {
-            WhiteNoiseTheme {
-                DataUsageScreen(
-                    profile = profile,
-                    onBack = {},
-                    onChange = { changedSettings = it },
-                )
-            }
-        }
-
-        composeRule.onNodeWithText("Automatic downloads").assertIsDisplayed()
+        composeRule.setContent { WhiteNoiseTheme {
+            DataUsageScreen(profile, {}, { profile = profile.copy(settings = it) })
+        } }
         composeRule.onNodeWithTag("data_usage.downloads.group").assertIsDisplayed()
         composeRule.onNodeWithTag("data_usage.downloads.divider.photos").assertIsDisplayed()
-        composeRule.onNodeWithText(
-            "Media that isn't downloaded automatically shows a download button.",
-        ).assertIsDisplayed()
         composeRule.onNodeWithText("Reset download settings").assertIsNotEnabled()
-
         composeRule.onNodeWithText("Photos").performClick()
-        composeRule.onNodeWithTag("choice_dialog.options").assertIsDisplayed()
-        composeRule.onNodeWithTag("choice_dialog.option.1").assertIsSelected()
-        composeRule.onNodeWithTag("choice_dialog.option.2").performClick()
-        composeRule.runOnIdle {
-            check(changedSettings?.photoDownloadPolicy == MediaDownloadPolicy.WifiAndCellular)
-        }
-
-        composeRule.onNodeWithTag("settings.list").performScrollToNode(
-            hasText("Photo and video quality"),
-        )
-        composeRule.onNodeWithText("Photo and video quality").performClick()
-        composeRule.onNodeWithTag("choice_dialog.option.0").assertIsSelected()
-        composeRule.onNodeWithText(
-            "High sends uncompressed photos and videos for better quality, but uses more data. " +
-                "Standard compresses media to use less data.",
-        ).assertIsDisplayed()
-        composeRule.onNodeWithTag("choice_dialog.option.1").performClick()
-        composeRule.runOnIdle {
-            check(changedSettings?.sentMediaQuality == SentMediaQuality.High)
-        }
-
-        val customizedProfile = ProfileFixtures.marmota.copy(
-            settings = ProfileFixtures.marmota.settings.copy(
-                fileDownloadPolicy = MediaDownloadPolicy.WifiAndCellular,
-            ),
-        )
-        composeRule.runOnIdle { profile = customizedProfile }
-        composeRule.onNodeWithTag("settings.list").performScrollToNode(
-            hasText("Reset download settings"),
-        )
+        composeRule.onNodeWithTag("download.network.Wifi").assertIsOn()
+        composeRule.onNodeWithTag("download.network.Mobile").assertIsOff().performClick()
+        composeRule.onNodeWithTag("download.network.Mobile").assertIsOn()
+        composeRule.onNodeWithText("Done").performClick()
+        composeRule.runOnIdle { check(profile.settings.downloadMatrix.allows(DownloadMediaType.Photos, DownloadNetwork.Mobile)) }
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(hasText("Media quality"))
+        composeRule.onNodeWithText("Media quality").performClick()
+        composeRule.onNodeWithTag("choice_dialog.option.2").assertIsSelected()
+        composeRule.onNodeWithTag("choice_dialog.option.0").performClick()
+        composeRule.runOnIdle { check(profile.settings.sentMediaQuality == SentMediaQuality.Low) }
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(hasText("Reset download settings"))
         composeRule.onNodeWithText("Reset download settings").assertIsEnabled().performClick()
         composeRule.runOnIdle {
-            check(changedSettings?.fileDownloadPolicy == ProfileSettings().fileDownloadPolicy)
+            check(profile.settings.downloadMatrix == MediaDownloadMatrix())
+            check(profile.settings.sentMediaQuality == SentMediaQuality.Low)
         }
     }
 

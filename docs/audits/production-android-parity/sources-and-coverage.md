@@ -177,3 +177,14 @@ and timed performance contracts therefore remain the B25 authority.
 [The brief](../../screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 records host evidence. Broader startup/windows, Nostr, installer and Amber/contact
 source drift still awaits its relevant batch/final reconciliation.
+
+## Implementation drift check — B27, 2026-09-04
+
+`git ls-remote` still resolves master to `911040c7e1c31652638c8cfd72812d1f3a694b9b`
+and no main branch. Comparing the pinned audit to that head leaves
+MediaAutoDownloadMatrix, MediaQuality, AutoDownloadScreen, AttachmentDownloadGate
+and AttachmentDownloadPolicy unchanged. AppState's patch does not change these
+settings or stop/restart methods. IntentStore gains installer handoff ownership;
+Worker gains strict protocol ID validation and durable work observation. Those
+production persistence/installer seams do not change C105–C107's prototype
+contract. [Implementation and verification](../../screens/downloads-and-media-quality.md#implementation-evidence).

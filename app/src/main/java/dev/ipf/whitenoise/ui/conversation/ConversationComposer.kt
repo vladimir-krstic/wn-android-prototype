@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.model.effectivePhotoQuality
+import dev.ipf.whitenoise.model.SentMediaQuality
 import dev.ipf.whitenoise.model.PhotoQuality
 import dev.ipf.whitenoise.model.PhotoMetadataPolicy
 import dev.ipf.whitenoise.model.SharedDeviceContact
@@ -197,6 +199,7 @@ private val ComposerVoiceStateSaver: Saver<ComposerVoiceState, Any> = listSaver(
                 "",
                 VoiceMessageFormat.Voice.name,
                 0,
+                state.quality.name,
             )
             is ComposerVoiceState.Review -> listOf(
                 "review",
@@ -205,6 +208,7 @@ private val ComposerVoiceStateSaver: Saver<ComposerVoiceState, Any> = listSaver(
                 state.transcript.orEmpty(),
                 state.format.name,
                 state.playbackTenths,
+                state.quality.name,
             )
         }
     },
@@ -215,6 +219,7 @@ private val ComposerVoiceStateSaver: Saver<ComposerVoiceState, Any> = listSaver(
                 transcript = (values[3] as String).takeIf { values[2] as Boolean },
                 format = VoiceMessageFormat.valueOf(values[4] as String),
                 playbackTenths = values[5] as Int,
+                quality = (values.getOrNull(6) as? String)?.let { SentMediaQuality.valueOf(it) } ?: SentMediaQuality.High,
             ))
         } else {
             ComposerVoiceState.Idle
@@ -469,6 +474,7 @@ fun FullConversationComposer(
     var attachmentMenuOpen by remember { mutableStateOf(false) }
     var contactPickerOpen by remember { mutableStateOf(false) }
     val attachmentEnvironment = LocalAttachmentEnvironment.current
+    val photoQuality = chat.effectivePhotoQuality(profile.settings)
     val photoLabel = stringResource(R.string.photo)
     var recentMediaOpen by remember { mutableStateOf(false) }
     var qualityOpen by remember { mutableStateOf(false) }
@@ -505,7 +511,7 @@ fun FullConversationComposer(
         val requestId = if (capture == null) ++localVoiceSequence else capture.beginVoice(captureOwner)
         if (requestId == null) { voiceFailure = dev.ipf.whitenoise.model.VoiceCaptureFailure.MicrophoneBusy; return null }
         focusManager.clearFocus(); sharedSpeech?.pause(); voiceOutcome = outcome
-        voiceState = ComposerVoiceReducer.start(voiceState, locked = locked, requestId = requestId)
+        voiceState = ComposerVoiceReducer.start(voiceState, locked = locked, requestId = requestId, quality = profile.settings.sentMediaQuality)
         return requestId
     }
     fun cancelVoice(requestId: Long) {
@@ -590,7 +596,7 @@ fun FullConversationComposer(
                                     images = listOf(ProfileAvatar.DeviceImage(clean)), fileSizeBytes = clean.size, mimeType = "image/gif")
                             } else DraftPhotoProcessor.prepare(context,
                                 MessageAttachment(id = nextId("photo"), kind = MessageAttachmentKind.Photo,
-                                    label = displayName(context, uri, "Photo"), images = listOf(ProfileAvatar.DeviceImage(source))), chat.draftPhotoQuality)
+                                    label = displayName(context, uri, "Photo"), images = listOf(ProfileAvatar.DeviceImage(source))), photoQuality)
                         }
                         if (photo == null) {
                             if (generation == preparationGeneration) attachmentError = true
@@ -630,7 +636,7 @@ fun FullConversationComposer(
             isPreparing = true
             try {
                 val prepared = DraftPhotoProcessor.prepare(context, MessageAttachment(nextId("photo"), MessageAttachmentKind.Photo,
-                    photoLabel, images = listOf(image)), chat.draftPhotoQuality)
+                    photoLabel, images = listOf(image)), photoQuality)
                 if (generation == preparationGeneration) {
                     attachmentError = prepared == null
                     prepared?.let { onAddAttachments(listOf(it)) }
@@ -1021,10 +1027,10 @@ fun FullConversationComposer(
                                 TextButton({ qualityOpen = true }, enabled = !isPreparing, modifier = Modifier.testTag("composer.photo.quality")) {
                                     val qualities = chat.draftAttachments.filter { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }.flatMap { attachment ->
                                         attachment.images.indices.map { index -> dev.ipf.whitenoise.model.PhotoEditing.effectiveQuality(
-                                            attachment.photoFrameQualities[index] ?: attachment.photoQuality ?: chat.draftPhotoQuality,
+                                            attachment.photoFrameQualities[index] ?: attachment.photoQuality ?: photoQuality,
                                             attachment.photoEdits[index] ?: dev.ipf.whitenoise.model.PhotoEditRecipe()) }
                                     }.distinct()
-                                    Text(stringResource(R.string.photo_quality) + ": " + if (qualities.size > 1) stringResource(R.string.photo_quality_mixed) else photoQualityLabel(qualities.firstOrNull() ?: chat.draftPhotoQuality))
+                                    Text(stringResource(R.string.photo_quality) + ": " + if (qualities.size > 1) stringResource(R.string.photo_quality_mixed) else photoQualityLabel(qualities.firstOrNull() ?: photoQuality))
                                 }
                                 val bytes = chat.draftAttachments.mapNotNull { it.fileSizeBytes }.sumOf { it.toLong() }
                                 if (bytes > 0) Text(stringResource(R.string.photo_prepared_size, android.text.format.Formatter.formatShortFileSize(context, bytes)),
@@ -1105,6 +1111,7 @@ fun FullConversationComposer(
                                         format = state.format,
                                         transcript = state.transcript.orEmpty(),
                                         durationSeconds = state.durationSeconds,
+                                        quality = state.quality,
                                     )
                                     if (onSendVoice(submission)) {
                                         voiceState = ComposerVoiceState.Idle
@@ -1150,7 +1157,7 @@ fun FullConversationComposer(
         recentMediaOpen = false
         attachmentError = runCatching { visualPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }.isFailure
     }, onAdd = ::addRecentPhoto)
-    if (qualityOpen) PhotoQualityDialog(chat.draftPhotoQuality, { qualityOpen = false }) { quality ->
+    if (qualityOpen) PhotoQualityDialog(photoQuality, { qualityOpen = false }) { quality ->
         qualityOpen = false; prepareDraftPhotos(quality)
     }
     voiceFailure?.let { failure -> VoiceCaptureFailureDialog(failure,

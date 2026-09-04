@@ -7,6 +7,8 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -38,11 +40,9 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.AutoLockDuration
 import dev.ipf.whitenoise.model.LanguagePreference
-import dev.ipf.whitenoise.model.MediaDownloadPolicy
 import dev.ipf.whitenoise.model.NotificationPreviewMode
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileSettings
-import dev.ipf.whitenoise.model.SentMediaQuality
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
@@ -435,143 +435,7 @@ fun PrivacySecurityScreen(
 }
 
 @Composable
-fun DataUsageScreen(
-    profile: Profile,
-    onBack: () -> Unit,
-    onChange: (ProfileSettings) -> Unit,
-) {
-    val settings = profile.settings
-    val defaults = ProfileSettings()
-    val downloadsUseDefaults =
-        settings.photoDownloadPolicy == defaults.photoDownloadPolicy &&
-            settings.videoDownloadPolicy == defaults.videoDownloadPolicy &&
-            settings.audioDownloadPolicy == defaults.audioDownloadPolicy &&
-            settings.fileDownloadPolicy == defaults.fileDownloadPolicy
-    var picker by remember { mutableStateOf<DataPicker?>(null) }
-    var qualityPicker by remember { mutableStateOf(false) }
-    SettingsScaffold(title = "Data Usage", onBack = onBack) {
-        SettingsList {
-            item { SettingsSection("Automatic downloads") }
-            item {
-                SettingsGroup(
-                    modifier = Modifier.testTag("data_usage.downloads.group"),
-                ) {
-                    SettingsLink(
-                        title = "Photos",
-                        value = settings.photoDownloadPolicy.label,
-                        onClick = { picker = DataPicker.Photos },
-                    )
-                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.photos"))
-                    SettingsLink(
-                        title = "Videos",
-                        value = settings.videoDownloadPolicy.label,
-                        onClick = { picker = DataPicker.Videos },
-                    )
-                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.videos"))
-                    SettingsLink(
-                        title = "Audio",
-                        value = settings.audioDownloadPolicy.label,
-                        onClick = { picker = DataPicker.Audio },
-                    )
-                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.audio"))
-                    SettingsLink(
-                        title = "Files",
-                        value = settings.fileDownloadPolicy.label,
-                        onClick = { picker = DataPicker.Files },
-                    )
-                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.files"))
-                    SettingsAction(
-                        title = "Reset download settings",
-                        subtitle = "Restore the default policy for every media type.",
-                        enabled = !downloadsUseDefaults,
-                        onClick = {
-                            onChange(
-                                settings.copy(
-                                    photoDownloadPolicy = defaults.photoDownloadPolicy,
-                                    videoDownloadPolicy = defaults.videoDownloadPolicy,
-                                    audioDownloadPolicy = defaults.audioDownloadPolicy,
-                                    fileDownloadPolicy = defaults.fileDownloadPolicy,
-                                ),
-                            )
-                        },
-                    )
-                }
-            }
-            item {
-                SettingsExplainer(
-                    "Media that isn't downloaded automatically shows a download button.",
-                )
-            }
-            item { SettingsSection("Sent media") }
-            item {
-                SettingsGroup(
-                    modifier = Modifier.testTag("data_usage.sent_media.group"),
-                ) {
-                    SettingsLink(
-                        title = "Photo and video quality",
-                        value = settings.sentMediaQuality.label,
-                        onClick = { qualityPicker = true },
-                    )
-                }
-            }
-            item {
-                SettingsExplainer("Choose the quality for photos and videos you send.")
-            }
-        }
-    }
-    picker?.let { target ->
-        val current = when (target) {
-            DataPicker.Photos -> settings.photoDownloadPolicy
-            DataPicker.Videos -> settings.videoDownloadPolicy
-            DataPicker.Audio -> settings.audioDownloadPolicy
-            DataPicker.Files -> settings.fileDownloadPolicy
-        }
-        ChoiceDialog(
-            title = target.label,
-            values = MediaDownloadPolicy.entries,
-            selected = current,
-            label = MediaDownloadPolicy::label,
-            onDismiss = { picker = null },
-            onSelect = { selected ->
-                onChange(
-                    when (target) {
-                        DataPicker.Photos -> settings.copy(photoDownloadPolicy = selected)
-                        DataPicker.Videos -> settings.copy(videoDownloadPolicy = selected)
-                        DataPicker.Audio -> settings.copy(audioDownloadPolicy = selected)
-                        DataPicker.Files -> settings.copy(fileDownloadPolicy = selected)
-                    },
-                )
-                picker = null
-            },
-        )
-    }
-    if (qualityPicker) {
-        ChoiceDialog(
-            title = "Photo and video quality",
-            values = SentMediaQuality.entries,
-            selected = settings.sentMediaQuality,
-            label = SentMediaQuality::label,
-            supportingText =
-                "High sends uncompressed photos and videos for better quality, but uses more data. " +
-                    "Standard compresses media to use less data.",
-            onDismiss = { qualityPicker = false },
-            onSelect = {
-                onChange(settings.copy(sentMediaQuality = it))
-                qualityPicker = false
-            },
-        )
-    }
-}
-
-private enum class DataPicker(val label: String) {
-    Photos("Photos"),
-    Videos("Videos"),
-    Audio("Audio"),
-    Files("Files"),
-}
-
-@Composable
-private fun <T> ChoiceDialog(
+internal fun <T> ChoiceDialog(
     title: String,
     values: List<T>,
     selected: T,
@@ -584,7 +448,7 @@ private fun <T> ChoiceDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).testTag("choice_dialog.content")) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()

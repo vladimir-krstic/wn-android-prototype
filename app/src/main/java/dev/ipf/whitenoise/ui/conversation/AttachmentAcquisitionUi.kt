@@ -60,8 +60,12 @@ internal fun AttachmentTransferHost(chat: Chat) {
             val state = checkNotNull(attachment.transfer)
             LaunchedEffect(entry.message.id, attachment.id, state.revision) {
                 owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                    delay(350)
-                    action.value(entry.message.id, attachment.id, "advance", state.revision)
+                    // A bounded queue may deny a slot without changing revision. Keep waiting;
+                    // lifecycle cancellation and revision-key changes stop this exact request.
+                    while (true) {
+                        delay(350)
+                        action.value(entry.message.id, attachment.id, "advance", state.revision)
+                    }
                 }
             }
         }
@@ -162,6 +166,7 @@ internal fun AttachmentTransferControls(messageId: String, attachment: MessageAt
     val environment = LocalAttachmentEnvironment.current
     Column(Modifier.fillMaxWidth().testTag("attachment.transfer.${attachment.id}").semantics { liveRegion = LiveRegionMode.Polite }) {
         Text(stringResource(when (state.phase) {
+            AttachmentTransferPhase.Idle -> R.string.download_waiting
             AttachmentTransferPhase.Queued -> R.string.attachment_queued
             AttachmentTransferPhase.Active -> if (state.direction == AttachmentTransferDirection.Upload) R.string.attachment_uploading else R.string.attachment_downloading
             AttachmentTransferPhase.Available -> R.string.attachment_available
@@ -172,6 +177,9 @@ internal fun AttachmentTransferControls(messageId: String, attachment: MessageAt
             AttachmentTransferPhase.Invalid -> R.string.attachment_invalid
             AttachmentTransferPhase.Unavailable -> R.string.attachment_export_unavailable
         }), style = MaterialTheme.typography.bodySmall)
+        if (state.phase == AttachmentTransferPhase.Idle || (state.phase == AttachmentTransferPhase.Queued && state.origin == AttachmentTransferOrigin.Automatic)) {
+            TextButton({ environment.transfer(messageId, attachment.id, "start", state.revision) }) { Text(stringResource(R.string.download_now)) }
+        }
         if (state.running) {
             LinearProgressIndicator(progress = { state.progress / 100f }, modifier = Modifier.fillMaxWidth())
             TextButton({ environment.transfer(messageId, attachment.id, "cancel", state.revision) }) { Text(stringResource(R.string.cancel)) }

@@ -86,6 +86,7 @@ fun DeveloperToolsScreen(
     onRecentMediaAccess: (dev.ipf.whitenoise.model.RecentMediaAccess) -> Unit = {},
     attachmentTransferScenario: dev.ipf.whitenoise.model.AttachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success,
     onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
+    downloadExampleControls: @Composable () -> Unit = {},
     photoEditorScenario: dev.ipf.whitenoise.model.PhotoEditorScenario = dev.ipf.whitenoise.model.PhotoEditorScenario.Success,
     onPhotoEditorScenario: (dev.ipf.whitenoise.model.PhotoEditorScenario) -> Unit = {},
     locationScenario: dev.ipf.whitenoise.model.LocationScenario = dev.ipf.whitenoise.model.LocationScenario.Unavailable,
@@ -295,6 +296,7 @@ fun DeveloperToolsScreen(
                         SettingsLink("Recent media access", recentMediaAccess.name, { recentOpen = true })
                         SettingsDivider()
                         SettingsLink("Attachment transfer outcomes", attachmentTransferScenario.developerLabel, { transferOpen = true })
+                        downloadExampleControls()
                         SettingsDivider()
                         SettingsLink("Photo editor outcomes", photoEditorScenario.developerLabel, { photoEditorOpen = true })
                         SettingsDivider()

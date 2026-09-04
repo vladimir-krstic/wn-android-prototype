@@ -38,3 +38,16 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B27. Decisions: None. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B27 implementation evidence — 2026-09-04
+
+C105–C107 are implemented and host-verified. The accepted title remains **Data
+Usage**, with Photos/Videos/Audio/Files groups and independent network switches.
+The earlier Data and storage/Auto-download media labels above were audit
+recommendations, superseded by the [selected brief](../../../screens/downloads-and-media-quality.md).
+The canonical attachment queue supports admission, stop/restart, promotion,
+per-file cancellation, failure/retry and exact profile/revision ownership.
+Settings edits cannot overwrite queue pause state. Low/Standard/High/Original
+feed future photo and voice policy while preserving prepared media. Videos/audio
+files are sent as-is. The full host gate passes 791 unit tests, zero lint errors
+and both APKs; six added UI cases compile only. Visual acceptance remains pending.

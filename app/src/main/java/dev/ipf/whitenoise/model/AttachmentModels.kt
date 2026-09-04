@@ -32,7 +32,8 @@ data class SharedDeviceContact(val name: String? = null, val phone: String? = nu
     }
 }
 
-enum class AttachmentTransferPhase { Queued, Active, Available, Cancelled, Failed, CacheMiss, Expired, Invalid, Unavailable }
+enum class AttachmentTransferPhase { Idle, Queued, Active, Available, Cancelled, Failed, CacheMiss, Expired, Invalid, Unavailable }
+enum class AttachmentTransferOrigin { Automatic, Manual }
 enum class AttachmentTransferDirection { Upload, Download }
 enum class AttachmentTransferScenario(val developerLabel: String) {
     Success("Success"), Failure("Recoverable failure"), CacheMiss("Cache miss"), Expired("Expired"), Invalid("Invalid attachment"),
@@ -41,6 +42,8 @@ enum class AttachmentTransferScenario(val developerLabel: String) {
 data class AttachmentTransfer(
     val phase: AttachmentTransferPhase = AttachmentTransferPhase.Queued,
     val direction: AttachmentTransferDirection = AttachmentTransferDirection.Download,
+    val origin: AttachmentTransferOrigin = AttachmentTransferOrigin.Manual,
+    val automaticSuppressed: Boolean = false,
     val progress: Int = 0,
     val revision: Long = 0,
     val attempt: Int = 1,
@@ -48,8 +51,17 @@ data class AttachmentTransfer(
 ) {
     val running: Boolean get() = phase == AttachmentTransferPhase.Queued || phase == AttachmentTransferPhase.Active
     val retryable: Boolean get() = phase in setOf(AttachmentTransferPhase.Cancelled, AttachmentTransferPhase.Failed, AttachmentTransferPhase.CacheMiss)
-    fun cancel() = if (running) copy(phase = AttachmentTransferPhase.Cancelled, revision = revision + 1) else this
-    fun retry() = if (retryable) copy(phase = AttachmentTransferPhase.Queued, progress = 0, attempt = attempt + 1, revision = revision + 1) else this
+    fun cancel() = if (running) copy(phase = AttachmentTransferPhase.Cancelled, automaticSuppressed = true, revision = revision + 1) else this
+    fun retry() = if (retryable || phase == AttachmentTransferPhase.Idle) copy(phase = AttachmentTransferPhase.Queued,
+        origin = AttachmentTransferOrigin.Manual, automaticSuppressed = false, progress = 0, attempt = attempt + 1, revision = revision + 1) else this
+    fun requestManual() = if (phase == AttachmentTransferPhase.Queued && origin == AttachmentTransferOrigin.Automatic)
+        copy(origin = AttachmentTransferOrigin.Manual, revision = revision + 1) else retry()
+    fun admitAutomatically() = if (phase == AttachmentTransferPhase.Idle && !automaticSuppressed)
+        copy(phase = AttachmentTransferPhase.Queued, origin = AttachmentTransferOrigin.Automatic, revision = revision + 1) else this
+    fun stopAutomatic() = if (phase == AttachmentTransferPhase.Queued && origin == AttachmentTransferOrigin.Automatic)
+        copy(phase = AttachmentTransferPhase.Idle, progress = 0, revision = revision + 1) else this
+    fun restartAutomatic() = if (automaticSuppressed && phase == AttachmentTransferPhase.Cancelled)
+        copy(phase = AttachmentTransferPhase.Idle, automaticSuppressed = false, revision = revision + 1) else this
     fun advance(expectedRevision: Long): AttachmentTransfer {
         if (revision != expectedRevision || !running) return this
         if (phase == AttachmentTransferPhase.Queued) return copy(phase = AttachmentTransferPhase.Active, revision = revision + 1)

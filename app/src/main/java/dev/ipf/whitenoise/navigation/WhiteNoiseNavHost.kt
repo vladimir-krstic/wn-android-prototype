@@ -188,6 +188,10 @@ fun WhiteNoiseNavHost(
     }
 
     uiState.activeProfile?.let { profile ->
+        androidx.compose.runtime.LaunchedEffect(profile.id, profile.chats, profile.settings.downloadMatrix,
+            profile.settings.automaticDownloadsPaused, appViewModel.downloadNetworkExample) {
+            appViewModel.admitAutomaticDownloads(profile.id)
+        }
         profile.chats.forEach { chat -> androidx.compose.runtime.key(profile.id, chat.id) {
             androidx.compose.runtime.CompositionLocalProvider(dev.ipf.whitenoise.ui.conversation.LocalAttachmentEnvironment provides
                 dev.ipf.whitenoise.ui.conversation.AttachmentEnvironment(transfer = { messageId, attachmentId, action, revision ->
@@ -495,7 +499,8 @@ fun WhiteNoiseNavHost(
         }
         composable<AppRoute.DataUsage> {
             uiState.activeProfile?.let { profile ->
-                DataUsageScreen(profile, onBack = { navController.popBackStack() }, onChange = appViewModel::updateProfileSettings)
+                DataUsageScreen(profile, onBack = { navController.popBackStack() }, onChange = { appViewModel.updateDataUsageSettings(profile.id, it) },
+                    onPauseAutomatic = { appViewModel.pauseAutomaticDownloads(profile.id, it) })
             }
         }
         composable<AppRoute.DiagnosticsImprovements> {
@@ -594,6 +599,9 @@ fun WhiteNoiseNavHost(
                     onRecentMediaAccess = appViewModel::selectRecentMediaAccess,
                     attachmentTransferScenario = appViewModel.attachmentTransferScenario,
                     onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
+                    downloadExampleControls = { dev.ipf.whitenoise.ui.settings.DownloadExampleControls(
+                        appViewModel.downloadNetworkExample, appViewModel.downloadTransfersHeld,
+                        appViewModel::chooseDownloadNetwork, appViewModel::loadDownloadQueueExample, appViewModel::holdDownloadTransfers) },
                     photoEditorScenario = appViewModel.nextPhotoEditorScenario,
                     onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
                     locationScenario = appViewModel.nextLocationScenario,

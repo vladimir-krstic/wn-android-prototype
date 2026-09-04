@@ -132,13 +132,14 @@ object VoiceMessageFixture {
         format: VoiceMessageFormat,
         editedTranscript: String = transcript,
         durationSeconds: Int = VoiceMessageFixture.durationSeconds,
+        quality: SentMediaQuality = SentMediaQuality.High,
     ): Pair<String, List<MessageAttachment>> {
         val normalizedTranscript = editedTranscript.trim()
         return when (format) {
-            VoiceMessageFormat.Voice -> "" to listOf(attachment(id, format, null, durationSeconds))
+            VoiceMessageFormat.Voice -> "" to listOf(attachment(id, format, null, durationSeconds, quality))
             VoiceMessageFormat.Text -> normalizedTranscript to emptyList()
             VoiceMessageFormat.Both -> normalizedTranscript to listOf(
-                attachment(id, format, normalizedTranscript, durationSeconds),
+                attachment(id, format, normalizedTranscript, durationSeconds, quality),
             )
         }
     }
@@ -148,6 +149,7 @@ object VoiceMessageFixture {
         format: VoiceMessageFormat,
         transcript: String?,
         durationSeconds: Int,
+        quality: SentMediaQuality,
     ) = MessageAttachment(
         id = id,
         kind = MessageAttachmentKind.Voice,
@@ -155,6 +157,7 @@ object VoiceMessageFixture {
         transcript = transcript,
         durationSeconds = durationSeconds.coerceAtLeast(1),
         voiceFormat = format,
+        voiceQuality = quality,
     )
 }
 
@@ -162,12 +165,13 @@ data class VoiceDraftSubmission(
     val format: VoiceMessageFormat,
     val transcript: String,
     val durationSeconds: Int,
+    val quality: SentMediaQuality = SentMediaQuality.High,
 )
 
 sealed interface ComposerVoiceState {
     data object Idle : ComposerVoiceState
 
-    data class Recording(val elapsedTenths: Int = 0, val locked: Boolean = false, val willCancel: Boolean = false, val requestId: Long = 0) : ComposerVoiceState
+    data class Recording(val elapsedTenths: Int = 0, val locked: Boolean = false, val willCancel: Boolean = false, val requestId: Long = 0, val quality: SentMediaQuality = SentMediaQuality.High) : ComposerVoiceState
 
     data class Review(
         val durationSeconds: Int,
@@ -176,12 +180,13 @@ sealed interface ComposerVoiceState {
         val isTranscribing: Boolean = false,
         val playbackTenths: Int = 0,
         val isPlaying: Boolean = false,
+        val quality: SentMediaQuality = SentMediaQuality.High,
     ) : ComposerVoiceState
 }
 
 object ComposerVoiceReducer {
-    fun start(state: ComposerVoiceState, locked: Boolean = false, requestId: Long = 0): ComposerVoiceState =
-        if (state == ComposerVoiceState.Idle) ComposerVoiceState.Recording(locked = locked, requestId = requestId) else state
+    fun start(state: ComposerVoiceState, locked: Boolean = false, requestId: Long = 0, quality: SentMediaQuality = SentMediaQuality.High): ComposerVoiceState =
+        if (state == ComposerVoiceState.Idle) ComposerVoiceState.Recording(locked = locked, requestId = requestId, quality = quality) else state
 
     fun tick(state: ComposerVoiceState): ComposerVoiceState = when (state) {
         is ComposerVoiceState.Recording -> state.copy(elapsedTenths = (state.elapsedTenths + 1).coerceAtMost(VoiceCapture.maximumTenths))
@@ -191,6 +196,7 @@ object ComposerVoiceReducer {
     fun stop(state: ComposerVoiceState): ComposerVoiceState = when (state) {
         is ComposerVoiceState.Recording -> ComposerVoiceState.Review(
             durationSeconds = ((state.elapsedTenths + 9) / 10).coerceAtLeast(1),
+            quality = state.quality,
         )
         else -> state
     }

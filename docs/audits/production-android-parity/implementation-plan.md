@@ -28,7 +28,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B22: implemented and host-verified 2026-09-04; 714 unit tests, zero lint errors, both APKs and ten new compiled UI/platform cases. [Selected brief and evidence](../../screens/notification-controls.md). Commit title: `B22: Add global and per-chat notification settings`. Q06 retains real delivery/services/publication/vibration outside scope.
 - B23: implemented and host-verified 2026-09-04; 748 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/notification-routing-and-actions.md). Commit title: `B23: Add notification routing and inline actions`. Q06 retains real delivery/workers/durable recovery outside scope.
 - B25: implemented and host-verified 2026-09-04; 772 unit tests, zero lint errors, both APKs and six new compiled UI cases. [Selected brief and evidence](../../screens/key-packages-and-developer-diagnostics.md). Commit title: `B25: Expand key packages and developer diagnostics`. Q04 preserves the approved developer-only placement. Implemented in an isolated worktree so the pending B24 decision does not enter this commit.
-- B24 and B26–B32: pending; linked decisions apply only to their named slices.
+- B27: implemented and host-verified 2026-09-04; 791 unit tests, zero lint errors, both APKs and six new compiled UI cases. [Evidence](../../screens/downloads-and-media-quality.md#implementation-evidence). Commit title: `B27: Add download rules, queue controls and media quality`. Isolated from pending B24 and B26 work.
+- B24, B26 and B28–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -61,7 +62,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B24** | App lock and sensitive privacy controls | C095, C096, C097, C098 | B01 | Blocked slices: Q02, Q06, Q08 |
 | **B25** | Key packages and developer diagnostics | C080, C110, C111, C118, C119 | B01 | Blocked slices: Q04 |
 | **B26** | Appearance, typography and input preferences | C100, C101, C102, C103, C104 | B01 | Blocked slices: Q01, Q09 |
-| **B27** | Download matrix, queue and media quality | C105, C106, C107 | B11 | Ready |
+| **B27** | Download matrix, queue and media quality | C105, C106, C107 | B11 | Implemented; host verified |
 | **B28** | Relay publication and managed-list differences | C108, C109 | B05 | Blocked slices: Q04 |
 | **B29** | AI-agent setup and streamed operation rows | C112, C113 | B03, B09 | Ready |
 | **B30** | Verified Nostr event cards and readers | C114, C115 | B09, B13 | Ready |
@@ -497,6 +498,8 @@ Capabilities: C100, C101, C102, C103, C104. Dependencies: B01.
 **Non-goals:** No backend, network transport, Marmot, real signing/encryption, persistence, installer, notification delivery, background service or device automation unless a later explicit request expands the selected batch. Do not restyle system-owned surfaces or redesign unrelated screens.
 
 ### B27 — Download matrix, queue and media quality
+
+**Status:** Implemented and host-verified; [selected brief](../../screens/downloads-and-media-quality.md#implementation-evidence). No device or visual verification.
 
 Capabilities: C105, C106, C107. Dependencies: B11.
 

@@ -17,15 +17,15 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B23 and B25 are implemented and host-verified.
+Production Android parity batches B01–B23, B25 and B27 are implemented and host-verified.
 [B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 adds publication/rotation/deletion recovery, detailed push inspection, streaming
 status controls, relay health, self-send outcomes and timed performance state.
-The latest host gate passes 772 unit tests, zero lint errors and both APKs.
+The latest host gate passes 791 unit tests, zero lint errors and both APKs.
 Six new UI cases compile only; device and visual acceptance remain pending.
 The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks B24 and B26–B32 and the per-batch commits.
+tracks B24, B26 and B28–B32 and the per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
@@ -182,3 +182,8 @@ Settings root batch are implemented at the static gate. When the user
 explicitly requests a device inspection, use the agreed Android reference
 device before treating the result as a final visual reference. Otherwise keep
 polish iterations within the host-side validation boundary.
+
+B27 adds [download rules, queue controls and media quality](docs/screens/downloads-and-media-quality.md#implementation-evidence).
+All 16 rules and queue ownership are deterministic; global quality applies to
+new photos/voice while preserving prepared media. Six new UI cases compile;
+no device inspection, network worker or voice encoder was added.

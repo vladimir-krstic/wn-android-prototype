@@ -337,3 +337,17 @@ renders developer-only stream status outside message controls. Native source
 seams are KeyPackagesScreen/AppState publication methods, DiagnosticsScreen,
 PerformanceDiagnostics, DeveloperScreen, GroupDetailsScreen push inspection and
 StreamDebug. The fixed local state is not a production engine or telemetry sink.
+
+## Production Android B27 — download matrix, queue and quality
+
+[Selected brief](../screens/downloads-and-media-quality.md) maps C105–C107 to
+model/MediaDownloads.kt, AttachmentModels.kt, ProfileSettings.kt,
+state/AppViewModel.kt and ui/settings/DataUsageScreen.kt. Production
+MediaAutoDownloadMatrix maps to immutable local rules; AttachmentDownloadGate,
+AttachmentDownloadPolicy and AppState stop/restart map to canonical attachment
+origin/admission/suppression and exact profile/revision guards. The existing
+AttachmentTransferHost owns foreground progress; Developer Tools owns network
+and held-queue examples. Reconnect production connectivity and durable workers
+at migration. MediaQuality maps to effective draft photo policy and captured
+voice policy in ComposerModels/ConversationComposer; real encoding is outside
+this prototype. B11 remains photo processing and metadata authority.

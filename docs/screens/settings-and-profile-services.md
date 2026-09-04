@@ -195,11 +195,10 @@ relay networking, and payments remain excluded.
   contextual first-request or blocked-recovery group; it disables all
   profile-owned notification options until granted and refreshes after the
   system prompt or Settings return.
-- Data Usage keeps the four per-media download policies and sent photo/video
-  quality as compact immediate Material radio dialogs rather than copying iOS
-  child-screen depth. Separated groups show every current value, place help
-  with the setting it explains, and disable Reset download settings while all
-  four download policies already match their defaults. See `data-usage.md`.
+- Data Usage retains four media-first groups. B27 adds four network switches per
+  type, automatic-queue stop/restart and four global photo/voice quality modes.
+  Native dialogs, separated groups, local help and default-aware reset preserve
+  the approved composition. See `downloads-and-media-quality.md` for current behavior.
 - Seven deterministic profile relay records expose connected, reconnecting,
   disconnected, read-only, custom, and unassigned states plus Profile, Inbox,
   and Chat Messages roles. Only connected Chat Messages relays are

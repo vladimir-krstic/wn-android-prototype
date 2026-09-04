@@ -31,15 +31,11 @@ enum class NotificationPreviewMode(val label: String) {
         }
 }
 
-enum class MediaDownloadPolicy(val label: String) {
-    Never("Never"),
-    Wifi("Wi-Fi"),
-    WifiAndCellular("Wi-Fi and cellular"),
-}
-
-enum class SentMediaQuality(val label: String) {
-    Standard("Standard"),
-    High("High"),
+enum class SentMediaQuality(val label: String, val photoQuality: PhotoQuality, val voiceBitrate: Int) {
+    Low("Low", PhotoQuality.Low, 32_000),
+    Standard("Standard", PhotoQuality.Standard, 64_000),
+    High("High", PhotoQuality.High, 96_000),
+    Original("Original", PhotoQuality.Original, 96_000),
 }
 
 enum class AutoLockDuration(val label: String) {
@@ -86,11 +82,9 @@ data class ProfileSettings(
     val hideScreenInRecents: Boolean = false,
     val requireDeviceAuthentication: Boolean = false,
     val autoLockDuration: AutoLockDuration = AutoLockDuration.Immediately,
-    val photoDownloadPolicy: MediaDownloadPolicy = MediaDownloadPolicy.Wifi,
-    val videoDownloadPolicy: MediaDownloadPolicy = MediaDownloadPolicy.Never,
-    val audioDownloadPolicy: MediaDownloadPolicy = MediaDownloadPolicy.Wifi,
-    val fileDownloadPolicy: MediaDownloadPolicy = MediaDownloadPolicy.Never,
-    val sentMediaQuality: SentMediaQuality = SentMediaQuality.Standard,
+    val downloadMatrix: MediaDownloadMatrix = MediaDownloadMatrix(),
+    val automaticDownloadsPaused: Boolean = false,
+    val sentMediaQuality: SentMediaQuality = SentMediaQuality.High,
     val relays: List<ProfileRelay> = ProfileRelayFixtures.defaults,
     val speech: SpeechPreferences = SpeechPreferences(),
     val dictation: DictationPreferences = DictationPreferences(),

@@ -4134,3 +4134,29 @@ single-artifact behavior in WN-ANDROID-0076; its native presentation remains.
 
 Evidence: [B25 brief](screens/key-packages-and-developer-diagnostics.md),
 DeveloperParityController, DeveloperParityUi, DeveloperModels and the state/UI tests.
+
+## WN-ANDROID-0147 — Download admission and media quality preserve prepared work
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B27, host verified; visual acceptance pending
+
+Keep Data Usage and Photos/Videos/Audio/Files grouping. Each type gains four
+independent network switches; all matching rules must allow admission and an
+unknown network admits none. Reset changes only the matrix. Retain the existing
+photos/audio-on-Wi-Fi defaults. Accepted requests are never revoked by subsequent
+policy changes. Confirmed Stop clears only waiting automatic requests; active,
+manual and upload work continue. Manual promotion keeps attachment identity and
+Restart clears only this profile's per-file automatic suppression. Queue counts
+come from canonical attachments; no duplicate queue, worker or network service.
+
+Global Low/Standard/High/Original governs future photo imports and captures voice
+policy at recording start. High retains accepted 4096px/JPEG95 photo output and
+replaces the old inert Standard preference label. Prepared photo bytes/quality
+remain unchanged; the existing per-draft selector overrides future imports until
+successful send. Voice policy is 32/64/96/96 kbps; the prototype retains fixed
+sample bytes. Photos retain B11 metadata stripping, including Original fallback.
+Imported videos/audio files are sent as-is. This expands the choice set and
+behavior in decisions 0068/0069 while retaining their presentation and alignment.
+
+Evidence: [B27 brief](screens/downloads-and-media-quality.md#implementation-evidence),
+MediaDownloads, AttachmentModels, DataUsageScreen, AppViewModel and state/UI tests.

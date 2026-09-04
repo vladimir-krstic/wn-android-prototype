@@ -16,6 +16,17 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-09-04 production B27
+
+C105–C107 are implemented and host-verified: all 16 network/media rules,
+profile-owned admission/stop/restart, explicit manual promotion and cancellation
+recovery, and four global photo/voice quality modes. Prepared media keeps its
+captured policy; photos retain B11 metadata stripping. 791 unit tests and both
+APKs pass with zero lint errors; six new UI cases and the revised Settings case
+compile only. [Evidence](../screens/downloads-and-media-quality.md#implementation-evidence).
+No network, background worker, storage or voice encoder was added. Device and
+visual acceptance remain pending.
+
 ## 2026-09-04 production B25
 
 C080/C110/C111/C118/C119 are implemented and host-verified within the approved
@@ -351,7 +362,7 @@ compiled; current-build device execution remains deferred until requested.
 | Appearance | System/light/dark choice and accepted language selection with monochrome semantic schemes | Reworked 2026-08-29 — immediate profile-owned System default/Light/Dark theme uses a separated transparent-resting Material radio group and focused helper; one Language disclosure opens a typed child route with eight accepted native radio choices and Back behavior; deterministic language state does not claim translated resources or invoke Android's app-wide locale API; static gate passed 2026-08-29 |
 | Privacy & Security | Device authentication, Recents snapshot privacy, Erase App Data entry and availability | Pixel 8a inspection passed 2026-08-31 in light/dark appearance at default and 200% type, including the scrolled destructive section — separated Material device-protection group, Android Recents wording, real device-lock recovery, and Auto-lock revealed only while authentication is effective; its single-choice radio list sits directly on the Material dialog surface without a nested card or separators; Diagnostics and device-wide erase use concise rows with consequences outside the actions; user visual acceptance remains separate |
 | Diagnostics & Improvements | Typed consumer privacy destination, independent choices, summary, stored size, confirmed clear | Corrected 2026-08-30 — Privacy & Security is the sole permanent consumer entry; its concise summarized route, independent native switches, conditional Stored Diagnostic Logs, platform-formatted size and confirmed clear preserve preferences; Developer Tools no longer links to or duplicates these controls; large dark RTL regression compiles and static gate passed |
-| Data Usage | Media quality and auto-download preferences by media type and connectivity level | Reworked 2026-08-29 — separated automatic-download and sent-media groups, section-local product help, direct-surface immediate Material radio dialogs, sent-quality data/compression consequence, and default-aware four-policy reset; full static gate passed and device acceptance remains pending |
+| Data Usage | Per-media/per-network rules, automatic queue and photo/voice quality | B27 host verified — 16 cells, overlapping rules, confirmed stop/restart, four quality modes and prepared-media preservation; [evidence](../screens/downloads-and-media-quality.md#implementation-evidence). Visual acceptance pending. |
 | Profile Relays | Endpoint list/details, Profile/Inbox/Chat Messages roles, availability, recovery, restore defaults | Refined 2026-08-30 — separated name/URL rows use compact 20 dp filled green connected and filled red not-connected check/close indicators with exact status semantics; Add Relay remains in-list; Restore Default Relays is a native filled-tonal button; detail URLs use normal one-line body text, flexible remaining width and middle ellipsis with complete semantics; compact Relay metadata, accepted Use For copy, validity-aware Material task sheet, read-only gating, focused confirmations, and shared 32 dp / 8 dp helper alignment remain statically covered; device acceptance pending |
 | Support | Create/open one profile-owned White Noise Support conversation without duplicates | Refined 2026-08-30 — compact support identity group, title-aligned purpose helper, contextual inline Start Chat, and unchanged relay recovery/availability behavior; static gate passed and device acceptance pending |
 | Donate | Deterministic donation surface and accepted copy | Refined 2026-08-30 — compact centered Material 3 Expressive connected single-choice button group for Lightning/Bitcoin plus the exact shared Share & Connect QR and npub capsule components; adaptive QR size/frame/margin and 240 × 32 dp capsule inside an unchanged 48 dp target cannot drift independently; the 1 dp QR-to-target relationship is retained while the smaller `bodyMedium` method caption sits 5 dp below the visible pill; no wallet or duplicate pinned action; static gate passed and device acceptance pending |

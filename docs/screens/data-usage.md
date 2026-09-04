@@ -1,5 +1,10 @@
 # Data Usage
 
+Current behavior is governed by [B27 downloads and media quality](downloads-and-media-quality.md).
+The 2026-08-29 record below preserves the approved presentation history; B27
+replaces its limited policy/quality values, inert transfer boundary and outdated
+photo/video compression copy.
+
 Status: User-selected Android polish implemented on 2026-08-29. Static
 verification is recorded in the parity ledger; device visual acceptance
 remains pending.

@@ -1,5 +1,14 @@
 package dev.ipf.whitenoise.state
 
+import dev.ipf.whitenoise.model.DownloadNetworkExample
+import dev.ipf.whitenoise.model.AttachmentTransfer
+import dev.ipf.whitenoise.model.AttachmentTransferPhase
+import dev.ipf.whitenoise.model.AttachmentTransferDirection
+import dev.ipf.whitenoise.model.AttachmentTransferOrigin
+import dev.ipf.whitenoise.model.downloadMediaType
+import dev.ipf.whitenoise.model.downloadQueueCounts
+import dev.ipf.whitenoise.model.effectivePhotoQuality
+
 import dev.ipf.whitenoise.model.*
 
 import dev.ipf.whitenoise.model.LocationSession
@@ -784,7 +793,13 @@ class AppViewModel(
     }
 
     fun setDeveloperToolsEnabled(enabled: Boolean): Boolean {
-        if (!enabled) developerParity.cancel()
+        if (!enabled) {
+            developerParity.cancel()
+            uiState.activeProfileId?.let { id ->
+                downloadNetworks = downloadNetworks - id
+                heldDownloadProfiles = heldDownloadProfiles - id
+            }
+        }
         var changed = false
         updateActiveProfile { profile ->
             val tools = profile.developerTools.withEnabled(enabled)
@@ -858,7 +873,11 @@ class AppViewModel(
         dismissChatBatch()
         cancelAccess()
         val signedIn = uiState.signedInProfileIds - activeId
-        if (wipeData) messageForwards = messageForwards.filterValues { activeId !in setOf(it.sourceProfileId, it.destinationProfileId) }
+        if (wipeData) {
+            messageForwards = messageForwards.filterValues { activeId !in setOf(it.sourceProfileId, it.destinationProfileId) }
+            downloadNetworks = downloadNetworks - activeId
+            heldDownloadProfiles = heldDownloadProfiles - activeId
+        }
         val profiles = if (wipeData) uiState.profiles.filterNot { it.id == activeId } else uiState.profiles
         val nextActiveId = profiles.firstOrNull { it.id in signedIn }?.id
         uiState = AppUiState(
@@ -1006,6 +1025,8 @@ class AppViewModel(
         attachmentAccessScenarioOwner = null
         recentMediaAccess = dev.ipf.whitenoise.model.RecentMediaAccess.Full
         attachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success
+        downloadNetworks = emptyMap()
+        heldDownloadProfiles = emptySet()
         messageForwards = emptyMap()
         cancelCreatedChatOpen()
         cancelProfileSave()
@@ -1762,7 +1783,7 @@ class AppViewModel(
             attachment.images.getOrNull(imageIndex) == null || photoEditorSession?.phase == PhotoEditorPhase.Saving) return false
         photoEditorSession = PhotoEditorSession(++photoEditorGeneration, profileId, chatId, attachmentId, imageIndex,
             attachment, PhotoEditHistory(initial = attachment.photoEdits[imageIndex] ?: PhotoEditRecipe()),
-            attachment.photoFrameQualities[imageIndex] ?: attachment.photoQuality ?: chat.draftPhotoQuality,
+            attachment.photoFrameQualities[imageIndex] ?: attachment.photoQuality ?: chat.effectivePhotoQuality(uiState.activeProfile!!.settings),
             nextStrokeId = (attachment.photoEdits[imageIndex]?.strokes?.maxOfOrNull { it.id } ?: 0) + 1, scenario = nextPhotoEditorScenario)
         nextPhotoEditorScenario = PhotoEditorScenario.Success
         return true
@@ -1870,6 +1891,92 @@ class AppViewModel(
         }) }
     }
 
+    private var downloadNetworks by mutableStateOf(emptyMap<String, DownloadNetworkExample>())
+    private var heldDownloadProfiles by mutableStateOf(emptySet<String>())
+    val downloadNetworkExample: DownloadNetworkExample get() = uiState.activeProfile?.let {
+        if (it.developerTools.isEnabled) downloadNetworks[it.id] else null
+    } ?: DownloadNetworkExample.Wifi
+    val downloadTransfersHeld: Boolean get() = uiState.activeProfile?.let {
+        it.developerTools.isEnabled && it.id in heldDownloadProfiles
+    } == true
+
+    fun chooseDownloadNetwork(value: DownloadNetworkExample) {
+        val profile = uiState.activeProfile?.takeIf { it.developerTools.isEnabled } ?: return
+        downloadNetworks = downloadNetworks + (profile.id to value)
+    }
+    fun holdDownloadTransfers(held: Boolean) {
+        val profile = uiState.activeProfile?.takeIf { it.developerTools.isEnabled } ?: return
+        heldDownloadProfiles = if (held) heldDownloadProfiles + profile.id else heldDownloadProfiles - profile.id
+    }
+    fun loadDownloadQueueExample() {
+        val active = uiState.activeProfile?.takeIf { it.developerTools.isEnabled } ?: return
+        heldDownloadProfiles = heldDownloadProfiles + active.id
+        updateActiveProfile { profile ->
+            var index = 0
+            profile.copy(chats = profile.chats.map { chat -> chat.copy(timeline = chat.timeline.map { entry ->
+                if (entry !is ChatTimelineEntry.Message || entry.message.isDeleted || entry.message.authorId == profile.id) entry
+                else entry.copy(message = entry.message.copy(attachments = entry.message.attachments.map { attachment ->
+                    if (attachment.downloadMediaType == null || !attachment.isAvailable || index >= 12) attachment
+                    else {
+                        val slot = index++
+                        attachment.copy(transfer = AttachmentTransfer(
+                            phase = when (slot) {
+                                0 -> AttachmentTransferPhase.Active
+                                1, 2 -> AttachmentTransferPhase.Queued
+                                else -> AttachmentTransferPhase.Idle
+                            },
+                            origin = if (slot == 1) AttachmentTransferOrigin.Manual else AttachmentTransferOrigin.Automatic,
+                            revision = (attachment.transfer?.revision ?: 0) + 1,
+                            scenario = attachmentTransferScenario,
+                        ))
+                    }
+                }))
+            }) })
+        }
+    }
+
+    fun updateDataUsageSettings(profileId: String, settings: ProfileSettings): Boolean {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return false
+        updateActiveProfile { profile -> profile.copy(settings = profile.settings.copy(
+            downloadMatrix = settings.downloadMatrix, sentMediaQuality = settings.sentMediaQuality,
+        )) }
+        return true
+    }
+
+    /** One atomic profile mutation; no transport cancellation is claimed in this prototype. */
+    fun pauseAutomaticDownloads(profileId: String, paused: Boolean) {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return
+        updateActiveProfile { profile -> profile.copy(
+            settings = profile.settings.copy(automaticDownloadsPaused = paused),
+            chats = profile.chats.map { chat -> chat.copy(timeline = chat.timeline.map { entry ->
+                if (entry !is ChatTimelineEntry.Message || entry.message.isDeleted) entry
+                else entry.copy(message = entry.message.copy(attachments = entry.message.attachments.map { attachment ->
+                    val current = attachment.transfer
+                    if (current == null || current.direction != AttachmentTransferDirection.Download) attachment
+                    else attachment.copy(transfer = if (paused) current.stopAutomatic() else current.restartAutomatic())
+                }))
+            }) },
+        ) }
+    }
+
+    /** Eligibility is checked once at admission. Tightening rules never revokes accepted work. */
+    fun admitAutomaticDownloads(profileId: String) {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId && it.id in uiState.signedInProfileIds } ?: return
+        if (profile.settings.automaticDownloadsPaused) return
+        val conditions = downloadNetworkExample.conditions
+        updateActiveProfile { current -> current.copy(chats = current.chats.map { chat -> chat.copy(timeline = chat.timeline.map { entry ->
+            if (entry !is ChatTimelineEntry.Message || entry.message.isDeleted || entry.message.authorId == profileId ||
+                entry.message.expiresAtMillis?.let { it <= dev.ipf.whitenoise.model.MessageForwarding.nowMillis } == true) entry
+            else entry.copy(message = entry.message.copy(attachments = entry.message.attachments.map { attachment ->
+                val type = attachment.downloadMediaType
+                val transfer = attachment.transfer
+                if (type == null || transfer?.direction != AttachmentTransferDirection.Download ||
+                    !current.settings.downloadMatrix.allows(type, conditions)) attachment
+                else attachment.copy(transfer = transfer.admitAutomatically())
+            }))
+        }) }) }
+    }
+
     fun replaceDraftPhotos(profileId: String, chatId: String, expected: List<MessageAttachment>, quality: dev.ipf.whitenoise.model.PhotoQuality, photos: List<MessageAttachment>): Boolean {
         if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return false
         var changed = false
@@ -1878,7 +1985,7 @@ class AppViewModel(
                 photos.any { replacement -> expected.none { it.id == replacement.id } }) chat
             else {
                 changed = true
-                chat.copy(draftPhotoQuality = quality, draftAttachments = chat.draftAttachments.map { before -> photos.firstOrNull { it.id == before.id } ?: before })
+                chat.copy(draftPhotoQuality = quality, draftPhotoQualityExplicit = true, draftAttachments = chat.draftAttachments.map { before -> photos.firstOrNull { it.id == before.id } ?: before })
             }
         }
         return changed
@@ -1893,11 +2000,13 @@ class AppViewModel(
                 else {
                     val current = attachment.transfer
                     val next = when (action) {
-                        "advance" -> current?.advance(expectedRevision)
+                        "advance" -> if (downloadTransfersHeld || (current?.phase == AttachmentTransferPhase.Queued &&
+                            current.direction == AttachmentTransferDirection.Download && (uiState.activeProfile?.downloadQueueCounts()?.active ?: 0) >= 2)) current
+                            else current?.advance(expectedRevision)
                         "cancel" -> current?.cancel()
-                        "retry" -> current?.retry()
+                        "retry" -> current?.requestManual()
                         "start" -> if (current == null) dev.ipf.whitenoise.model.AttachmentTransfer(scenario = attachmentTransferScenario,
-                            direction = if (entry.message.authorId == profileId) dev.ipf.whitenoise.model.AttachmentTransferDirection.Upload else dev.ipf.whitenoise.model.AttachmentTransferDirection.Download) else current
+                            direction = if (entry.message.authorId == profileId) dev.ipf.whitenoise.model.AttachmentTransferDirection.Upload else dev.ipf.whitenoise.model.AttachmentTransferDirection.Download) else current.requestManual()
                         else -> current
                     }
                     attachment.copy(transfer = if (entry.message.expiresAtMillis?.let { it <= dev.ipf.whitenoise.model.MessageForwarding.nowMillis } == true && next != null)
@@ -2022,6 +2131,7 @@ class AppViewModel(
             format = submission.format,
             editedTranscript = submission.transcript,
             durationSeconds = submission.durationSeconds,
+            quality = submission.quality,
         )
         if (
             (submission.format == VoiceMessageFormat.Text || submission.format == VoiceMessageFormat.Both) &&
@@ -2337,6 +2447,7 @@ class AppViewModel(
                             isDraft = preserveDraft && (chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty()),
                             draftText = if (preserveDraft) chat.draftText else "",
                             draftAttachments = if (preserveDraft) chat.draftAttachments else emptyList(),
+                            draftPhotoQualityExplicit = preserveDraft && chat.draftPhotoQualityExplicit,
                             suppressedDraftLinkUrl = if (preserveDraft) chat.suppressedDraftLinkUrl else null,
                             draftReplyMessageId = null,
                             deliveryState = ChatDeliveryState.None,
