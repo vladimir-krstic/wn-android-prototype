@@ -99,11 +99,12 @@ class AppViewModelTest {
     }
 
     @Test
-    fun openingAndReadAllMutateTheAuthoritativeRowsOutsideFilters() {
+    fun openingCapturesUnreadAndReadAllMutatesAuthoritativeRowsOutsideFilters() {
         val viewModel = signedInMarmota()
 
         viewModel.openChat("catalog-direct-replies")
-        assertFalse(viewModel.chat("catalog-direct-replies")!!.isUnread)
+        assertTrue(viewModel.chat("catalog-direct-replies")!!.isUnread)
+        assertTrue(viewModel.chat("catalog-direct-replies")!!.readState != null)
 
         viewModel.markAllChatsRead()
         assertTrue(viewModel.uiState.activeProfile!!.chats.filter { !it.isArchived }.none { it.isUnread })

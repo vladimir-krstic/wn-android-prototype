@@ -1,8 +1,8 @@
 # Global search — B07
 
 Selected 2026-09-04 under the all-batches goal. C031–C034. Implemented and
-host-verified; device/visual acceptance remains pending. B08 owns unloaded-history
-recovery inside a chat.
+host-verified; device/visual acceptance remains pending. B08 now implements
+unloaded-history recovery inside a chat; see [its brief](conversation-history-and-reading.md).
 
 ## Contract and presentation
 
@@ -97,8 +97,9 @@ interaction tests and run the full host gate before the B07 commit.
   checkbox/radio filter dialogs and DateRangePicker. Empty and failed lookup
   results keep their useful actions visible. Profile switches reset state and
   deleted chats/senders are reconciled. Opening a result preserves search for Back.
-- `AppViewModel.openGlobalSearchMessage` checks owner/chat/message before marking
-  the chat read. `WhiteNoiseNavHost` carries the exact target ID to Conversation
+- `AppViewModel.openGlobalSearchMessage` checks owner/chat/message before opening
+  its reading context. B08 now marks only settled visible rows read, preserving
+  unread content outside the revealed window. `WhiteNoiseNavHost` carries the exact target ID to Conversation
   and reuses accepted discovered-person navigation. Developer Tools supplies
   one-shot voice outcomes; ordinary Voice Search has success/cancel/unavailable
   and retry with no microphone or speech-service access.

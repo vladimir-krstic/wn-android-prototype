@@ -20,6 +20,7 @@ Current briefs:
 - `chat-organization-and-recovery.md`
 - `chat-folders.md`
 - `global-search.md`
+- `conversation-history-and-reading.md`
 - `diagnostics-and-improvements.md`
 - `chats-and-chat-creation.md`
 - `shared-conversation-core.md`

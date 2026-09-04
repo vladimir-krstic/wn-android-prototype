@@ -1,5 +1,17 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.model.ConversationHistory
+import dev.ipf.whitenoise.model.ConversationReading
+import dev.ipf.whitenoise.model.HistoryOperation
+import dev.ipf.whitenoise.model.HistoryScenario
+import dev.ipf.whitenoise.model.HistoryPhase
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.distinctUntilChanged
+import androidx.compose.material3.FilledTonalButton
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -70,6 +82,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
@@ -291,8 +304,26 @@ fun ConversationScreen(
     onOpenDeveloperTools: (() -> Unit)? = null,
     initialSearch: Boolean = false,
     initialMessageId: String? = null,
+    searchRequestId: Long = 0,
+    onHistoryScenario: (HistoryOperation) -> HistoryScenario = { HistoryScenario.Success },
+    onMessagesVisible: (Set<String>) -> Unit = {},
+    onReadThroughMention: (String) -> Unit = {},
 ) {
-    val items = remember(chat.timeline) { ConversationProjection.items(chat) }
+    val history = rememberConversationHistory(profile, chat)
+    val readState = remember(chat, profile.id) {
+        ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat, profile.id), chat, profile.id)
+    }
+    val items = remember(chat.timeline, history.windowIds, history.boundaryId, history.request, history.scanning, history.scanFailed) {
+        buildList {
+            fun control(id: String) { add(ConversationItem.NoticeItem(ChatTimelineEntry.Notice(id, ""))) }
+            if (ConversationHistory.hasOlder(chat, history.windowIds) || history.request?.operation == HistoryOperation.Older) control("history.older")
+            ConversationProjection.items(chat, history.windowIds).forEach { item ->
+                if (item is ConversationItem.MessageItem && item.id == history.boundaryId) control("history.unread")
+                add(item)
+            }
+            if (ConversationHistory.hasNewer(chat, history.windowIds) || history.request?.operation == HistoryOperation.Newer) control("history.newer")
+        }
+    }
     val listState = rememberLazyListState()
     val dayHeaderIndices = remember(items) {
         items.indices.filter { items[it] is ConversationItem.DayHeader }
@@ -342,9 +373,12 @@ fun ConversationScreen(
     var configureDraft by remember(profile.quickReactions) { mutableStateOf(profile.quickReactions) }
     var isSearching by rememberSaveable(chat.id) { mutableStateOf(initialSearch) }
     var searchQuery by rememberSaveable(chat.id) { mutableStateOf("") }
-    var searchResultIndex by rememberSaveable(chat.id) { mutableIntStateOf(0) }
+    var pinnedSearchMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var preSearchAnchor by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var preSearchOffset by rememberSaveable(profile.id, chat.id) { mutableIntStateOf(0) }
+    var handledSearchRequest by rememberSaveable(profile.id, chat.id) { mutableStateOf(0L) }
     var pendingInitialMessageId by rememberSaveable(chat.id, initialMessageId) {
-        mutableStateOf(initialMessageId)
+        mutableStateOf(initialMessageId ?: history.boundaryId)
     }
     var initialViewportSettled by rememberSaveable(chat.id) { mutableStateOf(false) }
     var pendingEndSettlement by remember(chat.id) { mutableStateOf(false) }
@@ -367,13 +401,20 @@ fun ConversationScreen(
         chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().map(ChatTimelineEntry.Message::message)
     }
     val selectedMessages = messages.filter { it.id in selectedMessageIds }
-    val searchResults = remember(chat.timeline, profile.people, searchQuery) {
-        ConversationSearch.results(chat, profile, searchQuery)
+    ConversationHistoryScan(history, profile, chat, searchQuery.takeIf { isSearching }.orEmpty(), onHistoryScenario)
+    val searchResults = history.scan ?: remember(chat.timeline, history.windowIds, profile.people, searchQuery) {
+        ConversationSearch.results(chat.copy(timeline = ConversationHistory.loaded(chat, history.windowIds)), profile, searchQuery)
+    }
+    val searchResultIndex = ConversationHistory.searchCursor(searchResults, pinnedSearchMessageId)
+    LaunchedEffect(searchResults, history.scanning) {
+        if (pinnedSearchMessageId == null || (!history.scanning && searchResults.none { it.messageId == pinnedSearchMessageId })) {
+            pinnedSearchMessageId = searchResults.firstOrNull()?.messageId
+        }
     }
     val searchResultMessageIds = remember(searchResults) {
         searchResults.mapTo(mutableSetOf(), dev.ipf.whitenoise.model.ConversationSearchResult::messageId)
     }
-    val currentSearchMessageId = searchResults.getOrNull(searchResultIndex)?.messageId
+    val currentSearchMessageId = pinnedSearchMessageId?.takeIf { id -> searchResults.any { it.messageId == id } }
 
     fun settleAfterNextTimelineItem(previousCount: Int) {
         coroutineScope.launch {
@@ -385,10 +426,22 @@ fun ConversationScreen(
         }
     }
 
+    fun startSearch() {
+        val anchor = listState.layoutInfo.visibleItemsInfo.firstOrNull { info -> items.getOrNull(info.index) is ConversationItem.MessageItem }
+        preSearchAnchor = anchor?.let { items[it.index].id }
+        preSearchOffset = anchor?.let { -it.offset } ?: 0
+        history.cancel()
+        isSearching = true
+    }
     fun closeSearch() {
         isSearching = false
         searchQuery = ""
-        searchResultIndex = 0
+        pinnedSearchMessageId = null
+        history.cancel()
+        preSearchAnchor?.let { history.target(chat, it, onHistoryScenario(HistoryOperation.Target), offset = preSearchOffset, highlight = false) }
+    }
+    LaunchedEffect(searchRequestId) {
+        if (searchRequestId > handledSearchRequest) { handledSearchRequest = searchRequestId; startSearch() }
     }
 
     fun beginReply(messageId: String): Boolean {
@@ -408,16 +461,7 @@ fun ConversationScreen(
     }
 
     fun openReplyTarget(messageId: String) {
-        val itemIndex = items.indexOfFirst {
-            it is ConversationItem.MessageItem && it.message.id == messageId
-        }
-        if (itemIndex < 0) return
-        coroutineScope.launch {
-            highlightedMessageId = messageId
-            listState.scrollToItem(itemIndex)
-            delay(1_400)
-            if (highlightedMessageId == messageId) highlightedMessageId = null
-        }
+        history.target(chat, messageId, onHistoryScenario(HistoryOperation.Target))
     }
 
     fun resolvedVoiceTranscript(message: ChatMessage): String? =
@@ -501,6 +545,8 @@ fun ConversationScreen(
             listState.scrollToItem(targetIndex)
             pendingInitialMessageId = null
             initialViewportSettled = true
+        } else if (target != null) {
+            if (history.request == null && history.readyTarget == null) history.target(chat, target, onHistoryScenario(HistoryOperation.Target))
         } else if (items.isEmpty()) {
             initialViewportSettled = true
         } else if (showsAvailableComposer && compactComposerHeightPx == 0) {
@@ -514,7 +560,7 @@ fun ConversationScreen(
         }
     }
     LaunchedEffect(pendingEndSettlement, items.size, compactComposerHeightPx) {
-        if (!pendingEndSettlement || items.isEmpty() || compactComposerHeightPx == 0) {
+        if (!pendingEndSettlement || items.isEmpty() || (showsAvailableComposer && compactComposerHeightPx == 0)) {
             return@LaunchedEffect
         }
         withFrameNanos { }
@@ -525,10 +571,76 @@ fun ConversationScreen(
     }
     LaunchedEffect(currentSearchMessageId) {
         val messageId = currentSearchMessageId ?: return@LaunchedEffect
-        val itemIndex = items.indexOfFirst {
-            it is ConversationItem.MessageItem && it.message.id == messageId
+        if (isSearching) history.target(chat, messageId, onHistoryScenario(HistoryOperation.Target))
+    }
+    val readyTarget = history.readyTarget
+    LaunchedEffect(readyTarget?.id) {
+        val target = readyTarget ?: return@LaunchedEffect
+        val index = items.indexOfFirst { it is ConversationItem.MessageItem && it.id == target.targetId && !it.message.isDeleted }
+        if (index < 0) return@LaunchedEffect
+        listState.scrollToItem(index, target.scrollOffset)
+        repeat(2) { withFrameNanos { } }
+        if (history.readyTarget?.id != target.id) return@LaunchedEffect
+        if (listState.layoutInfo.visibleItemsInfo.none { it.key == target.targetId }) {
+            history.request = target.copy(phase = HistoryPhase.Failed)
+            history.readyTarget = null
+            return@LaunchedEffect
         }
-        if (itemIndex >= 0) listState.animateScrollToItem(itemIndex)
+        pendingInitialMessageId = null
+        initialViewportSettled = true
+        if (history.jump.pendingId == target.targetId) history.jump = history.jump.copy(pendingId = null, stackActive = true)
+        if (target.markThrough) onReadThroughMention(target.targetId!!)
+        if (target.highlight) {
+            highlightedMessageId = target.targetId
+            delay(1_400)
+            if (highlightedMessageId == target.targetId) highlightedMessageId = null
+        }
+        if (history.readyTarget?.id == target.id) history.readyTarget = null
+    }
+    val tailWasLoaded = ConversationProjection.orderedEntries(chat).lastOrNull { it.id in history.observedIds }?.id in history.windowIds
+    val nearTail = initialViewportSettled && tailWasLoaded && !listState.canScrollForward
+    LaunchedEffect(chat.timeline) {
+        val follow = nearTail && !isSearching && !isSelecting && focusedMessageId == null
+        val hadArrival = chat.timeline.any { it.id !in history.observedIds }
+        history.reconcileArrivals(chat, profile.id, follow)
+        if (hadArrival && follow) pendingEndSettlement = true
+    }
+    LaunchedEffect(readState, nearTail) { history.jump = ConversationReading.jump(history.jump, readState, chat, nearTail) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, profile.id, chat.id) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                // A cancelled entry target must not hold the restored viewport unsettled.
+                pendingInitialMessageId = null
+                initialViewportSettled = true
+                pendingEndSettlement = false
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    val currentItems by rememberUpdatedState(items)
+    val currentVisibleCallback by rememberUpdatedState(onMessagesVisible)
+    val canRead by rememberUpdatedState(initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
+        viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
+        !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
+        !composerPresentationActive && history.request == null && history.readyTarget == null)
+    val relatedPx = with(density) { WhiteNoiseSpacing.Related.roundToPx() }
+    LaunchedEffect(profile.id, chat.id, listState, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            snapshotFlow {
+                if (!canRead || listState.isScrollInProgress) emptySet() else {
+                    val layout = listState.layoutInfo
+                    val start = layout.viewportStartOffset
+                    val end = layout.viewportEndOffset - (layout.afterContentPadding - relatedPx).coerceAtLeast(0)
+                    layout.visibleItemsInfo.filter { info ->
+                        val item = currentItems.getOrNull(info.index)
+                        item is ConversationItem.MessageItem && !item.message.isDeleted &&
+                            ConversationReading.actuallyVisible(info.offset, info.size, start, end)
+                    }.mapNotNull { currentItems.getOrNull(it.index)?.id }.toSet()
+                }
+            }.distinctUntilChanged().collect { ids -> if (ids.isNotEmpty()) currentVisibleCallback(ids) }
+        }
     }
 
     Scaffold(
@@ -543,6 +655,7 @@ fun ConversationScreen(
             ),
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
+            Column {
             when {
                 isSelecting -> SelectionTopBar(
                     count = selectedMessageIds.size,
@@ -554,8 +667,11 @@ fun ConversationScreen(
                 isSearching -> ConversationSearchTopBar(
                     query = searchQuery,
                     onQueryChanged = {
+                        history.cancel()
                         searchQuery = it
-                        searchResultIndex = 0
+                        pinnedSearchMessageId = null
+                        pendingInitialMessageId = null
+                        initialViewportSettled = true
                     },
                     onClose = ::closeSearch,
                 )
@@ -566,6 +682,15 @@ fun ConversationScreen(
                     onDeveloperTools = onOpenDeveloperTools,
                 )
             }
+            AdaptiveContent(Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)) {
+                Column {
+                    history.request?.takeIf { it.operation == HistoryOperation.Target }?.let { request ->
+                        HistoryTargetFeedback(request, history::retry) { history.cancel(); pendingInitialMessageId = null }
+                    }
+                    if (isSearching && (history.scanning || history.scanFailed)) HistorySearchFeedback(history.scanning) { history.scanRetry++ }
+                }
+            }
+            }
         },
         bottomBar = {
             when {
@@ -573,9 +698,9 @@ fun ConversationScreen(
                     count = searchResults.size,
                     current = searchResultIndex,
                     onOlder = {
-                        searchResultIndex = (searchResultIndex + 1).coerceAtMost(searchResults.lastIndex)
+                        pinnedSearchMessageId = searchResults.getOrNull((searchResultIndex + 1).coerceAtMost(searchResults.lastIndex))?.messageId
                     },
-                    onNewer = { searchResultIndex = (searchResultIndex - 1).coerceAtLeast(0) },
+                    onNewer = { pinnedSearchMessageId = searchResults.getOrNull((searchResultIndex - 1).coerceAtLeast(0))?.messageId },
                 )
                 isSelecting -> SelectionBottomBar(
                     selectedCount = selectedMessageIds.size,
@@ -590,6 +715,25 @@ fun ConversationScreen(
                     onDecline = { showDeclineConfirmation = true },
                     onCheckRelays = onOpenChatInfo,
                 )
+            }
+        },
+        floatingActionButton = {
+            if (!isSearching && !isSelecting && focusedMessageId == null && !composerPresentationActive) {
+                val mentions = ConversationReading.mentions(readState, chat, profile)
+                Column(Modifier.imePadding().padding(bottom = with(density) { compactComposerHeightPx.toDp() }), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+                    if (mentions.isNotEmpty()) FilledTonalButton(onClick = {
+                        history.target(chat, mentions.first(), onHistoryScenario(HistoryOperation.Target), markThrough = true)
+                    }, modifier = Modifier.testTag("history.jumpMention")) { Text(stringResource(R.string.history_jump_mention)) }
+                    if (!nearTail && initialViewportSettled) FilledTonalButton(onClick = {
+                        val unread = history.jump.pendingId
+                        val target = unread ?: ConversationProjection.orderedEntries(chat).filterIsInstance<ChatTimelineEntry.Message>().lastOrNull { !it.message.isDeleted }?.id
+                        if (target != null) {
+                            history.target(chat, target, onHistoryScenario(HistoryOperation.Target))
+                        }
+                    }, modifier = Modifier.testTag("history.jumpUnread")) {
+                        Text(stringResource(if (history.jump.pendingId != null) R.string.history_jump_unread else R.string.history_jump_latest))
+                    }
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
@@ -662,7 +806,18 @@ fun ConversationScreen(
                                 TimelineInformation(item.entry.text)
                             }
                             is ConversationItem.NoticeItem -> item(key = item.id, contentType = "notice") {
-                                TimelineInformation(item.entry.text, isNotice = true)
+                                when (item.id) {
+                                    "history.older", "history.newer" -> {
+                                        val operation = if (item.id == "history.older") HistoryOperation.Older else HistoryOperation.Newer
+                                        HistoryPageControl(operation, history.request, {
+                                            pendingInitialMessageId = null
+                                            initialViewportSettled = true
+                                            history.page(operation, onHistoryScenario(operation))
+                                        }, history::retry)
+                                    }
+                                    "history.unread" -> TimelineInformation(stringResource(R.string.history_unread_boundary))
+                                    else -> TimelineInformation(item.entry.text, isNotice = true)
+                                }
                             }
                             is ConversationItem.MessageItem -> item(
                                 key = item.id,
@@ -832,10 +987,7 @@ fun ConversationScreen(
             },
             onGoToMessage = { item ->
                 viewerSelection = null
-                val itemIndex = items.indexOfFirst {
-                    it is ConversationItem.MessageItem && it.message.id == item.message.id
-                }
-                if (itemIndex >= 0) coroutineScope.launch { listState.animateScrollToItem(itemIndex) }
+                openReplyTarget(item.message.id)
             },
         )
     }
@@ -1852,9 +2004,7 @@ private fun MessageRow(
                             onOpenMedia = onOpenMedia,
                             onOpenPersonProfile = onOpenPersonProfile,
                             onOpenReplyTarget = onOpenReplyTarget,
-                            canOpenReplyTarget = message.replyToMessageId?.let { targetId ->
-                                chat.timeline.any { it.id == targetId }
-                            } == true,
+                            canOpenReplyTarget = message.replyToMessageId != null,
                             searchQuery = searchQuery,
                             readAloudController = readAloudController,
                             voiceTranscript = if (speechActionState.transcriptAvailable) {
@@ -2473,9 +2623,10 @@ private fun MessageTime(
     val failed = outgoing && deliveryState == MessageDeliveryState.Failed
     val failedLabel = if (failed) stringResource(R.string.not_delivered_retry) else null
     val timestampColor = MaterialTheme.colorScheme.outline
-    val deliveryLabel = if (outgoing) {
+    val deliveryLabel = if (outgoing || deliveryState == MessageDeliveryState.Streaming) {
         stringResource(
             when (deliveryState) {
+                MessageDeliveryState.Streaming -> R.string.message_streaming
                 MessageDeliveryState.Sending -> R.string.sending
                 MessageDeliveryState.Sent -> R.string.sent
                 MessageDeliveryState.Failed -> R.string.not_delivered
@@ -2501,9 +2652,9 @@ private fun MessageTime(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (outgoing) {
+        if (outgoing || deliveryState == MessageDeliveryState.Streaming) {
             when (deliveryState) {
-                MessageDeliveryState.Sending -> CircularProgressIndicator(
+                MessageDeliveryState.Sending, MessageDeliveryState.Streaming -> CircularProgressIndicator(
                     modifier = Modifier
                         .size(14.dp)
                         .then(

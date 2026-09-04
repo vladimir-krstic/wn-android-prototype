@@ -622,6 +622,7 @@ class AppViewModel(
             updateActiveProfile { profile -> profile.copy(chats = profile.chats.map { chat ->
                 if (!chat.isGroup || chat.membership != ChatMembership.Active) chat else chat.copy(
                     membership = ChatMembership.Left, isPinned = false, unreadCount = 0, isMarkedUnread = false,
+                    readState = chat.readState?.copy(unreadIds = emptySet()),
                     members = chat.members.filterNot { it.personId == profile.id },
                     timeline = chat.timeline + ChatTimelineEntry.Event(
                         id = "${chat.id}-wipe-exit-${attempt.id}", text = "You left the group.",
@@ -695,6 +696,7 @@ class AppViewModel(
         nextProfileImageFails = false
         nextChatBatchScenario = ChatBatchScenario.Success
         nextGlobalVoiceScenario = GlobalVoiceScenario.Success
+        nextHistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
@@ -716,9 +718,30 @@ class AppViewModel(
     }
 
     fun openChat(chatId: String) {
+        val owner = uiState.activeProfileId ?: return
         mutateChat(chatId) { chat ->
-            chat.copy(unreadCount = 0, isMarkedUnread = false)
+            chat.copy(readState = chat.readState ?: dev.ipf.whitenoise.model.ConversationReading.initial(chat, owner))
         }
+    }
+
+    fun markConversationVisible(profileId: String, chatId: String, messageIds: Set<String>): Boolean {
+        if (uiState.activeProfileId != profileId || messageIds.isEmpty()) return false
+        val chat = chat(chatId) ?: return false
+        val visible = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().filter { it.id in messageIds && !it.message.isDeleted }.mapTo(hashSetOf()) { it.id }
+        if (visible.isEmpty()) return false
+        val read = dev.ipf.whitenoise.model.ConversationReading.reconcile(chat.readState ?: dev.ipf.whitenoise.model.ConversationReading.initial(chat, profileId), chat, profileId)
+        val changed = dev.ipf.whitenoise.model.ConversationReading.seen(read, visible)
+        mutateChat(chatId) { it.copy(readState = changed, unreadCount = changed.unreadIds.size, isMarkedUnread = false) }
+        return true
+    }
+
+    fun markConversationThrough(profileId: String, chatId: String, messageId: String): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val chat = chat(chatId) ?: return false
+        val ordered = dev.ipf.whitenoise.model.ConversationProjection.orderedEntries(chat)
+        val index = ordered.indexOfFirst { it is ChatTimelineEntry.Message && !it.message.isDeleted && it.id == messageId }
+        if (index < 0) return false
+        return markConversationVisible(profileId, chatId, ordered.take(index + 1).mapTo(hashSetOf()) { it.id })
     }
 
     fun markChatUnread(chatId: String, unread: Boolean) {
@@ -726,6 +749,7 @@ class AppViewModel(
             chat.copy(
                 unreadCount = 0,
                 isMarkedUnread = unread,
+                readState = chat.readState?.copy(unreadIds = emptySet()),
             )
         }
     }
@@ -739,7 +763,7 @@ class AppViewModel(
         updateActiveProfile { profile ->
             profile.copy(
                 chats = profile.chats.map { chat ->
-                    if (chat.isArchived) chat else chat.copy(unreadCount = 0, isMarkedUnread = false)
+                    if (chat.isArchived) chat else chat.copy(unreadCount = 0, isMarkedUnread = false, readState = chat.readState?.copy(unreadIds = emptySet()))
                 },
             )
         }
@@ -807,6 +831,7 @@ class AppViewModel(
                     chat.copy(
                         membership = ChatMembership.Left,
                         isPinned = false,
+                        readState = chat.readState?.copy(unreadIds = emptySet()),
                         unreadCount = 0,
                         isMarkedUnread = false,
                         members = if (chat.isGroup) chat.members.filterNot { it.personId == profile.id } else chat.members,
@@ -860,6 +885,39 @@ class AppViewModel(
 
     var nextGlobalVoiceScenario by mutableStateOf(GlobalVoiceScenario.Success)
         private set
+
+    var nextHistoryScenario by mutableStateOf(dev.ipf.whitenoise.model.HistoryScenario.Success)
+        private set
+
+    fun selectHistoryScenario(value: dev.ipf.whitenoise.model.HistoryScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextHistoryScenario = value
+    }
+
+    fun consumeHistoryScenario(profileId: String, operation: dev.ipf.whitenoise.model.HistoryOperation): dev.ipf.whitenoise.model.HistoryScenario {
+        if (uiState.activeProfileId != profileId) return dev.ipf.whitenoise.model.HistoryScenario.TargetUnavailable
+        if (!nextHistoryScenario.appliesTo(operation)) return dev.ipf.whitenoise.model.HistoryScenario.Success
+        return nextHistoryScenario.also { nextHistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success }
+    }
+
+    fun addConversationArrival(profileId: String, chatId: String, streaming: Boolean = false): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        if (profile.id != profileId || !profile.developerTools.isEnabled) return false
+        val chat = chat(chatId) ?: return false
+        if (chat.membership != ChatMembership.Active) return false
+        val sender = (chat.kind as? dev.ipf.whitenoise.model.ChatKind.Direct)?.personId
+            ?: chat.members.firstOrNull { it.personId != profileId }?.personId ?: profile.people.firstOrNull()?.id ?: return false
+        val (day, minute) = nextTimelinePosition(chat)
+        val message = ChatMessage("$chatId-arrival-${createdChatSequence++}", sender, day, "Today", minute, "Now",
+            if (streaming) "I’m putting the details together…" else "Could you check the plan, @${profile.name}?",
+            deliveryState = if (streaming) MessageDeliveryState.Streaming else MessageDeliveryState.Sent)
+        val created = dev.ipf.whitenoise.model.GlobalSearchClock.timestamp(message)
+        val withMessage = chat.copy(timeline = chat.timeline + ChatTimelineEntry.Message(message.copy(
+            createdAtMillis = created, receivedAtMillis = created + 20_000, expiresAtMillis = created + 86_400_000)),
+            preview = message.text, previewAuthor = profile.people.firstOrNull { it.id == sender }?.displayName, timestamp = "Now")
+        val read = dev.ipf.whitenoise.model.ConversationReading.reconcile(chat.readState ?: dev.ipf.whitenoise.model.ConversationReading.initial(chat, profileId), withMessage, profileId)
+        mutateChat(chatId) { withMessage.copy(readState = read, unreadCount = read.unreadIds.size) }
+        return true
+    }
 
     fun selectGlobalVoiceScenario(scenario: GlobalVoiceScenario) {
         if (uiState.activeProfile?.developerTools?.isEnabled == true) nextGlobalVoiceScenario = scenario
@@ -1178,6 +1236,7 @@ class AppViewModel(
                         chat.copy(
                             membership = ChatMembership.Active,
                             invitationInviterName = null,
+                            readState = chat.readState?.copy(unreadIds = emptySet()),
                             unreadCount = 0,
                             isMarkedUnread = false,
                             members = joinedMembers,
@@ -1556,8 +1615,8 @@ class AppViewModel(
                             previewAuthor = "You",
                             attachmentPreview = attachmentPreview(attachments),
                             timestamp = "Now",
-                            unreadCount = 0,
-                            isMarkedUnread = false,
+                            unreadCount = chat.unreadCount,
+                            isMarkedUnread = chat.isMarkedUnread,
                             isDraft = false,
                             draftText = "",
                             draftAttachments = emptyList(),
@@ -1886,7 +1945,15 @@ class AppViewModel(
 
     private fun mutateChat(chatId: String, transform: (Chat) -> Chat) {
         updateActiveProfile { profile ->
-            profile.copy(chats = profile.chats.map { if (it.id == chatId) transform(it) else it })
+            profile.copy(chats = profile.chats.map { before ->
+                if (before.id != chatId) before else {
+                    val after = transform(before)
+                    if (after.readState != null && after.timeline != before.timeline) {
+                        val read = dev.ipf.whitenoise.model.ConversationReading.reconcile(after.readState, after, profile.id)
+                        after.copy(readState = read, unreadCount = read.unreadIds.size)
+                    } else after
+                }
+            })
         }
     }
 

@@ -1,5 +1,12 @@
 # Message interactions and conversation search
 
+2026-09-04 production B08 extends this accepted surface with paged history,
+complete local search and target recovery, captured unread boundaries,
+visible-only reading, unread-mention jumps and richer Message Details. See
+[conversation-history-and-reading.md](conversation-history-and-reading.md) for
+the current contract and 319-test host gate. The device evidence below describes
+earlier builds; B08 UI tests were compiled only and visual acceptance is pending.
+
 Status: Search behavior and the message interaction surface are implemented.
 Build, lint, and unit tests pass. The complete 62-case conversation suite,
 focused quick-reaction geometry, and held mid-swipe LTR/RTL checks pass on the

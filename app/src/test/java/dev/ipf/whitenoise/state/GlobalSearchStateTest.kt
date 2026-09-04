@@ -7,12 +7,14 @@ import org.junit.Test
 
 class GlobalSearchStateTest {
     private fun model() = AppViewModel().apply { completeSignIn(OnboardingOrigin.Initial) }
-    @Test fun exactTargetOpensAndOnlyMarksItsChatRead() {
+    @Test fun exactTargetOpensAndWaitsForVisibleMessageBeforeReading() {
         val vm = model(); val owner = vm.uiState.activeProfile!!
         val chat = owner.chats.first { it.timeline.any { entry -> entry is ChatTimelineEntry.Message && !entry.message.isDeleted } }
         val message = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().first { !it.message.isDeleted }.message
         vm.markChatUnread(chat.id, true)
         assertTrue(vm.openGlobalSearchMessage(owner.id, chat.id, message.id))
+        assertTrue(vm.uiState.activeProfile!!.chats.first { it.id == chat.id }.isUnread)
+        assertTrue(vm.markConversationVisible(owner.id, chat.id, setOf(message.id)))
         assertFalse(vm.uiState.activeProfile!!.chats.first { it.id == chat.id }.isUnread)
         assertEquals(chat.timeline, vm.uiState.activeProfile!!.chats.first { it.id == chat.id }.timeline)
         assertEquals(owner.chats.filterNot { it.id == chat.id }, vm.uiState.activeProfile!!.chats.filterNot { it.id == chat.id })

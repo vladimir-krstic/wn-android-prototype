@@ -20,7 +20,7 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C032 · Filter global search by chats and senders | Implemented; host verified | Open search, filter or result; modal Back dismisses first and result Back restores search | Multi-select chat and sender filters use OR within and AND across categories. Searchable checkbox dialogs, removable chips, Clear All, saved state, profile reset and removed-ID reconciliation are connected. |
 | C033 · Global date and content filters | Implemented; host verified | Open search, filter or result; modal Back dismisses first and result Back restores search | Today/7-day/30-day/custom inclusive civil-date bounds and all six content categories combine with query/chat/sender filters. A fixed UTC fixture calendar preserves visible timeline labels; native DateRangePicker and DST/boundary tests cover dates, with Android desugaring retaining API 23 support. |
 | C034 · Identifier lookup and voice query entry | Implemented; host verified | Open search, filter or result; modal Back dismisses first and result Back restores search | Supported public keys, profile links and addresses reuse discovery with loading, invalid, unresolved, unavailable and retry states; unknown profiles have a readable name. Deterministic Voice Search success/cancel/unavailable/retry is guarded by owner/request/query and consumes no microphone or service. |
-| C035 · In-conversation search and target navigation | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Keep current highlighting/navigation; add loading older-result, failed-history, unavailable target and retry without blanking existing timeline. |
+| C035 · In-conversation search and target navigation | Implemented; host verified | Page, search, reveal or inspect; Back/cancel retains content and prevents stale navigation | Complete local-history search retains immediate loaded matches and stable result identity. Failed scans and missing/deleted targets have visible Retry/Cancel without blanking the transcript. Exact search/reply/media targets load their window before reveal; superseding input or navigation cancels old work. Chat Info reuses the existing conversation and search close restores its anchor, offset and draft. |
 
 ## Production integration seam
 
@@ -47,6 +47,15 @@ C031–C034 are implemented and host-verified 2026-09-04. The
 [selected brief](../../../screens/global-search.md#implementation-evidence)
 records the global result/filter/lookup/voice contracts, fixed calendar and
 production integration seams. The clean gate passed 296 unit tests, both APKs
-and zero lint errors; eight new UI cases compile. C035 remains for B08's
-unloaded-history and target recovery. Device execution and visual acceptance
+and zero lint errors; eight new UI cases compile. C035 was deferred to B08
+and is now completed below. Device execution and visual acceptance
 remain separate.
+
+## B08 implementation evidence
+
+B08's selected capabilities are implemented and host-verified 2026-09-04. The
+[selected brief](../../../screens/conversation-history-and-reading.md#implementation-evidence)
+records history/search recovery, captured/visible unread state and delivery facts,
+plus the eventual production page, target, read-anchor and metadata seams.
+The clean gate passed 319 unit tests, both APKs and zero lint errors; twelve new
+UI cases compile. No device execution or current-build visual acceptance is claimed.

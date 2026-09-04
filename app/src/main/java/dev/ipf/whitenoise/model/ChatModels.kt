@@ -131,6 +131,7 @@ enum class MessageDeliveryState {
     Sending,
     Sent,
     Failed,
+    Streaming,
 }
 
 enum class MessageDeletionState {
@@ -193,6 +194,9 @@ data class ChatMessage(
     val reactions: List<MessageReaction> = emptyList(),
     val deliveryState: MessageDeliveryState = MessageDeliveryState.Sent,
     val deletionState: MessageDeletionState = MessageDeletionState.None,
+    val createdAtMillis: Long? = null,
+    val receivedAtMillis: Long? = null,
+    val expiresAtMillis: Long? = null,
 ) {
     val isDeleted: Boolean
         get() = deletionState != MessageDeletionState.None
@@ -228,6 +232,7 @@ data class Chat(
     val suppressedDraftLinkUrl: String? = null,
     val draftReplyMessageId: String? = null,
     val pinnedOrder: Int? = null,
+    val readState: ConversationReadState? = null,
 ) {
     val isGroup: Boolean
         get() = kind == ChatKind.Group

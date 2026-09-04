@@ -39,6 +39,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.longClick
@@ -55,6 +56,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import dev.ipf.whitenoise.model.ChatTimelineEntry
+import dev.ipf.whitenoise.model.ConversationHistory
+import dev.ipf.whitenoise.model.ConversationProjection
 import dev.ipf.whitenoise.model.AppearancePreference
 import dev.ipf.whitenoise.model.ComposerAvailability
 import dev.ipf.whitenoise.model.MessageReaction
@@ -1767,7 +1770,7 @@ class ConversationScreenTest {
 
         composeRule.onNodeWithText("Message Details").assertIsDisplayed()
         composeRule.onNodeWithText("DLV-03: Failed outgoing message").assertIsDisplayed()
-        composeRule.onNodeWithText("Not Delivered").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Not Delivered")[0].assertIsDisplayed()
     }
 
     @Test
@@ -1783,10 +1786,11 @@ class ConversationScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("message.details.list").performScrollToNode(hasText("Reactions"))
         composeRule.onNodeWithText("Reactions").assertIsDisplayed()
         repeat(7) { index ->
             composeRule.onNodeWithTag("message.details.reaction.$index")
-                .assertExists()
+                .performScrollTo().assertIsDisplayed()
         }
         composeRule.onNodeWithTag("message.details.reaction.7").assertDoesNotExist()
     }
@@ -2096,6 +2100,8 @@ class ConversationScreenTest {
     private fun setConversation(chatId: String, initialSearch: Boolean = false) {
         val profile = ProfileFixtures.marmota
         val chat = profile.chats.first { it.id == chatId }
+        val entries = ConversationProjection.orderedEntries(chat)
+        val lastMessageId = entries.filterIsInstance<ChatTimelineEntry.Message>().lastOrNull()?.id
         composeRule.setContent {
             WhiteNoiseTheme {
                 ConversationScreen(
@@ -2107,8 +2113,22 @@ class ConversationScreenTest {
                     onAcceptInvitation = {},
                     onDeclineInvitation = {},
                     initialSearch = initialSearch,
+                    initialMessageId = lastMessageId,
                 )
             }
+        }
+        // These presentation cases address the complete catalog. Exercise real page
+        // actions during setup; the history suite separately tests bounded windows.
+        val olderPages = (entries.size - 1).coerceAtLeast(0) / ConversationHistory.pageSize
+        repeat(olderPages) {
+            composeRule.onNodeWithTag("conversation.timeline").performScrollToNode(hasTestTag("history.Older"))
+            composeRule.onNodeWithText("Load older messages").performClick()
+            composeRule.waitUntil(3_000) {
+                composeRule.onAllNodesWithText("Loading messages…").fetchSemanticsNodes().isEmpty()
+            }
+        }
+        lastMessageId?.let {
+            composeRule.onNodeWithTag("conversation.timeline").performScrollToNode(hasTestTag("conversation.message.$it"))
         }
     }
 

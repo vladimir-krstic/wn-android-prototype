@@ -91,7 +91,7 @@ chat/sender/date/content filters, saved query/filter state, identifier lookup an
 deterministic voice entry. The fixed calendar, API 23 date compatibility and
 production seams are documented in [global-search.md](../screens/global-search.md).
 The clean gate passed 296 unit tests, zero lint errors and both APKs; eight new
-UI cases compile. Device/visual acceptance remains pending; B08 owns unloaded history.
+UI cases compile. Device/visual acceptance remains pending; B08 adds unloaded-history recovery below.
 
 2026-09-04 production B06: C027–C029 are implemented and host-verified.
 Folders now has atomic New/Edit, descriptions, manual/automatic membership,
@@ -121,6 +121,16 @@ UI cases compile. Device/visual acceptance remains pending.
 | Person Profile | Identity, About, verified address, public key, shared groups, message/contact/block actions | Static gate passed 2026-08-30 — Share & Connect avatar/headline/address/copy-capsule metrics, balanced 16 dp name relationships, higher-contrast tonal About treatment, iOS-parity About ordering, navigable Groups in Common, native add-to-group sheet/confirmation, Add/Remove Contact, Block/Unblock, grouped admin actions, and pinned Message/recovery; UI regressions compile, device acceptance pending |
 
 ## Conversation
+
+2026-09-04 production B08: C035, C037 and C047 are implemented and host-verified.
+The existing conversation now pages older/newer history, searches the complete
+local history with loaded fallback/retry, recovers exact targets and restores
+the prior search viewport. Entry captures unread IDs; visible-only reading and
+explicit revealed-mention advancement preserve unseen content. Message Details
+adds receipt/created/expiry/Streaming facts and exact copy. See
+[conversation-history-and-reading.md](../screens/conversation-history-and-reading.md).
+The clean gate passed 319 unit tests, zero lint errors and both APKs; twelve new UI
+cases compile. Historical device evidence below does not verify this build.
 
 | Capability | Accepted parity scope | Android status |
 | --- | --- | --- |

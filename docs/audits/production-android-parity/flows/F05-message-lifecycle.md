@@ -17,7 +17,7 @@ These labels are the audit recommendation and follow current prototype terminolo
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
 | C036 · Text send, reply and failed-send retry | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
-| C037 · Paged history, read boundary and unread mention jump | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add deterministic older/newer loading, failed pages, captured unread boundary and next unread mention. Arrival/scroll must not accidentally mark unseen content read. |
+| C037 · Paged history, read boundary and unread mention jump | Implemented; host verified | Page, search, reveal or inspect; Back/cancel retains content and prevents stale navigation | Older/newer pages retain stable rows through loading/failure/retry. Captured unread IDs survive partial reading and profile/chat navigation; only settled visible rows are acknowledged. Covered, searched, backgrounded and unloaded rows remain unread. Off-tail arrivals freeze a boundary without scrolling; next unread mention loads and reveals its exact target before explicit read-through. Failed or stale targets never advance reading. |
 | C038 · Edit own message, retry/discard and revision history | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add edit draft, nonblank save, cancel, pending/failed retry/discard, edited marker and timestamped original/revisions; project latest accepted text into replies/search/copy/speech. |
 | C039 · Long-message reader and full-screen composer | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Prototype expands composer but lacks full message reader and per-chat Collapse long messages. Preserve draft/selection/reply during expand/collapse; reader shares actions and markdown. |
 | C040 · Select a text passage and act on it | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add selection with Copy and speech from selected passage; preserve source offsets and accessibility. Whole-message Copy alone is insufficient. |
@@ -27,7 +27,7 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C044 · Batch deletion and partial-failure recovery | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add independent deletion outcomes, successful-removal counts and retry for failed items; do not replay successful destructive work. |
 | C045 · Forward text/media to multiple chats | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add folder selection, per-target prepare/upload/send progress, cancellation, partial completion, blocked reasons and expiry/session-change recovery. Existing 32-message/5-chat prototype limits need explicit comparison, not silent removal. |
 | C046 · Outbound share and save from message actions | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Viewer already saves/shares images/video. Extend message/file actions and multi-attachment results with truthful partial outcomes, unavailable bytes and no-handler states. |
-| C047 · Message details and delivery state | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add received/created timestamps, expiry and Streaming state where applicable; preserve existing ID/copy/details surface. Do not manufacture read receipts. |
+| C047 · Message details and delivery state | Implemented; host verified | Page, search, reveal or inspect; Back/cancel retains content and prevents stale navigation | Message Details preserves content, reactions and people, adding Created/Sent/Received timestamps, Streaming, preferred local receipt, sender-claimed time beyond five seconds and authoritative expiry. Localized times name their zone; Message ID and known incoming sender public key copy exact values. Delivery facts never imply read receipts. |
 
 ## Production integration seam
 
@@ -47,3 +47,12 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B08, B09, B10, B11. Decisions: None. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B08 implementation evidence
+
+B08's selected capabilities are implemented and host-verified 2026-09-04. The
+[selected brief](../../../screens/conversation-history-and-reading.md#implementation-evidence)
+records history/search recovery, captured/visible unread state and delivery facts,
+plus the eventual production page, target, read-anchor and metadata seams.
+The clean gate passed 319 unit tests, both APKs and zero lint errors; twelve new
+UI cases compile. No device execution or current-build visual acceptance is claimed.

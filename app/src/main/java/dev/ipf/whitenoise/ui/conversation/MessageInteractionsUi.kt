@@ -1068,6 +1068,7 @@ fun MessageDetailsScreen(
     ) { padding ->
         AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
             dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn(
+                modifier = Modifier.testTag("message.details.list"),
                 contentPadding = PaddingValues(WhiteNoiseSpacing.CompactScreenMargin),
                 verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
             ) {
@@ -1092,6 +1093,7 @@ fun MessageDetailsScreen(
                         }
                     }
                 }
+                item { MessageFactsSection(profile, message) }
                 if (message.reactions.isNotEmpty()) {
                     item {
                         Surface(
@@ -1156,16 +1158,6 @@ fun MessageDetailsScreen(
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                     ) {
                         Column {
-                            ListItem(
-                                headlineContent = {
-                                    Text(stringResource(if (outgoing) R.string.sent else R.string.received))
-                                },
-                                supportingContent = { Text("${message.dayLabel}, ${message.timeLabel}") },
-                                leadingContent = {
-                                    Icon(painterResource(R.drawable.ic_info), contentDescription = null)
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            )
                             if (!outgoing) {
                                 ListItem(
                                     headlineContent = { Text(stringResource(R.string.sent_from)) },
@@ -1193,7 +1185,8 @@ fun MessageDetailsScreen(
                                         profile.people.firstOrNull { it.id == member.personId }
                                     }
                                 } else {
-                                    profile.people.firstOrNull { it.id == chat.id }?.let(::listOf).orEmpty()
+                                    val peer = (chat.kind as? dev.ipf.whitenoise.model.ChatKind.Direct)?.personId
+                                    profile.people.firstOrNull { it.id == peer }?.let(::listOf).orEmpty()
                                 }
                                 recipients.forEach { person ->
                                     ListItem(
@@ -1202,6 +1195,7 @@ fun MessageDetailsScreen(
                                             Text(
                                                 stringResource(
                                                     when (message.deliveryState) {
+                                                        MessageDeliveryState.Streaming -> R.string.message_streaming
                                                         MessageDeliveryState.Sending -> R.string.sending
                                                         MessageDeliveryState.Failed -> R.string.not_delivered
                                                         MessageDeliveryState.Sent -> R.string.sent
@@ -1227,6 +1221,7 @@ fun MessageDetailsScreen(
                                             Text(
                                                 stringResource(
                                                     when (message.deliveryState) {
+                                                        MessageDeliveryState.Streaming -> R.string.message_streaming
                                                         MessageDeliveryState.Sending -> R.string.sending
                                                         MessageDeliveryState.Failed -> R.string.not_delivered
                                                         MessageDeliveryState.Sent -> R.string.sent

@@ -1,6 +1,6 @@
 # Production Android parity audit
 
-Status: **B01–B07 implemented and host-verified; B08–B32 pending**
+Status: **B01–B08 implemented and host-verified; B09–B32 pending**
 
 Production source is [`marmot-protocol/whitenoise-android`](https://github.com/marmot-protocol/whitenoise-android) `master` at [`319454889f1c2494dec4a69b5577d98017f44eee`](https://github.com/marmot-protocol/whitenoise-android/commit/319454889f1c2494dec4a69b5577d98017f44eee). The initial comparison target was this prototype's working tree based on `4c3f7366bcb738839f4969d762403adfc023b8a3`, reconciled on 2026-09-03 after concurrent local work completed; generated audit files are excluded from its hash manifest.
 
@@ -16,21 +16,21 @@ The [capability matrix](capability-matrix.md) contains **122** user-outcome capa
 
 | Status | Count |
 | --- | ---: |
-| covered | 43 |
-| partial | 32 |
+| covered | 46 |
+| partial | 29 |
 | missing | 41 |
 | behavioral divergence | 5 |
 | unverified | 0 |
 | excluded with reason | 1 |
 
 
-After B07, 78 of the 122 rows still require implementation work. **58** are ready within the established prototype boundary; **20** require a linked product/platform decision. A decision blocks only the named slice, so other batches can proceed. One covered capability also links to a non-blocking destination decision.
+After B08, 75 of the 122 rows still require implementation work. **55** are ready within the established prototype boundary; **20** require a linked product/platform decision. A decision blocks only the named slice, so other batches can proceed. One covered capability also links to a non-blocking destination decision.
 
 ## Proposed destination changes
 
 New top-level or detail destinations are needed for Folders, Folder editor, global search filters/results, Read Aloud settings, Dictation settings, AI Agents, Help, About & licenses and production-style update state. Existing Conversation, Composer, Chat/Group Info, Shared Content, Profile, Keys, Notifications, Appearance, Device Privacy, Data and Storage, Relays, Key Packages, Diagnostics and onboarding surfaces gain behavior and state.
 
-**B01 — Access failures, retained profiles and signer choice** is implemented and host-verified. It covers typed access results, explicit recovery consent, retained-profile re-entry and startup retry. See [its implementation evidence](../../screens/access-and-recovery.md#implementation-evidence). B02 adds temporary key exports and staged profile exit; [its evidence](../../screens/keys-and-profile-exit.md#implementation-evidence) records 216 passing unit tests. Q05 is resolved by the approved wipe default. B03 adds people discovery, private contact details and profile-to-group actions; [its evidence](../../screens/people-discovery-and-private-details.md#implementation-evidence) records 231 passing unit tests. B04 adds profile banners, image viewing, Lightning validation and draft-only name suggestions; [its evidence](../../screens/profile-media-and-lightning.md#implementation-evidence) records 244 passing unit tests. B05 adds selection/bulk actions, pinned ordering, local/leave-first deletion and connection recovery; [its evidence](../../screens/chat-organization-and-recovery.md#implementation-evidence) records 262 passing unit tests. B06 completes folder management, automatic rules, editable defaults/restoration and all assignment entry points; [its evidence](../../screens/chat-folders.md#implementation-evidence) records 277 passing unit tests. B07 adds grouped global results, exact-message navigation, typed filters, identifier lookup and deterministic voice entry; [its evidence](../../screens/global-search.md#implementation-evidence) records 296 passing unit tests. B08 is next: conversation history, unread and details recovery.
+**B01 — Access failures, retained profiles and signer choice** is implemented and host-verified. It covers typed access results, explicit recovery consent, retained-profile re-entry and startup retry. See [its implementation evidence](../../screens/access-and-recovery.md#implementation-evidence). B02 adds temporary key exports and staged profile exit; [its evidence](../../screens/keys-and-profile-exit.md#implementation-evidence) records 216 passing unit tests. Q05 is resolved by the approved wipe default. B03 adds people discovery, private contact details and profile-to-group actions; [its evidence](../../screens/people-discovery-and-private-details.md#implementation-evidence) records 231 passing unit tests. B04 adds profile banners, image viewing, Lightning validation and draft-only name suggestions; [its evidence](../../screens/profile-media-and-lightning.md#implementation-evidence) records 244 passing unit tests. B05 adds selection/bulk actions, pinned ordering, local/leave-first deletion and connection recovery; [its evidence](../../screens/chat-organization-and-recovery.md#implementation-evidence) records 262 passing unit tests. B06 completes folder management, automatic rules, editable defaults/restoration and all assignment entry points; [its evidence](../../screens/chat-folders.md#implementation-evidence) records 277 passing unit tests. B07 adds grouped global results, exact-message navigation, typed filters, identifier lookup and deterministic voice entry; [its evidence](../../screens/global-search.md#implementation-evidence) records 296 passing unit tests. B08 adds paged history/search recovery, visible-only reading and delivery facts; [its evidence](../../screens/conversation-history-and-reading.md#implementation-evidence) records 319 passing unit tests. B09 is next: editing, full reader and text selection.
 
 ## Deliverables
 

@@ -28,13 +28,16 @@ sealed interface ConversationItem {
 }
 
 object ConversationProjection {
-    fun items(chat: Chat): List<ConversationItem> {
-        val ordered = chat.timeline.sortedWith(
+    fun orderedEntries(chat: Chat): List<ChatTimelineEntry> = chat.timeline.sortedWith(
             compareBy<ChatTimelineEntry> { it.dayOrdinal }
                 .thenBy { it.minuteOfDay }
                 .thenBy { it.id },
         )
-        val messagesById = ordered.mapNotNull { (it as? ChatTimelineEntry.Message)?.message }
+
+    fun items(chat: Chat, visibleIds: Set<String>? = null): List<ConversationItem> {
+        val all = orderedEntries(chat)
+        val ordered = if (visibleIds == null) all else all.filter { it.id in visibleIds }
+        val messagesById = all.mapNotNull { (it as? ChatTimelineEntry.Message)?.message }
             .associateBy(ChatMessage::id)
         val result = mutableListOf<ConversationItem>()
         var currentDay: String? = null

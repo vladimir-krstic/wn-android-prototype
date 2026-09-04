@@ -1,5 +1,12 @@
 # Shared conversation core
 
+2026-09-04 production B08 extends this accepted surface with paged history,
+complete local search and target recovery, captured unread boundaries,
+visible-only reading, unread-mention jumps and richer Message Details. See
+[conversation-history-and-reading.md](conversation-history-and-reading.md) for
+the current contract and 319-test host gate. The device evidence below describes
+earlier builds; B08 UI tests were compiled only and visual acceptance is pending.
+
 Status: 2026-09-01 pinned-fixture parity audit and conversation-surface
 correction implemented. The 77-row chat inventory is intact, every specialized
 catalog timeline now carries the complete pinned iOS scenario sequence rather
@@ -159,12 +166,13 @@ and tiny sources. Current-build device visual acceptance remains pending.
 - White Noise Support uses stable ID `white-noise-support`, one shared model,
   and cannot duplicate. A new support chat requires at least one available
   profile Chat Message relay.
-- Opening clears unread state. Sending nonblank text appends one deterministic
+- B08 opening captures concrete unread IDs. Settled visible rows advance reading;
+  off-screen content stays unread. Sending nonblank text appends one deterministic
   outgoing message, clears the draft, updates the Chats preview, and scrolls
   to the newest entry.
-- Opening an available conversation waits for the measured compact composer
-  and lazy layout, then settles the newest entry completely above the floating
-  controls. Edge-to-edge content may draw behind the composer only while
+- Opening an available conversation settles its exact entry target or captured
+  unread boundary; otherwise it waits for the measured composer and lazy layout
+  and settles the newest entry completely above the floating controls. Edge-to-edge content may draw behind the composer only while
   scrolling.
 - A leading-to-trailing 64 dp reply swipe moves bubble and metadata together,
   resists beyond the threshold up to 96 dp, mirrors in RTL, yields vertical

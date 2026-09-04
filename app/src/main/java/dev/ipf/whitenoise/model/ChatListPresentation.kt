@@ -90,13 +90,14 @@ data class ChatListUndo(
     val markedUnread: Boolean,
     val archived: Boolean,
     val pinned: Boolean,
+    val readState: ConversationReadState? = null,
 ) {
     fun restore(chat: Chat): Chat = when (action) {
         ChatListAction.Read -> if (chat.unreadCount == 0 && !chat.isMarkedUnread) {
-            chat.copy(unreadCount = unreadCount, isMarkedUnread = markedUnread)
+            chat.copy(unreadCount = unreadCount, isMarkedUnread = markedUnread, readState = readState)
         } else chat
         ChatListAction.Unread -> if (chat.unreadCount == 0 && chat.isMarkedUnread) {
-            chat.copy(unreadCount = unreadCount, isMarkedUnread = markedUnread)
+            chat.copy(unreadCount = unreadCount, isMarkedUnread = markedUnread, readState = readState)
         } else chat
         ChatListAction.Archive, ChatListAction.Unarchive ->
             if (chat.isArchived == !archived && chat.isPinned == (pinned && action != ChatListAction.Archive)) {
@@ -107,7 +108,7 @@ data class ChatListUndo(
 
     companion object {
         fun capture(profileId: String, chat: Chat, action: ChatListAction) = ChatListUndo(
-            profileId, chat.id, action, chat.unreadCount, chat.isMarkedUnread, chat.isArchived, chat.isPinned,
+            profileId, chat.id, action, chat.unreadCount, chat.isMarkedUnread, chat.isArchived, chat.isPinned, chat.readState,
         )
     }
 }

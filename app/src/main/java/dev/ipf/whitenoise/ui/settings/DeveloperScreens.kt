@@ -73,6 +73,8 @@ fun DeveloperToolsScreen(
     onDebugMode: (Boolean) -> Boolean,
     onDiagnostics: () -> Unit,
     onKeyPackages: () -> Unit,
+    historyScenario: dev.ipf.whitenoise.model.HistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success,
+    onHistoryScenario: (dev.ipf.whitenoise.model.HistoryScenario) -> Unit = {},
     globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
     onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
     chatBatchScenario: dev.ipf.whitenoise.model.ChatBatchScenario = dev.ipf.whitenoise.model.ChatBatchScenario.Success,
@@ -99,6 +101,9 @@ fun DeveloperToolsScreen(
     val tools = profile.developerTools
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var historyOpen by remember { mutableStateOf(false) }
+    if (historyOpen) ScenarioChoiceDialog("Conversation history", dev.ipf.whitenoise.model.HistoryScenario.entries,
+        historyScenario, { it.developerLabel }, onHistoryScenario, { historyOpen = false })
     var globalVoiceOpen by remember { mutableStateOf(false) }
     if (globalVoiceOpen) ScenarioChoiceDialog("Voice search", dev.ipf.whitenoise.model.GlobalVoiceScenario.entries,
         globalVoiceScenario, { it.developerLabel }, onGlobalVoiceScenario, { globalVoiceOpen = false })
@@ -170,6 +175,8 @@ fun DeveloperToolsScreen(
                 item { SettingsSection("Access testing") }
                 item {
                     SettingsGroup {
+                        SettingsLink("History loading scenarios", historyScenario.developerLabel, { historyOpen = true })
+                        SettingsDivider()
                         SettingsLink("Voice search scenarios", globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
                         SettingsDivider()
                         SettingsLink("Chat action scenarios", chatBatchScenario.developerLabel, { chatBatchOpen = true })
@@ -530,6 +537,7 @@ fun ConversationDebugScreen(
     onBack: () -> Unit,
     onOpenDeveloperTools: () -> Unit,
     onDiagnostics: () -> Unit,
+    onAddArrival: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     SettingsScaffold(title = "Conversation Debug", onBack = onBack) {
@@ -577,6 +585,14 @@ fun ConversationDebugScreen(
                             CopyableDebugValue("Nostr group ID", info.nostrGroupId) {
                                 copyToClipboard(context, "Nostr group ID", info.nostrGroupId)
                             }
+                        }
+                    }
+                    item { SettingsSection("History examples") }
+                    item {
+                        SettingsGroup {
+                            SettingsLink("Add unread mention", "Return to the chat to inspect the preserved unread boundary", { onAddArrival(false) })
+                            SettingsDivider()
+                            SettingsLink("Add streaming message", "Includes receipt, sender time and expiry metadata", { onAddArrival(true) })
                         }
                     }
                     item { SettingsSection("Delivery & notifications") }

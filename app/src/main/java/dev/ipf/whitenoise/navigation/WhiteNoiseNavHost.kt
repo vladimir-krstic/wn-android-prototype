@@ -508,6 +508,8 @@ fun WhiteNoiseNavHost(
                     onGroupContactScenario = appViewModel::selectGroupContactScenario,
                     createdChatUnavailable = appViewModel.nextCreatedChatUnavailable,
                     onCreatedChatUnavailable = appViewModel::setCreatedChatUnavailable,
+                    historyScenario = appViewModel.nextHistoryScenario,
+                    onHistoryScenario = appViewModel::selectHistoryScenario,
                     globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
                     onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
                     chatBatchScenario = appViewModel.nextChatBatchScenario,
@@ -554,6 +556,7 @@ fun WhiteNoiseNavHost(
                     onBack = { navController.popBackStack() },
                     onOpenDeveloperTools = { navController.navigate(AppRoute.DeveloperTools) },
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics(route.chatId)) },
+                    onAddArrival = { streaming -> appViewModel.addConversationArrival(profile.id, route.chatId, streaming) },
                 )
             }
         }
@@ -668,6 +671,8 @@ fun WhiteNoiseNavHost(
             val route = entry.toRoute<AppRoute.Conversation>()
             appViewModel.chat(route.chatId)?.let { chat ->
                 val profile = uiState.activeProfile ?: return@let
+                val searchRequest by entry.savedStateHandle.getStateFlow("conversationSearchRequest", 0L).collectAsState()
+                androidx.compose.runtime.key(profile.id, chat.id) {
                 ConversationScreen(
                     profile = profile,
                     chat = chat,
@@ -711,7 +716,12 @@ fun WhiteNoiseNavHost(
                     },
                     initialSearch = route.openSearch,
                     initialMessageId = route.targetMessageId,
+                    searchRequestId = searchRequest,
+                    onHistoryScenario = { appViewModel.consumeHistoryScenario(profile.id, it) },
+                    onMessagesVisible = { appViewModel.markConversationVisible(profile.id, chat.id, it) },
+                    onReadThroughMention = { appViewModel.markConversationThrough(profile.id, chat.id, it) },
                 )
+                }
             }
         }
         composable<AppRoute.ChatInfo> { entry ->
@@ -730,9 +740,13 @@ fun WhiteNoiseNavHost(
                     },
                     onRelays = { navController.navigate(AppRoute.ChatRelays(chat.id)) },
                     onSearch = {
-                        navController.navigate(AppRoute.Conversation(chat.id, openSearch = true)) {
-                            popUpTo<AppRoute.Conversation> { inclusive = true }
-                        }
+                        val conversation = runCatching { navController.getBackStackEntry<AppRoute.Conversation>() }.getOrNull()
+                            ?.takeIf { it.toRoute<AppRoute.Conversation>().chatId == chat.id }
+                        if (conversation != null) {
+                            val value = conversation.savedStateHandle.get<Long>("conversationSearchRequest") ?: 0L
+                            conversation.savedStateHandle["conversationSearchRequest"] = value + 1
+                            navController.popBackStack<AppRoute.Conversation>(inclusive = false)
+                        } else navController.navigate(AppRoute.Conversation(chat.id, openSearch = true))
                     },
                     onEditGroup = { navController.navigate(AppRoute.EditGroup(chat.id)) },
                     onAddPeople = { navController.navigate(AppRoute.AddGroupMembers(chat.id)) },

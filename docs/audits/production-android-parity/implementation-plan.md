@@ -11,7 +11,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B05: implemented and host-verified 2026-09-04; 262 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Selected brief and evidence](../../screens/chat-organization-and-recovery.md). Manual folder assignment provides part of B06. Commit title: `B05: Add chat organization and connection recovery`.
 - B06: implemented and host-verified 2026-09-04; 277 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/chat-folders.md). Commit title: `B06: Add folder management and automatic rules`.
 - B07: implemented and host-verified 2026-09-04; 296 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Selected brief and evidence](../../screens/global-search.md). Commit title: `B07: Add cross-chat search and typed filters`.
-- B08–B32: pending; linked decisions apply only to their named slices.
+- B08: implemented and host-verified 2026-09-04; 319 unit tests, zero lint errors, both APKs and twelve new compiled UI cases. [Selected brief and evidence](../../screens/conversation-history-and-reading.md). Commit title: `B08: Add conversation history and unread recovery`.
+- B09–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -25,7 +26,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B05** | Chat-list selection, order and connection recovery | C024, C025, C026, C030 | B01 | Ready |
 | **B06** | Chat folders end to end | C027, C028, C029 | B05 | Ready |
 | **B07** | Cross-chat search and filters | C031, C032, C033, C034 | B05 | Ready |
-| **B08** | Conversation history, unread and details recovery | C035, C037, C047 | B05 | Ready |
+| **B08** | Conversation history, unread and details recovery | C035, C037, C047 | B05 | Implemented; host verified |
 | **B09** | Message editing, full reader and text selection | C038, C039, C040, C041 | B08 | Ready |
 | **B10** | Moderation deletion and resilient forwarding | C043, C044, C045 | B09 | Ready |
 | **B11** | Composer media acquisition and attachment actions | C046, C049, C051, C052, C054, C057 | B08 | Blocked slices: Q06 |
@@ -152,6 +153,8 @@ Capabilities: C031, C032, C033, C034. Dependencies: B05.
 **Non-goals:** No backend, network transport, Marmot, real signing/encryption, persistence, installer, notification delivery, background service or device automation unless a later explicit request expands the selected batch. Do not restyle system-owned surfaces or redesign unrelated screens.
 
 ### B08 — Conversation history, unread and details recovery
+
+Completed and host-verified 2026-09-04; [implementation evidence](../../screens/conversation-history-and-reading.md#implementation-evidence). Device/visual acceptance remains pending.
 
 Capabilities: C035, C037, C047. Dependencies: B05.
 
