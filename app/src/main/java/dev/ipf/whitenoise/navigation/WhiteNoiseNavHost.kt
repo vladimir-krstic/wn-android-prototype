@@ -69,6 +69,7 @@ import dev.ipf.whitenoise.ui.settings.ManageProfilesScreen
 import dev.ipf.whitenoise.ui.settings.DiagnosticsImprovementsScreen
 import dev.ipf.whitenoise.ui.settings.DiagnosticsPromptHost
 import dev.ipf.whitenoise.ui.settings.ProfileExitReportDialog
+import dev.ipf.whitenoise.ui.conversation.MessageOperationsHost
 
 @Composable
 fun WhiteNoiseNavHost(
@@ -185,10 +186,20 @@ fun WhiteNoiseNavHost(
         )
     }
 
+    MessageOperationsHost(
+        profile = uiState.activeProfile, forward = uiState.activeProfileId?.let { appViewModel.messageForwards[it] },
+        onAdvanceForward = { id, revision -> uiState.activeProfileId?.let { appViewModel.advanceMessageForward(it, id, revision) } },
+        onAdvanceDelete = { chat, id, revision -> uiState.activeProfileId?.let { appViewModel.advanceMessageDeletion(it, chat, id, revision) } },
+        onRetry = { id -> uiState.activeProfileId?.let { appViewModel.retryMessageForward(it, id) } },
+        onCancel = { id -> uiState.activeProfileId?.let { appViewModel.cancelMessageForward(it, id) } },
+        onDismiss = { id -> uiState.activeProfileId?.let { appViewModel.dismissMessageForward(it, id) } },
+        modifier = modifier,
+        onAutomaticRetry = { id, revision -> uiState.activeProfileId?.let { appViewModel.retryMessageForward(it, id, automatic = true, expectedRevision = revision) } },
+    ) { operationModifier ->
     NavHost(
         navController = navController,
         startDestination = AppRoute.startDestination,
-        modifier = modifier,
+        modifier = operationModifier,
     ) {
         composable<AppRoute.Welcome> { entry ->
             val route = entry.toRoute<AppRoute.Welcome>()
@@ -512,6 +523,10 @@ fun WhiteNoiseNavHost(
                     onHistoryScenario = appViewModel::selectHistoryScenario,
                     messageEditScenario = appViewModel.nextMessageEditScenario,
                     onMessageEditScenario = appViewModel::selectMessageEditScenario,
+                    messageDeleteScenario = appViewModel.nextMessageDeleteScenario,
+                    onMessageDeleteScenario = appViewModel::selectMessageDeleteScenario,
+                    messageForwardScenario = appViewModel.nextMessageForwardScenario,
+                    onMessageForwardScenario = appViewModel::selectMessageForwardScenario,
                     globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
                     onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
                     chatBatchScenario = appViewModel.nextChatBatchScenario,
@@ -700,7 +715,7 @@ fun WhiteNoiseNavHost(
                         appViewModel.setMessageReaction(chat.id, messageId, emoji, remove)
                     },
                     onQuickReactionsChanged = appViewModel::setQuickReactions,
-                    onDeleteMessages = { ids, scope -> appViewModel.deleteMessages(chat.id, ids, scope) },
+                    onDeleteMessages = { ids, scope -> appViewModel.beginMessageDeletion(profile.id, chat.id, ids, scope) },
                     onForwardMessages = { ids, targets -> appViewModel.forwardMessages(chat.id, ids, targets) },
                     onForwardMedia = { key, targets, message ->
                         appViewModel.forwardMediaFrame(chat.id, key, targets, message)
@@ -728,6 +743,11 @@ fun WhiteNoiseNavHost(
                     onRetryMessageEdit = { appViewModel.retryMessageEdit(profile.id, chat.id, it) },
                     onDiscardMessageEdit = { appViewModel.discardMessageEdit(profile.id, chat.id, it) },
                     onInterruptMessageEdits = { appViewModel.interruptMessageEdits(profile.id, chat.id) },
+                    forwardProfiles = uiState.signedInProfiles,
+                    onForwardToProfile = { ids, destination, targets -> appViewModel.beginMessageForward(profile.id, chat.id, ids, destination, targets) },
+                    onForwardMediaToProfile = { key, destination, targets, text -> appViewModel.beginMessageForward(profile.id, chat.id, setOf(key.messageId), destination, targets, key, text) },
+                    onRetryMessageDeletion = { appViewModel.retryMessageDeletion(profile.id, chat.id, it) },
+                    onDismissMessageDeletion = { appViewModel.dismissMessageDeletion(profile.id, chat.id, it) },
                 )
                 }
             }
@@ -780,8 +800,10 @@ fun WhiteNoiseNavHost(
                     chat = chat,
                     category = category,
                     onBack = { navController.popBackStack() },
+                    forwardProfiles = uiState.signedInProfiles,
+                    onForwardMediaToProfile = { key, destination, targets, text -> appViewModel.beginMessageForward(profile.id, chat.id, setOf(key.messageId), destination, targets, key, text) },
                     onForwardMedia = { key, targets, message ->
-                        appViewModel.forwardMediaFrame(chat.id, key, targets, message)
+                        appViewModel.beginMessageForward(profile.id, chat.id, setOf(key.messageId), profile.id, targets, key, message)
                     },
                     onGoToMessage = { messageId ->
                         navController.navigate(
@@ -843,6 +865,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
 }
 

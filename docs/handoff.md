@@ -1,10 +1,10 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B09 are implemented and host-verified.
+2026-09-04: production parity B01–B10 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. Continue with B10. Q05 is resolved by the approved checked wipe
+record evidence. Continue with B11. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -20,11 +20,14 @@ visible-only unread state, mention navigation and delivery facts; see
 state and history, full reading, per-chat collapse, native passage selection and
 source-aware Markdown; see `docs/screens/message-editing-and-reading.md`. Encoded
 Nostr reference resolution/profile presentation stays tracked with B30.
-Latest clean gate: 343 unit tests, zero lint errors, both APKs;
+B10 adds moderation, mixed deletion and app-owned forwarding/retry across both
+conversation and Shared Content; see `docs/screens/message-moderation-and-forwarding.md`.
+The 32/5 count caps are removed following the production source comparison.
+Latest clean gate: 361 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B10–B32. This
+boundary. Production Android parity remains in progress through B11–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

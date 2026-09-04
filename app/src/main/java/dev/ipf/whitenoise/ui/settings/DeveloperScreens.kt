@@ -77,6 +77,10 @@ fun DeveloperToolsScreen(
     onHistoryScenario: (dev.ipf.whitenoise.model.HistoryScenario) -> Unit = {},
     messageEditScenario: dev.ipf.whitenoise.model.MessageEditScenario = dev.ipf.whitenoise.model.MessageEditScenario.Success,
     onMessageEditScenario: (dev.ipf.whitenoise.model.MessageEditScenario) -> Unit = {},
+    messageDeleteScenario: dev.ipf.whitenoise.model.MessageDeleteScenario = dev.ipf.whitenoise.model.MessageDeleteScenario.Success,
+    onMessageDeleteScenario: (dev.ipf.whitenoise.model.MessageDeleteScenario) -> Unit = {},
+    messageForwardScenario: dev.ipf.whitenoise.model.MessageForwardScenario = dev.ipf.whitenoise.model.MessageForwardScenario.Success,
+    onMessageForwardScenario: (dev.ipf.whitenoise.model.MessageForwardScenario) -> Unit = {},
     globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
     onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
     chatBatchScenario: dev.ipf.whitenoise.model.ChatBatchScenario = dev.ipf.whitenoise.model.ChatBatchScenario.Success,
@@ -105,6 +109,12 @@ fun DeveloperToolsScreen(
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
     var historyOpen by remember { mutableStateOf(false) }
     var editOpen by remember { mutableStateOf(false) }
+    var deleteOpen by remember { mutableStateOf(false) }
+    var forwardOpen by remember { mutableStateOf(false) }
+    if (deleteOpen) ScenarioChoiceDialog("Message deletion", dev.ipf.whitenoise.model.MessageDeleteScenario.entries,
+        messageDeleteScenario, { it.developerLabel }, onMessageDeleteScenario, { deleteOpen = false })
+    if (forwardOpen) ScenarioChoiceDialog("Message forwarding", dev.ipf.whitenoise.model.MessageForwardScenario.entries,
+        messageForwardScenario, { it.developerLabel }, onMessageForwardScenario, { forwardOpen = false })
     if (editOpen) ScenarioChoiceDialog("Message editing", dev.ipf.whitenoise.model.MessageEditScenario.entries,
         messageEditScenario, { it.developerLabel }, onMessageEditScenario, { editOpen = false })
     if (historyOpen) ScenarioChoiceDialog("Conversation history", dev.ipf.whitenoise.model.HistoryScenario.entries,
@@ -183,6 +193,8 @@ fun DeveloperToolsScreen(
                         SettingsLink("History loading scenarios", historyScenario.developerLabel, { historyOpen = true })
                         SettingsDivider()
                         SettingsLink("Message edit outcomes", messageEditScenario.developerLabel, { editOpen = true })
+                        SettingsLink("Message deletion outcomes", messageDeleteScenario.developerLabel, { deleteOpen = true })
+                        SettingsLink("Message forwarding outcomes", messageForwardScenario.developerLabel, { forwardOpen = true })
                         SettingsDivider()
                         SettingsLink("Voice search scenarios", globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
                         SettingsDivider()

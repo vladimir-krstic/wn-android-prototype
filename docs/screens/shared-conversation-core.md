@@ -271,3 +271,12 @@ per-chat collapse, native passage selection and structured source-aware text.
 The ordinary composer draft, selection, reply and attachments remain independent
 of the edit task. The clean host gate passes 343 unit tests and both APKs; ten
 new UI cases compile. Device/visual acceptance remains pending.
+
+## B10 message-operation ownership
+
+See [moderation and forwarding](message-moderation-and-forwarding.md). Per-chat
+deletion outcomes survive route changes, and forwarding has app-owned foreground
+progress with profile/session guards. The operation host accounts for its bottom
+status strip once and retains side navigation-bar insets; opening forwarding details suppresses read acknowledgement
+behind that modal. Ordinary composer and history state remain independent.
+The clean gate passes 361 unit tests; device/visual acceptance remains pending.

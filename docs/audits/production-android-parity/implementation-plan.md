@@ -13,7 +13,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B07: implemented and host-verified 2026-09-04; 296 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Selected brief and evidence](../../screens/global-search.md). Commit title: `B07: Add cross-chat search and typed filters`.
 - B08: implemented and host-verified 2026-09-04; 319 unit tests, zero lint errors, both APKs and twelve new compiled UI cases. [Selected brief and evidence](../../screens/conversation-history-and-reading.md). Commit title: `B08: Add conversation history and unread recovery`.
 - B09: implemented and host-verified 2026-09-04; 343 unit tests, zero lint errors, both APKs and ten new compiled UI cases. [Selected brief and evidence](../../screens/message-editing-and-reading.md). Commit title: `B09: Add message editing and full reading`.
-- B10–B32: pending; linked decisions apply only to their named slices.
+- B10: implemented and host-verified 2026-09-04; 361 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/message-moderation-and-forwarding.md). Commit title: `B10: Add message moderation and forwarding recovery`.
+- B11–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -29,7 +30,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B07** | Cross-chat search and filters | C031, C032, C033, C034 | B05 | Ready |
 | **B08** | Conversation history, unread and details recovery | C035, C037, C047 | B05 | Implemented; host verified |
 | **B09** | Message editing, full reader and text selection | C038, C039, C040, C041 | B08 | Implemented; host verified |
-| **B10** | Moderation deletion and resilient forwarding | C043, C044, C045 | B09 | Ready |
+| **B10** | Moderation deletion and resilient forwarding | C043, C044, C045 | B09 | Implemented; host verified |
 | **B11** | Composer media acquisition and attachment actions | C046, C049, C051, C052, C054, C057 | B08 | Blocked slices: Q06 |
 | **B12** | Draft photo editor | C050 | B11 | Ready |
 | **B13** | Text attachment reader and expanded shared media | C055, C056, C059 | B11 | Blocked slices: Q06 |
@@ -186,6 +187,8 @@ Capabilities: C038, C039, C040, C041. Dependencies: B08.
 **Non-goals:** No backend, network transport, Marmot, real signing/encryption, persistence, installer, notification delivery, background service or device automation unless a later explicit request expands the selected batch. Do not restyle system-owned surfaces or redesign unrelated screens.
 
 ### B10 — Moderation deletion and resilient forwarding
+
+Completed and host-verified 2026-09-04; [implementation evidence](../../screens/message-moderation-and-forwarding.md#implementation-evidence). The source comparison removes the older 32/5 count caps; device/visual acceptance remains pending.
 
 Capabilities: C043, C044, C045. Dependencies: B09.
 

@@ -3712,3 +3712,35 @@ Sources checked 2026-09-04: [Compose selection and links](https://developer.andr
 and the resolved Foundation 1.12.0 source. Nine edit-state, eleven document and
 four source-selection unit tests pass; ten new UI cases compile. Device and
 visual acceptance remain pending.
+
+## WN-ANDROID-0130 — Source-aligned message batches retain explicit operation ownership
+
+2026-09-04 implementation decision under authorized B10 production parity.
+Production ForwardSelection/ForwardMessagePicker at pinned master apply no
+message/recipient count cap. Replace the older prototype 32-message/five-chat
+caps with explicit source/target eligibility; never silently truncate folder
+selection. This supersedes the earlier count limits without changing the
+approved picker rows, search, sheet geometry or media-caption capsule.
+
+Freeze each deletion item's everyone/local operation after an explicit count
+breakdown. Revalidate role/membership at execution and retry only failures;
+permission loss must not silently convert an everyone delete into local hiding.
+A tombstone can open local-removal confirmation through hold or accessibility,
+superseding the earlier no-hold rule for this one action.
+
+Forwarding belongs to app state outside the source route. Native status/details
+surfaces expose per-target progress, partial counts, explicit cancellation and
+retry. Preserve sent prefixes and completed targets; cancel only before publishing.
+Match production's three transient retries at 1/2/4 seconds, leaving preparation
+timeouts for manual retry and source/expiry/session failures terminal. Native
+lifecycle pausing and profile/session/request guards prevent stale completions.
+Destination-profile selection is explicit and never switches the active profile;
+wiping profile data clears retained operation payloads.
+
+Sources: pinned production MessageBatchDeleteOperations.kt, ForwardSelection.kt,
+MessageForwarding.kt and AppState.kt; current [Material dialogs](https://developer.android.com/develop/ui/compose/components/dialog),
+[progress indicators](https://developer.android.com/develop/ui/compose/components/progress)
+and [checkbox semantics](https://developer.android.com/develop/ui/compose/components/checkbox).
+361 unit tests and both APKs pass; nine new UI cases compile. Runtime transport,
+background services and current-build device/visual acceptance remain outside
+this host-verified implementation evidence.

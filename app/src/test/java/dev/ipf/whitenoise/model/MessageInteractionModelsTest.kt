@@ -30,18 +30,18 @@ class MessageInteractionModelsTest {
         )
         assertEquals(MessageAction.RetrySend, MessageActionPolicy.available(failedText, ProfileFixtures.MARMOTA_ID).first())
         assertTrue(MessageAction.Copy in MessageActionPolicy.available(failedText, ProfileFixtures.MARMOTA_ID))
-        assertTrue(MessageActionPolicy.available(failedText.copy(deletionState = MessageDeletionState.DeletedByCurrentProfile), ProfileFixtures.MARMOTA_ID).isEmpty())
+        assertEquals(listOf(MessageAction.Delete), MessageActionPolicy.available(failedText.copy(deletionState = MessageDeletionState.DeletedByCurrentProfile), ProfileFixtures.MARMOTA_ID))
     }
 
     @Test
-    fun forwardingAndDeletionPoliciesEnforceBoundsAndDirection() {
+    fun forwardingPreservesLargeSelectionsWhileDeletionKeepsAuthorshipWithoutGroupContext() {
         val mine = ChatMessage("mine", "me", 3, "Today", 600, "10:00 AM", "Text")
         val theirs = mine.copy(id = "theirs", authorId = "them")
 
         assertTrue(MessageActionPolicy.canDeleteForEveryone(listOf(mine), "me"))
         assertFalse(MessageActionPolicy.canDeleteForEveryone(listOf(mine, theirs), "me"))
         assertTrue(MessageActionPolicy.canForward(List(32) { mine.copy(id = "$it") }))
-        assertFalse(MessageActionPolicy.canForward(List(33) { mine.copy(id = "$it") }))
+        assertTrue(MessageActionPolicy.canForward(List(33) { mine.copy(id = "$it") }))
         assertFalse(MessageActionPolicy.canForward(listOf(mine.copy(deletionState = MessageDeletionState.DeletedByOther))))
     }
 

@@ -299,6 +299,11 @@ fun ConversationScreen(
     onReaction: (String, String, Boolean) -> Boolean = { _, _, _ -> false },
     onQuickReactionsChanged: (List<String>) -> Boolean = { false },
     onDeleteMessages: (Set<String>, MessageDeletionScope) -> Boolean = { _, _ -> false },
+    forwardProfiles: List<Profile> = listOf(profile),
+    onForwardToProfile: ((Set<String>, String, List<String>) -> Boolean)? = null,
+    onForwardMediaToProfile: ((ConversationMediaKey, String, List<String>, String) -> Boolean)? = null,
+    onRetryMessageDeletion: (Long) -> Unit = {},
+    onDismissMessageDeletion: (Long) -> Unit = {},
     onForwardMessages: (Set<String>, List<String>) -> Boolean = { _, _ -> false },
     onForwardMedia: (ConversationMediaKey, List<String>, String) -> Boolean = { _, _, _ -> false },
     onOpenMessageDetails: (String) -> Unit = {},
@@ -373,6 +378,8 @@ fun ConversationScreen(
     var isSelecting by remember { mutableStateOf(false) }
     var selectedMessageIds by remember { mutableStateOf(emptySet<String>()) }
     var deleteMessageIds by remember { mutableStateOf<Set<String>?>(null) }
+    var deleteStartFailed by remember { mutableStateOf(false) }
+    val operationCovered = LocalMessageOperationCover.current
     var forwardMessageIds by remember { mutableStateOf<Set<String>?>(null) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var emojiMessageId by remember { mutableStateOf<String?>(null) }
@@ -653,7 +660,7 @@ fun ConversationScreen(
     val currentVisibleCallback by rememberUpdatedState(onMessagesVisible)
     val canRead by rememberUpdatedState(initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
         editMessageId == null && readerMessageId == null && historyMessageId == null &&
-        viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
+        !operationCovered && viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
         !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
         !composerPresentationActive && history.request == null && history.readyTarget == null)
     val relatedPx = with(density) { WhiteNoiseSpacing.Related.roundToPx() }
@@ -747,6 +754,8 @@ fun ConversationScreen(
                         HistoryTargetFeedback(request, history::retry) { history.cancel(); pendingInitialMessageId = null }
                     }
                     if (isSearching && (history.scanning || history.scanFailed)) HistorySearchFeedback(history.scanning) { history.scanRetry++ }
+                    chat.messageDeletion?.let { operation -> MessageDeletionNotice(operation,
+                        onRetry = { onRetryMessageDeletion(operation.id) }, onDismiss = { onDismissMessageDeletion(operation.id) }) }
                 }
             }
             }
@@ -1116,11 +1125,23 @@ fun ConversationScreen(
             },
         )
     }
+    LaunchedEffect(chat.messageDeletion?.id, chat.messageDeletion?.revision) {
+        chat.messageDeletion?.takeIf { !it.isRunning }?.let { operation ->
+            selectedMessageIds = operation.failed.map { it.messageId }.filter { id -> messages.any { it.id == id } }.toSet()
+            isSelecting = selectedMessageIds.isNotEmpty()
+        }
+    }
     forwardMessageIds?.let { ids ->
         ForwardMessagesSheet(
             profile = profile,
             sourceChatId = chat.id,
             onDismiss = { forwardMessageIds = null },
+            destinationProfiles = forwardProfiles,
+            onForwardToProfile = { destination, targets, _ ->
+                val started = onForwardToProfile?.invoke(ids, destination, targets) ?: onForwardMessages(ids, targets)
+                if (started) { forwardMessageIds = null; isSelecting = false; selectedMessageIds = emptySet() }
+                started
+            },
             onForward = { targets, _ ->
                 if (onForwardMessages(ids, targets)) {
                     forwardMessageIds = null
@@ -1136,6 +1157,12 @@ fun ConversationScreen(
             sourceChatId = chat.id,
             onDismiss = { forwardMediaKey = null },
             allowsAccompanyingMessage = true,
+            destinationProfiles = forwardProfiles,
+            onForwardToProfile = { destination, targets, message ->
+                val started = onForwardMediaToProfile?.invoke(key, destination, targets, message) ?: onForwardMedia(key, targets, message)
+                if (started) { forwardMediaKey = null; viewerSelection = null }
+                started
+            },
             onForward = { targets, message ->
                 if (onForwardMedia(key, targets, message)) forwardMediaKey = null
             },
@@ -1145,13 +1172,17 @@ fun ConversationScreen(
         DeleteMessagesDialog(
             messages = messages.filter { it.id in ids },
             profileId = profile.id,
-            onDismiss = { deleteMessageIds = null },
+            onDismiss = { deleteMessageIds = null; deleteStartFailed = false },
+            remoteIds = messages.filter { dev.ipf.whitenoise.model.MessageDeletion.canDeleteForEveryone(it, profile, chat) }.map { it.id }.toSet(),
+            busy = chat.messageDeletion?.isRunning == true,
+            startFailed = deleteStartFailed,
             onDelete = { scope ->
+                deleteStartFailed = false
                 if (onDeleteMessages(ids, scope)) {
                     deleteMessageIds = null
                     isSelecting = false
                     selectedMessageIds = emptySet()
-                }
+                } else deleteStartFailed = true
             },
         )
     }
@@ -1855,13 +1886,13 @@ private fun MessageRow(
         }
     }
     val availableActions = MessageActionPolicy.available(message, profile.id, speechActionState, chat.composerAvailability(profile) == ComposerAvailability.Available)
-    val failedOutgoing = outgoing && message.deliveryState == MessageDeliveryState.Failed
+    val failedOutgoing = !message.isDeleted && outgoing && message.deliveryState == MessageDeliveryState.Failed
     val retryLabel = stringResource(R.string.not_delivered_retry)
     val messageInteractionSource = remember(message.id) { MutableInteractionSource() }
     val contextPreviewInteraction = remember(message.id) { MutableInteractionSource() }
     val showMessageActions = {
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        onShowActions()
+        if (message.isDeleted) onAccessibilityAction(MessageAction.Delete) else onShowActions()
     }
     val canSwipeReply = !contextPreview && !isSelectionMode && MessageAction.Reply in availableActions
     val swipeState = rememberDraggableState { physicalDelta ->
@@ -1933,7 +1964,7 @@ private fun MessageRow(
                 },
             )
             .semantics {
-                if (!message.isDeleted) {
+                if (availableActions.isNotEmpty()) {
                     onLongClick(showActionsLabel) {
                         showMessageActions()
                         true
@@ -2094,7 +2125,7 @@ private fun MessageRow(
                             onReaction = onReaction,
                             onShowActions = onShowActions,
                             onBubbleLongPress = if (
-                                !contextPreview && !isSelectionMode && !message.isDeleted
+                                !contextPreview && !isSelectionMode && availableActions.isNotEmpty()
                             ) {
                                 showMessageActions
                             } else {

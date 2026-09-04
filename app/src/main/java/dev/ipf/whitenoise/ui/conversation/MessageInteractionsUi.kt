@@ -69,6 +69,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,6 +101,8 @@ import dev.ipf.whitenoise.model.EmojiSection
 import dev.ipf.whitenoise.model.MessageAction
 import dev.ipf.whitenoise.model.MessageActionPolicy
 import dev.ipf.whitenoise.model.MessageDeletionScope
+import dev.ipf.whitenoise.model.MessageForwarding
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.ipf.whitenoise.model.MessageDeliveryState
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ReactionCatalog
@@ -548,14 +551,29 @@ internal fun ForwardMessagesSheet(
     onDismiss: () -> Unit,
     allowsAccompanyingMessage: Boolean = false,
     onForward: (List<String>, String) -> Unit,
+    destinationProfiles: List<Profile> = listOf(profile),
+    onForwardToProfile: ((String, List<String>, String) -> Boolean)? = null,
 ) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
     )
-    var query by remember { mutableStateOf("") }
-    var selected by remember { mutableStateOf(emptySet<String>()) }
-    var accompanyingMessage by remember { mutableStateOf("") }
+    var query by rememberSaveable(profile.id) { mutableStateOf("") }
+    var destinationId by rememberSaveable(profile.id) { mutableStateOf(profile.id) }
+    val destination = destinationProfiles.firstOrNull { it.id == destinationId } ?: profile
+    var selected by rememberSaveable(profile.id, destination.id, stateSaver = androidx.compose.runtime.saveable.listSaver<Set<String>, String>(save = { it.toList() }, restore = { it.toSet() })) { mutableStateOf(emptySet<String>()) }
+    var accompanyingMessage by rememberSaveable(profile.id) { mutableStateOf("") }
+    var profileChoice by remember { mutableStateOf(false) }
+    var startFailed by remember { mutableStateOf(false) }
+    fun submit() {
+        startFailed = if (onForwardToProfile != null) !onForwardToProfile(destination.id, selected.toList(), accompanyingMessage)
+            else { onForward(selected.toList(), accompanyingMessage); false }
+    }
+    LaunchedEffect(destinationProfiles.map { it.id }) {
+        if (destinationId !in destinationProfiles.map { it.id }) { destinationId = profile.id; selected = emptySet() }
+    }
+    LaunchedEffect(destination.chats.map { it.id }) { selected = selected.filter { id -> destination.chats.any { it.id == id } }.toSet() }
+
     var bottomOverlayHeightPx by remember { mutableIntStateOf(0) }
     val destinationListState = rememberLazyListState()
     val density = LocalDensity.current
@@ -578,10 +596,16 @@ internal fun ForwardMessagesSheet(
         },
         label = "ForwardSheetTopContainer",
     )
-    val chats = profile.chats.filter {
-        it.id != sourceChatId && it.composerAvailability(profile) == ComposerAvailability.Available &&
-            (query.isBlank() || it.title.contains(query, ignoreCase = true))
+    val chats = destination.chats.filter {
+        (destination.id != profile.id || it.id != sourceChatId) && (query.isBlank() || it.title.contains(query, ignoreCase = true))
     }
+    val folders = destination.chatFolders.filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+    if (profileChoice) AlertDialog(onDismissRequest = { profileChoice = false }, title = { Text(stringResource(R.string.batch_profile_choice)) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            destinationProfiles.forEach { candidate -> TextButton(onClick = { destinationId = candidate.id; selected = emptySet(); profileChoice = false; startFailed = false }) {
+                Text(candidate.name)
+            } }
+        } }, confirmButton = { TextButton(onClick = { profileChoice = false }) { Text(stringResource(R.string.cancel)) } })
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -608,6 +632,11 @@ internal fun ForwardMessagesSheet(
                 ) {
                     Column {
                         WhiteNoiseSheetHeader(stringResource(R.string.forward))
+                        if (destinationProfiles.size > 1) TextButton(onClick = { profileChoice = true }, modifier = Modifier.testTag("conversation.forward.profile")) {
+                            Text(stringResource(R.string.batch_forward_from, destination.name))
+                        }
+                        if (startFailed) Text(stringResource(R.string.batch_forward_start_failed), color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin))
                         Text(
                             stringResource(R.string.forward_selection_limit),
                             modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.Section),
@@ -637,7 +666,7 @@ internal fun ForwardMessagesSheet(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     Box(Modifier.fillMaxSize()) {
-                        if (chats.isEmpty()) {
+                        if (chats.isEmpty() && folders.isEmpty()) {
                             Column(
                                 modifier = Modifier.fillMaxSize().padding(bottom = bottomContentPadding),
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -663,9 +692,17 @@ internal fun ForwardMessagesSheet(
                                     bottom = bottomContentPadding,
                                 ),
                             ) {
+                                if (folders.isNotEmpty()) item { Text(stringResource(R.string.batch_folders), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = WhiteNoiseSpacing.Related)) }
+                                itemsIndexed(folders, key = { _, folder -> "folder:${folder.id}" }) { _, folder ->
+                                    val members = MessageForwarding.folderMembers(destination, profile.id, sourceChatId, folder)
+                                    ForwardFolderChoice(folder, members, selected) { selected = MessageForwarding.toggleFolder(selected, members) }
+                                    Spacer(Modifier.height(WhiteNoiseSpacing.Related))
+                                }
+                                if (chats.isNotEmpty()) item { Text(stringResource(R.string.batch_chats), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = WhiteNoiseSpacing.Related)) }
                                 itemsIndexed(chats, key = { _, chat -> chat.id }) { index, chat ->
                                     val checked = chat.id in selected
-                                    val enabled = checked || selected.size < 5
+                                    val failure = MessageForwarding.targetFailure(destination, chat)
+                                    val enabled = checked || failure == null
                                     val shapes = ListItemDefaults.segmentedShapes(
                                         index = index,
                                         count = chats.size,
@@ -689,7 +726,7 @@ internal fun ForwardMessagesSheet(
                                         colors = destinationColors,
                                         supportingContent = {
                                             Text(
-                                                chat.displayPreview,
+                                                failure?.let { forwardFailureText(it) } ?: chat.displayPreview,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
                                             )
@@ -749,7 +786,7 @@ internal fun ForwardMessagesSheet(
                             ForwardMessageComposer(
                                 value = accompanyingMessage,
                                 onValueChange = { accompanyingMessage = it },
-                                onForward = { onForward(selected.toList(), accompanyingMessage) },
+                                onForward = { submit() },
                                 enabled = selected.isNotEmpty(),
                                 forwardDescription = forwardDescription,
                                 modifier = Modifier
@@ -765,7 +802,7 @@ internal fun ForwardMessagesSheet(
                             )
                         } else {
                             WhiteNoiseButton(
-                                onClick = { onForward(selected.toList(), accompanyingMessage) },
+                                onClick = { submit() },
                                 enabled = selected.isNotEmpty(),
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
@@ -881,7 +918,11 @@ internal fun DeleteMessagesDialog(
     profileId: String,
     onDismiss: () -> Unit,
     onDelete: (MessageDeletionScope) -> Unit,
+    remoteIds: Set<String> = messages.filter { !it.isDeleted && it.authorId == profileId }.map { it.id }.toSet(),
+    busy: Boolean = false,
+    startFailed: Boolean = false,
 ) {
+    val remoteCount = messages.count { it.id in remoteIds }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -897,18 +938,25 @@ internal fun DeleteMessagesDialog(
                 },
             )
         },
-        text = { Text(stringResource(R.string.delete_for_me_explanation)) },
+        text = { Column {
+            Text(when {
+                remoteCount in 1 until messages.size -> stringResource(R.string.batch_delete_mixed, remoteCount, messages.size - remoteCount)
+                remoteCount > 0 -> stringResource(R.string.batch_delete_everyone_detail)
+                else -> stringResource(R.string.delete_for_me_explanation)
+            })
+            if (startFailed) Text(stringResource(R.string.batch_delete_start_failed), color = MaterialTheme.colorScheme.error)
+        } },
         confirmButton = {
             Column(horizontalAlignment = Alignment.End) {
-                if (MessageActionPolicy.canDeleteForEveryone(messages, profileId)) {
-                    TextButton(onClick = { onDelete(MessageDeletionScope.ForEveryone) }) {
+                if (remoteCount > 0) {
+                    TextButton(onClick = { onDelete(MessageDeletionScope.ForEveryone) }, enabled = !busy) {
                         Text(
                             stringResource(R.string.delete_for_everyone),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
-                TextButton(onClick = { onDelete(MessageDeletionScope.ForMe) }) {
+                TextButton(onClick = { onDelete(MessageDeletionScope.ForMe) }, enabled = !busy) {
                     Text(stringResource(R.string.delete_for_me), color = MaterialTheme.colorScheme.error)
                 }
             }

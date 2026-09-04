@@ -1703,13 +1703,13 @@ class ConversationScreenTest {
     }
 
     @Test
-    fun forwardingUsesSearchAndAnExplicitSelectionLimit() {
+    fun forwardingUsesSearchAndFolderSelectionGuidance() {
         setConversation("fiatjaf")
 
         composeRule.onNodeWithTag("conversation.message.fiatjaf-8")
             .performSemanticsAction(SemanticsActions.OnLongClick)
         composeRule.onNodeWithText("Forward").performClick()
-        composeRule.onNodeWithText("Select up to 5 chats.").assertIsDisplayed()
+        composeRule.onNodeWithText("Choose chats or folders.").assertIsDisplayed()
         composeRule.onNodeWithText("Search Chats").assertIsDisplayed()
     }
 

@@ -46,7 +46,7 @@ object MessageActionPolicy {
         ),
         canWrite: Boolean = true,
     ): List<MessageAction> {
-        if (message.isDeleted) return emptyList()
+        if (message.isDeleted) return listOf(MessageAction.Delete)
         val hasVoice = message.attachments.any { it.kind == MessageAttachmentKind.Voice }
         val incoming = message.authorId != profileId
         return buildList {
@@ -97,7 +97,7 @@ object MessageActionPolicy {
         messages.isNotEmpty() && messages.all { !it.isDeleted && it.authorId == profileId }
 
     fun canForward(messages: List<ChatMessage>): Boolean =
-        messages.isNotEmpty() && messages.size <= 32 && messages.none(ChatMessage::isDeleted)
+        MessageForwarding.sourceFailure(messages) == null
 }
 
 object ReactionCatalog {

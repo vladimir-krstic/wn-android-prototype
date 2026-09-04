@@ -122,6 +122,15 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B10: C043–C045 are implemented and host-verified. Group
+moderation and mixed deletion preserve per-item outcomes and failed-only retry.
+Forwarding adds folder/destination-profile selection, app-owned progress,
+automatic/manual retry and no replay of accepted sends. The source comparison
+removes the old 32-message/five-chat caps. See
+[message-moderation-and-forwarding.md](../screens/message-moderation-and-forwarding.md).
+The clean gate passed 361 unit tests, zero lint errors and both APKs; nine new UI
+cases compile. Historical device evidence below does not verify this build.
+
 2026-09-04 production B09: C038–C041's edit/history, full-reader, passage-selection
 and structured-document contracts are implemented and host-verified. Per-chat
 collapse and Read more retain access to complete text; native selection preserves

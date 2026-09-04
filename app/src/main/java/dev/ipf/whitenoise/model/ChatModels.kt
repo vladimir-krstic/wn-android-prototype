@@ -236,6 +236,7 @@ data class Chat(
     val pinnedOrder: Int? = null,
     val readState: ConversationReadState? = null,
     val collapseLongMessages: Boolean = true,
+    val messageDeletion: MessageDeleteOperation? = null,
 ) {
     val isGroup: Boolean
         get() = kind == ChatKind.Group

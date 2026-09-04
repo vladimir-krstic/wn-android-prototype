@@ -405,7 +405,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun forwardingPreservesSourceOrderAndPayloadAcrossAtMostFiveTargets() {
+    fun forwardingPreservesSourceOrderAndPayloadAcrossMoreThanFiveTargets() {
         val viewModel = signedInMarmota()
         val targetIds = listOf("maya-chen", "fiatjaf")
         val sourceIds = setOf("TXT-01", "TXT-02")
@@ -419,7 +419,7 @@ class AppViewModelTest {
             assertEquals(listOf("TXT-01: Incoming short text", "TXT-02: Outgoing short text"), copies.map { it.text })
             assertTrue(copies.all { it.authorId == ProfileFixtures.MARMOTA_ID && it.replyToMessageId == null && it.reactions.isEmpty() })
         }
-        assertFalse(viewModel.forwardMessages("catalog-direct-text", sourceIds, listOf("maya-chen", "fiatjaf", "weekend-walks", "theo-grant", "aisha-rahman", "nora-bennett")))
+        assertTrue(viewModel.forwardMessages("catalog-direct-text", sourceIds, listOf("maya-chen", "fiatjaf", "weekend-walks", "theo-grant", "aisha-rahman", "nora-bennett")))
         assertFalse(viewModel.forwardMessages("catalog-direct-text", sourceIds, listOf("catalog-direct-text")))
     }
 

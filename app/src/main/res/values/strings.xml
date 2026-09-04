@@ -346,8 +346,8 @@
     <string name="delete_for_me">Delete for Me</string>
     <string name="delete_for_everyone">Delete for Everyone</string>
     <string name="delete_for_me_explanation">Delete for Me removes the selected content from this device.</string>
-    <string name="forward_selection_limit">Select up to 5 chats.</string>
-    <string name="forward_selection_unavailable">Forwarding isn’t available when the selection contains a deleted message or more than 32 messages.</string>
+    <string name="forward_selection_limit">Choose chats or folders.</string>
+    <string name="forward_selection_unavailable">This selection contains a deleted, expired or unavailable message.</string>
     <plurals name="forward_to_chats">
         <item quantity="one">Forward to %1$d Chat</item>
         <item quantity="other">Forward to %1$d Chats</item>
@@ -656,4 +656,61 @@
     <string name="message_copy_id">Copy Message ID</string>
     <string name="message_copy_sender_key">Copy Sender Public Key</string>
     <string name="message_sender_public_key">Sender Public Key</string>
+    <string name="batch_details">Details</string>
+    <string name="batch_dismiss">Dismiss</string>
+    <string name="batch_forward_title">Forwarding</string>
+    <string name="batch_preparing">Preparing messages…</string>
+    <string name="batch_preparing_media">Preparing media: %1$d of %2$d</string>
+    <string name="batch_chat_unavailable">This chat is unavailable.</string>
+    <string name="batch_target_progress">Media uploaded: %1$d of %2$d · Messages sent: %3$d of %4$d</string>
+    <string name="batch_retry_failed">Retry failed</string>
+    <plurals name="batch_delete_progress">
+        <item quantity="one">Deleted %1$d of %2$d message</item>
+        <item quantity="other">Deleted %1$d of %2$d messages</item>
+    </plurals>
+    <string name="batch_delete_failures">Couldn’t delete for everyone: %1$d. Couldn’t remove from this device: %2$d.</string>
+    <string name="batch_copy_report">Copy report</string>
+    <string name="batch_folder_empty">No available chats</string>
+    <plurals name="batch_folder_count">
+        <item quantity="one">%1$d available chat</item>
+        <item quantity="other">%1$d available chats</item>
+    </plurals>
+    <plurals name="batch_forward_running">
+        <item quantity="one">Forwarding to %1$d of %2$d chat…</item>
+        <item quantity="other">Forwarding to %1$d of %2$d chats…</item>
+    </plurals>
+    <plurals name="batch_forward_complete">
+        <item quantity="one">Forwarded to %1$d of %2$d chat</item>
+        <item quantity="other">Forwarded to %1$d of %2$d chats</item>
+    </plurals>
+    <string name="batch_forward_failed">Couldn’t forward messages.</string>
+    <string name="batch_forward_cancelled">Forwarding cancelled</string>
+    <string name="batch_waiting">Waiting</string>
+    <string name="batch_uploading">Uploading media…</string>
+    <string name="batch_sending">Sending messages…</string>
+    <string name="batch_sent">Sent</string>
+    <string name="batch_prepare_failed">Couldn’t prepare the messages.</string>
+    <string name="batch_prepare_timeout">Preparing the media took too long.</string>
+    <string name="batch_upload_failed">Couldn’t upload the media.</string>
+    <string name="batch_send_failed">Couldn’t send the remaining messages.</string>
+    <string name="batch_payload_large">This media is too large to forward.</string>
+    <string name="batch_source_expired">The source message has expired.</string>
+    <string name="batch_session_changed">The profile session changed. Start forwarding again.</string>
+    <string name="batch_source_unavailable">The source message is no longer available.</string>
+    <string name="batch_invitation">Accept this chat invitation first.</string>
+    <string name="batch_left">You left this chat.</string>
+    <string name="batch_removed">You were removed from this chat.</string>
+    <string name="batch_blocked">Unblock this person to send messages.</string>
+    <string name="batch_missing_relays">Add a relay before sending messages.</string>
+    <string name="batch_forward_from">Send as %1$s</string>
+    <string name="batch_forward_start_failed">Couldn’t start forwarding. Check the source messages and destination profile.</string>
+    <string name="batch_delete_mixed">For everyone: %1$d. Only from this device: %2$d. Others will still see the messages removed only from this device.</string>
+    <string name="batch_delete_everyone_detail">Delete these messages for everyone, or remove them only from this device.</string>
+    <string name="batch_delete_start_failed">Couldn’t start deletion. Check the selected messages and try again.</string>
+    <string name="batch_profile_choice">Send as</string>
+    <string name="batch_folders">Folders</string>
+    <string name="batch_chats">Chats</string>
+    <string name="batch_delete_failed_remote">Couldn’t delete for everyone: %1$d.</string>
+    <string name="batch_delete_failed_local">Couldn’t remove from this device: %1$d.</string>
+    <string name="batch_automatic_retry">Retrying automatically…</string>
 </resources>

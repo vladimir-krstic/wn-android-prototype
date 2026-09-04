@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.state
 
+import dev.ipf.whitenoise.model.*
+
 import dev.ipf.whitenoise.model.ChatOrganization
 import dev.ipf.whitenoise.model.MessageEditing
 import dev.ipf.whitenoise.model.MessageEditAttempt
@@ -170,8 +172,9 @@ class AppViewModel(
 
     fun selectProfile(profileId: String) {
         if (profileId !in uiState.signedInProfileIds) return
-        if (uiState.profiles.none { it.id == profileId }) return
+        if (uiState.profiles.none { it.id == profileId } || uiState.activeProfileId == profileId) return
         interruptMessageEdits()
+        interruptMessageOperations()
         cancelAccess()
         profileExitAttempt = null
         cancelCreatedChatOpen()
@@ -301,6 +304,7 @@ class AppViewModel(
     fun recoverStartupProfiles() {
         if (startupState.phase != StartupPhase.Failed || uiState.profiles.isEmpty()) return
         interruptMessageEdits()
+        interruptMessageOperations()
         cancelAccess()
         uiState = uiState.copy(activeProfileId = null, signedInProfileIds = emptySet(), pendingDiagnosticsProfileId = null)
         startupState = startupState.copy(phase = StartupPhase.Ready)
@@ -584,11 +588,13 @@ class AppViewModel(
     fun signOutActiveProfile(wipeData: Boolean): ProfileExitDestination? {
         val activeId = uiState.activeProfileId ?: return null
         interruptMessageEdits()
+        interruptMessageOperations()
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
         cancelAccess()
         val signedIn = uiState.signedInProfileIds - activeId
+        if (wipeData) messageForwards = messageForwards.filterValues { activeId !in setOf(it.sourceProfileId, it.destinationProfileId) }
         val profiles = if (wipeData) uiState.profiles.filterNot { it.id == activeId } else uiState.profiles
         val nextActiveId = profiles.firstOrNull { it.id in signedIn }?.id
         uiState = AppUiState(
@@ -681,6 +687,8 @@ class AppViewModel(
         if (profile.id == uiState.activeProfileId || !WipeConfirmationPhrase.matches(confirmation, profile.name)) {
             return false
         }
+        interruptMessageOperations(profileId)
+        messageForwards = messageForwards.filterValues { profileId !in setOf(it.sourceProfileId, it.destinationProfileId) }
         if (accessAttempt?.candidate?.id == profileId) cancelAccess()
         uiState = uiState.copy(
             profiles = uiState.profiles.filterNot { it.id == profileId },
@@ -706,6 +714,9 @@ class AppViewModel(
         nextGlobalVoiceScenario = GlobalVoiceScenario.Success
         nextHistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success
         nextMessageEditScenario = MessageEditScenario.Success
+        nextMessageDeleteScenario = MessageDeleteScenario.Success
+        nextMessageForwardScenario = MessageForwardScenario.Success
+        messageForwards = emptyMap()
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
@@ -1530,176 +1541,207 @@ class AppViewModel(
         return true
     }
 
-    fun deleteMessages(
-        chatId: String,
-        messageIds: Set<String>,
-        scope: MessageDeletionScope,
-    ): Boolean {
-        if (messageIds.isEmpty()) return false
-        val profileId = uiState.activeProfileId ?: return false
-        var changed = false
-        mutateChat(chatId) { chat ->
-            val selected = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>()
-                .map(ChatTimelineEntry.Message::message)
-                .filter { it.id in messageIds }
-            if (selected.size != messageIds.size) return@mutateChat chat
-            if (scope == MessageDeletionScope.ForEveryone && !MessageActionPolicy.canDeleteForEveryone(selected, profileId)) {
-                return@mutateChat chat
-            }
-            changed = true
-            val timeline = when (scope) {
-                MessageDeletionScope.ForMe -> chat.timeline.filterNot { entry ->
-                    entry is ChatTimelineEntry.Message && entry.message.id in messageIds
-                }
-                MessageDeletionScope.ForEveryone -> chat.timeline.map { entry ->
-                    if (entry is ChatTimelineEntry.Message && entry.message.id in messageIds) {
-                        entry.copy(
-                            message = entry.message.copy(
-                                text = "",
-                                attachments = emptyList(),
-                                replyToMessageId = null,
-                                reactions = emptyList(),
-                                deletionState = dev.ipf.whitenoise.model.MessageDeletionState.DeletedByCurrentProfile,
-                                editHistory = null,
-                                editAttempt = null,
-                            ),
-                        )
-                    } else {
-                        entry
-                    }
-                }
-            }
-            val latest = timeline.filterIsInstance<ChatTimelineEntry.Message>().lastOrNull()?.message
-            chat.copy(
-                timeline = timeline,
-                preview = latest?.visibleText(profileId).orEmpty(),
-                previewAuthor = latest?.let { if (it.authorId == profileId) "You" else null },
-                attachmentPreview = latest?.let { attachmentPreview(it.attachments) },
-                draftReplyMessageId = chat.draftReplyMessageId?.takeUnless(messageIds::contains),
-                isDraft = chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty() ||
-                    (chat.draftReplyMessageId != null && chat.draftReplyMessageId !in messageIds),
-            )
-        }
-        return changed
+    private var messageOperationGeneration = 0L
+    var nextMessageDeleteScenario by mutableStateOf(MessageDeleteScenario.Success)
+        private set
+    var nextMessageForwardScenario by mutableStateOf(MessageForwardScenario.Success)
+        private set
+    var messageForwards by mutableStateOf<Map<String, MessageForwardOperation>>(emptyMap())
+        private set
+
+    fun selectMessageDeleteScenario(value: MessageDeleteScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextMessageDeleteScenario = value
     }
-
-    fun forwardMessages(
-        sourceChatId: String,
-        messageIds: Set<String>,
-        targetChatIds: List<String>,
-    ): Boolean {
-        val profile = uiState.activeProfile ?: return false
-        val source = profile.chats.firstOrNull { it.id == sourceChatId } ?: return false
-        val targets = targetChatIds.distinct()
-        if (targets.isEmpty() || targets.size > 5 || sourceChatId in targets) return false
-        val selected = source.timeline.filterIsInstance<ChatTimelineEntry.Message>()
-            .map(ChatTimelineEntry.Message::message)
-            .filter { it.id in messageIds }
-        if (selected.size != messageIds.size || !MessageActionPolicy.canForward(selected)) return false
-        val eligibleTargets = profile.chats.filter { target ->
-            target.id in targets && target.composerAvailability(profile) == ComposerAvailability.Available
+    fun selectMessageForwardScenario(value: MessageForwardScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextMessageForwardScenario = value
+    }
+    fun beginMessageDeletion(profileId: String, chatId: String, ids: Set<String>, scope: MessageDeletionScope): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return false
+        val chat = chat(chatId)?.takeUnless { it.messageDeletion?.isRunning == true } ?: return false
+        val items = MessageDeletion.plan(profile, chat, ids, scope) ?: return false
+        val operation = MessageDeleteOperation(++messageOperationGeneration, profileId, chatId, items, nextMessageDeleteScenario)
+        nextMessageDeleteScenario = MessageDeleteScenario.Success
+        mutateChat(chatId) { it.copy(messageDeletion = operation) }
+        return true
+    }
+    fun advanceMessageDeletion(profileId: String, chatId: String, requestId: Long, revision: Int): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return false
+        val chat = chat(chatId) ?: return false
+        val operation = chat.messageDeletion?.takeIf { it.id == requestId && it.revision == revision && it.isRunning } ?: return false
+        val index = operation.items.indexOfFirst { it.phase == MessageDeletePhase.Pending }
+        val item = operation.items[index]
+        val message = message(chatId, item.messageId)
+        val failure = when {
+            message == null -> MessageDeleteFailure.Unavailable
+            item.scope == MessageDeletionScope.ForEveryone && !MessageDeletion.canDeleteForEveryone(message, profile, chat) -> MessageDeleteFailure.PermissionDenied
+            operation.attempt == 0 && (operation.scenario == MessageDeleteScenario.Failure ||
+                (operation.scenario == MessageDeleteScenario.Partial && index % 2 == 1)) -> MessageDeleteFailure.Temporary
+            else -> null
         }
-        if (eligibleTargets.size != targets.size) return false
-
-        updateActiveProfile { active ->
-            active.copy(chats = active.chats.map { target ->
-                if (target.id !in targets) return@map target
-                var minute = nextTimelinePosition(target).second
-                val copies = selected.map { sourceMessage ->
-                    createdChatSequence += 1
-                    ChatTimelineEntry.Message(
-                        sourceMessage.copy(
-                            id = "${target.id}-forward-$createdChatSequence",
-                            authorId = active.id,
-                            dayOrdinal = 3,
-                            dayLabel = "Today",
-                            minuteOfDay = minute++,
-                            timeLabel = "Now",
-                            replyToMessageId = null,
-                            reactions = emptyList(),
-                            deliveryState = MessageDeliveryState.Sent,
-                            deletionState = dev.ipf.whitenoise.model.MessageDeletionState.None,
-                            editHistory = null,
-                            editAttempt = null,
-                            createdAtMillis = null,
-                            receivedAtMillis = null,
-                            expiresAtMillis = null,
-                        ),
-                    )
-                }
-                val latest = copies.last().message
-                target.copy(
-                    timeline = target.timeline + copies,
-                    preview = latest.text.ifBlank { latest.attachments.firstOrNull()?.label.orEmpty() },
-                    previewAuthor = "You",
-                    attachmentPreview = attachmentPreview(latest.attachments),
-                    timestamp = "Now",
-                )
-            })
+        val outcome = item.copy(phase = if (failure == null) MessageDeletePhase.Succeeded else MessageDeletePhase.Failed, failure = failure)
+        val next = operation.copy(items = operation.items.mapIndexed { i, value -> if (i == index) outcome else value }, revision = revision + 1)
+        mutateChat(chatId) { current ->
+            (if (failure == null) MessageDeletion.remove(current, item, profileId) else current).copy(messageDeletion = next)
         }
         return true
     }
-
-    fun forwardMediaFrame(
-        sourceChatId: String,
-        mediaKey: ConversationMediaKey,
-        targetChatIds: List<String>,
-        accompanyingText: String = "",
-    ): Boolean {
-        val profile = uiState.activeProfile ?: return false
-        val source = profile.chats.firstOrNull { it.id == sourceChatId } ?: return false
-        val media = ConversationMediaProjection.items(source, profile).firstOrNull {
-            it.key == mediaKey
-        } ?: return false
-        val targets = targetChatIds.distinct()
-        if (targets.isEmpty() || targets.size > 5 || sourceChatId in targets) return false
-        val eligibleTargets = profile.chats.filter { target ->
-            target.id in targets && target.composerAvailability(profile) == ComposerAvailability.Available
-        }
-        if (eligibleTargets.size != targets.size) return false
-        val text = accompanyingText.trim()
-
-        updateActiveProfile { active ->
-            active.copy(chats = active.chats.map { target ->
-                if (target.id !in targets) return@map target
-                val (day, minute) = nextTimelinePosition(target)
-                createdChatSequence += 1
-                val sequence = createdChatSequence
-                val attachment = media.attachment.copy(
-                    id = "${target.id}-media-$sequence",
-                    kind = if (media.attachment.kind == MessageAttachmentKind.Video) {
-                        MessageAttachmentKind.Video
-                    } else {
-                        MessageAttachmentKind.Photo
-                    },
-                    label = if (media.attachment.kind == MessageAttachmentKind.Photos) {
-                        "Photo"
-                    } else {
-                        media.attachment.label
-                    },
-                    images = listOfNotNull(media.image),
-                )
-                val forwarded = ChatMessage(
-                    id = "${target.id}-forward-media-$sequence",
-                    authorId = active.id,
-                    dayOrdinal = day,
-                    dayLabel = "Today",
-                    minuteOfDay = minute,
-                    timeLabel = "Now",
-                    text = text,
-                    attachments = listOf(attachment),
-                    deliveryState = MessageDeliveryState.Sent,
-                )
-                target.copy(
-                    timeline = target.timeline + ChatTimelineEntry.Message(forwarded),
-                    preview = text.ifBlank { attachment.label },
-                    previewAuthor = "You",
-                    attachmentPreview = attachmentPreview(listOf(attachment)),
-                    timestamp = "Now",
-                )
-            })
-        }
+    fun retryMessageDeletion(profileId: String, chatId: String, requestId: Long): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val op = chat(chatId)?.messageDeletion?.takeIf { it.id == requestId && it.canRetry } ?: return false
+        mutateChat(chatId) { it.copy(messageDeletion = op.copy(attempt = op.attempt + 1, revision = op.revision + 1,
+            items = op.items.map { item -> if (item.phase == MessageDeletePhase.Failed && item.failure != MessageDeleteFailure.SessionChanged)
+                item.copy(phase = MessageDeletePhase.Pending, failure = null) else item })) }
         return true
+    }
+    fun dismissMessageDeletion(profileId: String, chatId: String, requestId: Long) {
+        if (uiState.activeProfileId != profileId) return
+        mutateChat(chatId) { chat -> if (chat.messageDeletion?.let { it.id == requestId && !it.isRunning } == true) chat.copy(messageDeletion = null) else chat }
+    }
+    /** Immediate local entry used by existing non-UI callers; the UI uses the staged batch. */
+    fun deleteMessages(chatId: String, messageIds: Set<String>, scope: MessageDeletionScope): Boolean {
+        val profile = uiState.activeProfile ?: return false
+        val chat = chat(chatId) ?: return false
+        val items = MessageDeletion.plan(profile, chat, messageIds, scope) ?: return false
+        mutateChat(chatId) { original -> items.fold(original) { current, item -> MessageDeletion.remove(current, item, profile.id) } }
+        return true
+    }
+
+    fun beginMessageForward(profileId: String, sourceChatId: String, messageIds: Set<String>, destinationProfileId: String,
+        targetChatIds: List<String>, mediaKey: ConversationMediaKey? = null, accompanyingText: String = ""): Boolean {
+        val sourceProfile = uiState.activeProfile?.takeIf { it.id == profileId && it.id in uiState.signedInProfileIds } ?: return false
+        val destination = uiState.signedInProfiles.firstOrNull { it.id == destinationProfileId } ?: return false
+        if (messageForwards[profileId]?.isRunning == true) return false
+        val source = sourceProfile.chats.firstOrNull { it.id == sourceChatId } ?: return false
+        val targets = targetChatIds.distinct()
+        if (targets.isEmpty() || (destinationProfileId == profileId && sourceChatId in targets)) return false
+        val payload = MessageForwarding.payload(sourceProfile, source, messageIds, mediaKey, accompanyingText) ?: return false
+        val operation = MessageForwardOperation(++messageOperationGeneration, profileId, sourceChatId, destinationProfileId,
+            messageIds.toSet(), payload, targets.map { id ->
+                val chat = destination.chats.firstOrNull { it.id == id }
+                val failure = MessageForwarding.targetFailure(destination, chat)
+                MessageForwardTarget(id, chat?.title.orEmpty(), phase = if (failure == null) MessageForwardTargetPhase.Waiting else MessageForwardTargetPhase.Failed, failure = failure)
+            }, nextMessageForwardScenario)
+        nextMessageForwardScenario = MessageForwardScenario.Success
+        messageForwards = messageForwards + (profileId to operation)
+        return true
+    }
+    fun advanceMessageForward(profileId: String, requestId: Long, revision: Int): Boolean {
+        val operation = messageForwards[profileId]?.takeIf { it.id == requestId && it.revision == revision && it.isRunning } ?: return false
+        val sourceProfile = uiState.profiles.firstOrNull { it.id == operation.sourceProfileId }
+        val destination = uiState.profiles.firstOrNull { it.id == operation.destinationProfileId }
+        val source = sourceProfile?.chats?.firstOrNull { it.id == operation.sourceChatId }
+        val sources = source?.timeline?.filterIsInstance<ChatTimelineEntry.Message>()?.map { it.message }?.filter { it.id in operation.sourceMessageIds }.orEmpty()
+        val scenario = operation.scenario.takeIf { operation.attempt == 0 || (it == MessageForwardScenario.PartialSendUntilRetried && operation.manualRetries == 0) } ?: MessageForwardScenario.Success
+        val globalFailure = when {
+            uiState.activeProfileId != profileId || sourceProfile == null || destination == null ||
+                operation.sourceProfileId !in uiState.signedInProfileIds || operation.destinationProfileId !in uiState.signedInProfileIds ||
+                scenario == MessageForwardScenario.SessionChanged -> MessageForwardFailure.SessionChanged
+            source == null || sources.size != operation.sourceMessageIds.size -> MessageForwardFailure.SourceUnavailable
+            MessageForwarding.sourceFailure(sources) != null -> MessageForwarding.sourceFailure(sources)
+            scenario == MessageForwardScenario.Expired -> MessageForwardFailure.Expired
+            scenario == MessageForwardScenario.PayloadTooLarge -> MessageForwardFailure.PayloadTooLarge
+            operation.phase == MessageForwardPhase.Preparing && scenario == MessageForwardScenario.PreparationFails -> MessageForwardFailure.Preparation
+            operation.phase == MessageForwardPhase.Preparing && scenario == MessageForwardScenario.PreparationTimeout -> MessageForwardFailure.PreparationTimeout
+            else -> null
+        }
+        fun store(next: MessageForwardOperation) { messageForwards = messageForwards + (profileId to next.copy(revision = revision + 1)) }
+        if (globalFailure != null) {
+            store(operation.copy(targets = operation.targets.map { if (it.phase == MessageForwardTargetPhase.Completed) it else
+                it.copy(phase = MessageForwardTargetPhase.Failed, failure = globalFailure) }).settled())
+            return true
+        }
+        if (operation.phase == MessageForwardPhase.Preparing) {
+            val prepared = (operation.prepared + 1).coerceAtMost(operation.totalAttachments)
+            store(operation.copy(prepared = prepared, phase = if (prepared == operation.totalAttachments) MessageForwardPhase.Running else MessageForwardPhase.Preparing).settled())
+            return true
+        }
+        val targetIndex = operation.targets.indexOfFirst { it.phase in setOf(MessageForwardTargetPhase.Waiting, MessageForwardTargetPhase.Uploading, MessageForwardTargetPhase.Sending) }
+        if (targetIndex < 0) { store(operation.settled()); return true }
+        val target = operation.targets[targetIndex]
+        val targetChat = destination!!.chats.firstOrNull { it.id == target.chatId }
+        val failure = MessageForwarding.targetFailure(destination, targetChat)
+        val next = if (failure != null) target.copy(phase = MessageForwardTargetPhase.Failed, failure = failure) else when (target.phase) {
+            MessageForwardTargetPhase.Waiting -> target.copy(phase = if (operation.totalAttachments > 0) MessageForwardTargetPhase.Uploading else MessageForwardTargetPhase.Sending)
+            MessageForwardTargetPhase.Uploading -> {
+                if (scenario == MessageForwardScenario.PartialUpload && targetIndex == minOf(1, operation.targets.lastIndex))
+                    target.copy(phase = MessageForwardTargetPhase.Failed, failure = MessageForwardFailure.Upload)
+                else target.copy(uploaded = (target.uploaded + 1).coerceAtMost(operation.totalAttachments),
+                    phase = if (target.uploaded + 1 >= operation.totalAttachments) MessageForwardTargetPhase.Sending else MessageForwardTargetPhase.Uploading)
+            }
+            MessageForwardTargetPhase.Sending -> {
+                if (scenario in setOf(MessageForwardScenario.PartialSend, MessageForwardScenario.PartialSendUntilRetried) && targetIndex == minOf(1, operation.targets.lastIndex) && target.sent == minOf(1, operation.messages.lastIndex))
+                    target.copy(phase = MessageForwardTargetPhase.Failed, failure = MessageForwardFailure.Send)
+                else {
+                    val (day, minute) = nextTimelinePosition(targetChat!!)
+                    val copy = MessageForwarding.copyForDestination(operation.messages[target.sent], operation.id, targetChat, destination.id, target.sent, day, minute)
+                    uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != destination.id) profile else profile.copy(chats = profile.chats.map { chat ->
+                        if (chat.id != target.chatId || chat.timeline.any { it.id == copy.id }) chat else {
+                            val updated = chat.copy(timeline = chat.timeline + ChatTimelineEntry.Message(copy),
+                                preview = copy.text.ifBlank { copy.attachments.firstOrNull()?.label.orEmpty() }, previewAuthor = "You",
+                                attachmentPreview = attachmentPreview(copy.attachments), timestamp = "Now")
+                            updated.copy(readState = updated.readState?.let { ConversationReading.reconcile(it, updated, profile.id) })
+                        }
+                    }) })
+                    target.copy(sent = target.sent + 1, phase = if (target.sent + 1 == operation.messages.size) MessageForwardTargetPhase.Completed else MessageForwardTargetPhase.Sending)
+                }
+            }
+            else -> target
+        }
+        store(operation.copy(targets = operation.targets.mapIndexed { i, value -> if (i == targetIndex) next else value }).settled())
+        return true
+    }
+    fun retryMessageForward(profileId: String, requestId: Long, automatic: Boolean = false, expectedRevision: Int? = null): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val op = messageForwards[profileId]?.takeIf { it.id == requestId && it.canRetry } ?: return false
+        if ((automatic && !op.canAutomaticallyRetry) || (expectedRevision != null && expectedRevision != op.revision)) return false
+        messageForwards = messageForwards + (profileId to op.copy(attempt = op.attempt + 1, revision = op.revision + 1,
+            automaticRetries = op.automaticRetries + if (automatic) 1 else 0,
+            manualRetries = op.manualRetries + if (automatic) 0 else 1,
+            phase = if (op.prepared < op.totalAttachments || op.targets.any { it.failure in setOf(MessageForwardFailure.Preparation, MessageForwardFailure.PreparationTimeout) })
+                MessageForwardPhase.Preparing else MessageForwardPhase.Running,
+            targets = op.targets.map { if (it.phase == MessageForwardTargetPhase.Failed && it.failure?.retryable == true)
+                it.copy(phase = MessageForwardTargetPhase.Waiting, failure = null) else it }))
+        return true
+    }
+    fun cancelMessageForward(profileId: String, requestId: Long): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val op = messageForwards[profileId]?.takeIf { it.id == requestId && it.canCancel } ?: return false
+        messageForwards = messageForwards + (profileId to op.copy(phase = MessageForwardPhase.Cancelled, revision = op.revision + 1,
+            targets = op.targets.map { if (it.phase in setOf(MessageForwardTargetPhase.Completed, MessageForwardTargetPhase.Failed)) it else it.copy(phase = MessageForwardTargetPhase.Cancelled) }))
+        return true
+    }
+    fun dismissMessageForward(profileId: String, requestId: Long) {
+        if (uiState.activeProfileId == profileId && messageForwards[profileId]?.let { it.id == requestId && !it.isRunning } == true)
+            messageForwards = messageForwards - profileId
+    }
+    fun interruptMessageOperations(profileId: String? = uiState.activeProfileId) {
+        if (profileId == null) return
+        messageForwards = messageForwards.mapValues { (_, op) ->
+            if (!op.isRunning || profileId !in setOf(op.sourceProfileId, op.destinationProfileId)) op else op.copy(revision = op.revision + 1,
+                targets = op.targets.map { if (it.phase == MessageForwardTargetPhase.Completed) it else it.copy(phase = MessageForwardTargetPhase.Failed, failure = MessageForwardFailure.SessionChanged) }).settled()
+        }
+        uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != profileId) profile else profile.copy(chats = profile.chats.map { chat ->
+            val op = chat.messageDeletion
+            if (op?.isRunning != true) chat else chat.copy(messageDeletion = op.copy(revision = op.revision + 1, items = op.items.map {
+                if (it.phase == MessageDeletePhase.Pending) it.copy(phase = MessageDeletePhase.Failed, failure = MessageDeleteFailure.SessionChanged) else it
+            }))
+        }) })
+    }
+    fun forwardMessages(sourceChatId: String, messageIds: Set<String>, targetChatIds: List<String>): Boolean {
+        val owner = uiState.activeProfileId ?: return false
+        if (!beginMessageForward(owner, sourceChatId, messageIds, owner, targetChatIds)) return false
+        while (messageForwards[owner]?.isRunning == true) {
+            val op = messageForwards.getValue(owner); advanceMessageForward(owner, op.id, op.revision)
+        }
+        return messageForwards[owner]?.phase == MessageForwardPhase.Completed
+    }
+    fun forwardMediaFrame(sourceChatId: String, mediaKey: ConversationMediaKey, targetChatIds: List<String>, accompanyingText: String = ""): Boolean {
+        val owner = uiState.activeProfileId ?: return false
+        if (!beginMessageForward(owner, sourceChatId, setOf(mediaKey.messageId), owner, targetChatIds, mediaKey, accompanyingText)) return false
+        while (messageForwards[owner]?.isRunning == true) {
+            val op = messageForwards.getValue(owner); advanceMessageForward(owner, op.id, op.revision)
+        }
+        return messageForwards[owner]?.phase == MessageForwardPhase.Completed
     }
 
     fun message(chatId: String, messageId: String): ChatMessage? = chat(chatId)?.timeline
@@ -2016,6 +2058,7 @@ class AppViewModel(
 
     private fun activate(profile: Profile, updatesStoredProfile: Boolean) {
         interruptMessageEdits()
+        interruptMessageOperations()
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
@@ -2105,24 +2148,6 @@ class AppViewModel(
         return day to ((latestMinute ?: 719) + 1)
     }
 
-    private fun attachmentPreview(attachments: List<MessageAttachment>): AttachmentPreview? {
-        if (attachments.isEmpty()) return null
-        val visualCount = attachments.count {
-            it.kind == MessageAttachmentKind.Photo || it.kind == MessageAttachmentKind.Photos
-        }
-        if (visualCount > 1 && visualCount == attachments.size) {
-            return AttachmentPreview.Photos(visualCount)
-        }
-        val first = attachments.first()
-        return when (first.kind) {
-            MessageAttachmentKind.Photo -> AttachmentPreview.Photo
-            MessageAttachmentKind.Photos -> AttachmentPreview.Photos(first.images.size.coerceAtLeast(1))
-            MessageAttachmentKind.Video -> AttachmentPreview.Video
-            MessageAttachmentKind.Voice -> AttachmentPreview.VoiceMessage
-            MessageAttachmentKind.File -> AttachmentPreview.File(first.label)
-            MessageAttachmentKind.Contact -> AttachmentPreview.Contact(first.label.removePrefix("Contact: "))
-            MessageAttachmentKind.Link -> AttachmentPreview.Link
-            MessageAttachmentKind.Gif -> AttachmentPreview.Gif
-        }
-    }
+    private fun attachmentPreview(attachments: List<MessageAttachment>) = messageAttachmentPreview(attachments)
+
 }

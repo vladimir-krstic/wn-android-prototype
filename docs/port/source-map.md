@@ -133,3 +133,12 @@ For each flow:
 5. Write the Android brief before implementation.
 6. Choose Android components from current official guidance; never make Swift
    type names or Apple metrics the Android architecture.
+
+## Production B10 deletion and forwarding extension
+
+`docs/screens/message-moderation-and-forwarding.md` maps production
+messageDeleteCapability, MessageBatchDeleteOperations, MessageDeleteDialog,
+ForwardSelection/Picker, ForwardSession and ForwardOperationCoordinator into
+`MessageBatchModels.kt`, `AppViewModel.kt`, `MessageBatchUi.kt` and the shared
+conversation/Shared Content picker. Production reconnects outcome and transport
+callbacks; prototype behavior remains deterministic, in memory and foreground-owned.

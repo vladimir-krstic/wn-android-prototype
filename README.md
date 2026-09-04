@@ -111,6 +111,8 @@ evidence, bounded decisions, and remaining user-acceptance work.
   selected. The [production parity plan](docs/audits/production-android-parity/implementation-plan.md)
   tracks completed batches and their verification; [B09](docs/screens/message-editing-and-reading.md)
   covers message editing, full reading and native passage selection.
+  [B10](docs/screens/message-moderation-and-forwarding.md) adds moderation, batch
+  deletion recovery and forwarding progress.
 
 ## iOS parity reference
 

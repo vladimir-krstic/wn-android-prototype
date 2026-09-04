@@ -437,3 +437,15 @@ per-chat collapse, native passage selection and structured source-aware text.
 The ordinary composer draft, selection, reply and attachments remain independent
 of the edit task. The clean host gate passes 343 unit tests and both APKs; ten
 new UI cases compile. Device/visual acceptance remains pending.
+
+## B10 moderation and forwarding extension
+
+The [current B10 brief](message-moderation-and-forwarding.md) supersedes the older
+32-message/five-chat limit and deleted-message no-hold rules described above.
+Tombstones now offer local removal; active admins can moderate group messages.
+Mixed deletion explicitly names its scopes and preserves failed-only recovery.
+The shared picker retains its approved geometry while adding folders, blocked
+reasons and destination-profile choice. App-owned progress/retry survives route
+changes; completion never duplicates accepted sends. The clean host gate passes
+361 unit tests and both APKs; nine new UI cases compile. Device/visual acceptance
+is separate from the older evidence above.

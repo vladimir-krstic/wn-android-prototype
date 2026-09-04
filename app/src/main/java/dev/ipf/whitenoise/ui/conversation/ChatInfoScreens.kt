@@ -748,6 +748,8 @@ fun SharedContentScreen(
     category: SharedContentCategory,
     onBack: () -> Unit,
     onForwardMedia: (ConversationMediaKey, List<String>, String) -> Boolean = { _, _, _ -> false },
+    forwardProfiles: List<Profile> = listOf(profile),
+    onForwardMediaToProfile: ((ConversationMediaKey, String, List<String>, String) -> Boolean)? = null,
     onGoToMessage: (String) -> Unit = {},
 ) {
     val content = remember(chat.timeline, category) {
@@ -870,6 +872,12 @@ fun SharedContentScreen(
             sourceChatId = chat.id,
             onDismiss = { forwardMediaKey = null },
             allowsAccompanyingMessage = true,
+            destinationProfiles = forwardProfiles,
+            onForwardToProfile = { destination, targets, message ->
+                val started = onForwardMediaToProfile?.invoke(key, destination, targets, message) ?: onForwardMedia(key, targets, message)
+                if (started) { forwardMediaKey = null; viewerSelection = null }
+                started
+            },
             onForward = { targets, message ->
                 if (onForwardMedia(key, targets, message)) forwardMediaKey = null
             },
