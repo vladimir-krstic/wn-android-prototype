@@ -29,7 +29,8 @@ MessageFullScreen/EditHistory, native passage selection and MarkdownRenderer int
 `docs/screens/message-editing-and-reading.md`. Accepted text is authoritative;
 local document/source annotations reconnect to production AST/selection data.
 Encoded Nostr profile/event reference resolution is implemented and mapped in
-the B30 section below.
+the B30 section below. B31 maps production Help/About and reviewed URLs to
+`docs/screens/help-about-and-licenses.md`.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)
@@ -400,3 +401,18 @@ Developer Tools only inserts examples. Ordinary rendering, profile routing,
 copy, readers, playback and retry do not depend on the developer gate. No
 private-key form, transport, persistence, relay access or wire-schema claim is
 introduced.
+
+## Production Android B31 — Help, About and open source licenses
+
+[Selected brief](../screens/help-about-and-licenses.md) maps C117 to
+model/HelpAbout.kt, ui/settings/HelpAboutScreens.kt, the Settings hub and typed
+Navigation Compose destinations. Production HelpAboutScreens and
+WhiteNoiseUrls provide the product hierarchy, GitHub issue destination and
+privacy-policy seam.
+
+Reconnect only package-owned version facts and generated dependency notices.
+The bug-report intent contains the reviewed public URL and no app data.
+Browser access remains a user-initiated Android activity handoff; the app owns
+neither its network session nor GitHub authentication. Keep the HTTPS
+scheme/host/path allowlist and explicit unavailable recovery when this work is
+migrated to production.

@@ -32,7 +32,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B28: implemented and host-verified 2026-09-04; 809 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/relay-publication-and-validation.md#implementation-evidence). Commit title: `B28: Add relay publication readiness and recovery`. Existing three-role/general-URL capability is preserved; Q04 still governs future narrowing or relocation.
 - B29: implemented and host-verified 2026-09-04; 817 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/ai-agents-and-streaming-operations.md#implementation-evidence). Commit title: `B29: Add AI agent setup and streaming operations`. Ordinary operations remain separate from developer stream records.
 - B30: implemented and host-verified 2026-09-04; 826 unit tests, zero lint errors, both APKs and seven new compiled UI cases. [Evidence](../../screens/verified-event-cards-and-readers.md#implementation-evidence). Commit title: `B30: Add verified event cards and readers`. Public references remain in-app and all event/media content is deterministic and local.
-- B24, B26 and B31–B32: pending; linked decisions apply only to their named slices.
+- B31: implemented and host-verified 2026-09-04; 829 unit tests, zero lint errors, both debug APKs, a release APK with generated notices and six new compiled UI cases. [Evidence](../../screens/help-about-and-licenses.md#implementation-evidence). Commit title: `B31: Add Help, About and open source licenses`.
+- B24, B26 and B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -69,7 +70,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B28** | Relay publication and managed-list differences | C108, C109 | B05 | Implemented; host verified; Q04 retained for future narrowing |
 | **B29** | AI-agent setup and streamed operation rows | C112, C113 | B03, B09 | Implemented; host verified |
 | **B30** | Verified Nostr event cards and readers | C114, C115 | B09, B13 | Implemented; host verified |
-| **B31** | Help, About, licenses and external support | C117 | B01 | Ready |
+| **B31** | Help, About, licenses and external support | C117 | B01 | Implemented; host verified |
 | **B32** | Distribution-gated update experience | C120, C121 | B05 | Blocked slices: Q06 |
 
 ## Batch details
@@ -575,6 +576,8 @@ Capabilities: C117. Dependencies: B01.
 **Acceptance and validation:** C117 satisfies its matrix contract. Preserve all existing flow behavior. Add rule/ownership unit tests and durable Compose interaction/semantics tests; run targeted host tests and the complete static gate at the end. Device/system-surface and visual acceptance remain separate.
 
 **Non-goals:** No backend, network transport, Marmot, real signing/encryption, persistence, installer, notification delivery, background service or device automation unless a later explicit request expands the selected batch. Do not restyle system-owned surfaces or redesign unrelated screens.
+
+**Implementation evidence:** Implemented and host-verified under [the B31 brief](../../screens/help-about-and-licenses.md#implementation-evidence). The review-first handoff attaches no app data; version/build are package-owned; browser destinations are allowlisted; release license resources are generated from resolved dependencies.
 
 ### B32 — Distribution-gated update experience
 

@@ -63,6 +63,9 @@ import dev.ipf.whitenoise.ui.settings.ChatFolderEditScreen
 import dev.ipf.whitenoise.ui.settings.SettingsScreen
 import dev.ipf.whitenoise.ui.settings.ShareConnectScreen
 import dev.ipf.whitenoise.ui.settings.SupportScreen
+import dev.ipf.whitenoise.ui.settings.HelpScreen
+import dev.ipf.whitenoise.ui.settings.BugReportScreen
+import dev.ipf.whitenoise.ui.settings.AboutLicensesScreen
 import dev.ipf.whitenoise.ui.settings.ConversationDebugScreen
 import dev.ipf.whitenoise.ui.settings.DeveloperToolsScreen
 import dev.ipf.whitenoise.ui.settings.DiagnosticsScreen
@@ -384,6 +387,7 @@ fun WhiteNoiseNavHost(
                 onDataUsage = { navController.navigate(AppRoute.DataUsage) },
                 onRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 onSupport = { navController.navigate(AppRoute.Support) },
+                onHelp = { navController.navigate(AppRoute.Help) },
                 onDonate = { navController.navigate(AppRoute.Donate) },
                 onDeveloperTools = { navController.navigate(AppRoute.DeveloperTools) },
                 onSignOut = { appViewModel.beginProfileExit(it) },
@@ -568,6 +572,23 @@ fun WhiteNoiseNavHost(
                     onRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 )
             }
+        }
+        composable<AppRoute.Help> {
+            HelpScreen(
+                onBack = { navController.popBackStack() },
+                onReportBug = { navController.navigate(AppRoute.BugReport) },
+                onAbout = { navController.navigate(AppRoute.AboutLicenses) },
+            )
+        }
+        composable<AppRoute.BugReport> {
+            BugReportScreen(onBack = { navController.popBackStack() })
+        }
+        composable<AppRoute.AboutLicenses> {
+            AboutLicensesScreen(
+                versionName = dev.ipf.whitenoise.BuildConfig.VERSION_NAME,
+                buildNumber = dev.ipf.whitenoise.BuildConfig.VERSION_CODE.toString(),
+                onBack = { navController.popBackStack() },
+            )
         }
         composable<AppRoute.Donate> {
             DonateScreen(onBack = { navController.popBackStack() })

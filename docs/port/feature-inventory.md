@@ -16,6 +16,19 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-09-04 production B31
+
+C117 is implemented and host-verified. Settings now opens Help, a review-first
+bug-report handoff and About & licenses. The GitHub action attaches no app data
+and names every excluded sensitive category; package version/build values,
+generated release dependency notices, reviewed HTTPS privacy/browser links and
+Retry/Cancel recovery are covered. 829 unit tests pass; six UI cases compile,
+zero lint errors and both debug APKs build. Release assembly generates 239
+dependency metadata rows plus license text.
+[Evidence](../screens/help-about-and-licenses.md#implementation-evidence). No
+network permission or diagnostic upload was added; device, external-surface and
+visual acceptance remain pending.
+
 ## 2026-09-04 production B30
 
 C114/C115 are implemented and host-verified. Checksum-valid public profile
@@ -405,6 +418,7 @@ compiled; current-build device execution remains deferred until requested.
 | Data Usage | Per-media/per-network rules, automatic queue and photo/voice quality | B27 host verified — 16 cells, overlapping rules, confirmed stop/restart, four quality modes and prepared-media preservation; [evidence](../screens/downloads-and-media-quality.md#implementation-evidence). Visual acceptance pending. |
 | Profile Relays | Endpoint list/details, Profile/Inbox/Chat Messages roles, availability, recovery, restore defaults | Refined 2026-08-30 — separated name/URL rows use compact 20 dp filled green connected and filled red not-connected check/close indicators with exact status semantics; Add Relay remains in-list; Restore Default Relays is a native filled-tonal button; detail URLs use normal one-line body text, flexible remaining width and middle ellipsis with complete semantics; compact Relay metadata, accepted Use For copy, validity-aware Material task sheet, read-only gating, focused confirmations, and shared 32 dp / 8 dp helper alignment remain statically covered; device acceptance pending |
 | Support | Create/open one profile-owned White Noise Support conversation without duplicates | Refined 2026-08-30 — compact support identity group, title-aligned purpose helper, contextual inline Start Chat, and unchanged relay recovery/availability behavior; static gate passed and device acceptance pending |
+| Help & About | Review-first public bug report, package version/build, dependency notices and privacy policy | B31 host verified — typed Help/Report/About routes, zero-data GitHub handoff with all excluded sensitive categories named, Google-generated release licenses, allowlisted HTTPS privacy/browser destinations and Retry/Cancel recovery. [Evidence](../screens/help-about-and-licenses.md#implementation-evidence). External activity and visual acceptance pending. |
 | Donate | Deterministic donation surface and accepted copy | Refined 2026-08-30 — compact centered Material 3 Expressive connected single-choice button group for Lightning/Bitcoin plus the exact shared Share & Connect QR and npub capsule components; adaptive QR size/frame/margin and 240 × 32 dp capsule inside an unchanged 48 dp target cannot drift independently; the 1 dp QR-to-target relationship is retained while the smaller `bodyMedium` method caption sits 5 dp below the visible pill; no wallet or duplicate pinned action; static gate passed and device acceptance pending |
 | Developer Tools gate | Per-profile technical master gate and Debug Mode, independent of consent | Corrected 2026-08-30 — progressive master gate, separated debugging/key/log groups, title-aligned helpers, divided peer rows and compact About metadata; Diagnostic Logs is read-only On/Off plus only non-empty files or a durable empty row, with no consumer destination or clear action; non-empty data adds a native system-document Export Diagnostic Logs action with deterministic sanitized payload and focused failure recovery; master-off still resets debug only and preserves records and consent; static gate passed and device acceptance pending |
 | Diagnostics | Persistent live event console, Test/Clear commands, empty state, sanitized copy | Refined 2026-08-30 — native top-app-bar vertical-dots action and shared Material menu contain optional summary copy, Test, and disabled-when-empty Clear Events; compact green radiowave alpha pulse reinforces the persistent Live label and Live event stream semantics above one 16 dp rounded divided console; Events and Live share the console rows' 16 dp inner content line; static gate passed and device acceptance pending |

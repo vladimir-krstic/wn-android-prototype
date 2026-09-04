@@ -88,6 +88,7 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import dev.ipf.whitenoise.R
+import dev.ipf.whitenoise.BuildConfig
 import dev.ipf.whitenoise.model.AvatarWebImageCatalog
 import dev.ipf.whitenoise.model.ExportPasswordStrength
 import dev.ipf.whitenoise.model.Profile
@@ -137,6 +138,7 @@ fun SettingsScreen(
     onReadAloud: () -> Unit = {},
     onDictation: () -> Unit = {},
     onAiAgents: () -> Unit = {},
+    onHelp: () -> Unit = {},
     initiallyShowSwitcher: Boolean = false,
     exitAttempt: dev.ipf.whitenoise.model.ProfileExitAttempt? = null,
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
@@ -276,6 +278,13 @@ fun SettingsScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
                     SettingsHubLink(
+                        title = stringResource(R.string.help_title),
+                        icon = R.drawable.ic_info,
+                        iconTag = "help",
+                        onClick = onHelp,
+                    )
+                    SettingsDivider(Modifier.testTag("settings.help.divider.help"))
+                    SettingsHubLink(
                         title = "Chat with support",
                         icon = R.drawable.ic_settings_chat_bubble_outline,
                         iconTag = "support",
@@ -311,7 +320,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            item { SettingsVersionFooter("0.1") }
+            item { SettingsVersionFooter(BuildConfig.VERSION_NAME) }
         }
     }
     if (switcherOpen) {

@@ -124,6 +124,15 @@ sealed interface AppRoute {
     data object Support : AppRoute
 
     @Serializable
+    data object Help : AppRoute
+
+    @Serializable
+    data object BugReport : AppRoute
+
+    @Serializable
+    data object AboutLicenses : AppRoute
+
+    @Serializable
     data object Donate : AppRoute
 
     @Serializable

@@ -17,15 +17,15 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B23 and B25–B30 are implemented and host-verified.
+Production Android parity batches B01–B23 and B25–B31 are implemented and host-verified.
 [B25 key packages and developer diagnostics](docs/screens/key-packages-and-developer-diagnostics.md#implementation-evidence)
 adds publication/rotation/deletion recovery, detailed push inspection, streaming
 status controls, relay health, self-send outcomes and timed performance state.
-The latest host gate passes 826 unit tests, zero lint errors and both APKs.
-Seven new B30 UI cases compile only; device and visual acceptance remain pending.
+The latest host gate passes 829 unit tests, zero lint errors and both APKs.
+Six new B31 UI cases compile only; device and visual acceptance remain pending.
 The existing deterministic, offline boundary remains.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks B24, B26 and B31–B32 and the per-batch commits.
+tracks B24, B26 and B32 and the per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`
@@ -44,6 +44,8 @@ tracks B24, B26 and B31–B32 and the per-batch commits.
 - AndroidX Media3: 1.11.0 for local video playback and standard Material 3
   player controls inside the sent-media viewer
 - ZXing core: 3.5.4 for local QR encoding
+- Google OSS Licenses plugin 0.13.0 and SDK 17.3.0 for generated release
+  dependency notices while retaining the API 23 minimum
 - One `app` module and one launcher activity
 
 The runtime is intentionally offline and deterministic. It declares camera
@@ -202,3 +204,8 @@ B30 adds [verified event cards and readers](docs/screens/verified-event-cards-an
 Encoded public identities stay in-app with member-aware display, while typed
 event cards reuse the rich reader and bundled Media3 video viewer. Seven UI
 cases compile; no relay resolution, remote media or cryptographic verifier was added.
+
+B31 adds [Help, About and open source licenses](docs/screens/help-about-and-licenses.md#implementation-evidence).
+The review-first bug report sends no app data, version/build values come from
+the package, and reviewed browser links fail safely. Release builds generate
+the bundled dependency notices; six UI cases compile.

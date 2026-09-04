@@ -20,6 +20,9 @@ exifInterface = "1.4.2"
 media3 = "1.11.0"
 zxing = "3.5.4"
 desugarJdk = "2.1.5"
+ossLicensesPlugin = "0.13.0"
+# 17.4+ raises minSdk to 24; 17.3.0 is the latest official release compatible with this app's API 23 floor.
+ossLicenses = "17.3.0"
 
 [libraries]
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdk" }
@@ -50,8 +53,10 @@ androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", vers
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 androidx-media3-ui-compose-material3 = { module = "androidx.media3:media3-ui-compose-material3", version.ref = "media3" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+play-services-oss-licenses = { module = "com.google.android.gms:play-services-oss-licenses", version.ref = "ossLicenses" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+oss-licenses = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "ossLicensesPlugin" }

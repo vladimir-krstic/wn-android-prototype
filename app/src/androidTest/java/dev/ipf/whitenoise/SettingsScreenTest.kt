@@ -118,6 +118,7 @@ class SettingsScreenTest {
             Triple("privacy_security", "Privacy & Security", "Device protection and auto-lock"),
             Triple("data_usage", "Data Usage", "Downloads and sent-media quality"),
             Triple("relays", "Relays", null),
+            Triple("help", "Help", "Report a bug, version, licenses and privacy"),
             Triple("support", "Chat with support", "A unique local support conversation"),
             Triple("donate", "Donate", "Lightning or Bitcoin"),
             Triple("developer_tools", "Developer Tools", "Development and testing only"),
@@ -133,7 +134,6 @@ class SettingsScreenTest {
             }
         }
         composeRule.onNodeWithText("Preferences").assertDoesNotExist()
-        composeRule.onNodeWithText("Help").assertDoesNotExist()
         composeRule.onNodeWithText("Manage Profiles").assertDoesNotExist()
         composeRule.onNodeWithText("System default").assertDoesNotExist()
         composeRule.onNodeWithTag("settings.list").performScrollToNode(

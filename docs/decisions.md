@@ -4235,3 +4235,25 @@ handoff is added.
 Evidence: [B30 brief](screens/verified-event-cards-and-readers.md),
 NostrReferences, NostrEventUi, MessageDocumentUi, AppViewModel and the
 state/Compose tests.
+
+## WN-ANDROID-0151 — Help handoffs attach no app data and licenses keep API 23
+
+- Date: 2026-09-04
+- Status: Implemented under the authorized B31 contract; host verified
+
+Put Help in the existing Settings hierarchy with separate review-first Report
+a bug and About & licenses destinations. The GitHub handoff attaches no
+messages, media, contacts, profile details, keys, diagnostic logs or audit
+logs. GitHub and privacy actions accept only their reviewed HTTPS host/path
+boundaries and recover locally when no handler can open them. Package version
+and build values remain authoritative.
+
+Generate dependency notices with Google's first-party OSS Licenses plugin
+0.13.0. Keep the established minimum SDK 23 by using SDK 17.3.0, the latest
+official release line compatible with that minimum; 17.4.0 and newer require
+API 24. Do not override the dependency manifest or raise the app minimum only
+for the notice surface. Release assembly must prove real generated metadata
+and license text rather than the debug placeholder.
+
+Evidence: [B31 brief](screens/help-about-and-licenses.md), HelpAbout policy/UI,
+typed navigation, generated release resources and state/Compose tests.
