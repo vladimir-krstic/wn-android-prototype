@@ -1,10 +1,16 @@
 # F11 — Incoming sharing and external entry points
 
+B21/C084–C088 are implemented and host-verified within the local scope. The
+[selected brief](../../../screens/incoming-sharing-and-profile-links.md#implementation-evidence)
+records 693 passing unit tests, nine compiled UI cases and exact migration seams.
+Q06 still excludes real exported receiving/provider I/O and shortcut publication.
+Device and visual acceptance remain pending.
+
 ## Purpose and current composition
 
 Stage external requests at the app boundary and select profile/chat before editing the draft. Back cancels staging and returns to prior task. Consume requests exactly once and reject stale ownership.
 
-Prototype surface: `MainActivity.kt; navigation/WhiteNoiseNavHost.kt; model/ComposerModels.kt`. Reuse `WhiteNoiseScaffold`, tonal Settings groups/rows, shared sheets/dialogs, `WhiteNoiseTextField`, `WhiteNoiseButton`, adaptive content bounds, message action/reaction components, MediaViewer and established empty/loading/error content as applicable. Keep 48 dp minimum targets, label-above forms, semantic error colors, bounded state layers, RTL, 200% text, IME/inset ownership and compact/expanded behavior.
+Prototype surface: `model/IncomingSharing.kt; model/ProfileLinks.kt; state/IncomingController.kt; ui/share/IncomingShareUi.kt; navigation/WhiteNoiseNavHost.kt; ui/settings/ShareConnectScreen.kt`. Reuse `WhiteNoiseScaffold`, tonal Settings groups/rows, shared sheets/dialogs, `WhiteNoiseTextField`, `WhiteNoiseButton`, adaptive content bounds, message action/reaction components, MediaViewer and established empty/loading/error content as applicable. Keep 48 dp minimum targets, label-above forms, semantic error colors, bounded state layers, RTL, 200% text, IME/inset ownership and compact/expanded behavior.
 
 ## Required content and proposed copy
 
@@ -16,11 +22,11 @@ These labels are the audit recommendation and follow current prototype terminolo
 
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
-| C084 · Receive Android shared text and attachments | Decision required | Trigger its named entry/action; cancel with Back where available | Add deterministic request/staging model and supported text/image/video/audio/document payload outcomes; real exported share target is Q06. |
-| C085 · Share destination/profile picker and multi-chat drafts | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Pick one profile and eligible chats, stage drafts rather than send, open first chat and report others; cancel restores prior route, no duplicate consumption. |
-| C086 · Direct Share and conversation shortcuts | Decision required | Trigger its named entry/action; cancel with Back where available | Model target metadata, unavailable/deleted/signed-out owner, fallback picker and replacement request. Actual shortcut publication is Q06. |
-| C087 · Cross-client profile links and QR provenance | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Prototype QR works internally. Add canonical marmot profile links plus accepted legacy/address forms and invalid/secret rejection; do not add arbitrary URL handlers. |
-| C088 · Lock/sign-in/deferred external route ownership | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Queue latest owned request through lock or activation, resolve target under original profile, reject stale completion after explicit navigation; deterministic event harness, no public mock launcher. |
+| C084 · Receive Android shared text and attachments | Owned incoming payload | Prepare; Back cancels | Text/media/document descriptors, MIME precedence, deduplication, caps and distinct failures are implemented. Real receiving remains Q06. |
+| C085 · Share destination/profile picker and multi-chat drafts | Prepared payload and selected profile | Select destinations; Share stages drafts | Existing draft content is merged without send. Open first and report other drafts/overflow. Opening retry never repeats staging. |
+| C086 · Direct Share and conversation shortcuts | Direct or conversation target metadata | Validate owner; fall back or recover | Direct mismatch opens picker; conversation target retains exact owner and missing-target Go to chats recovery. Publication remains Q06. |
+| C087 · Cross-client profile links and QR provenance | Public profile or recipient input | Share, scan or search; reject invalid input | Canonical marmot/QR provenance and supported public forms resolve actual identities. Secret/checksum/unknown-route rejection is implemented. |
+| C088 · Lock/sign-in/deferred external route ownership | Owned queued/preparing/opening request | Defer, replace, cancel or activate | Fresh IDs, bare-launcher preservation, sign-in/lock deferral and route/profile/sign-out invalidation prevent stale or duplicate consumption. |
 
 ## Production integration seam
 
@@ -39,4 +45,4 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B21. Decisions: Q06. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+Batches: B21 complete within local scope. Decisions: Q06 retains real receiving/publication outside scope. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.

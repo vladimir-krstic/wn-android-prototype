@@ -35,7 +35,7 @@ class PeopleDiscoveryTest {
         }
     }
     @Test fun noProfilePublicKeyCanStillBeUsedAndUnknownAddressCannot() {
-        val key = "npub1" + "q".repeat(58)
+        val key = PublicReferenceEncoding.fixtureKey("unknown-person")
         val result = PeopleDiscovery.resolve(profile, "https://whitenoise.chat/$key")
         assertEquals(PeopleSearchStatus.NoProfile, result.status)
         assertEquals(key, result.people.single().person.publicKey)

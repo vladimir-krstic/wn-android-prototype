@@ -173,11 +173,18 @@ fun DeveloperToolsScreen(
         profileSaveScenario, { it.developerLabel }, onProfileSaveScenario, { profileSaveScenariosOpen = false })
     var peopleScenariosOpen by remember { mutableStateOf(false) }
     var groupScenariosOpen by remember { mutableStateOf(false) }
+    val incoming = dev.ipf.whitenoise.ui.share.LocalIncoming.current
+    var incomingExampleOpen by remember { mutableStateOf(false) }
+    var incomingOutcomeOpen by remember { mutableStateOf(false) }
     val retention = dev.ipf.whitenoise.ui.conversation.LocalRetention.current
     val groupLifecycle = dev.ipf.whitenoise.ui.conversation.LocalGroupLifecycle.current
     val transcript = dev.ipf.whitenoise.ui.conversation.LocalTranscript.current
     val groupWork = dev.ipf.whitenoise.ui.conversation.LocalGroupWork.current
     var groupWorkChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
+    if (incoming != null && incomingExampleOpen) ScenarioChoiceDialog("Incoming request", dev.ipf.whitenoise.model.IncomingExample.entries,
+        dev.ipf.whitenoise.model.IncomingExample.Text, { it.label }, { example -> incoming.receive(dev.ipf.whitenoise.model.IncomingExamples.entry(example,profile,incoming.signedProfiles())) }, { incomingExampleOpen = false })
+    if (incoming != null && incomingOutcomeOpen) ScenarioChoiceDialog("Incoming share outcome", dev.ipf.whitenoise.state.IncomingScenario.entries,
+        incoming.scenario, { it.developerLabel }, incoming::choose, { incomingOutcomeOpen = false })
     if (retention != null && groupWorkChoice == "retention") ScenarioChoiceDialog("Retention update", dev.ipf.whitenoise.state.RetentionScenario.entries, retention.scenario, { it.developerLabel }, retention::choose, { groupWorkChoice = null })
     if (retention != null && groupWorkChoice == "expiry") ScenarioChoiceDialog("Retention example", dev.ipf.whitenoise.state.RetentionExample.entries, retention.example, { it.developerLabel }, retention::chooseExample, { groupWorkChoice = null })
     if (groupLifecycle != null && groupWorkChoice == "lifecycle") ScenarioChoiceDialog("Group administration", dev.ipf.whitenoise.model.GroupLifecycleScenario.entries, groupLifecycle.scenario, { it.developerLabel }, groupLifecycle::choose, { groupWorkChoice = null })
@@ -291,6 +298,11 @@ fun DeveloperToolsScreen(
                                 SettingsDivider(); SettingsLink("Group lifecycle", groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
                             }
                             if (transcript != null) { SettingsDivider(); SettingsLink("Transcript export", transcript.scenario.developerLabel, { groupWorkChoice = "transcript" }) }
+                            if (incoming != null) {
+                                SettingsDivider(); SettingsLink("Incoming request", "Open an owned share, shortcut or profile link", { incomingExampleOpen = true })
+                                SettingsDivider(); SettingsLink("Incoming share outcome", incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
+                                SettingsDivider(); SettingsLink("Defer incoming requests", if (incoming.locked) "Locked" else "Unlocked", { incoming.chooseLock(!incoming.locked) })
+                            }
                             if (retention != null) {
                                 SettingsDivider(); SettingsLink("Retention update", retention.scenario.developerLabel, { groupWorkChoice = "retention" })
                                 SettingsDivider(); SettingsLink("Retention example", retention.example.developerLabel, { groupWorkChoice = "expiry" })

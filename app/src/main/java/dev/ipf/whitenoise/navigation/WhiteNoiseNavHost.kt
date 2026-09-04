@@ -196,6 +196,21 @@ fun WhiteNoiseNavHost(
         } }
     }
 
+    dev.ipf.whitenoise.ui.share.IncomingHost(appViewModel.incoming, currentBackStackEntry?.id,
+        currentBackStackEntry?.destination?.route?.substringBefore('/')?.substringBefore('?') in onboardingRouteNames,
+        onOpen = { opening ->
+            appViewModel.selectProfile(opening.profileId)
+            if (appViewModel.uiState.activeProfileId != opening.profileId) false else {
+                val target = opening.target
+                if (opening.chatList) { showSignedInRoot(); true }
+                else if (target != null && appViewModel.chat(target.chatId) != null) {
+                    openConversation(target.chatId, clearsCreationFlow = true); true
+                } else if (opening.person != null) {
+                    if (opening.person.publicKey == appViewModel.uiState.activeProfile?.publicKey) { navController.navigate(AppRoute.ShareConnect); true }
+                    else appViewModel.acceptDiscoveredPerson(opening.profileId,opening.person)?.let { id -> navController.navigate(AppRoute.PersonProfile(id)); true } ?: false
+                } else false
+            }
+        }) {
     dev.ipf.whitenoise.ui.conversation.GroupWorkHost(appViewModel.groupWork, appViewModel.groupLifecycle, appViewModel.transcript, appViewModel.retention) {
     dev.ipf.whitenoise.ui.conversation.ComposerCaptureHost(appViewModel.composerCapture) {
     dev.ipf.whitenoise.ui.conversation.ReadAloudHost(uiState.activeProfile, onSource = { target ->
@@ -399,7 +414,9 @@ fun WhiteNoiseNavHost(
                 onSave = { appViewModel.saveChatFolder(profile.id, route.folderId, it) != null })
         }
         composable<AppRoute.ShareConnect> {
-            uiState.activeProfile?.let { ShareConnectScreen(it, onBack = { navController.popBackStack() }) }
+            uiState.activeProfile?.let { ShareConnectScreen(it, onBack = { navController.popBackStack() }, onOpenProfile = { person ->
+                if (person.id != it.id) appViewModel.acceptDiscoveredPerson(it.id, person)?.let { id -> navController.navigate(AppRoute.PersonProfile(id)) }
+            }) }
         }
         composable<AppRoute.EditProfile> {
             uiState.activeProfile?.let { profile ->
@@ -929,6 +946,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
     }
     }

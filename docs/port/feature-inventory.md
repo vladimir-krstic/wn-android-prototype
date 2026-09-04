@@ -122,6 +122,17 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B21: C084–C088 are implemented and host-verified within
+local scope. Incoming sharing selects a profile and eligible chats, merges drafts,
+reports independent shelf limits and separates staging/opening retry. Direct Share
+fallback, missing shortcut recovery, lock/sign-in deferral, replacement and
+profile/navigation ownership are covered. Canonical profile links and generated QR
+validate public encodings and open the actual parsed identity; shared recipient
+search accepts supported link/nprofile/hex forms. Q06 retains real exported
+receiving and shortcut publication outside scope. 693 unit tests, zero lint errors
+and both APKs pass; nine new UI cases compile only.
+See [incoming-sharing-and-profile-links.md](../screens/incoming-sharing-and-profile-links.md#implementation-evidence).
+
 2026-09-04 production B20: C081–C083 are implemented and host-verified. Group/Chat
 Info and setup share nine staged presets and bounded custom durations. Enabling or
 shortening confirms pruning; read-only members can inspect the policy. Accepted

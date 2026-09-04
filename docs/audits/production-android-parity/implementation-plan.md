@@ -24,7 +24,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B18: implemented and host-verified 2026-09-04; 575 unit tests, zero lint errors, both APKs and ten new compiled UI/bitmap cases. [Selected brief and evidence](../../screens/group-setup-images-and-roster.md). Commit title: `B18: Add group setup, image and roster recovery`. Warm roster presentation drift reconciled.
 - B19: implemented and host-verified 2026-09-04; 617 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/group-administration-and-transcript.md). Commit title: `B19: Add group administration, disbanding and transcript export`. Cold/terminal group-seed drift reconciled.
 - B20: implemented and host-verified 2026-09-04; 655 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/disappearing-timers-and-expiry.md). Commit title: `B20: Add disappearing timers and message expiry`. Q03 resolved from production source.
-- B21–B32: pending; linked decisions apply only to their named slices.
+- B21: implemented and host-verified 2026-09-04; 693 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/incoming-sharing-and-profile-links.md). Commit title: `B21: Add incoming sharing, shortcuts and profile links`. Q06 retains real exported receiving/publication outside scope.
+- B22–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -51,7 +52,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Implemented; host verified |
 | **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Implemented; host verified |
 | **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Implemented; host verified; Q03 resolved |
-| **B21** | Inbound sharing, shortcuts and profile links | C084, C085, C086, C087, C088 | B01, B11 | Blocked slices: Q06 |
+| **B21** | Inbound sharing, shortcuts and profile links | C084, C085, C086, C087, C088 | B01, B11 | Implemented; host verified; real receiving/publication remains outside Q06 scope |
 | **B22** | Global and per-chat notification settings | C089, C090, C091, C092, C093 | B05 | Blocked slices: Q06 |
 | **B23** | Notification routing and inline actions | C094 | B21, B22 | Blocked slices: Q06 |
 | **B24** | App lock and sensitive privacy controls | C095, C096, C097, C098 | B01 | Blocked slices: Q02, Q06, Q08 |
@@ -398,6 +399,12 @@ Commit: `B20: Add disappearing timers and message expiry`.
 ### B21 — Inbound sharing, shortcuts and profile links
 
 Capabilities: C084, C085, C086, C087, C088. Dependencies: B01, B11.
+
+**Status:** Implemented and host-verified. [Selected brief](../../screens/incoming-sharing-and-profile-links.md#implementation-evidence):
+693 unit tests, zero lint errors, both APKs; nine new UI cases compile only.
+Owned draft staging, destination selection, shortcut recovery and public profile
+links are complete within the deterministic scope. Real receiving/publication
+remains Q06. Commit: `B21: Add incoming sharing, shortcuts and profile links`.
 
 **Implementation:** Add deterministic request/staging model and supported text/image/video/audio/document payload outcomes; real exported share target is Q06. Pick one profile and eligible chats, stage drafts rather than send, open first chat and report others; cancel restores prior route, no duplicate consumption. Model target metadata, unavailable/deleted/signed-out owner, fallback picker and replacement request. Actual shortcut publication is Q06. Prototype QR works internally. Add canonical marmot profile links plus accepted legacy/address forms and invalid/secret rejection; do not add arbitrary URL handlers. Queue latest owned request through lock or activation, resolve target under original profile, reject stale completion after explicit navigation; deterministic event harness, no public mock launcher.
 

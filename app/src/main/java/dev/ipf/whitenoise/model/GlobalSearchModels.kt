@@ -77,15 +77,9 @@ object GlobalSearch {
     private val whitespace = Regex("\\s+")
     private val link = Regex("(?i)(https?://|www\\.)\\S+")
     private val audioFile = Regex("(?i)\\.(mp3|m4a|wav|ogg|opus|aac|flac)(?:$|[?#])")
-    private val profileLink = Regex("(?i)^(?:(?:nostr|whitenoise(?:-(?:staging|dev))?|marmot):|https?://(?:www\\.)?(?:whitenoise\\.chat|marmot\\.app)/profile/)")
-    fun identifierIntent(query: String): Boolean {
-        val value = query.trim()
-        return PrivateKeyValidator.normalize(value) != value ||
-            listOf("npub", "nsec", "ncryptsec").any { value.startsWith(it, true) } || profileLink.containsMatchIn(value) ||
-            ('@' in value && value.none(Char::isWhitespace))
-    }
+    fun identifierIntent(query: String): Boolean = ProfileLinks.identifierIntent(query)
     fun people(profile: Profile, query: String, scenario: PeopleSearchScenario): PeopleSearchResult {
-        val normalized = PrivateKeyValidator.normalize(query)
+        val normalized = ProfileLinks.normalizeRecipient(query)
         if (identifierIntent(query) && '@' !in normalized && PrivateKeyValidator.state(normalized) != PrivateKeyState.PublicKey) {
             return PeopleSearchResult(emptyList(), PeopleSearchStatus.InvalidIdentifier)
         }

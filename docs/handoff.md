@@ -1,14 +1,14 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B20 are implemented and host-verified.
+2026-09-04: production parity B01–B21 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. B20 is complete within its local scope: custom timers, confirmed
-pruning, immutable send/read countdowns and expiry cleanup. Q03 is resolved from
-production's separate update and per-row filtering paths. Continue with B21,
-incoming sharing, shortcut targets and profile links.
-B20's commit title is `B20: Add disappearing timers and message expiry`. Q05 is resolved by the approved checked wipe
+record evidence. B21 is complete within its local scope: incoming draft staging,
+profile/chat selection, shortcut recovery and canonical profile/QR links. Q06 still
+excludes real exported receiving and shortcut publication. Continue with B22,
+global and per-chat notification settings.
+B21's commit title is `B21: Add incoming sharing, shortcuts and profile links`. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -90,11 +90,19 @@ Read Aloud stops on missing current/queued source. Accepted policy and failed
 history refresh remain separate. See `docs/screens/disappearing-timers-and-expiry.md`;
 nine new UI cases compile only. Master remains unchanged; broader timeline-window
 ordering still needs final reconciliation.
-Latest host gate: 655 unit tests, zero lint errors, both APKs;
+B21 adds `IncomingController`, `IncomingSharing`, full-screen Material destination
+selection and `ProfileLinks`. New requests replace old work; sign-out/wipe and
+explicit navigation clear pending ownership. Only accepted draft opening retries;
+it never repeats staging. Canonical QR resolves its actual public identity, and
+New Message/global recipient search accepts the same npub/nprofile/link/hex forms.
+See `docs/screens/incoming-sharing-and-profile-links.md`; 38 added unit cases and
+nine compiled UI cases cover the owned states. Real Intent/provider preparation,
+shortcut publication and app-lock integration remain production migration seams.
+Latest host gate: 693 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B21–B32. This
+boundary. Production Android parity remains in progress through B22–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

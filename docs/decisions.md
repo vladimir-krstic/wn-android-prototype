@@ -4030,3 +4030,30 @@ The [selected brief](screens/disappearing-timers-and-expiry.md#implementation-ev
 records evidence and migration seams. Host validation passes 655 unit tests,
 zero lint errors and both APKs; nine new UI cases compile only. No backend,
 background expiry service, durable storage or new permission is added.
+
+## WN-ANDROID-0141 — Incoming draft ownership and public profile links
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B21; host verified, device/visual acceptance pending.
+
+Incoming content is prepared for one selected signed-in profile and multiple
+eligible chats. It merges with drafts without sending; independent ten-media and
+ten-document incoming caps include existing shelves and report dropped files.
+Accepted staging and subsequent opening are distinct, so opening retry cannot
+repeat the merge. Replacement, Back, profile changes and sign-out/wipe revoke
+pending ownership. Direct Share requires the receiving profile's current target;
+unknown/mismatched metadata falls back to destination selection. Conversation
+shortcuts retain their exact owner and provide missing-target recovery.
+
+Outbound profile links use `marmot://profile/<npub>` and generated QR adds
+`?from=qr`. Strict public-only Bech32/checksum/TLV parsing accepts known legacy
+routes and appropriate recipient forms, rejects secrets/unknown routes, and
+resolves the scanned identity. Stable bundled public encodings have no associated
+secret. Search preserves ordinary URLs as message queries. No protocol client or
+cryptographic operation is introduced.
+
+Q06 leaves exported receiving, URI/provider adapters and shortcut publication
+outside this prototype; developer-only requests exercise the app-owned flow.
+The [selected brief](screens/incoming-sharing-and-profile-links.md#implementation-evidence)
+records exact migration seams. Host validation passes 693 unit tests, zero lint
+errors and both APKs; nine new UI cases compile only.

@@ -2,6 +2,10 @@
 
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.model.ProfileLinks
+import dev.ipf.whitenoise.model.PeopleDiscovery
+import dev.ipf.whitenoise.model.Person
+
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,11 +32,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,13 +72,15 @@ private enum class ProfileScannerError {
 fun ShareConnectScreen(
     profile: Profile,
     onBack: () -> Unit,
+    onOpenProfile: (Person) -> Unit = {},
 ) {
     val context = LocalContext.current
     val shareProfileLabel = stringResource(R.string.share_profile)
     var copied by rememberSaveable(profile.id) { mutableStateOf(false) }
-    var scannerOpen by rememberSaveable { mutableStateOf(false) }
-    var scannerError by rememberSaveable { mutableStateOf<ProfileScannerError?>(null) }
-    var profileFound by rememberSaveable { mutableStateOf(false) }
+    var scannerOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var scannerError by rememberSaveable(profile.id) { mutableStateOf<ProfileScannerError?>(null) }
+    var foundPerson by remember(profile.id) { mutableStateOf<Person?>(null) }
+    val profileFound = foundPerson != null
 
     LaunchedEffect(copied) {
         if (copied) {
@@ -89,7 +95,7 @@ fun ShareConnectScreen(
             putExtra(Intent.EXTRA_TITLE, profile.name)
             putExtra(
                 Intent.EXTRA_TEXT,
-                "Connect with ${profile.name} on White Noise:\n${profile.publicKey}",
+                "Connect with ${profile.name} on White Noise:\n${ProfileLinks.forKey(profile.publicKey)?.uri ?: profile.publicKey}",
             )
         }
         context.startActivity(Intent.createChooser(sendIntent, shareProfileLabel))
@@ -146,12 +152,12 @@ fun ShareConnectScreen(
         ) {
             if (profileFound) {
                 ProfileFoundContent(
-                    foundProfile = demoFoundProfile(),
+                    foundProfile = foundPerson!!.let { Profile(id = it.id, name = it.displayName, publicKey = it.publicKey, nostrAddress = it.nostrAddress, avatar = it.avatar) },
                     onOpenScanner = {
                         scannerError = null
                         scannerOpen = true
                     },
-                    onDone = { profileFound = false },
+                    onDone = { foundPerson?.let(onOpenProfile); foundPerson = null },
                 )
             } else {
                 ShareProfileContent(
@@ -172,12 +178,13 @@ fun ShareConnectScreen(
             onDismiss = { scannerOpen = false },
             onCodeScanned = { payload ->
                 scannerOpen = false
-                if (payload.trim().startsWith("npub")) {
-                    scannerError = null
-                    profileFound = true
-                } else {
-                    scannerError = ProfileScannerError.InvalidCode
+                val reference = ProfileLinks.parse(payload)
+                val person = reference?.let { ref ->
+                    if (ref.value == profile.publicKey) Person(profile.id, profile.name, publicKey = profile.publicKey, nostrAddress = profile.nostrAddress, avatar = profile.avatar)
+                    else PeopleDiscovery.resolve(profile, ref.value).people.firstOrNull()?.person
                 }
+                if (person != null) { scannerError = null; foundPerson = person }
+                else scannerError = ProfileScannerError.InvalidCode
             },
             onUnavailable = {
                 scannerOpen = false
@@ -263,7 +270,7 @@ private fun ShareProfileContent(
             )
 
             IdentityQrCodeSurface(
-                value = profile.publicKey,
+                value = ProfileLinks.forKey(profile.publicKey)?.qrUri ?: profile.publicKey,
                 availableWidth = availableWidth,
                 contentDescription = stringResource(R.string.profile_qr_code),
                 testTag = "share_connect.qr_surface",
@@ -386,16 +393,4 @@ private fun ProfileFoundContent(
             Text(stringResource(R.string.scan_another))
         }
     }
-}
-
-private fun demoFoundProfile(): Profile {
-    val choice = AvatarWebImageCatalog.choices.first()
-    return Profile(
-        id = "open-quill-found",
-        name = "Open Quill",
-        publicKey = "npub1q2v9n6t4r7c3x8m5k2w9p6s4y7h3d8f5j2a9e6u4z7n1m2d9",
-        nostrAddress = "open-quill@whitenoise.example",
-        isNostrAddressVerified = true,
-        avatar = ProfileAvatarModel.WebImage(choice.asset, choice.id),
-    )
 }

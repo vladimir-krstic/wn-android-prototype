@@ -292,18 +292,7 @@ data class Person(
         get() = if (publicKey.length <= 17) publicKey else "${publicKey.take(12)}…${publicKey.takeLast(4)}"
 
     companion object {
-        private const val KEY_ALPHABET = "023456789acdefghjklmnpqrstuvwxyz"
-
-        fun publicKeyFor(id: String): String {
-            val seed = id.map(Char::code).ifEmpty { listOf(0) }
-            val body = buildString {
-                repeat(58) { index ->
-                    val alphabetIndex = (seed[index % seed.size] + index) % KEY_ALPHABET.length
-                    append(KEY_ALPHABET[alphabetIndex])
-                }
-            }
-            return "npub1$body"
-        }
+        fun publicKeyFor(id: String): String = PublicReferenceEncoding.fixtureKey(id)
 
         private fun defaultNostrAddress(name: String): String {
             val local = name.lowercase()

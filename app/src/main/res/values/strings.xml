@@ -1122,4 +1122,31 @@
     <string name="retention_unit_years">Years</string>
     <plurals name="retention_years"><item quantity="one">%1$d year</item><item quantity="other">%1$d years</item></plurals>
     <string name="retention_remaining">%1$s remaining</string>
+    <string name="incoming_share_to">Share to</string>
+    <string name="incoming_open_title">Open in White Noise</string>
+    <string name="incoming_choose_profile">Choose another profile</string>
+    <string name="incoming_review">Review this content in each chat before sending.</string>
+    <string name="incoming_shortcut_fallback">That chat isn’t available for sharing. Choose a destination.</string>
+    <string name="incoming_search">Search chats</string>
+    <string name="incoming_no_chats">No chats to share to</string>
+    <string name="incoming_recent">Recent chats</string>
+    <string name="incoming_archived">Archived</string>
+    <string name="incoming_preparing">Preparing shared content…</string>
+    <string name="incoming_staging">Adding content to drafts…</string>
+    <string name="incoming_opening">Opening chat…</string>
+    <string name="incoming_empty">There’s no content to share.</string>
+    <string name="incoming_invalid">This content or profile link isn’t supported.</string>
+    <string name="incoming_unavailable">The shared files aren’t available. Share them again from the original app.</string>
+    <string name="incoming_too_large">The shared file is too large to open. Choose a smaller file.</string>
+    <string name="incoming_profile_unavailable">This profile is no longer signed in.</string>
+    <string name="incoming_target_unavailable">This chat or profile isn’t available.</string>
+    <string name="incoming_prepare_failed">Couldn’t prepare the shared content. You can retry.</string>
+    <string name="incoming_stage_failed">Couldn’t add the content to drafts. You can retry.</string>
+    <string name="incoming_open_failed">Your drafts were saved, but the chat couldn’t open. Retry to open it.</string>
+    <string name="incoming_changed">The destination changed. Choose the profile and chats again.</string>
+    <plurals name="incoming_share_count"><item quantity="one">Share to %1$d chat</item><item quantity="other">Share to %1$d chats</item></plurals>
+    <plurals name="incoming_other_chats"><item quantity="one">Content added to drafts in %1$d other chat.</item><item quantity="other">Content added to drafts in %1$d other chats.</item></plurals>
+    <plurals name="incoming_dropped"><item quantity="one">%1$d file wasn’t added because the attachment limit was reached.</item><item quantity="other">%1$d files weren’t added because the attachment limit was reached.</item></plurals>
+    <plurals name="incoming_files"><item quantity="one">%1$d shared file</item><item quantity="other">%1$d shared files</item></plurals>
+    <string name="incoming_go_chats">Go to chats</string>
 </resources>

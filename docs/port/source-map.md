@@ -273,3 +273,18 @@ transfer and engine sweep/refetch during migration. Preserve accepted mutation
 when refresh fails and never infer expiry for unpinned history from current policy.
 Q03 is resolved in WN-ANDROID-0140. No relevant retention drift exists through
 master `911040c7e1c31652638c8cfd72812d1f3a694b9b`; broader ordering remains open.
+
+## Production B21 incoming sharing and profile links
+
+`docs/screens/incoming-sharing-and-profile-links.md` maps SharePayload,
+ShareInboundStager, ShareStaging, DraftStore.mergeText, MainShell.stageShareToChats
+and AppState.stageInboundShare to `IncomingSharing.kt`, `IncomingController.kt`,
+`IncomingShareUi.kt`, AppViewModel and the navigation host. ShareRequest/ShareRouting,
+ConversationShortcutOwnership and NotificationTarget provide request replacement,
+original owner and deferred route contracts. Reconnect actual Intent/ClipData,
+provider access, lock readiness, shortcut publication and accepted-stage callbacks
+when migrating; Q06 excludes these external integrations here.
+ProfileLink, NostrProfileReference and QrScanResult map to public-only
+`ProfileLinks.kt`, ShareConnectScreen and shared recipient normalization. Canonical
+links and QR provenance resolve actual identities; public NIP-19 examples verify
+checksum/TLV handling. Current master changes none of these contracts.

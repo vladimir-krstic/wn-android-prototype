@@ -136,7 +136,7 @@ class GlobalSearchTest {
         val address = "river@whitenoise.example"
         assertEquals(PeopleSearchStatus.Unavailable, GlobalSearch.people(profile, address, PeopleSearchScenario.Unavailable).status)
         assertEquals("river-song", GlobalSearch.people(profile, address, PeopleSearchScenario.Success).people.single().person.id)
-        val key = "npub1" + "p".repeat(58)
+        val key = PublicReferenceEncoding.fixtureKey("unknown-global-person")
         assertEquals(PeopleSearchStatus.NoProfile, GlobalSearch.people(profile, "nostr:$key", PeopleSearchScenario.Success).status)
     }
     @Test fun voiceCompletionsRequireOwnerUnchangedQueryAndActiveSearch() {

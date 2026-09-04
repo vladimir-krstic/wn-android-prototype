@@ -120,3 +120,16 @@ policy-pruning and row-deadline operations. B20 implements those owned local sta
 its [brief](../../screens/disappearing-timers-and-expiry.md#implementation-evidence)
 records 655 passing unit tests and nine compiled UI cases. This does not finish
 broader authoritative timeline-window, Nostr, installer, Amber/contact/startup drift.
+
+## Implementation drift check — B21, 2026-09-04
+
+Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`, without main.
+The seven-commit diff changes no SharePayload/ShareStaging, ProfileLink, QR or
+shortcut file. AppState's patch leaves stageInboundShare unchanged; it changes
+bootstrap/account snapshots, timeline metadata and installer handoffs. MainShell
+only adds the installer handoff import/effect. B21 therefore uses the pinned
+staging/merge, target ownership and accepted-open contracts. The
+[brief](../../screens/incoming-sharing-and-profile-links.md#implementation-evidence)
+records 693 passing unit tests and nine compiled UI cases, with explicit Q06
+external integration seams. Broader timeline-window, Nostr, installer and
+Amber/contact/startup drift still awaits the relevant batch or final audit.

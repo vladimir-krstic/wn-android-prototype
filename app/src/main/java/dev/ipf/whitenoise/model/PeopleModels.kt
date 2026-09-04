@@ -18,7 +18,7 @@ object PrivateContactDetails {
 fun Person.matchesPeopleQuery(query: String): Boolean {
     fun String.normalized() = Normalizer.normalize(trim().lowercase(Locale.ROOT), Normalizer.Form.NFD)
         .replace(Regex("\\p{Mn}+"), "")
-    val needle = PrivateKeyValidator.normalize(query).normalized()
+    val needle = ProfileLinks.normalizeRecipient(query).normalized()
     return listOf(name, displayName, publicKey, nostrAddress).any { needle in it.normalized() }
 }
 
@@ -40,12 +40,12 @@ object PeopleDiscovery {
             PeopleResult(person, if (inChat) PersonSource.Chats else if (person.isFollowing) PersonSource.Following else PersonSource.Local)
         }
     fun resolve(profile: Profile, query: String, scenario: PeopleSearchScenario = PeopleSearchScenario.Success): PeopleSearchResult {
-        val key = PrivateKeyValidator.normalize(query)
+        val key = ProfileLinks.normalizeRecipient(query)
         val local = local(profile, query)
         if (key.isBlank()) return PeopleSearchResult(local, PeopleSearchStatus.Ready)
         val isKey = key.startsWith("npub", true)
         val isAddress = '@' in key
-        val invalid = if (isAddress) !Regex("^[^\\s@]+@[^\\s@.]+(?:\\.[^\\s@.]+)+$").matches(key)
+        val invalid = if (ProfileLinks.identifierIntent(query) && ProfileLinks.parse(query,recipient = true) == null) true else if (isAddress) !Regex("^[^\\s@]+@[^\\s@.]+(?:\\.[^\\s@.]+)+$").matches(key)
             else (isKey && PrivateKeyValidator.state(key) != PrivateKeyState.PublicKey) || (key.startsWith("nsec", true) || key.startsWith("ncryptsec", true)) || "://" in key
         if (invalid) return PeopleSearchResult(emptyList(), PeopleSearchStatus.InvalidIdentifier)
         if (scenario == PeopleSearchScenario.Unavailable) return PeopleSearchResult(local, PeopleSearchStatus.Unavailable)

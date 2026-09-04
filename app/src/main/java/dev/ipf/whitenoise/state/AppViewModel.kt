@@ -214,6 +214,24 @@ class AppViewModel(
         )
     }
 
+    val incoming: IncomingController by lazy {
+        IncomingController(profiles = { uiState.profiles }, activeId = { uiState.activeProfileId },
+            signedIn = { it in uiState.signedInProfileIds },
+            ready = { startupState.phase == StartupPhase.Ready && uiState.activeProfileId in uiState.signedInProfileIds && accessAttempt == null },
+            stage = ::stageIncomingDrafts)
+    }
+
+    private fun stageIncomingDrafts(requestId: Long, profileId: String, ids: List<String>, prepared: PreparedIncoming): IncomingCommit? {
+        val profile = uiState.profiles.firstOrNull { it.id == profileId && it.id in uiState.signedInProfileIds } ?: return null
+        val targets = ids.distinct().map { id -> profile.chats.firstOrNull { it.id == id && IncomingSharing.canStage(profile,it) } ?: return null }
+        if (targets.isEmpty()) return null
+        val results = targets.associate { it.id to IncomingSharing.stage(it,prepared,requestId) }
+        uiState = uiState.copy(profiles = uiState.profiles.map { p -> if (p.id != profileId) p else
+            p.copy(chats = p.chats.map { results[it.id]?.chat ?: it }) })
+        composerCapture.reconcile()
+        return IncomingCommit(targets.map { it.id }, results.values.sumOf { it.dropped })
+    }
+
     val retention: RetentionController by lazy {
         RetentionController(
             profiles = { uiState.profiles }, activeId = { uiState.activeProfileId }, signedIn = { it in uiState.signedInProfileIds },
@@ -779,6 +797,7 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        incoming.reconcile()
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
@@ -875,6 +894,7 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        incoming.reconcile()
         return true
     }
 
@@ -915,6 +935,7 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        incoming.reconcile()
         createdChatSequence = 0
         return true
     }
@@ -2544,6 +2565,7 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        incoming.reconcile()
     }
 
     private fun addShowcaseProfiles() {
@@ -2591,6 +2613,7 @@ class AppViewModel(
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
+        incoming.reconcile()
     }
 
     private fun insertAfterPinned(chats: List<Chat>, chat: Chat): List<Chat> {
