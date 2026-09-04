@@ -67,7 +67,7 @@ object ConversationMediaProjection {
             .filterNot(ChatMessage::isDeleted)
             .flatMap { message ->
                 message.attachments.flatMap { attachment ->
-                    if (!attachment.isAvailable) return@flatMap emptyList()
+                    if (!attachment.bytesAvailable) return@flatMap emptyList()
                     when (attachment.kind) {
                         MessageAttachmentKind.Photo,
                         MessageAttachmentKind.Photos,

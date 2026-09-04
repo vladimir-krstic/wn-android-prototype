@@ -371,7 +371,7 @@ object ConversationFixtures {
             "LINK-03: Invalid destination",
             attachments = listOf(link("LINK-03-link", null, "Unavailable preview", "", "This destination cannot be opened.", available = false)),
         ),
-        message("RICH-01", profileId, TODAY, "Today", 603, "10:03 AM", "RICH-01: GIF", attachments = listOf(gif("RICH-01-gif", "Marmot looking around", AvatarAsset.Marmot))),
+        message("RICH-01", profileId, TODAY, "Today", 603, "10:03 AM", "RICH-01: GIF", attachments = listOf(gif("RICH-01-gif", "Animated dots", AvatarAsset.Marmot))),
         message("RICH-05", "catalog-media-rich", TODAY, "Today", 612, "10:12 AM", "RICH-05: Valid contact", attachments = listOf(contact("RICH-05-contact", "Avery Stone", AvatarAsset.WebChristopherCampbell))),
     )
 
@@ -593,7 +593,7 @@ object ConversationFixtures {
             message("week-msg-16", "nora-bennett", 3, "Yesterday", 544, "9:04 AM", "Then let’s keep the changing details here instead of in the description.", reply = "week-msg-15"),
             message("week-msg-17", "maya-chen", 3, "Yesterday", 546, "9:06 AM", "This clip shows the narrow section.", attachments = listOf(video("week-video", "Narrow trail clip", AvatarAsset.Pebble, 8))),
             message("week-msg-18", profileId, 3, "Yesterday", 548, "9:08 AM", "And here’s the bridge beside it.", attachments = listOf(gallery[0], video("week-mixed-video", "Bridge video", AvatarAsset.Pebble, 8)), reply = "week-msg-17"),
-            message("week-msg-19", "leo-martins", 4, "Today", 480, "8:00 AM", attachments = listOf(gif("week-gif", "Marmot looking around", AvatarAsset.Marmot)), reactions = listOf(MessageReaction("🤣", listOf(profileId, "maya-chen")))),
+            message("week-msg-19", "leo-martins", 4, "Today", 480, "8:00 AM", attachments = listOf(gif("week-gif", "Animated dots", AvatarAsset.Marmot)), reactions = listOf(MessageReaction("🤣", listOf(profileId, "maya-chen")))),
             message("week-msg-20", profileId, 4, "Today", 482, "8:02 AM", attachments = listOf(gallery[5]), reactions = listOf(MessageReaction("🦫", listOf("elias-moreno")))),
             message("week-msg-21", "maya-chen", 4, "Today", 484, "8:04 AM", "Not the steep shortcut—the entrance with the sunlit trees.", attachments = listOf(gallery[0]), reactions = listOf(MessageReaction("👎", listOf(profileId, "nora-bennett")))),
             message("week-msg-22", "elias-moreno", 4, "Today", 486, "8:06 AM", attachments = listOf(contact("week-contact", "Avery Stone", AvatarAsset.WebChristopherCampbell))),
@@ -702,7 +702,7 @@ object ConversationFixtures {
         is AttachmentPreview.File -> listOf(file("${chat.id}-file", preview.name))
         is AttachmentPreview.Contact -> listOf(contact("${chat.id}-contact", preview.name, AvatarAsset.WebChristopherCampbell))
         AttachmentPreview.Link -> listOf(link("${chat.id}-link", "https://whitenoise.chat", "Reading for later", "whitenoise.chat", "A useful link shared with the chat."))
-        AttachmentPreview.Gif -> listOf(gif("${chat.id}-gif", "Marmot", AvatarAsset.Marmot))
+        AttachmentPreview.Gif -> listOf(gif("${chat.id}-gif", "Animated dots", AvatarAsset.Marmot))
     }
 
     private fun defaultDayLabel(timestamp: String): String = when {

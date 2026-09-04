@@ -174,6 +174,12 @@ data class MessageAttachment(
     val pixelWidth: Int? = null,
     val pixelHeight: Int? = null,
     val isAvailable: Boolean = true,
+    val mimeType: String? = null,
+    val sourceImages: List<ProfileAvatar> = emptyList(),
+    val photoQuality: PhotoQuality? = null,
+    val metadataPolicy: PhotoMetadataPolicy? = null,
+    val deviceContact: SharedDeviceContact? = null,
+    val transfer: AttachmentTransfer? = null,
 )
 
 data class MessageReaction(
@@ -231,6 +237,7 @@ data class Chat(
     val timeline: List<ChatTimelineEntry> = emptyList(),
     val draftText: String = "",
     val draftAttachments: List<MessageAttachment> = emptyList(),
+    val draftPhotoQuality: PhotoQuality = PhotoQuality.High,
     val suppressedDraftLinkUrl: String? = null,
     val draftReplyMessageId: String? = null,
     val pinnedOrder: Int? = null,

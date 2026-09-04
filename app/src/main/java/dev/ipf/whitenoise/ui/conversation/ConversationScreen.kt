@@ -388,6 +388,8 @@ fun ConversationScreen(
     var configureDraft by remember(profile.quickReactions) { mutableStateOf(profile.quickReactions) }
     var isSearching by rememberSaveable(chat.id) { mutableStateOf(initialSearch) }
     var editMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var exportMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var exportSharing by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var readerMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var historyMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var readerStartsSelection by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
@@ -402,6 +404,7 @@ fun ConversationScreen(
     var initialViewportSettled by rememberSaveable(chat.id) { mutableStateOf(false) }
     var pendingEndSettlement by remember(chat.id) { mutableStateOf(false) }
     var compactComposerHeightPx by remember(chat.id) { mutableIntStateOf(0) }
+    var composerOverlayActive by remember(chat.id) { mutableStateOf(false) }
     var composerPresentationActive by remember(chat.id) { mutableStateOf(false) }
     var composerTravelPx by remember(chat.id) { mutableFloatStateOf(0f) }
     var pushTimelineWithComposer by remember(chat.id) { mutableStateOf(false) }
@@ -518,6 +521,9 @@ fun ConversationScreen(
                 readerMessageId = message.id
             }
             MessageAction.Reply -> beginReply(message.id)
+            MessageAction.Share, MessageAction.SaveAttachments -> {
+                exportMessageId = message.id; exportSharing = action == MessageAction.Share
+            }
             MessageAction.Forward -> forwardMessageIds = setOf(message.id)
             MessageAction.Copy -> {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -659,10 +665,10 @@ fun ConversationScreen(
     val currentItems by rememberUpdatedState(items)
     val currentVisibleCallback by rememberUpdatedState(onMessagesVisible)
     val canRead by rememberUpdatedState(initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
-        editMessageId == null && readerMessageId == null && historyMessageId == null &&
+        editMessageId == null && readerMessageId == null && historyMessageId == null && exportMessageId == null &&
         !operationCovered && viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
         !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
-        !composerPresentationActive && history.request == null && history.readyTarget == null)
+        !composerPresentationActive && !composerOverlayActive && history.request == null && history.readyTarget == null)
     val relatedPx = with(density) { WhiteNoiseSpacing.Related.roundToPx() }
     LaunchedEffect(profile.id, chat.id, listState, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -1001,6 +1007,7 @@ fun ConversationScreen(
                                 }
                             }
                         },
+                        onOverlayPresentationChanged = { composerOverlayActive = it },
                         onExpansionPresentationChanged = { active, travel ->
                             if (active && !composerPresentationActive) {
                                 pushTimelineWithComposer = ComposerExpansionPolicy.shouldPushTimeline(
@@ -1191,6 +1198,11 @@ fun ConversationScreen(
     }
     messages.firstOrNull { it.id == historyMessageId && !it.isDeleted }?.let { message ->
         MessageEditHistoryDialog(message) { historyMessageId = null }
+    }
+    exportMessageId?.let { id ->
+        val current = messages.firstOrNull { it.id == id }
+        if (current == null || current.isDeleted) LaunchedEffect(id, current) { exportMessageId = null }
+        else MessageAttachmentExportSheet(current, exportSharing, profile.people) { exportMessageId = null }
     }
     messages.firstOrNull { it.id == readerMessageId && !it.isDeleted }?.let { message ->
         MessageReaderDialog(profile, chat, message, readerStartsSelection, speechActionState(message), readAloudController,

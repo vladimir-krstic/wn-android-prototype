@@ -716,6 +716,8 @@ class AppViewModel(
         nextMessageEditScenario = MessageEditScenario.Success
         nextMessageDeleteScenario = MessageDeleteScenario.Success
         nextMessageForwardScenario = MessageForwardScenario.Success
+        recentMediaAccess = dev.ipf.whitenoise.model.RecentMediaAccess.Full
+        attachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success
         messageForwards = emptyMap()
         cancelCreatedChatOpen()
         cancelProfileSave()
@@ -1417,6 +1419,74 @@ class AppViewModel(
         }
     }
 
+    var recentMediaAccess by mutableStateOf(dev.ipf.whitenoise.model.RecentMediaAccess.Full)
+        private set
+    var attachmentTransferScenario by mutableStateOf(dev.ipf.whitenoise.model.AttachmentTransferScenario.Success)
+        private set
+
+    fun selectRecentMediaAccess(value: dev.ipf.whitenoise.model.RecentMediaAccess) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) recentMediaAccess = value
+    }
+
+    fun selectAttachmentTransferScenario(value: dev.ipf.whitenoise.model.AttachmentTransferScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled != true) return
+        attachmentTransferScenario = value
+        updateActiveProfile { profile -> profile.copy(chats = profile.chats.map { chat ->
+            chat.copy(timeline = chat.timeline.map { entry ->
+                if (entry !is ChatTimelineEntry.Message || entry.message.isDeleted) entry else entry.copy(message = entry.message.copy(
+                    attachments = entry.message.attachments.map { attachment ->
+                        if (attachment.kind == dev.ipf.whitenoise.model.MessageAttachmentKind.Link || attachment.kind == dev.ipf.whitenoise.model.MessageAttachmentKind.Contact) attachment
+                        else attachment.copy(transfer = dev.ipf.whitenoise.model.AttachmentTransfer(
+                            phase = dev.ipf.whitenoise.model.AttachmentTransferPhase.CacheMiss,
+                            scenario = value, attempt = 0,
+                            revision = (attachment.transfer?.revision ?: 0) + 1,
+                        ))
+                    },
+                ))
+            })
+        }) }
+    }
+
+    fun replaceDraftPhotos(profileId: String, chatId: String, expected: List<MessageAttachment>, quality: dev.ipf.whitenoise.model.PhotoQuality, photos: List<MessageAttachment>): Boolean {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return false
+        var changed = false
+        mutateChat(chatId) { chat ->
+            if (chat.draftAttachments != expected || photos.map { it.id }.toSet().size != photos.size ||
+                photos.any { replacement -> expected.none { it.id == replacement.id } }) chat
+            else {
+                changed = true
+                chat.copy(draftPhotoQuality = quality, draftAttachments = chat.draftAttachments.map { before -> photos.firstOrNull { it.id == before.id } ?: before })
+            }
+        }
+        return changed
+    }
+
+    fun attachmentTransferAction(profileId: String, chatId: String, messageId: String, attachmentId: String, action: String, expectedRevision: Long) {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return
+        mutateChat(chatId) { chat -> chat.copy(timeline = chat.timeline.map { entry ->
+            if (entry !is ChatTimelineEntry.Message || entry.message.id != messageId || entry.message.isDeleted) entry
+            else entry.copy(message = entry.message.copy(attachments = entry.message.attachments.map { attachment ->
+                if (attachment.id != attachmentId || (attachment.transfer?.revision ?: 0) != expectedRevision) attachment
+                else {
+                    val current = attachment.transfer
+                    val next = when (action) {
+                        "advance" -> current?.advance(expectedRevision)
+                        "cancel" -> current?.cancel()
+                        "retry" -> current?.retry()
+                        "start" -> if (current == null) dev.ipf.whitenoise.model.AttachmentTransfer(scenario = attachmentTransferScenario,
+                            direction = if (entry.message.authorId == profileId) dev.ipf.whitenoise.model.AttachmentTransferDirection.Upload else dev.ipf.whitenoise.model.AttachmentTransferDirection.Download) else current
+                        else -> current
+                    }
+                    attachment.copy(transfer = if (entry.message.expiresAtMillis?.let { it <= dev.ipf.whitenoise.model.MessageForwarding.nowMillis } == true && next != null)
+                        next.copy(phase = dev.ipf.whitenoise.model.AttachmentTransferPhase.Expired)
+                        else if (!attachment.isAvailable && next?.phase == dev.ipf.whitenoise.model.AttachmentTransferPhase.Available)
+                            next.copy(phase = dev.ipf.whitenoise.model.AttachmentTransferPhase.Unavailable)
+                        else next)
+                }
+            }))
+        }) }
+    }
+
     fun addDraftAttachments(chatId: String, attachments: List<MessageAttachment>) {
         if (attachments.isEmpty()) return
         mutateChat(chatId) { chat ->
@@ -1459,9 +1529,12 @@ class AppViewModel(
         val linkPreview = LinkPreviewDetector.first(trimmed)
             ?.takeUnless { it.url == chat.suppressedDraftLinkUrl }
             ?.attachment("$chatId-link-${createdChatSequence + 1}")
-        val attachments = chat.draftAttachments + listOfNotNull(linkPreview)
+        val attachments = chat.draftAttachments.map { it.copy(sourceImages = emptyList(), transfer = if (it.kind in setOf(dev.ipf.whitenoise.model.MessageAttachmentKind.Photo, dev.ipf.whitenoise.model.MessageAttachmentKind.Photos,
+            dev.ipf.whitenoise.model.MessageAttachmentKind.Video, dev.ipf.whitenoise.model.MessageAttachmentKind.File, dev.ipf.whitenoise.model.MessageAttachmentKind.Gif))
+            dev.ipf.whitenoise.model.AttachmentTransfer(direction = dev.ipf.whitenoise.model.AttachmentTransferDirection.Upload, scenario = attachmentTransferScenario) else null) } + listOfNotNull(linkPreview)
         if (trimmed.isEmpty() && attachments.isEmpty()) return false
-        return sendContent(chatId, trimmed, attachments, chat.draftReplyMessageId)
+        val contactText = attachments.mapNotNull { it.deviceContact?.text }.joinToString("\n\n")
+        return sendContent(chatId, listOf(trimmed, contactText).filter(String::isNotBlank).joinToString("\n\n"), attachments, chat.draftReplyMessageId)
     }
 
     fun sendVoice(
@@ -1722,9 +1795,15 @@ class AppViewModel(
         }
         uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != profileId) profile else profile.copy(chats = profile.chats.map { chat ->
             val op = chat.messageDeletion
-            if (op?.isRunning != true) chat else chat.copy(messageDeletion = op.copy(revision = op.revision + 1, items = op.items.map {
-                if (it.phase == MessageDeletePhase.Pending) it.copy(phase = MessageDeletePhase.Failed, failure = MessageDeleteFailure.SessionChanged) else it
-            }))
+            chat.copy(
+                timeline = chat.timeline.map { entry ->
+                    if (entry !is ChatTimelineEntry.Message || entry.message.attachments.none { it.transfer?.running == true }) entry
+                    else entry.copy(message = entry.message.copy(attachments = entry.message.attachments.map { it.copy(transfer = it.transfer?.cancel()) }))
+                },
+                messageDeletion = if (op?.isRunning != true) op else op.copy(revision = op.revision + 1, items = op.items.map {
+                    if (it.phase == MessageDeletePhase.Pending) it.copy(phase = MessageDeletePhase.Failed, failure = MessageDeleteFailure.SessionChanged) else it
+                }),
+            )
         }) })
     }
     fun forwardMessages(sourceChatId: String, messageIds: Set<String>, targetChatIds: List<String>): Boolean {

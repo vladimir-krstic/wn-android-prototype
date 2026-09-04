@@ -10,6 +10,8 @@ enum class MessageAction {
     SelectText,
     Reply,
     Forward,
+    Share,
+    SaveAttachments,
     Copy,
     CopyMarkdown,
     ReadAloud,
@@ -65,6 +67,8 @@ object MessageActionPolicy {
             }
             add(MessageAction.Reply)
             add(MessageAction.Forward)
+            add(MessageAction.Share)
+            if (AttachmentExports.keys(message).isNotEmpty()) add(MessageAction.SaveAttachments)
             if (message.text.isNotBlank()) {
                 add(if (hasVoice) MessageAction.CopyTranscript else MessageAction.Copy)
                 if (!hasVoice && MessageDocuments.plainText(message.text) != message.text) add(MessageAction.CopyMarkdown)

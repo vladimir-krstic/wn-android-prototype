@@ -426,7 +426,7 @@ object ComposerFixtures {
                 MessageAttachment(
                     "CMP-GIF-attachment",
                     MessageAttachmentKind.Gif,
-                    "Marmot looking around",
+                    "Animated dots",
                     images = listOf(ProfileAvatar.Asset(AvatarAsset.Marmot)),
                 ),
             ),

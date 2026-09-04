@@ -122,6 +122,16 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B11: C046/C049/C051/C052/C054/C057 are implemented and
+host-verified within the prototype boundary. Message save/share reports per-item
+results, recent media exposes bundled access states, reversible draft quality
+strips identifying photo metadata, transfer recovery keeps authoritative IDs,
+GIF content decodes, and device contacts use selected-field vCard/text separately
+from White Noise identity. See [composer-attachment-actions.md](../screens/composer-attachment-actions.md).
+The clean gate passes 381 unit tests, zero lint errors and both APKs; 11 new
+UI/platform cases compile. Q06 real library grants and all device/visual checks
+remain outside this implementation evidence.
+
 2026-09-04 production B10: C043–C045 are implemented and host-verified. Group
 moderation and mixed deletion preserve per-item outcomes and failed-only retry.
 Forwarding adds folder/destination-profile selection, app-owned progress,

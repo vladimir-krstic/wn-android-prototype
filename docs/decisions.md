@@ -3744,3 +3744,38 @@ and [checkbox semantics](https://developer.android.com/develop/ui/compose/compon
 361 unit tests and both APKs pass; nine new UI cases compile. Runtime transport,
 background services and current-build device/visual acceptance remain outside
 this host-verified implementation evidence.
+
+## WN-ANDROID-0131 — Draft media keeps reversible quality and explicit external handoff
+
+- Date: 2026-09-04
+- Status: Implemented from the authorized production parity B11; host verified,
+  device and visual acceptance pending.
+
+Retain the accepted 4096px/JPEG95 policy as High. Add Low, Standard and Original
+per draft, preserve source images in memory through quality changes, and remove
+those sources from sent/forwarded payloads. Original strips supported JPEG/PNG
+metadata losslessly; orientation/color/unsupported formats use a disclosed safe
+re-encode. Output sizes are measured bytes, and videos/files are not described as
+metadata-stripped photos. GIFs preserve animation blocks while dropping comments
+and unrelated application metadata. A neutral animated fixture replaces the
+previous static GIF-labelled presentation, with sampled static/error fallback.
+
+Recent media uses deterministic none/selected/full/unavailable states; Gallery
+remains the standard Photo Picker. Q06 does not authorize real library grants.
+White Noise person and Device contact are distinct actions. The latter launches
+the permissionless phone-row picker, reads only that granted row, previews
+available fields and sends selected-field vCard/text. It never queries the email
+table or derives White Noise identity from a phone number.
+
+Q07 retains explicit Android document destinations. Message attachment actions
+report per-item save/cancel/failure and confirm partial sharing. Unique temporary
+files carry actual names/MIME types and Android URI grants; opening sharing does
+not claim delivery. Transfer state stays profile/chat/message/attachment-owned,
+revision-guarded and driven only in the app foreground. It survives ordinary app
+navigation and invalidates old events on profile/session changes. Real transport,
+cache and media permission integrations remain production seams.
+
+Evidence: `docs/screens/composer-attachment-actions.md`, `AttachmentModelsTest`,
+`AttachmentStateTest` and compiled `AttachmentAcquisitionTest`; 381 passing host
+unit tests, zero lint errors and both APKs. Current official sources are linked
+in the selected brief. No device or visual verification is claimed.

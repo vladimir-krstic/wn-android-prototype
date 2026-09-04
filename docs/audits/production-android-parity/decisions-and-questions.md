@@ -55,7 +55,7 @@ default nor the scope of real external operations.
 
 - **Scope:** C049, C058, C059, C066, C070, C084, C086, C090, C094, C095 and C121 touch media permissions, location/maps, background services, shortcuts/share targets, notification delivery/actions, app authentication, or APK installation.
 - **Recommendation:** First implement deterministic app-owned states and launch contracts where already approved. Keep networking/services/installers off. Approve each real permission or service only with its bounded implementation batch; prefer permissionless system surfaces.
-- **Blocks:** device-executed capability, not the audit specs or deterministic UI/state implementations.
+- **Blocks:** device-executed capability, not the audit specs or deterministic UI/state implementations. B11 implements C049 with bundled access states and a standard Photo Picker; real library permission/MediaStore access remains outside the prototype scope.
 
 <a id="q07"></a>
 
@@ -63,7 +63,7 @@ default nor the scope of real external operations.
 
 - **Conflict:** C053 production often writes to gallery/media storage, while the prototype uses Android document creation for explicit placement.
 - **Recommendation:** Preserve the prototype's system-owned save flow until the selected media brief establishes that gallery placement is part of the outcome. Keep Save and Share available in the viewer either way.
-- **Blocks:** no current batch; record the choice when B11 is selected.
+- **B11 choice (2026-09-04):** retain explicit Android document destinations for Save, including per-item multi-attachment outcomes. This preserves the approved prototype integration without new storage permissions. See `docs/screens/composer-attachment-actions.md`. No batch remains blocked by Q07.
 
 <a id="q08"></a>
 

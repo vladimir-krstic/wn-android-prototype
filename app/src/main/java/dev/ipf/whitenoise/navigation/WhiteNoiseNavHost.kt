@@ -186,6 +186,15 @@ fun WhiteNoiseNavHost(
         )
     }
 
+    uiState.activeProfile?.let { profile ->
+        profile.chats.forEach { chat -> androidx.compose.runtime.key(profile.id, chat.id) {
+            androidx.compose.runtime.CompositionLocalProvider(dev.ipf.whitenoise.ui.conversation.LocalAttachmentEnvironment provides
+                dev.ipf.whitenoise.ui.conversation.AttachmentEnvironment(transfer = { messageId, attachmentId, action, revision ->
+                    appViewModel.attachmentTransferAction(profile.id, chat.id, messageId, attachmentId, action, revision)
+                })) { dev.ipf.whitenoise.ui.conversation.AttachmentTransferHost(chat) }
+        } }
+    }
+
     MessageOperationsHost(
         profile = uiState.activeProfile, forward = uiState.activeProfileId?.let { appViewModel.messageForwards[it] },
         onAdvanceForward = { id, revision -> uiState.activeProfileId?.let { appViewModel.advanceMessageForward(it, id, revision) } },
@@ -526,6 +535,10 @@ fun WhiteNoiseNavHost(
                     messageDeleteScenario = appViewModel.nextMessageDeleteScenario,
                     onMessageDeleteScenario = appViewModel::selectMessageDeleteScenario,
                     messageForwardScenario = appViewModel.nextMessageForwardScenario,
+                    recentMediaAccess = appViewModel.recentMediaAccess,
+                    onRecentMediaAccess = appViewModel::selectRecentMediaAccess,
+                    attachmentTransferScenario = appViewModel.attachmentTransferScenario,
+                    onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
                     onMessageForwardScenario = appViewModel::selectMessageForwardScenario,
                     globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
                     onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
@@ -691,6 +704,12 @@ fun WhiteNoiseNavHost(
                 val profile = uiState.activeProfile ?: return@let
                 val searchRequest by entry.savedStateHandle.getStateFlow("conversationSearchRequest", 0L).collectAsState()
                 androidx.compose.runtime.key(profile.id, chat.id) {
+                androidx.compose.runtime.CompositionLocalProvider(dev.ipf.whitenoise.ui.conversation.LocalAttachmentEnvironment provides
+                    dev.ipf.whitenoise.ui.conversation.AttachmentEnvironment(
+                        recentAccess = appViewModel.recentMediaAccess,
+                        replacePhotos = { expected, quality, prepared -> appViewModel.replaceDraftPhotos(profile.id, chat.id, expected, quality, prepared) },
+                        transfer = { messageId, attachmentId, action, revision -> appViewModel.attachmentTransferAction(profile.id, chat.id, messageId, attachmentId, action, revision) },
+                    )) {
                 ConversationScreen(
                     profile = profile,
                     chat = chat,
@@ -704,7 +723,7 @@ fun WhiteNoiseNavHost(
                         }
                     },
                     onDraftTextChanged = { appViewModel.updateDraftText(chat.id, it) },
-                    onAddDraftAttachments = { appViewModel.addDraftAttachments(chat.id, it) },
+                    onAddDraftAttachments = { if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.addDraftAttachments(chat.id, it) },
                     onRemoveDraftAttachment = { appViewModel.removeDraftAttachment(chat.id, it) },
                     onSuppressDraftLink = { appViewModel.suppressDraftLink(chat.id, it) },
                     onCancelDraftReply = { appViewModel.cancelDraftReply(chat.id) },
@@ -749,6 +768,7 @@ fun WhiteNoiseNavHost(
                     onRetryMessageDeletion = { appViewModel.retryMessageDeletion(profile.id, chat.id, it) },
                     onDismissMessageDeletion = { appViewModel.dismissMessageDeletion(profile.id, chat.id, it) },
                 )
+                }
                 }
             }
         }

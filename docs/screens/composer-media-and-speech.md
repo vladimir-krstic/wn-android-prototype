@@ -308,3 +308,15 @@ per-chat collapse, native passage selection and structured source-aware text.
 The ordinary composer draft, selection, reply and attachments remain independent
 of the edit task. The clean host gate passes 343 unit tests and both APKs; ten
 new UI cases compile. Device/visual acceptance remains pending.
+
+## Production B11 extension — 2026-09-04
+
+[Composer attachment actions](composer-attachment-actions.md) extends this accepted
+composition with reversible per-draft photo quality, actual byte counts, bundled
+recent-media access states, device contacts, transfer recovery and decoded GIFs.
+The previously accepted 4096px/JPEG95 import is now the High default. White Noise
+person keeps the existing searchable sheet; Device contact uses the system phone
+row and a selected-field preview. Existing camera, Photo Picker, Files, draft
+shelf, voice and media-viewer behavior remain governed here. The B11 clean gate
+passes 381 unit tests, zero lint errors and both APKs; new UI/platform cases are
+compiled only. No historical device evidence verifies the current build.

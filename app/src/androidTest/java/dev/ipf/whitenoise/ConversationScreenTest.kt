@@ -621,7 +621,7 @@ class ConversationScreenTest {
         composeRule.onNodeWithText("Camera").assertIsDisplayed()
         composeRule.onNodeWithText("Photos and videos").assertIsDisplayed()
         composeRule.onNodeWithText("Files").assertIsDisplayed()
-        composeRule.onNodeWithText("Contact").assertIsDisplayed()
+        composeRule.onNodeWithText("White Noise person").assertIsDisplayed()
         composeRule.onNodeWithText("GIF").assertDoesNotExist()
 
         val add = composeRule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode()
@@ -871,9 +871,9 @@ class ConversationScreenTest {
         setConversation("fiatjaf")
 
         composeRule.onNodeWithContentDescription("Add Attachment").performClick()
-        composeRule.onNodeWithText("Contact").performClick()
+        composeRule.onNodeWithText("White Noise person").performClick()
 
-        composeRule.onNodeWithText("Share Contact").assertIsDisplayed()
+        composeRule.onNodeWithText("White Noise person").assertIsDisplayed()
         composeRule.onNodeWithTag("conversation.contact.search").assertHeightIsAtLeast(56.dp)
         val sheet = composeRule.onNodeWithTag("conversation.contact.sheet").fetchSemanticsNode().boundsInRoot
         val windowHeight = composeRule.activity.window.decorView.height.toFloat()

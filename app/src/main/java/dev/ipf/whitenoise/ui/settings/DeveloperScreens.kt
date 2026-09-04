@@ -80,6 +80,10 @@ fun DeveloperToolsScreen(
     messageDeleteScenario: dev.ipf.whitenoise.model.MessageDeleteScenario = dev.ipf.whitenoise.model.MessageDeleteScenario.Success,
     onMessageDeleteScenario: (dev.ipf.whitenoise.model.MessageDeleteScenario) -> Unit = {},
     messageForwardScenario: dev.ipf.whitenoise.model.MessageForwardScenario = dev.ipf.whitenoise.model.MessageForwardScenario.Success,
+    recentMediaAccess: dev.ipf.whitenoise.model.RecentMediaAccess = dev.ipf.whitenoise.model.RecentMediaAccess.Full,
+    onRecentMediaAccess: (dev.ipf.whitenoise.model.RecentMediaAccess) -> Unit = {},
+    attachmentTransferScenario: dev.ipf.whitenoise.model.AttachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success,
+    onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
     onMessageForwardScenario: (dev.ipf.whitenoise.model.MessageForwardScenario) -> Unit = {},
     globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
     onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
@@ -110,6 +114,12 @@ fun DeveloperToolsScreen(
     var historyOpen by remember { mutableStateOf(false) }
     var editOpen by remember { mutableStateOf(false) }
     var deleteOpen by remember { mutableStateOf(false) }
+    var recentOpen by remember { mutableStateOf(false) }
+    var transferOpen by remember { mutableStateOf(false) }
+    if (recentOpen) ScenarioChoiceDialog("Recent media access", dev.ipf.whitenoise.model.RecentMediaAccess.entries,
+        recentMediaAccess, { it.name }, onRecentMediaAccess, { recentOpen = false })
+    if (transferOpen) ScenarioChoiceDialog("Attachment transfer", dev.ipf.whitenoise.model.AttachmentTransferScenario.entries,
+        attachmentTransferScenario, { it.developerLabel }, onAttachmentTransferScenario, { transferOpen = false })
     var forwardOpen by remember { mutableStateOf(false) }
     if (deleteOpen) ScenarioChoiceDialog("Message deletion", dev.ipf.whitenoise.model.MessageDeleteScenario.entries,
         messageDeleteScenario, { it.developerLabel }, onMessageDeleteScenario, { deleteOpen = false })
@@ -194,6 +204,10 @@ fun DeveloperToolsScreen(
                         SettingsDivider()
                         SettingsLink("Message edit outcomes", messageEditScenario.developerLabel, { editOpen = true })
                         SettingsLink("Message deletion outcomes", messageDeleteScenario.developerLabel, { deleteOpen = true })
+                        SettingsLink("Recent media access", recentMediaAccess.name, { recentOpen = true })
+                        SettingsDivider()
+                        SettingsLink("Attachment transfer outcomes", attachmentTransferScenario.developerLabel, { transferOpen = true })
+                        SettingsDivider()
                         SettingsLink("Message forwarding outcomes", messageForwardScenario.developerLabel, { forwardOpen = true })
                         SettingsDivider()
                         SettingsLink("Voice search scenarios", globalVoiceScenario.developerLabel, { globalVoiceOpen = true })

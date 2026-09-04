@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.model.bytesAvailable
+
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -102,6 +104,9 @@ internal fun TimelineAttachmentContent(
                 onClick = onOpenMedia,
                 searchQuery = searchQuery,
             )
+        }
+        if (messageId != null) attachments.filter { it.transfer != null && it.transfer.phase != dev.ipf.whitenoise.model.AttachmentTransferPhase.Available }.forEach { attachment ->
+            AttachmentTransferControls(messageId, attachment)
         }
         attachments.filterNot(MessageAttachment::isVisual).forEach { attachment ->
             when (attachment.kind) {
@@ -281,7 +286,7 @@ private fun MediaTile(
     contentScale: ContentScale = ContentScale.Crop,
     onClick: (VisualFrame) -> Unit,
 ) {
-    val opensViewer = frame.attachment.isAvailable && (
+    val opensViewer = frame.attachment.bytesAvailable && (
         frame.attachment.kind == MessageAttachmentKind.Photo ||
             frame.attachment.kind == MessageAttachmentKind.Photos ||
             frame.attachment.kind == MessageAttachmentKind.Video
@@ -300,7 +305,8 @@ private fun MediaTile(
                 },
             ),
     ) {
-        frame.image?.let { ComposerImage(it, Modifier.fillMaxSize(), contentScale) }
+        if (frame.attachment.kind == MessageAttachmentKind.Gif) AnimatedAttachmentImage(frame.attachment, Modifier.fillMaxSize())
+        else frame.image?.takeIf { frame.attachment.bytesAvailable }?.let { ComposerImage(it, Modifier.fillMaxSize(), contentScale) }
             ?: SearchHighlightedText(
                 text = frame.attachment.label,
                 query = searchQuery,
@@ -441,7 +447,7 @@ private fun DocumentOrContactCard(
 ) {
     val context = LocalContext.current
     val bundled = bundledResource(attachment.label)
-    val canOpenFile = attachment.kind == MessageAttachmentKind.File && attachment.isAvailable && (
+    val canOpenFile = attachment.kind == MessageAttachmentKind.File && attachment.bytesAvailable && (
         attachment.externalUri?.let {
             runCatching { it.toUri().scheme == "content" }.getOrDefault(false)
         } == true || bundled != null
@@ -505,6 +511,7 @@ private fun DocumentOrContactCard(
                     fontWeight = FontWeight.SemiBold,
                 )
                 val metadata = when {
+                    attachment.deviceContact != null -> attachment.deviceContact.fields.drop(1).joinToString(" · ")
                     person != null -> person.shortPublicKey
                     attachment.kind == MessageAttachmentKind.File -> fileMetadata(attachment)
                     else -> null

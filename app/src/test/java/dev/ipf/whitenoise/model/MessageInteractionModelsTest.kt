@@ -25,7 +25,7 @@ class MessageInteractionModelsTest {
         )
 
         assertEquals(
-            listOf(MessageAction.Reply, MessageAction.Forward, MessageAction.Select, MessageAction.Info, MessageAction.Delete),
+            listOf(MessageAction.Reply, MessageAction.Forward, MessageAction.Share, MessageAction.SaveAttachments, MessageAction.Select, MessageAction.Info, MessageAction.Delete),
             MessageActionPolicy.available(incomingAttachment, ProfileFixtures.MARMOTA_ID),
         )
         assertEquals(MessageAction.RetrySend, MessageActionPolicy.available(failedText, ProfileFixtures.MARMOTA_ID).first())

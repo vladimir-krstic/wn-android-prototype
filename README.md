@@ -113,6 +113,8 @@ evidence, bounded decisions, and remaining user-acceptance work.
   covers message editing, full reading and native passage selection.
   [B10](docs/screens/message-moderation-and-forwarding.md) adds moderation, batch
   deletion recovery and forwarding progress.
+  [B11](docs/screens/composer-attachment-actions.md) adds reversible photo quality,
+  contact/media acquisition, transfer recovery and attachment save/share results.
 
 ## iOS parity reference
 

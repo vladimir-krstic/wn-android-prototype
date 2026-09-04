@@ -142,3 +142,15 @@ ForwardSelection/Picker, ForwardSession and ForwardOperationCoordinator into
 `MessageBatchModels.kt`, `AppViewModel.kt`, `MessageBatchUi.kt` and the shared
 conversation/Shared Content picker. Production reconnects outcome and transport
 callbacks; prototype behavior remains deterministic, in memory and foreground-owned.
+
+## Production B11 media acquisition and attachment extension
+
+`docs/screens/composer-attachment-actions.md` maps production MessageOutboundShare,
+MessageAttachmentSave, RecentMedia, MediaQuality/MediaPipeline,
+AttachmentTransferCoordinator and ContactShare/ContactPreview into
+`AttachmentModels.kt`, `PhotoMetadata.kt`, `DraftPhotoProcessor.kt`,
+`AttachmentAcquisitionUi.kt`, `MessageAttachmentExport.kt` and
+`AnimatedAttachmentImage.kt`. AppViewModel owns deterministic revisions and draft
+quality; production must reconnect authoritative cache/transfer/media grants.
+System Photo Picker, document creation, contact phone-row selection and Sharesheet
+remain platform-owned. No production database, permission or transport is copied.

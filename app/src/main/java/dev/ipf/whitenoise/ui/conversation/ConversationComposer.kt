@@ -1,5 +1,8 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.model.PhotoQuality
+import dev.ipf.whitenoise.model.PhotoMetadataPolicy
+import dev.ipf.whitenoise.model.SharedDeviceContact
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -469,6 +472,7 @@ fun FullConversationComposer(
     modifier: Modifier = Modifier,
     onCompactHeightChanged: (Int) -> Unit = {},
     onExpansionPresentationChanged: (Boolean, Float) -> Unit = { _, _ -> },
+    onOverlayPresentationChanged: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val addAttachmentDescription = stringResource(R.string.add_attachment)
@@ -482,6 +486,14 @@ fun FullConversationComposer(
     val density = LocalDensity.current
     var attachmentMenuOpen by remember { mutableStateOf(false) }
     var contactPickerOpen by remember { mutableStateOf(false) }
+    val attachmentEnvironment = LocalAttachmentEnvironment.current
+    val photoLabel = stringResource(R.string.photo)
+    var recentMediaOpen by remember { mutableStateOf(false) }
+    var qualityOpen by remember { mutableStateOf(false) }
+    var deviceContact by rememberSaveable(profile.id, chat.id, stateSaver = androidx.compose.runtime.saveable.listSaver<SharedDeviceContact?, String>(
+        save = { if (it == null) emptyList() else listOf(it.name.orEmpty(), it.phone.orEmpty(), it.email.orEmpty()) },
+        restore = { if (it.size != 3) null else SharedDeviceContact(it[0].ifBlank { null }, it[1].ifBlank { null }, it[2].ifBlank { null }) },
+    )) { mutableStateOf<SharedDeviceContact?>(null) }
     var mediaViewerAttachmentId by remember { mutableStateOf<String?>(null) }
     var isExpanded by rememberSaveable(chat.id) { mutableStateOf(false) }
     val expansionProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f) }
@@ -498,6 +510,11 @@ fun FullConversationComposer(
     var preparationGeneration by remember { mutableIntStateOf(0) }
     var voiceState by rememberSaveable(chat.id, stateSaver = ComposerVoiceStateSaver) {
         mutableStateOf<ComposerVoiceState>(ComposerVoiceState.Idle)
+    }
+
+    androidx.compose.runtime.SideEffect {
+        onOverlayPresentationChanged(attachmentMenuOpen || contactPickerOpen || recentMediaOpen || qualityOpen ||
+            deviceContact != null || showCameraPermissionRecovery || mediaViewerAttachmentId != null)
     }
 
     fun nextId(prefix: String): String {
@@ -525,16 +542,30 @@ fun FullConversationComposer(
                             externalUri = uri.toString(),
                         )
                     } else {
-                        val bytes = ConversationImageProcessor.prepare(context.contentResolver, uri)
-                        if (bytes == null) {
+                        val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching { context.contentResolver.openInputStream(uri)?.use { input ->
+                                val output = java.io.ByteArrayOutputStream()
+                                val buffer = ByteArray(8192)
+                                var read = input.read(buffer)
+                                while (read >= 0) {
+                                    if (output.size() + read > DraftPhotoProcessor.MaximumInputBytes) return@use null
+                                    output.write(buffer, 0, read); read = input.read(buffer)
+                                }
+                                output.toByteArray()
+                            } }.getOrNull()
+                        }
+                        val photo = bytes?.let { source ->
+                            if (type == "image/gif") dev.ipf.whitenoise.model.PhotoMetadata.strippedGif(source)?.let { clean ->
+                                MessageAttachment(nextId("gif"), MessageAttachmentKind.Gif, displayName(context, uri, "GIF"),
+                                    images = listOf(ProfileAvatar.DeviceImage(clean)), fileSizeBytes = clean.size, mimeType = "image/gif")
+                            } else DraftPhotoProcessor.prepare(context,
+                                MessageAttachment(id = nextId("photo"), kind = MessageAttachmentKind.Photo,
+                                    label = displayName(context, uri, "Photo"), images = listOf(ProfileAvatar.DeviceImage(source))), chat.draftPhotoQuality)
+                        }
+                        if (photo == null) {
                             if (generation == preparationGeneration) attachmentError = true
                         } else {
-                            prepared += MessageAttachment(
-                                id = nextId("photo"),
-                                kind = MessageAttachmentKind.Photo,
-                                label = displayName(context, uri, "Photo"),
-                                images = listOf(ProfileAvatar.DeviceImage(bytes)),
-                            )
+                            prepared += photo
                         }
                     }
                 }
@@ -542,6 +573,46 @@ fun FullConversationComposer(
             } finally {
                 if (generation == preparationGeneration) isPreparing = false
             }
+        }
+    }
+
+    fun prepareDraftPhotos(quality: PhotoQuality) {
+        val expected = chat.draftAttachments
+        val generation = ++preparationGeneration
+        preparationJob?.cancel()
+        preparationJob = coroutineScope.launch {
+            isPreparing = true
+            attachmentError = false
+            try {
+                val photos = expected.filter { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }
+                val prepared = photos.map { DraftPhotoProcessor.prepare(context, it, quality) }
+                if (generation == preparationGeneration) {
+                    attachmentError = prepared.any { it == null } || !attachmentEnvironment.replacePhotos(expected, quality, prepared.filterNotNull())
+                }
+            } finally { if (generation == preparationGeneration) isPreparing = false }
+        }
+    }
+    fun addRecentPhoto(image: ProfileAvatar) {
+        recentMediaOpen = false
+        val generation = ++preparationGeneration
+        preparationJob?.cancel()
+        preparationJob = coroutineScope.launch {
+            isPreparing = true
+            try {
+                val prepared = DraftPhotoProcessor.prepare(context, MessageAttachment(nextId("photo"), MessageAttachmentKind.Photo,
+                    photoLabel, images = listOf(image)), chat.draftPhotoQuality)
+                if (generation == preparationGeneration) {
+                    attachmentError = prepared == null
+                    prepared?.let { onAddAttachments(listOf(it)) }
+                }
+            } finally { if (generation == preparationGeneration) isPreparing = false }
+        }
+    }
+    val deviceContactPicker = rememberLauncherForActivityResult(PickDeviceContactPhone()) { uri ->
+        if (uri != null) coroutineScope.launch {
+            val selected = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { readDeviceContact(context, uri) }
+            deviceContact = selected
+            attachmentError = selected == null
         }
     }
 
@@ -638,6 +709,8 @@ fun FullConversationComposer(
 
     DisposableEffect(Unit) {
         onDispose {
+            onOverlayPresentationChanged(false)
+            ++preparationGeneration
             preparationJob?.cancel()
             if (context.findActivity()?.isChangingConfigurations != true) {
                 voiceState = ComposerVoiceState.Idle
@@ -846,10 +919,15 @@ fun FullConversationComposer(
                             },
                         ),
                         WhiteNoiseMenuItem(
-                            label = stringResource(R.string.contact),
+                            label = stringResource(R.string.white_noise_person),
                             icon = R.drawable.ic_person,
                             onClick = { contactPickerOpen = true },
                         ),
+                        WhiteNoiseMenuItem(stringResource(R.string.device_contact), icon = R.drawable.ic_person, onClick = {
+                            attachmentError = runCatching { deviceContactPicker.launch(Unit) }.isFailure
+                        }),
+                        WhiteNoiseMenuItem(stringResource(R.string.recent_media), icon = R.drawable.ic_image, onClick = { recentMediaOpen = true }),
+                        WhiteNoiseMenuItem(stringResource(R.string.photo_quality), icon = R.drawable.ic_image, onClick = { qualityOpen = true }),
                         ),
                         onCancelVoice = {
                             voiceState = ComposerVoiceState.Idle
@@ -897,6 +975,16 @@ fun FullConversationComposer(
                                 onPreview = { mediaViewerAttachmentId = it },
                                 onRemove = onRemoveAttachment,
                             )
+                            if (chat.draftAttachments.any { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }) {
+                                TextButton({ qualityOpen = true }, enabled = !isPreparing, modifier = Modifier.testTag("composer.photo.quality")) {
+                                    Text(stringResource(R.string.photo_quality) + ": " + photoQualityLabel(chat.draftPhotoQuality))
+                                }
+                                val bytes = chat.draftAttachments.mapNotNull { it.fileSizeBytes }.sumOf { it.toLong() }
+                                if (bytes > 0) Text(stringResource(R.string.photo_prepared_size, android.text.format.Formatter.formatShortFileSize(context, bytes)),
+                                    Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
+                                if (chat.draftAttachments.any { it.metadataPolicy == PhotoMetadataPolicy.SafeFallback }) Text(stringResource(R.string.photo_quality_fallback),
+                                    Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
+                            }
                             if (chat.draftAttachments.any(MessageAttachment::isVisual)) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -983,7 +1071,8 @@ fun FullConversationComposer(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                                Text(stringResource(R.string.preparing_attachment))
+                                Text(stringResource(R.string.preparing_attachment), Modifier.weight(1f))
+                                TextButton({ ++preparationGeneration; preparationJob?.cancel(); isPreparing = false }) { Text(stringResource(R.string.cancel)) }
                             }
                         }
                         if (attachmentError) {
@@ -1002,6 +1091,17 @@ fun FullConversationComposer(
         }
     }
 
+    if (recentMediaOpen) RecentMediaSheet(attachmentEnvironment.recentAccess, { recentMediaOpen = false }, onGallery = {
+        recentMediaOpen = false
+        attachmentError = runCatching { visualPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }.isFailure
+    }, onAdd = ::addRecentPhoto)
+    if (qualityOpen) PhotoQualityDialog(chat.draftPhotoQuality, { qualityOpen = false }) { quality ->
+        qualityOpen = false; prepareDraftPhotos(quality)
+    }
+    deviceContact?.let { contact -> DeviceContactPreview(contact, { deviceContact = null }) { selected ->
+        selected.attachment(nextId("device-contact"))?.let { onAddAttachments(listOf(it)) }
+        deviceContact = null
+    } }
     if (contactPickerOpen) {
         ContactPickerSheet(
             people = profile.people,
@@ -1014,6 +1114,7 @@ fun FullConversationComposer(
                             kind = MessageAttachmentKind.Contact,
                             label = "Contact: ${person.displayName}",
                             images = listOf(person.avatar),
+                            contactPersonId = person.id,
                         ),
                     ),
                 )
@@ -1320,7 +1421,8 @@ private fun DraftAttachmentContent(
 ) {
     when {
         attachment.isVisual() -> Box(modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
-            attachment.images.firstOrNull()?.let { image ->
+            if (attachment.kind == MessageAttachmentKind.Gif) AnimatedAttachmentImage(attachment, Modifier.fillMaxSize())
+            else attachment.images.firstOrNull()?.let { image ->
                 ComposerImage(image, Modifier.fillMaxSize())
             } ?: Text(
                 attachment.label,
@@ -1880,7 +1982,7 @@ private fun ContactPickerSheet(
         sheetState = sheetState,
     ) {
         Column(Modifier.fillMaxSize().testTag("conversation.contact.sheet")) {
-            WhiteNoiseSheetHeader(stringResource(R.string.share_contact), onClose = onDismiss)
+            WhiteNoiseSheetHeader(stringResource(R.string.white_noise_person), onClose = onDismiss)
             TextField(
                 value = query,
                 onValueChange = { query = it },
