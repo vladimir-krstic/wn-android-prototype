@@ -288,3 +288,23 @@ ProfileLink, NostrProfileReference and QrScanResult map to public-only
 `ProfileLinks.kt`, ShareConnectScreen and shared recipient normalization. Canonical
 links and QR provenance resolve actual identities; public NIP-19 examples verify
 checksum/TLV handling. Current master changes none of these contracts.
+
+## Production B22 notification controls
+
+`docs/screens/notification-controls.md` maps NotificationsScreen and AppState's
+local/push/background setters/provider gate to `NotificationController.kt`,
+`NotificationControls.kt` and `PreferenceScreens.kt`. BackgroundConnectionPreferences
+is app-wide; initiating-profile local enable and accepted service rejection remain
+separate. Erase App Data resets local app-wide state. Real runtime supervision,
+provider registration and permission results reconnect at this boundary.
+
+NotificationChannelSpec, ConversationNotificationRouting, ConversationNotifyDialogs,
+ConversationNotificationSettingsScreen and ConversationVibrationPreferences map to
+`NotificationControlsUi.kt` and `NotificationCategoryAccess.kt`. Existing public
+Android settings targets are used; missing category/child targets report fallback.
+Real publication, override observation and vibration remain migration seams.
+ChatMutePreferences/MuteOverrideReconciliation and AppState mute commands map to
+independent NotifyFor and mute/deadline fields. `MuteDurationDialog.kt` uses native
+calendar/time input; RetentionController's shared clock expires canonical mute state.
+All/Mentions remain independent of effective Nothing while muted. Current master
+changes none of these settings contracts.

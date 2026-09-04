@@ -214,6 +214,18 @@ class AppViewModel(
         )
     }
 
+    val notificationControls: NotificationController by lazy {
+        NotificationController(active = { uiState.activeProfile }, signedIn = { it in uiState.signedInProfileIds }, now = { retention.nowMillis },
+            settings = { profileId, reduce ->
+                if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) false
+                else { updateActiveProfile { it.copy(settings = reduce(it.settings)) }; true }
+            },
+            chat = { owner, reduce ->
+                if (uiState.activeProfileId != owner.profileId || owner.profileId !in uiState.signedInProfileIds || chat(owner.chatId) == null) false
+                else { mutateChat(owner.chatId,reduce); true }
+            })
+    }
+
     val incoming: IncomingController by lazy {
         IncomingController(profiles = { uiState.profiles }, activeId = { uiState.activeProfileId },
             signedIn = { it in uiState.signedInProfileIds },
@@ -242,6 +254,7 @@ class AppViewModel(
             },
             removeExpired = ::removeExpiredMessages,
             addExample = ::addRetentionExample,
+            onClockAdvanced = ::expireChatMutes,
         )
     }
 
@@ -798,6 +811,7 @@ class AppViewModel(
         transcript.reconcile()
         retention.reconcile()
         incoming.reconcile()
+        notificationControls.reconcile()
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
@@ -895,6 +909,7 @@ class AppViewModel(
         transcript.reconcile()
         retention.reconcile()
         incoming.reconcile()
+        notificationControls.reconcile()
         return true
     }
 
@@ -930,12 +945,14 @@ class AppViewModel(
         cancelProfileSave()
         dismissChatBatch()
         uiState = AppUiState()
+        notificationControls.eraseAppData()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()
         transcript.reconcile()
         retention.reconcile()
         incoming.reconcile()
+        notificationControls.reconcile()
         createdChatSequence = 0
         return true
     }
@@ -1020,7 +1037,13 @@ class AppViewModel(
     }
 
     fun setChatMute(chatId: String, duration: MuteDuration?) {
-        mutateChat(chatId) { chat -> chat.copy(muteDuration = duration) }
+        mutateChat(chatId) { chat -> NotificationControls.mute(chat,duration,retention.nowMillis) ?: chat }
+    }
+
+    private fun expireChatMutes(now: Long) {
+        uiState = uiState.copy(profiles = uiState.profiles.map { profile ->
+            if (profile.id !in uiState.signedInProfileIds) profile else profile.copy(chats = profile.chats.map { NotificationControls.expire(it,now) })
+        })
     }
 
     fun setChatDisappearing(chatId: String, duration: DisappearingDuration): Boolean {
@@ -2566,6 +2589,7 @@ class AppViewModel(
         transcript.reconcile()
         retention.reconcile()
         incoming.reconcile()
+        notificationControls.reconcile()
     }
 
     private fun addShowcaseProfiles() {
@@ -2614,6 +2638,7 @@ class AppViewModel(
         transcript.reconcile()
         retention.reconcile()
         incoming.reconcile()
+        notificationControls.reconcile()
     }
 
     private fun insertAfterPinned(chats: List<Chat>, chat: Chat): List<Chat> {

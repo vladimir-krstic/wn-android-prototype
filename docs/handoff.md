@@ -1,14 +1,14 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B21 are implemented and host-verified.
+2026-09-04: production parity B01–B22 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. B21 is complete within its local scope: incoming draft staging,
-profile/chat selection, shortcut recovery and canonical profile/QR links. Q06 still
-excludes real exported receiving and shortcut publication. Continue with B22,
-global and per-chat notification settings.
-B21's commit title is `B21: Add incoming sharing, shortcuts and profile links`. Q05 is resolved by the approved checked wipe
+record evidence. B22 is complete within its local scope: notification delivery
+recovery, app-wide background preference, categories, per-chat modes/vibration and
+custom mute expiry. Q06 still excludes actual delivery/services/publication and
+vibration. Continue with B23, notification routing and inline actions.
+B22's commit title is `B22: Add global and per-chat notification settings`. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -98,11 +98,20 @@ New Message/global recipient search accepts the same npub/nprofile/link/hex form
 See `docs/screens/incoming-sharing-and-profile-links.md`; 38 added unit cases and
 nine compiled UI cases cover the owned states. Real Intent/provider preparation,
 shortcut publication and app-lock integration remain production migration seams.
-Latest host gate: 693 unit tests, zero lint errors, both APKs;
+B22 adds `NotificationController`, pure category/mute/vibration policies and a
+Sounds & notifications route. Notify for remains All/Mentions independently of mute.
+Native date/time input writes an exact deadline; the existing retention clock clears
+canonical expired mute state. Background connection is app-wide and survives profile
+switching; pending changes remain initiating-profile-owned. Erase App Data resets
+it. Category actions use existing Android targets or report app-settings fallback.
+Real channel publication, services, provider readiness and vibration are migration
+seams; `docs/screens/notification-controls.md` records 21 added unit cases and ten
+compiled UI/platform cases. B32 must reconnect app-update distribution availability.
+Latest host gate: 714 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B22–B32. This
+boundary. Production Android parity remains in progress through B23–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

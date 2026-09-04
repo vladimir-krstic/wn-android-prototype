@@ -87,6 +87,9 @@ sealed interface AppRoute {
     data object Notifications : AppRoute
 
     @Serializable
+    data class ConversationNotifications(val chatId: String) : AppRoute
+
+    @Serializable
     data object Appearance : AppRoute
 
     @Serializable

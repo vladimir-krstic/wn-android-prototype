@@ -17,16 +17,16 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B21 are implemented and host-verified.
-[B21 incoming sharing and profile links](docs/screens/incoming-sharing-and-profile-links.md#implementation-evidence)
-adds owned multi-chat draft staging, shortcut recovery and canonical profile links,
-with separate staging/opening retry and profile-safe deferred requests.
-The latest host gate passes 693 unit tests, zero lint errors and both APKs.
-Nine new UI cases compile only; device and visual acceptance remain pending.
-Incoming requests remain deterministic; real exported share targets and shortcut
-publication remain outside scope.
+Production Android parity batches B01–B22 are implemented and host-verified.
+[B22 notification controls](docs/screens/notification-controls.md#implementation-evidence)
+adds delivery recovery, app-wide background connection preference, per-chat modes,
+category scope/settings handoffs, vibration choices and custom mute expiry.
+The latest host gate passes 714 unit tests, zero lint errors and both APKs.
+Ten new UI/platform cases compile only; device and visual acceptance remain pending.
+Notification delivery, services, channel publication and vibration remain local
+state models with explicit production integration seams.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks the remaining B22–B32 batches and per-batch commits.
+tracks the remaining B23–B32 batches and per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`

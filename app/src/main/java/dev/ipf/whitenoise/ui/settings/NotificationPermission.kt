@@ -135,7 +135,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
-private fun notificationSettingsIntent(context: Context): Intent =
+internal fun notificationSettingsIntent(context: Context): Intent =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         notificationSettingsIntentApi26(context)
     } else {

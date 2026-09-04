@@ -133,3 +133,18 @@ staging/merge, target ownership and accepted-open contracts. The
 records 693 passing unit tests and nine compiled UI cases, with explicit Q06
 external integration seams. Broader timeline-window, Nostr, installer and
 Amber/contact/startup drift still awaits the relevant batch or final audit.
+
+## Implementation drift check — B22, 2026-09-04
+
+Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`, without main.
+The seven-commit diff changes notification startup/route test coverage, not
+NotificationsScreen, category routing, vibration, mute preferences or their settings
+contracts. AppState's settings setters are unchanged. The pinned getter and
+updateBackgroundConnectionPreference explicitly establish app-wide ownership;
+local enabling remains account-owned and accepted before a rejected service start.
+NotifyForDialog stores All/Mentions separately from the authoritative mute state.
+B22 preserves these distinctions, fixed-clock expiry and scoped settings recovery.
+The [brief](../../screens/notification-controls.md#implementation-evidence) records
+714 passing unit tests and ten compiled UI/platform cases. Broader timeline-window,
+notification startup, Nostr, installer and Amber/contact drift remains for its
+relevant batch or final reconciliation.

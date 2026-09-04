@@ -25,7 +25,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B19: implemented and host-verified 2026-09-04; 617 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/group-administration-and-transcript.md). Commit title: `B19: Add group administration, disbanding and transcript export`. Cold/terminal group-seed drift reconciled.
 - B20: implemented and host-verified 2026-09-04; 655 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/disappearing-timers-and-expiry.md). Commit title: `B20: Add disappearing timers and message expiry`. Q03 resolved from production source.
 - B21: implemented and host-verified 2026-09-04; 693 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/incoming-sharing-and-profile-links.md). Commit title: `B21: Add incoming sharing, shortcuts and profile links`. Q06 retains real exported receiving/publication outside scope.
-- B22–B32: pending; linked decisions apply only to their named slices.
+- B22: implemented and host-verified 2026-09-04; 714 unit tests, zero lint errors, both APKs and ten new compiled UI/platform cases. [Selected brief and evidence](../../screens/notification-controls.md). Commit title: `B22: Add global and per-chat notification settings`. Q06 retains real delivery/services/publication/vibration outside scope.
+- B23–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -53,7 +54,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Implemented; host verified |
 | **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Implemented; host verified; Q03 resolved |
 | **B21** | Inbound sharing, shortcuts and profile links | C084, C085, C086, C087, C088 | B01, B11 | Implemented; host verified; real receiving/publication remains outside Q06 scope |
-| **B22** | Global and per-chat notification settings | C089, C090, C091, C092, C093 | B05 | Blocked slices: Q06 |
+| **B22** | Global and per-chat notification settings | C089, C090, C091, C092, C093 | B05 | Implemented; host verified; real delivery/services remain outside Q06 scope |
 | **B23** | Notification routing and inline actions | C094 | B21, B22 | Blocked slices: Q06 |
 | **B24** | App lock and sensitive privacy controls | C095, C096, C097, C098 | B01 | Blocked slices: Q02, Q06, Q08 |
 | **B25** | Key packages and developer diagnostics | C080, C110, C111, C118, C119 | B01 | Blocked slices: Q04 |
@@ -419,6 +420,13 @@ remains Q06. Commit: `B21: Add incoming sharing, shortcuts and profile links`.
 ### B22 — Global and per-chat notification settings
 
 Capabilities: C089, C090, C091, C092, C093. Dependencies: B05.
+
+**Status:** Implemented and host-verified. [Selected brief](../../screens/notification-controls.md#implementation-evidence):
+714 unit tests, zero lint errors, both APKs; ten new UI/platform cases compile only.
+Delivery rollback, app-wide background preference, category scope/settings fallback,
+per-chat mode/vibration and custom mute expiry are implemented within local scope.
+Q06 retains real delivery/services/publication/vibration. Commit:
+`B22: Add global and per-chat notification settings`.
 
 **Implementation:** Existing permission/push UI needs Play-services/build-configuration availability and asynchronous enable failure/revert states. Add preference, permission dependency, rejected service/retry and stopped state; local model only unless Q06 approves actual service. Add category rows for direct/group/mentions/reactions/invites/membership/agent activity and distribution-gated updates. Android owns category settings; do not imitate system screens. New Sounds & notifications detail: all/mentions/nothing, inherit/custom category, effective Android override, selected vibration and preview state. Add custom date/time, expiry and restore previous all/mentions choice. Keep approved immediate-choice Material dialog for existing presets.
 

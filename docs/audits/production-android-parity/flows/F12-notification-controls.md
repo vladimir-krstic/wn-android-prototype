@@ -1,5 +1,11 @@
 # F12 — Notifications and conversation alert rules
 
+B22/C089–C093 are implemented and host-verified within local scope. The
+[selected brief](../../../screens/notification-controls.md#implementation-evidence)
+records 714 passing unit tests, ten compiled UI/platform cases and production
+integration seams. Q06 excludes real delivery/services/publication/vibration.
+B23/C094 remains pending. Device and visual acceptance remain pending.
+
 ## Purpose and current composition
 
 Global settings own enablement; chat details own overrides; Android owns channel/permission UI. Present requested, effective and unavailable states separately.
@@ -8,7 +14,7 @@ Prototype surface: `ui/settings/PreferenceScreens.kt; NotificationPermission.kt;
 
 ## Required content and proposed copy
 
-Use **Notifications**, **Local notifications**, **Keep connected**, **Push notifications**, **Defaults for all chats**, **Sounds & notifications**, **Notify for**, **Vibration pattern**, **Mute until**, and **Open Settings** only when that resolves the state.
+Use **Notifications**, **Local notifications**, **Keep connected in the background**, **Native push**, **Notification categories**, **Sounds & notifications**, **Notify for**, **Vibration pattern**, **Mute until**, and **Open Settings** only when that resolves the state.
 
 These labels are the audit recommendation and follow current prototype terminology. Validate exact surrounding help/error copy in the selected screen brief against each matrix source link; preserve production security and destructive consequences without exposing implementation terms.
 
@@ -16,11 +22,11 @@ These labels are the audit recommendation and follow current prototype terminolo
 
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
-| C089 · Local/push switches and permission recovery | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Existing permission/push UI needs Play-services/build-configuration availability and asynchronous enable failure/revert states. |
-| C090 · Keep connected in the background | Decision required | Trigger its named entry/action; cancel with Back where available | Add preference, permission dependency, rejected service/retry and stopped state; local model only unless Q06 approves actual service. |
-| C091 · Android notification categories and global defaults | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add category rows for direct/group/mentions/reactions/invites/membership/agent activity and distribution-gated updates. Android owns category settings; do not imitate system screens. |
-| C092 · Per-chat notify mode, custom category and vibration | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | New Sounds & notifications detail: all/mentions/nothing, inherit/custom category, effective Android override, selected vibration and preview state. |
-| C093 · Custom mute-until and restoration of previous notify mode | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add custom date/time, expiry and restore previous all/mentions choice. Keep approved immediate-choice Material dialog for existing presets. |
+| C089 · Local/push switches and permission recovery | Saved profile preferences and effective permission/provider state | Choose delivery; pending/cancel/retry | Availability gates and asynchronous rollback preserve stored choices and origin-profile ownership. |
+| C090 · Keep connected in the background | App-wide background preference | Enable local delivery first, then connection; retry rejection or stop | Accepted local enabling is retained after service rejection. Switching profiles keeps the global preference; app erase clears it. Real service remains Q06. |
+| C091 · Android notification categories and global defaults | Global categories and distribution availability | Open Android category settings | Exact existing category targets or explicit app-settings fallback/unavailable outcomes; no imitation system screen or channel publication. |
+| C092 · Per-chat notify mode, custom category and vibration | Saved Notify for, mute, scope and vibration | Select modes/scope; stage vibration; save, preview or cancel | All/Mentions survives effective Nothing while muted. Primary/custom/global scope and Android override projections are independent and owner-checked. |
+| C093 · Custom mute-until and restoration of previous notify mode | Existing preset/custom mute or unmuted state | One-tap presets or native date/time; Back/cancel preserves | Future-time acceptance and shared foreground expiry update canonical mute state and restore the saved choice. |
 | C094 · Notification tap, inline reply/reaction/mark-read | Decision required | Trigger its named entry/action; cancel with Back where available | Model message/invite route and account ownership, inline action pending/failure/retry, exactly-once result and read-through boundary; live notifications require Q06. |
 
 ## Production integration seam
@@ -40,4 +46,4 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B22, B23. Decisions: Q06. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+Batches: B22 complete locally; B23 pending. Decisions: Q06 retains real platform delivery/services/publication/vibration outside scope. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.

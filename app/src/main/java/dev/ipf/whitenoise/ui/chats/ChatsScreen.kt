@@ -436,10 +436,15 @@ fun ChatsScreen(
         }, onRetry = ::startVoice, onDismiss = { voiceRequest = null })
     }
 
+    val notifications = dev.ipf.whitenoise.ui.settings.LocalNotificationControls.current
     muteChat?.let { chat ->
         MuteDurationDialog(
             onDismiss = { muteChat = null },
             selectedDuration = chat.muteDuration,
+            onCustomSelect = notifications?.let { controller -> { until: Long ->
+                controller.request(dev.ipf.whitenoise.state.NotificationChange.Mute(dev.ipf.whitenoise.model.MuteDuration.Custom,until),chat.id,profile?.id); muteChat = null
+            } },
+            nowMillis = { notifications?.nowMillis ?: dev.ipf.whitenoise.model.MessageForwarding.nowMillis },
             onSelect = {
                 onMute(chat.id, it)
                 muteChat = null

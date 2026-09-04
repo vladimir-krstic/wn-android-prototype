@@ -4057,3 +4057,31 @@ outside this prototype; developer-only requests exercise the app-owned flow.
 The [selected brief](screens/incoming-sharing-and-profile-links.md#implementation-evidence)
 records exact migration seams. Host validation passes 693 unit tests, zero lint
 errors and both APKs; nine new UI cases compile only.
+
+## WN-ANDROID-0142 — Notification scope, mute restoration and Android settings ownership
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B22; host verified, device/visual acceptance pending.
+
+Notifications retains the approved contextual permission gate, dependent Native
+push and inline preview choices. New delivery mutations have owned pending,
+failure and retry states. Production background connection is an app-wide
+preference: enabling first enables local notifications for the initiating profile;
+start rejection preserves that accepted local change but reverts the connection
+preference. Profile switching/sign-out does not reset the app-wide preference;
+Erase App Data does. Real delivery and services remain Q06 migration seams.
+
+Sounds & notifications separates All/Mentions preference from mute. Muted means
+Nothing without erasing the restore choice. The shared mute dialog keeps one-tap
+presets, adds native date/time input and rejects elapsed times at final acceptance.
+The existing fixed foreground clock expires canonical mute state. Category scope
+keeps primary messages chat-specific, four optional categories global-or-custom,
+and membership/updates global-only. Android owns actual sound/vibration/importance.
+Existing category settings open through the public action; unavailable child/global
+targets report app-settings fallback. No system settings screen or channel is
+fabricated. Selected vibration and effective Android override remain distinct;
+preview defaults unavailable without the Q06 device capability.
+
+The [selected brief](screens/notification-controls.md#implementation-evidence)
+records exact contracts and production reconnection. Host validation passes 714
+unit tests, zero lint errors and both APKs; ten new UI/platform cases compile only.

@@ -174,6 +174,18 @@ fun DeveloperToolsScreen(
     var peopleScenariosOpen by remember { mutableStateOf(false) }
     var groupScenariosOpen by remember { mutableStateOf(false) }
     val incoming = dev.ipf.whitenoise.ui.share.LocalIncoming.current
+    val notificationControls = LocalNotificationControls.current
+    var notificationChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
+    if (notificationControls != null) {
+        when (notificationChoice) {
+            "outcome" -> ScenarioChoiceDialog("Notification settings outcomes",dev.ipf.whitenoise.state.NotificationScenario.entries,
+                notificationControls.scenario,{it.developerLabel},notificationControls::choose,{notificationChoice = null})
+            "push" -> ScenarioChoiceDialog("Native push availability",dev.ipf.whitenoise.model.PushAvailability.entries,
+                notificationControls.environment.push,{it.name},{notificationControls.chooseEnvironment(notificationControls.environment.copy(push = it))},{notificationChoice = null})
+            "vibration" -> ScenarioChoiceDialog("Android vibration override",dev.ipf.whitenoise.model.AndroidVibrationOverride.entries,
+                notificationControls.environment.vibrationOverride,{it.name},{notificationControls.chooseEnvironment(notificationControls.environment.copy(vibrationOverride = it))},{notificationChoice = null})
+        }
+    }
     var incomingExampleOpen by remember { mutableStateOf(false) }
     var incomingOutcomeOpen by remember { mutableStateOf(false) }
     val retention = dev.ipf.whitenoise.ui.conversation.LocalRetention.current
@@ -302,6 +314,14 @@ fun DeveloperToolsScreen(
                                 SettingsDivider(); SettingsLink("Incoming request", "Open an owned share, shortcut or profile link", { incomingExampleOpen = true })
                                 SettingsDivider(); SettingsLink("Incoming share outcome", incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
                                 SettingsDivider(); SettingsLink("Defer incoming requests", if (incoming.locked) "Locked" else "Unlocked", { incoming.chooseLock(!incoming.locked) })
+                            }
+                            if (notificationControls != null) {
+                                SettingsDivider(); SettingsLink("Notification outcomes",notificationControls.scenario.developerLabel,{notificationChoice = "outcome"})
+                                SettingsDivider(); SettingsLink("Native push availability",notificationControls.environment.push.name,{notificationChoice = "push"})
+                                SettingsDivider(); SettingsLink("Android vibration override",notificationControls.environment.vibrationOverride.name,{notificationChoice = "vibration"})
+                                SettingsDivider(); SettingsSwitch("Vibration preview available",notificationControls.environment.previewAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(previewAvailable = it))})
+                                SettingsDivider(); SettingsSwitch("App update distribution",notificationControls.environment.updatesAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(updatesAvailable = it))})
+                                SettingsDivider(); SettingsLink("Stop background connection","Report a runtime stop",notificationControls::stopBackground,enabled = notificationControls.backgroundConnection)
                             }
                             if (retention != null) {
                                 SettingsDivider(); SettingsLink("Retention update", retention.scenario.developerLabel, { groupWorkChoice = "retention" })

@@ -547,8 +547,10 @@ class SettingsScreenTest {
         }
 
         composeRule.onNodeWithText("Turn on local notifications first.").assertIsDisplayed()
-        composeRule.onNodeWithText("Turn on local notifications to change message previews.").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(hasTestTag("notifications.preview.group"))
         composeRule.onNodeWithText("Sender and message").assertIsNotEnabled()
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(hasText("Turn on local notifications to change message previews."))
+        composeRule.onNodeWithText("Turn on local notifications to change message previews.").assertIsDisplayed()
         composeRule.onNodeWithText("Notifications are off").assertDoesNotExist()
     }
 
@@ -567,6 +569,7 @@ class SettingsScreenTest {
         }
 
         composeRule.onNodeWithTag("notifications.delivery.divider").assertIsDisplayed()
+        composeRule.onNodeWithTag("settings.list").performScrollToNode(hasTestTag("notifications.preview.group"))
         composeRule.onNodeWithText("Sender and message").assertIsDisplayed()
         composeRule.onNodeWithText("Sender only").assertIsDisplayed()
         composeRule.onNodeWithText("New message only").assertIsSelected()

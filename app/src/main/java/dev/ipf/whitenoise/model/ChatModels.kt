@@ -22,6 +22,7 @@ enum class MuteDuration(val label: String) {
     OneDay("1 Day"),
     OneWeek("1 Week"),
     Always("Always"),
+    Custom("Custom time"),
 }
 
 enum class ChatDeliveryState {
@@ -214,6 +215,10 @@ data class Chat(
     val unreadCount: Int = 0,
     val isMarkedUnread: Boolean = false,
     val muteDuration: MuteDuration? = null,
+    val mutedUntilMillis: Long? = null,
+    val notifyFor: NotifyFor = NotifyFor.AllMessages,
+    val vibration: VibrationChoice = VibrationChoice.SystemDefault,
+    val customNotificationCategories: Set<NotificationCategory> = emptySet(),
     val disappearingDuration: DisappearingDuration = DisappearingDuration.Off,
     val isDraft: Boolean = false,
     val deliveryState: ChatDeliveryState = ChatDeliveryState.None,

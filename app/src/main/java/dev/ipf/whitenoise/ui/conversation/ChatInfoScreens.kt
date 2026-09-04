@@ -146,6 +146,7 @@ fun ChatInfoScreen(
     onCreateFolder: (String) -> String? = { null },
     onAddToFolder: (String) -> Boolean = { false },
     onCollapseLongMessages: (Boolean) -> Unit = {},
+    onNotifications: (() -> Unit)? = null,
 ) {
     var folderPicker by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var folderFailed by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
@@ -153,7 +154,8 @@ fun ChatInfoScreen(
         onDismiss = { folderPicker = false }, onCreate = onCreateFolder,
         onSelect = { if (onAddToFolder(it)) folderPicker = false else folderFailed = true },
         errorMessage = if (folderFailed) stringResource(R.string.folder_assignment_failed) else null)
-    var muteSheet by remember { mutableStateOf(false) }
+    val notifications = dev.ipf.whitenoise.ui.settings.LocalNotificationControls.current
+    var muteSheet by remember(profile.id,chat.id) { mutableStateOf(false) }
     var disappearingSheet by remember { mutableStateOf(false) }
     var leaveConfirmation by remember { mutableStateOf(false) }
     var onlyAdminWarning by remember { mutableStateOf(false) }
@@ -315,6 +317,11 @@ fun ChatInfoScreen(
                         dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
                     }
                 }
+                if (onNotifications != null) item(key = "notification_controls") {
+                    dev.ipf.whitenoise.ui.settings.SettingsGroup {
+                        dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.notification_sounds_title),onClick = onNotifications)
+                    }
+                }
                 item(key = "retention_work") { RetentionWorkPanel(profile, chat) }
                 item(key = "transcript_export") { TranscriptPanel(profile, chat) }
                 item(key = "technical_actions") {
@@ -374,6 +381,10 @@ fun ChatInfoScreen(
             onDismiss = { muteSheet = false },
             selectedDuration = chat.muteDuration,
             onSelect = { onMute(it); muteSheet = false },
+            onCustomSelect = notifications?.let { controller -> { until: Long ->
+                controller.request(dev.ipf.whitenoise.state.NotificationChange.Mute(MuteDuration.Custom,until),chat.id,profile.id); muteSheet = false
+            } },
+            nowMillis = { notifications?.nowMillis ?: dev.ipf.whitenoise.model.MessageForwarding.nowMillis },
         )
     }
     RetentionConfirmation(profile, chat)

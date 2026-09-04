@@ -20,6 +20,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.res.stringResource
+import dev.ipf.whitenoise.model.NotificationCategory
+import dev.ipf.whitenoise.model.NotificationControls
+import dev.ipf.whitenoise.model.NotificationEnvironment
+import dev.ipf.whitenoise.model.PushAvailability
+import dev.ipf.whitenoise.state.NotificationChange
+import dev.ipf.whitenoise.state.NotificationDelivery
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,11 +52,16 @@ fun NotificationsScreen(
     onBack: () -> Unit,
     onChange: (ProfileSettings) -> Unit,
     permissionStatusOverride: NotificationPermissionStatus? = null,
+    onOpenCategory: ((NotificationCategory) -> NotificationSettingsOpen)? = null,
 ) {
     val permissionAccess = rememberNotificationPermissionAccess()
     val permissionStatus = permissionStatusOverride ?: permissionAccess.status
     val notificationsAllowed = permissionStatus == NotificationPermissionStatus.Allowed
     val settings = profile.settings
+    val controller = LocalNotificationControls.current
+    val environment = controller?.environment ?: NotificationEnvironment()
+    var settingsResult by rememberSaveable(profile.id) { mutableStateOf<NotificationSettingsOpen?>(null) }
+    val context = LocalContext.current
     val localNotificationsEnabled = notificationsAllowed && settings.localNotifications
     SettingsScaffold(title = "Notifications", onBack = onBack) {
         SettingsList {
@@ -87,28 +100,41 @@ fun NotificationsScreen(
                         checked = localNotificationsEnabled,
                         enabled = notificationsAllowed,
                         onCheckedChange = {
-                            onChange(
-                                settings.copy(
-                                    localNotifications = it,
-                                    nativePushNotifications = settings.nativePushNotifications && it,
-                                ),
-                            )
+                            if (controller != null) controller.request(NotificationChange.Delivery(NotificationDelivery.Local,it),expectedProfileId = profile.id)
+                            else onChange(settings.copy(localNotifications = it,
+                                nativePushNotifications = settings.nativePushNotifications && it))
                         },
                         subtitle = "Create message notifications on this device. Without native push, delivery may wait until White Noise is active.",
                     )
                     SettingsDivider(Modifier.testTag("notifications.delivery.divider"))
                     SettingsSwitch(
                         title = "Native push",
-                        checked = localNotificationsEnabled && settings.nativePushNotifications,
-                        enabled = localNotificationsEnabled,
-                        onCheckedChange = { onChange(settings.copy(nativePushNotifications = it)) },
+                        checked = NotificationControls.pushEnabled(settings,notificationsAllowed,environment.push),
+                        enabled = localNotificationsEnabled && environment.push == PushAvailability.Available,
+                        onCheckedChange = {
+                            if (controller != null) controller.request(NotificationChange.Delivery(NotificationDelivery.Push,it),expectedProfileId = profile.id)
+                            else onChange(settings.copy(nativePushNotifications = it))
+                        },
                         subtitle = when {
                             !notificationsAllowed -> "Allow notifications first."
                             !settings.localNotifications -> "Turn on local notifications first."
+                            environment.push == PushAvailability.BuildNotConfigured -> stringResource(R.string.notification_push_build)
+                            environment.push == PushAvailability.PlayServicesMissing -> stringResource(R.string.notification_push_services)
+                            environment.push == PushAvailability.ProviderNotInitialized -> stringResource(R.string.notification_push_provider)
                             else -> "Use a generic wake-up signal to check for new messages in the background. Message details stay on this device."
                         },
                     )
                 }
+            }
+            if (controller != null) {
+                item { SettingsGroup {
+                    SettingsSwitch(stringResource(R.string.notification_background),
+                        NotificationControls.backgroundEnabled(controller.backgroundConnection,notificationsAllowed), {
+                            controller.request(NotificationChange.Delivery(NotificationDelivery.Background,it),expectedProfileId = profile.id)
+                        },enabled = notificationsAllowed,subtitle = stringResource(R.string.notification_background_detail))
+                } }
+                item { SettingsExplainer(stringResource(if (NotificationControls.backgroundEnabled(controller.backgroundConnection,notificationsAllowed))
+                    R.string.notification_background_on else R.string.notification_background_off)) }
             }
             item { SettingsSection("Preview") }
             item {
@@ -151,8 +177,18 @@ fun NotificationsScreen(
                     },
                 )
             }
+            item { SettingsSection(stringResource(R.string.notification_categories)) }
+            item { SettingsExplainer(stringResource(R.string.notification_categories_detail)) }
+            item { SettingsGroup {
+                NotificationCategory.global(environment.updatesAvailable).forEachIndexed { index, category ->
+                    if (index > 0) SettingsDivider()
+                    SettingsLink(stringResource(notificationCategoryResource(category)),
+                        onClick = { settingsResult = onOpenCategory?.invoke(category) ?: openNotificationCategory(context,category) })
+                }
+            } }
         }
     }
+    NotificationSettingsFeedback(settingsResult) { settingsResult = null }
 }
 
 @Composable

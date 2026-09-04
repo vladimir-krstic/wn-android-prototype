@@ -28,6 +28,7 @@ class RetentionController(
     private val commit: (GroupOwner, DisappearingDuration, DisappearingDuration, Set<String>) -> Boolean,
     private val removeExpired: (GroupOwner, Set<String>) -> Unit,
     private val addExample: (GroupOwner, RetentionExample, Long) -> Unit,
+    private val onClockAdvanced: (Long) -> Unit = {},
 ) {
     var nowMillis by mutableLongStateOf(MessageForwarding.nowMillis); private set
     var work by mutableStateOf<Map<GroupOwner, RetentionWork>>(emptyMap()); private set
@@ -113,6 +114,7 @@ class RetentionController(
             val expired = c.timeline.filterIsInstance<ChatTimelineEntry.Message>().filter { MessageRetentionPolicy.expired(it.message, nowMillis) }.mapTo(linkedSetOf()) { it.id }
             if (expired.isNotEmpty()) removeExpired(GroupOwner(p.id, c.id), expired)
         } }
+        onClockAdvanced(nowMillis)
         reconcile()
     }
 }

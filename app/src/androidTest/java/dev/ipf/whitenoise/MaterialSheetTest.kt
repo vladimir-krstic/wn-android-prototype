@@ -147,7 +147,7 @@ class MaterialSheetTest {
         )
         rule.waitForIdle()
         rule.runOnIdle { assertNull(result); assertFalse(visible.value); visible.value = true }
-        for (duration in MuteDuration.entries) {
+        for (duration in MuteDuration.entries.filter { it != MuteDuration.Custom }) {
             rule.onNodeWithText(duration.label).performScrollTo().performClick()
             rule.runOnIdle { assertEquals(duration, result); visible.value = true }
         }

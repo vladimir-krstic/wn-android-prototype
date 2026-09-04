@@ -196,6 +196,7 @@ fun WhiteNoiseNavHost(
         } }
     }
 
+    dev.ipf.whitenoise.ui.settings.NotificationControlsHost(appViewModel.notificationControls,currentBackStackEntry?.id) {
     dev.ipf.whitenoise.ui.share.IncomingHost(appViewModel.incoming, currentBackStackEntry?.id,
         currentBackStackEntry?.destination?.route?.substringBefore('/')?.substringBefore('?') in onboardingRouteNames,
         onOpen = { opening ->
@@ -329,7 +330,7 @@ fun WhiteNoiseNavHost(
                 onVoiceScenario = { uiState.activeProfileId?.let(appViewModel::consumeGlobalVoiceScenario) ?: dev.ipf.whitenoise.model.GlobalVoiceScenario.Unavailable },
                 onMarkUnread = appViewModel::markChatUnread,
                 onTogglePin = appViewModel::toggleChatPin,
-                onMute = appViewModel::setChatMute,
+                onMute = { chatId, duration -> appViewModel.notificationControls.request(dev.ipf.whitenoise.state.NotificationChange.Mute(duration),chatId,uiState.activeProfileId) },
                 onArchive = appViewModel::setChatArchived,
                 onLeave = appViewModel::leaveChat,
                 onDelete = { appViewModel.deleteEndedChat(it) },
@@ -441,9 +442,19 @@ fun WhiteNoiseNavHost(
                 onRetryKey = { appViewModel.retryLocalKeyAccess(profile.id) },
             ) }
         }
+        composable<AppRoute.ConversationNotifications> { entry ->
+            val route = entry.toRoute<AppRoute.ConversationNotifications>()
+            val profile = uiState.activeProfile
+            val chat = appViewModel.chat(route.chatId)
+            if (profile != null && chat != null) dev.ipf.whitenoise.ui.settings.ConversationNotificationScreen(
+                profile,chat,appViewModel.notificationControls,onBack = { navController.popBackStack() })
+            else LaunchedEffect(route.chatId) { navController.popBackStack() }
+        }
         composable<AppRoute.Notifications> {
             uiState.activeProfile?.let { profile ->
-                NotificationsScreen(profile, onBack = { navController.popBackStack() }, onChange = appViewModel::updateProfileSettings)
+                NotificationsScreen(profile, onBack = { navController.popBackStack() }, onChange = {
+                    if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.updateProfileSettings(it)
+                })
             }
         }
         composable<AppRoute.Appearance> {
@@ -854,7 +865,8 @@ fun WhiteNoiseNavHost(
                     },
                     onEditGroup = { navController.navigate(AppRoute.EditGroup(chat.id)) },
                     onAddPeople = { navController.navigate(AppRoute.AddGroupMembers(chat.id)) },
-                    onMute = { appViewModel.setChatMute(chat.id, it) },
+                    onMute = { appViewModel.notificationControls.request(dev.ipf.whitenoise.state.NotificationChange.Mute(it),chat.id,profile.id) },
+                    onNotifications = { navController.navigate(AppRoute.ConversationNotifications(chat.id)) },
                     onDisappearing = { appViewModel.setChatDisappearing(chat.id, it) },
                     onArchive = { appViewModel.setChatArchived(chat.id, !chat.isArchived) },
                     onLeave = { appViewModel.leaveChat(chat.id) },
@@ -946,6 +958,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
     }
     }
