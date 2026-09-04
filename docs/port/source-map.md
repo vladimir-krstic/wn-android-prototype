@@ -24,6 +24,11 @@ history search, older/newer pages, exact targets, captured/visible unread state
 and Message Details metadata to `docs/screens/conversation-history-and-reading.md`.
 Production ConversationHistorySearch, page/target/read controller methods and
 MessageInfoSheet are the integration seams; prototype history stays in memory.
+B09 maps authenticated edit aggregation and pending/retry/discard controller events,
+MessageFullScreen/EditHistory, native passage selection and MarkdownRenderer into
+`docs/screens/message-editing-and-reading.md`. Accepted text is authoritative;
+local document/source annotations reconnect to production AST/selection data.
+Encoded Nostr profile/event reference resolution is tracked with B30.
 
 All iOS paths below are relative to the root of the private
 [`wn-ios-prototype`](https://github.com/vladimir-krstic/wn-ios-prototype)

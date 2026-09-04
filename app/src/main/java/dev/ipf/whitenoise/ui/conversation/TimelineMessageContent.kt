@@ -661,6 +661,10 @@ internal class ReadAloudController {
         private set
     var progress by mutableFloatStateOf(0f)
         private set
+    var activePassage by mutableStateOf<dev.ipf.whitenoise.model.MessagePassage?>(null)
+        private set
+    private var utteranceGeneration = 0L
+    private var activeUtteranceId: String? = null
 
     private var engine: TextToSpeech? = null
     private var closed = true
@@ -683,12 +687,12 @@ internal class ReadAloudController {
         engine = created
         created.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = postUpdate {
-                if (utteranceId == activeMessageId) progress = 0f
+                if (utteranceId == activeUtteranceId) progress = 0f
             }
 
             override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
                 postUpdate {
-                    if (utteranceId == activeMessageId) {
+                    if (utteranceId == activeUtteranceId) {
                         val spokenTextLength = utteranceId
                             ?.let(utteranceLengths::get)
                             ?.coerceAtLeast(1)
@@ -713,23 +717,39 @@ internal class ReadAloudController {
             stop()
             return
         }
+        speak(messageId, text, null)
+    }
+
+    fun speakPassage(messageId: String, passage: dev.ipf.whitenoise.model.MessagePassage) {
+        if (ready && passage.text.isNotBlank()) speak(messageId, passage.text, passage)
+    }
+
+    private fun speak(messageId: String, text: String, passage: dev.ipf.whitenoise.model.MessagePassage?) {
         val currentEngine = engine ?: return
-        utteranceLengths[messageId] = text.length
-        val result = currentEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, messageId)
+        val utteranceId = "$messageId:${++utteranceGeneration}"
+        activeUtteranceId?.let(utteranceLengths::remove)
+        activeUtteranceId = utteranceId
+        utteranceLengths[utteranceId] = text.length
+        val result = currentEngine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
         if (result == TextToSpeech.SUCCESS) {
             activeMessageId = messageId
+            activePassage = passage
             progress = 0f
         } else {
-            utteranceLengths.remove(messageId)
+            utteranceLengths.remove(utteranceId)
+            activeUtteranceId = null
             activeMessageId = null
+            activePassage = null
             progress = 0f
         }
     }
 
     fun stop() {
         engine?.stop()
-        activeMessageId?.let(utteranceLengths::remove)
+        activeUtteranceId?.let(utteranceLengths::remove)
+        activeUtteranceId = null
         activeMessageId = null
+        activePassage = null
         progress = 0f
     }
 
@@ -741,13 +761,17 @@ internal class ReadAloudController {
         utteranceLengths.clear()
         ready = false
         activeMessageId = null
+        activeUtteranceId = null
+        activePassage = null
         progress = 0f
     }
 
     private fun finish(utteranceId: String?) = postUpdate {
         utteranceId?.let(utteranceLengths::remove)
-        if (utteranceId == activeMessageId) {
+        if (utteranceId == activeUtteranceId) {
             activeMessageId = null
+            activeUtteranceId = null
+            activePassage = null
             progress = 0f
         }
     }

@@ -108,7 +108,9 @@ evidence, bounded decisions, and remaining user-acceptance work.
 - `docs/references/` — Android platform router, native-UI evaluation method,
   pinned iOS provenance, and resource guidance.
 - `docs/screens/` — Android screen briefs created only when a screen is
-  selected.
+  selected. The [production parity plan](docs/audits/production-android-parity/implementation-plan.md)
+  tracks completed batches and their verification; [B09](docs/screens/message-editing-and-reading.md)
+  covers message editing, full reading and native passage selection.
 
 ## iOS parity reference
 

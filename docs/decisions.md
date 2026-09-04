@@ -3689,3 +3689,26 @@ Sources: [Android Java API desugaring](https://developer.android.com/studio/writ
 [Google Maven metadata](https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs/maven-metadata.xml).
 The final clean host gate passed 296 unit tests, both APKs and lint without
 errors after the compatibility fix. Device execution remains unrequested.
+
+## WN-ANDROID-0129 — Native passage selection retains authored source spans
+
+2026-09-04 implementation decision under the authorized B09 batch. Use Compose
+Foundation's `SelectionState` for full-reader selection and native handles,
+keyboard, toolbar and Back behavior. Each rendered UTF-16 unit carries an
+annotation pointing to its unchanged authored span. Selected fragments retain
+annotations, so repeated words and Markdown/entity presentation resolve without
+searching for an ambiguous text occurrence. A source revision clears selection;
+speech stores the selected span and rejects stale utterance callbacks.
+
+The local parser renders the named production document shapes with Material
+text/link primitives and literal fallback; production integration should supply
+its existing AST rather than adopt a second runtime parser. Copy retains the
+established readable text; Copy Markdown exposes the complete authored source.
+Encoded Nostr identity/event reference resolution remains tracked in B30. No
+third-party runtime parser, WebView, network, service or permission is added.
+
+Sources checked 2026-09-04: [Compose selection and links](https://developer.android.com/develop/ui/compose/text/user-interactions),
+[SelectionState](https://developer.android.com/reference/kotlin/androidx/compose/foundation/text/selection/SelectionState),
+and the resolved Foundation 1.12.0 source. Nine edit-state, eleven document and
+four source-selection unit tests pass; ten new UI cases compile. Device and
+visual acceptance remain pending.

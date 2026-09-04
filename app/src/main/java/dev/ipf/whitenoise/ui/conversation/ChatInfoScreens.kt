@@ -142,6 +142,7 @@ fun ChatInfoScreen(
     modifier: Modifier = Modifier,
     onCreateFolder: (String) -> String? = { null },
     onAddToFolder: (String) -> Boolean = { false },
+    onCollapseLongMessages: (Boolean) -> Unit = {},
 ) {
     var folderPicker by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var folderFailed by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
@@ -296,6 +297,14 @@ fun ChatInfoScreen(
                 }
                 item(key = "actions_heading") {
                     SettingsSection(stringResource(if (chat.isGroup) R.string.advanced else R.string.chat_actions))
+                }
+                item(key = "collapse_long_messages") {
+                    dev.ipf.whitenoise.ui.settings.SettingsGroup {
+                        dev.ipf.whitenoise.ui.settings.SettingsSwitch(
+                            title = stringResource(R.string.message_collapse_long), checked = chat.collapseLongMessages,
+                            onCheckedChange = onCollapseLongMessages, subtitle = stringResource(R.string.message_collapse_long_detail),
+                        )
+                    }
                 }
                 item(key = "technical_actions") {
                     ChatInfoActionGroup(

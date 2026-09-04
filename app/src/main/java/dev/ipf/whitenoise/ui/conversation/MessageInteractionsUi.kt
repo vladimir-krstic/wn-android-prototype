@@ -116,9 +116,16 @@ import kotlinx.coroutines.launch
 internal fun actionLabel(action: MessageAction): String = stringResource(
     when (action) {
         MessageAction.RetrySend -> R.string.retry_send
+        MessageAction.Edit -> R.string.message_edit
+        MessageAction.EditHistory -> R.string.message_edit_history
+        MessageAction.RetryEdit -> R.string.message_retry_edit
+        MessageAction.DiscardEdit -> R.string.message_discard_edit
+        MessageAction.OpenMessage -> R.string.message_reader
+        MessageAction.SelectText -> R.string.message_select_text
         MessageAction.Reply -> R.string.reply
         MessageAction.Forward -> R.string.forward
         MessageAction.Copy -> R.string.copy
+        MessageAction.CopyMarkdown -> R.string.message_copy_markdown
         MessageAction.ReadAloud -> R.string.read_aloud
         MessageAction.StopReading -> R.string.stop_reading
         MessageAction.Transcribe -> R.string.transcribe
@@ -133,9 +140,16 @@ internal fun actionLabel(action: MessageAction): String = stringResource(
 
 internal fun actionIcon(action: MessageAction): Int = when (action) {
     MessageAction.RetrySend -> R.drawable.ic_refresh
+    MessageAction.Edit -> R.drawable.ic_edit
+    MessageAction.EditHistory -> R.drawable.ic_description
+    MessageAction.RetryEdit -> R.drawable.ic_refresh
+    MessageAction.DiscardEdit -> R.drawable.ic_close
+    MessageAction.OpenMessage -> R.drawable.ic_description
+    MessageAction.SelectText -> R.drawable.ic_content_copy
     MessageAction.Reply -> R.drawable.ic_reply
     MessageAction.Forward -> R.drawable.ic_forward
     MessageAction.Copy -> R.drawable.ic_content_copy
+    MessageAction.CopyMarkdown -> R.drawable.ic_content_copy
     MessageAction.ReadAloud -> R.drawable.ic_volume_up
     MessageAction.StopReading -> R.drawable.ic_stop
     MessageAction.Transcribe -> R.drawable.ic_description

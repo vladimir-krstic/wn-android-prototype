@@ -299,3 +299,12 @@ Sources: [Compose gestures](https://developer.android.com/develop/ui/compose/tou
 [Android Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker),
 [Compose accessibility](https://developer.android.com/develop/ui/compose/accessibility/semantics),
 and [touch targets](https://developer.android.com/develop/ui/compose/accessibility/api-defaults).
+
+## B09 editing and reading extension
+
+The [message editing and reading brief](message-editing-and-reading.md) adds
+accepted/pending edit separation, original/revision history, full reading,
+per-chat collapse, native passage selection and structured source-aware text.
+The ordinary composer draft, selection, reply and attachments remain independent
+of the edit task. The clean host gate passes 343 unit tests and both APKs; ten
+new UI cases compile. Device/visual acceptance remains pending.

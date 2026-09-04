@@ -75,6 +75,8 @@ fun DeveloperToolsScreen(
     onKeyPackages: () -> Unit,
     historyScenario: dev.ipf.whitenoise.model.HistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success,
     onHistoryScenario: (dev.ipf.whitenoise.model.HistoryScenario) -> Unit = {},
+    messageEditScenario: dev.ipf.whitenoise.model.MessageEditScenario = dev.ipf.whitenoise.model.MessageEditScenario.Success,
+    onMessageEditScenario: (dev.ipf.whitenoise.model.MessageEditScenario) -> Unit = {},
     globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
     onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
     chatBatchScenario: dev.ipf.whitenoise.model.ChatBatchScenario = dev.ipf.whitenoise.model.ChatBatchScenario.Success,
@@ -102,6 +104,9 @@ fun DeveloperToolsScreen(
     var exportContent by rememberSaveable(profile.id) { mutableStateOf("") }
     var saveErrorDialog by rememberSaveable(profile.id) { mutableStateOf(false) }
     var historyOpen by remember { mutableStateOf(false) }
+    var editOpen by remember { mutableStateOf(false) }
+    if (editOpen) ScenarioChoiceDialog("Message editing", dev.ipf.whitenoise.model.MessageEditScenario.entries,
+        messageEditScenario, { it.developerLabel }, onMessageEditScenario, { editOpen = false })
     if (historyOpen) ScenarioChoiceDialog("Conversation history", dev.ipf.whitenoise.model.HistoryScenario.entries,
         historyScenario, { it.developerLabel }, onHistoryScenario, { historyOpen = false })
     var globalVoiceOpen by remember { mutableStateOf(false) }
@@ -176,6 +181,8 @@ fun DeveloperToolsScreen(
                 item {
                     SettingsGroup {
                         SettingsLink("History loading scenarios", historyScenario.developerLabel, { historyOpen = true })
+                        SettingsDivider()
+                        SettingsLink("Message edit outcomes", messageEditScenario.developerLabel, { editOpen = true })
                         SettingsDivider()
                         SettingsLink("Voice search scenarios", globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
                         SettingsDivider()
@@ -538,6 +545,7 @@ fun ConversationDebugScreen(
     onOpenDeveloperTools: () -> Unit,
     onDiagnostics: () -> Unit,
     onAddArrival: (Boolean) -> Unit = {},
+    onAddReadingExample: () -> Unit = {},
 ) {
     val context = LocalContext.current
     SettingsScaffold(title = "Conversation Debug", onBack = onBack) {
@@ -593,6 +601,8 @@ fun ConversationDebugScreen(
                             SettingsLink("Add unread mention", "Return to the chat to inspect the preserved unread boundary", { onAddArrival(false) })
                             SettingsDivider()
                             SettingsLink("Add streaming message", "Includes receipt, sender time and expiry metadata", { onAddArrival(true) })
+                            SettingsDivider()
+                            SettingsLink("Add long document", "Markdown, selection and revision history", onAddReadingExample)
                         }
                     }
                     item { SettingsSection("Delivery & notifications") }

@@ -262,3 +262,12 @@ and tiny sources. Current-build device visual acceptance remains pending.
 - [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics)
 - [Set up window insets](https://developer.android.com/develop/ui/compose/system/insets-ui)
 - [Text input](https://developer.android.com/develop/ui/compose/text/user-input)
+
+## B09 editing and reading extension
+
+The [message editing and reading brief](message-editing-and-reading.md) adds
+accepted/pending edit separation, original/revision history, full reading,
+per-chat collapse, native passage selection and structured source-aware text.
+The ordinary composer draft, selection, reply and attachments remain independent
+of the edit task. The clean host gate passes 343 unit tests and both APKs; ten
+new UI cases compile. Device/visual acceptance remains pending.

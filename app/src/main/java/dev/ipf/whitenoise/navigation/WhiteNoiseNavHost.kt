@@ -510,6 +510,8 @@ fun WhiteNoiseNavHost(
                     onCreatedChatUnavailable = appViewModel::setCreatedChatUnavailable,
                     historyScenario = appViewModel.nextHistoryScenario,
                     onHistoryScenario = appViewModel::selectHistoryScenario,
+                    messageEditScenario = appViewModel.nextMessageEditScenario,
+                    onMessageEditScenario = appViewModel::selectMessageEditScenario,
                     globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
                     onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
                     chatBatchScenario = appViewModel.nextChatBatchScenario,
@@ -557,6 +559,7 @@ fun WhiteNoiseNavHost(
                     onOpenDeveloperTools = { navController.navigate(AppRoute.DeveloperTools) },
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics(route.chatId)) },
                     onAddArrival = { streaming -> appViewModel.addConversationArrival(profile.id, route.chatId, streaming) },
+                    onAddReadingExample = { appViewModel.addMessageReadingExample(profile.id, route.chatId) },
                 )
             }
         }
@@ -720,6 +723,11 @@ fun WhiteNoiseNavHost(
                     onHistoryScenario = { appViewModel.consumeHistoryScenario(profile.id, it) },
                     onMessagesVisible = { appViewModel.markConversationVisible(profile.id, chat.id, it) },
                     onReadThroughMention = { appViewModel.markConversationThrough(profile.id, chat.id, it) },
+                    onEditMessage = { id, text, revision -> appViewModel.beginMessageEdit(profile.id, chat.id, id, text, revision) },
+                    onAdvanceMessageEdit = { id, request -> appViewModel.advanceMessageEdit(profile.id, chat.id, id, request) },
+                    onRetryMessageEdit = { appViewModel.retryMessageEdit(profile.id, chat.id, it) },
+                    onDiscardMessageEdit = { appViewModel.discardMessageEdit(profile.id, chat.id, it) },
+                    onInterruptMessageEdits = { appViewModel.interruptMessageEdits(profile.id, chat.id) },
                 )
                 }
             }
@@ -757,6 +765,7 @@ fun WhiteNoiseNavHost(
                     onDeveloperTools = { navController.navigate(AppRoute.ConversationDebug(chat.id)) },
                     onCreateFolder = { appViewModel.createChatFolder(profile.id, it) },
                     onAddToFolder = { appViewModel.assignChatFolder(profile.id, chat.id, it) },
+                    onCollapseLongMessages = { appViewModel.setCollapseLongMessages(profile.id, chat.id, it) },
                 )
             }
         }

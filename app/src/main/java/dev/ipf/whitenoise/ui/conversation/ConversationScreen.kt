@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -82,6 +83,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -104,6 +106,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -308,6 +311,11 @@ fun ConversationScreen(
     onHistoryScenario: (HistoryOperation) -> HistoryScenario = { HistoryScenario.Success },
     onMessagesVisible: (Set<String>) -> Unit = {},
     onReadThroughMention: (String) -> Unit = {},
+    onEditMessage: (String, String, Int) -> Boolean = { _, _, _ -> false },
+    onAdvanceMessageEdit: (String, Long) -> Unit = { _, _ -> },
+    onRetryMessageEdit: (String) -> Unit = {},
+    onDiscardMessageEdit: (String) -> Unit = {},
+    onInterruptMessageEdits: () -> Unit = {},
 ) {
     val history = rememberConversationHistory(profile, chat)
     val readState = remember(chat, profile.id) {
@@ -372,6 +380,10 @@ fun ConversationScreen(
     var configureReactionSlot by remember { mutableStateOf<Int?>(null) }
     var configureDraft by remember(profile.quickReactions) { mutableStateOf(profile.quickReactions) }
     var isSearching by rememberSaveable(chat.id) { mutableStateOf(initialSearch) }
+    var editMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var readerMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var historyMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var readerStartsSelection by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var searchQuery by rememberSaveable(chat.id) { mutableStateOf("") }
     var pinnedSearchMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var preSearchAnchor by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
@@ -483,13 +495,30 @@ fun ConversationScreen(
 
     fun handleAction(message: ChatMessage, action: MessageAction) {
         focusedMessageId = null
+        if (action in setOf(MessageAction.Edit, MessageAction.EditHistory, MessageAction.OpenMessage, MessageAction.SelectText)) {
+            history.cancel()
+            pendingInitialMessageId = null
+            initialViewportSettled = true
+        }
         when (action) {
             MessageAction.RetrySend -> onRetry(message.id)
+            MessageAction.Edit -> { readerMessageId = null; editMessageId = message.id }
+            MessageAction.EditHistory -> { readerMessageId = null; historyMessageId = message.id }
+            MessageAction.RetryEdit -> onRetryMessageEdit(message.id)
+            MessageAction.DiscardEdit -> onDiscardMessageEdit(message.id)
+            MessageAction.OpenMessage, MessageAction.SelectText -> {
+                readerStartsSelection = action == MessageAction.SelectText
+                readerMessageId = message.id
+            }
             MessageAction.Reply -> beginReply(message.id)
             MessageAction.Forward -> forwardMessageIds = setOf(message.id)
             MessageAction.Copy -> {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.plainVisibleText(profile.id)))
+            }
+            MessageAction.CopyMarkdown -> {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.text))
             }
             MessageAction.ReadAloud -> readAloudController.toggle(
                 message.id,
@@ -610,6 +639,7 @@ fun ConversationScreen(
     DisposableEffect(lifecycle, profile.id, chat.id) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
+                onInterruptMessageEdits()
                 // A cancelled entry target must not hold the restored viewport unsettled.
                 pendingInitialMessageId = null
                 initialViewportSettled = true
@@ -622,6 +652,7 @@ fun ConversationScreen(
     val currentItems by rememberUpdatedState(items)
     val currentVisibleCallback by rememberUpdatedState(onMessagesVisible)
     val canRead by rememberUpdatedState(initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
+        editMessageId == null && readerMessageId == null && historyMessageId == null &&
         viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
         !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
         !composerPresentationActive && history.request == null && history.readyTarget == null)
@@ -643,6 +674,34 @@ fun ConversationScreen(
         }
     }
 
+    val pendingEdits = messages.mapNotNull { message -> message.editAttempt?.takeIf { it.phase == dev.ipf.whitenoise.model.MessageEditPhase.Pending }?.let { message.id to it.id } }
+    var spokenSource by remember { mutableStateOf<Pair<String, String>?>(null) }
+    LaunchedEffect(readAloudController.activeMessageId, chat.timeline) {
+        val id = readAloudController.activeMessageId
+        val source = messages.firstOrNull { it.id == id && !it.isDeleted }?.text
+        if (id != null && (source == null || (spokenSource?.first == id && spokenSource?.second != source))) readAloudController.stop()
+        spokenSource = if (id == null || source == null) null else id to source
+    }
+    LaunchedEffect(profile.id, chat.id, pendingEdits, lifecycle) {
+        if (pendingEdits.isNotEmpty()) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(450)
+            pendingEdits.forEach { (messageId, requestId) -> onAdvanceMessageEdit(messageId, requestId) }
+        }
+    }
+    DisposableEffect(profile.id, chat.id) { onDispose { onInterruptMessageEdits() } }
+    LaunchedEffect(messages) {
+        val available = messages.filterNot { it.isDeleted }.map { it.id }.toSet()
+        if (editMessageId !in available) editMessageId = null
+        if (readerMessageId !in available) readerMessageId = null
+        if (historyMessageId !in available) historyMessageId = null
+    }
+    CompositionLocalProvider(LocalMessageReading provides MessageReadingActions(
+        collapse = chat.collapseLongMessages && !isSearching,
+        canWrite = chat.composerAvailability(profile) == ComposerAvailability.Available,
+        open = { history.cancel(); pendingInitialMessageId = null; initialViewportSettled = true; readerStartsSelection = false; readerMessageId = it },
+        history = { history.cancel(); pendingInitialMessageId = null; initialViewportSettled = true; historyMessageId = it },
+        retry = onRetryMessageEdit, discard = onDiscardMessageEdit,
+    )) {
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -1096,6 +1155,20 @@ fun ConversationScreen(
             },
         )
     }
+    messages.firstOrNull { it.id == editMessageId && !it.isDeleted }?.let { message ->
+        MessageEditDialog(profile.id, message, { editMessageId = null }) { text, revision -> onEditMessage(message.id, text, revision) }
+    }
+    messages.firstOrNull { it.id == historyMessageId && !it.isDeleted }?.let { message ->
+        MessageEditHistoryDialog(message) { historyMessageId = null }
+    }
+    messages.firstOrNull { it.id == readerMessageId && !it.isDeleted }?.let { message ->
+        MessageReaderDialog(profile, chat, message, readerStartsSelection, speechActionState(message), readAloudController,
+            onDismiss = { readerMessageId = null }, onAction = { action ->
+                if (action !in setOf(MessageAction.Copy, MessageAction.CopyMarkdown, MessageAction.ReadAloud, MessageAction.StopReading, MessageAction.RetryEdit, MessageAction.DiscardEdit)) readerMessageId = null
+                handleAction(message, action)
+            }, onReact = { readerMessageId = null; focusedMessageId = message.id }, onPerson = { readerMessageId = null; onOpenPersonProfile(it) })
+    }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1122,8 +1195,8 @@ private fun FocusedMessageActionsOverlay(
     val quickReactions = remember(profile.quickReactions, selectedReaction) {
         ReactionCatalog.quickStrip(profile.quickReactions, selectedReaction)
     }
-    val actions = remember(message, profile.id, speechActionState) {
-        MessageActionPolicy.available(message, profile.id, speechActionState)
+    val actions = remember(message, profile.id, speechActionState, chat.composerAvailability(profile)) {
+        MessageActionPolicy.available(message, profile.id, speechActionState, chat.composerAvailability(profile) == ComposerAvailability.Available)
     }
     val density = LocalDensity.current
     val dismissInteraction = remember { MutableInteractionSource() }
@@ -1774,13 +1847,14 @@ private fun MessageRow(
         message,
         profile.id,
         speechActionState,
+        canWrite = chat.composerAvailability(profile) == ComposerAvailability.Available,
     ).map { action ->
         CustomAccessibilityAction(actionLabel(action)) {
             onAccessibilityAction(action)
             true
         }
     }
-    val availableActions = MessageActionPolicy.available(message, profile.id, speechActionState)
+    val availableActions = MessageActionPolicy.available(message, profile.id, speechActionState, chat.composerAvailability(profile) == ComposerAvailability.Available)
     val failedOutgoing = outgoing && message.deliveryState == MessageDeliveryState.Failed
     val retryLabel = stringResource(R.string.not_delivered_retry)
     val messageInteractionSource = remember(message.id) { MutableInteractionSource() }
@@ -2304,8 +2378,8 @@ private fun MessageBubble(
     messageInteractionSource: MutableInteractionSource?,
     onPositioned: (Rect) -> Unit,
 ) {
-    val text = message.visibleText(profile.id)
-    val plainText = message.plainVisibleText(profile.id)
+    val text = if (message.isDeleted || searchQuery.isNotBlank()) message.visibleText(profile.id) else dev.ipf.whitenoise.model.MessageEditing.displayedText(message)
+    val plainText = dev.ipf.whitenoise.model.InlineMessageMarkup.plainText(text)
     val description = buildString {
         append(authorName)
         if (plainText.isNotBlank()) append(", $plainText")
@@ -2455,12 +2529,19 @@ private fun MessageBubbleText(
                 style = MaterialTheme.typography.bodyLarge,
             )
         } else if (message.deletionState == MessageDeletionState.None) {
-            InlineMessageText(
-                text = text,
-                people = profile.people,
-                onOpenPerson = onOpenPersonProfile,
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            val reading = LocalMessageReading.current
+            val document = remember(text) { dev.ipf.whitenoise.model.MessageDocuments.parse(text) }
+            val limit = with(LocalDensity.current) { (MaterialTheme.typography.bodyLarge.lineHeight * 52).toDp() }
+            val limitPx = with(LocalDensity.current) { limit.roundToPx() }
+            var overflow by remember(text, limitPx) { mutableStateOf(false) }
+            Box(if (reading.collapse) Modifier.heightIn(max = limit).clipToBounds() else Modifier) {
+                MessageDocumentContent(document, profile.people, onOpenPersonProfile,
+                    Modifier.wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged { overflow = it.height > limitPx })
+            }
+            if (overflow && reading.collapse) TextButton(onClick = { reading.open(message.id) }, modifier = Modifier.testTag("message.readMore.${message.id}"),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.LocalContentColor.current)) {
+                Text(stringResource(R.string.message_read_more))
+            }
         } else {
             Text(
                 text = text,
@@ -2468,6 +2549,7 @@ private fun MessageBubbleText(
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
+        if (!message.isDeleted) MessageEditStatus(message)
         ReadAloudProgress(message.id, readAloudController)
     }
 }

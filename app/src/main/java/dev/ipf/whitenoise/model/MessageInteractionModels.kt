@@ -2,9 +2,16 @@ package dev.ipf.whitenoise.model
 
 enum class MessageAction {
     RetrySend,
+    Edit,
+    EditHistory,
+    RetryEdit,
+    DiscardEdit,
+    OpenMessage,
+    SelectText,
     Reply,
     Forward,
     Copy,
+    CopyMarkdown,
     ReadAloud,
     StopReading,
     Transcribe,
@@ -37,6 +44,7 @@ object MessageActionPolicy {
                 .firstOrNull { it.kind == MessageAttachmentKind.Voice }
                 ?.transcript != null,
         ),
+        canWrite: Boolean = true,
     ): List<MessageAction> {
         if (message.isDeleted) return emptyList()
         val hasVoice = message.attachments.any { it.kind == MessageAttachmentKind.Voice }
@@ -45,10 +53,21 @@ object MessageActionPolicy {
             if (message.authorId == profileId && message.deliveryState == MessageDeliveryState.Failed) {
                 add(MessageAction.RetrySend)
             }
+            if (message.editAttempt?.phase == MessageEditPhase.Failed) {
+                if (canWrite) add(MessageAction.RetryEdit)
+                add(MessageAction.DiscardEdit)
+            }
+            if (canWrite && MessageEditing.eligible(message, profileId)) add(MessageAction.Edit)
+            if (message.editHistory != null) add(MessageAction.EditHistory)
+            if (message.text.isNotBlank()) {
+                add(MessageAction.OpenMessage)
+                add(MessageAction.SelectText)
+            }
             add(MessageAction.Reply)
             add(MessageAction.Forward)
             if (message.text.isNotBlank()) {
                 add(if (hasVoice) MessageAction.CopyTranscript else MessageAction.Copy)
+                if (!hasVoice && MessageDocuments.plainText(message.text) != message.text) add(MessageAction.CopyMarkdown)
             }
             if (incoming && hasVoice && message.text.isBlank()) {
                 if (speech.transcriptAvailable) {

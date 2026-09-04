@@ -197,6 +197,8 @@ data class ChatMessage(
     val createdAtMillis: Long? = null,
     val receivedAtMillis: Long? = null,
     val expiresAtMillis: Long? = null,
+    val editHistory: MessageEditHistory? = null,
+    val editAttempt: MessageEditAttempt? = null,
 ) {
     val isDeleted: Boolean
         get() = deletionState != MessageDeletionState.None
@@ -233,6 +235,7 @@ data class Chat(
     val draftReplyMessageId: String? = null,
     val pinnedOrder: Int? = null,
     val readState: ConversationReadState? = null,
+    val collapseLongMessages: Boolean = true,
 ) {
     val isGroup: Boolean
         get() = kind == ChatKind.Group

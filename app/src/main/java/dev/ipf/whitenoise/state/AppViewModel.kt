@@ -1,6 +1,11 @@
 package dev.ipf.whitenoise.state
 
 import dev.ipf.whitenoise.model.ChatOrganization
+import dev.ipf.whitenoise.model.MessageEditing
+import dev.ipf.whitenoise.model.MessageEditAttempt
+import dev.ipf.whitenoise.model.MessageEditScenario
+import dev.ipf.whitenoise.model.MessageEditPhase
+import dev.ipf.whitenoise.model.MessageEditFailure
 import dev.ipf.whitenoise.model.ChatFolder
 import dev.ipf.whitenoise.model.ChatFolderDraft
 import dev.ipf.whitenoise.model.ChatFolders
@@ -166,6 +171,7 @@ class AppViewModel(
     fun selectProfile(profileId: String) {
         if (profileId !in uiState.signedInProfileIds) return
         if (uiState.profiles.none { it.id == profileId }) return
+        interruptMessageEdits()
         cancelAccess()
         profileExitAttempt = null
         cancelCreatedChatOpen()
@@ -294,6 +300,7 @@ class AppViewModel(
 
     fun recoverStartupProfiles() {
         if (startupState.phase != StartupPhase.Failed || uiState.profiles.isEmpty()) return
+        interruptMessageEdits()
         cancelAccess()
         uiState = uiState.copy(activeProfileId = null, signedInProfileIds = emptySet(), pendingDiagnosticsProfileId = null)
         startupState = startupState.copy(phase = StartupPhase.Ready)
@@ -576,6 +583,7 @@ class AppViewModel(
 
     fun signOutActiveProfile(wipeData: Boolean): ProfileExitDestination? {
         val activeId = uiState.activeProfileId ?: return null
+        interruptMessageEdits()
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
@@ -697,6 +705,7 @@ class AppViewModel(
         nextChatBatchScenario = ChatBatchScenario.Success
         nextGlobalVoiceScenario = GlobalVoiceScenario.Success
         nextHistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success
+        nextMessageEditScenario = MessageEditScenario.Success
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()
@@ -1284,6 +1293,104 @@ class AppViewModel(
         return changed
     }
 
+    private var messageEditGeneration = 0L
+    var nextMessageEditScenario by mutableStateOf(MessageEditScenario.Success)
+        private set
+
+    fun selectMessageEditScenario(scenario: MessageEditScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextMessageEditScenario = scenario
+    }
+
+    fun setCollapseLongMessages(profileId: String, chatId: String, collapse: Boolean) {
+        if (uiState.activeProfileId == profileId) mutateChat(chatId) { it.copy(collapseLongMessages = collapse) }
+    }
+
+    fun addMessageReadingExample(profileId: String, chatId: String): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId && it.developerTools.isEnabled } ?: return false
+        val chat = chat(chatId)?.takeIf { it.composerAvailability(profile) == ComposerAvailability.Available } ?: return false
+        val (day, minute) = nextTimelinePosition(chat)
+        val message = ChatMessage("$chatId-reading-${createdChatSequence++}", profileId, day, "Today", minute, "Now", dev.ipf.whitenoise.model.MessageReadingExamples.document)
+        val original = "# Notes from the trail\n\nMeet at the west gate."
+        val time = dev.ipf.whitenoise.model.GlobalSearchClock.timestamp(message)
+        val edited = message.copy(editHistory = dev.ipf.whitenoise.model.MessageEditHistory(original, time - 60_000,
+            listOf(dev.ipf.whitenoise.model.MessageRevision(++messageEditGeneration, message.text, time))))
+        mutateChat(chatId) { it.copy(timeline = it.timeline + ChatTimelineEntry.Message(edited), preview = "Notes from the trail", previewAuthor = "You", timestamp = "Now") }
+        return true
+    }
+
+    fun beginMessageEdit(profileId: String, chatId: String, messageId: String, text: String, expectedRevision: Int? = null): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return false
+        val chat = chat(chatId)?.takeIf { it.composerAvailability(profile) == ComposerAvailability.Available } ?: return false
+        val message = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().firstOrNull { it.id == messageId }?.message ?: return false
+        val revision = message.editHistory?.revisions?.size ?: 0
+        if (!MessageEditing.eligible(message, profileId) || !MessageEditing.canSave(message, text) ||
+            (expectedRevision != null && expectedRevision != revision)) return false
+        val attempt = MessageEditAttempt(++messageEditGeneration, profileId, text.trim(), message.text, revision, nextMessageEditScenario)
+        nextMessageEditScenario = MessageEditScenario.Success
+        mutateMessage(chatId, messageId) { it.copy(editAttempt = attempt) }
+        return true
+    }
+
+    fun advanceMessageEdit(profileId: String, chatId: String, messageId: String, requestId: Long): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return false
+        val chat = chat(chatId) ?: return false
+        val message = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().firstOrNull { it.id == messageId }?.message ?: return false
+        val attempt = message.editAttempt ?: return false
+        if (attempt.id != requestId || attempt.profileId != profileId || attempt.phase != MessageEditPhase.Pending ||
+            message.text != attempt.baseText || (message.editHistory?.revisions?.size ?: 0) != attempt.baseRevision) return false
+        val failure = when {
+            !MessageEditing.eligible(message, profileId) || chat.composerAvailability(profile) != ComposerAvailability.Available ||
+                attempt.scenario == MessageEditScenario.Unavailable -> MessageEditFailure.Unavailable
+            attempt.scenario == MessageEditScenario.SaveFails -> MessageEditFailure.SaveFailed
+            else -> null
+        }
+        if (failure != null) {
+            mutateMessage(chatId, messageId) { it.copy(editAttempt = attempt.copy(phase = MessageEditPhase.Failed, failure = failure)) }
+            return false
+        }
+        mutateMessage(chatId, messageId) { MessageEditing.accept(it, attempt) }
+        val current = chat(chatId) ?: return true
+        val latest = dev.ipf.whitenoise.model.ConversationProjection.orderedEntries(current).filterIsInstance<ChatTimelineEntry.Message>().lastOrNull()?.message
+        if (latest?.id == messageId) mutateChat(chatId) { it.copy(preview = latest.text) }
+        return true
+    }
+
+    fun retryMessageEdit(profileId: String, chatId: String, messageId: String): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val message = chat(chatId)?.timeline?.filterIsInstance<ChatTimelineEntry.Message>()?.firstOrNull { it.id == messageId }?.message ?: return false
+        val failed = message.editAttempt?.takeIf { it.phase == MessageEditPhase.Failed && it.profileId == profileId } ?: return false
+        return beginMessageEdit(profileId, chatId, messageId, failed.text, failed.baseRevision)
+    }
+
+    fun discardMessageEdit(profileId: String, chatId: String, messageId: String): Boolean {
+        if (uiState.activeProfileId != profileId) return false
+        val message = chat(chatId)?.timeline?.filterIsInstance<ChatTimelineEntry.Message>()?.firstOrNull { it.id == messageId }?.message ?: return false
+        if (message.editAttempt?.profileId != profileId) return false
+        mutateMessage(chatId, messageId) { it.copy(editAttempt = null) }
+        return true
+    }
+
+    /** Leaving an owner/session preserves retryable edits but invalidates all pending completions. */
+    fun interruptMessageEdits(profileId: String? = uiState.activeProfileId, chatId: String? = null) {
+        if (profileId == null) return
+        uiState = uiState.copy(profiles = uiState.profiles.map { profile ->
+            if (profile.id != profileId) profile else profile.copy(chats = profile.chats.map { chat ->
+                if (chatId != null && chat.id != chatId) chat else chat.copy(timeline = chat.timeline.map { entry ->
+                    if (entry !is ChatTimelineEntry.Message || entry.message.editAttempt?.phase != MessageEditPhase.Pending) entry
+                    else entry.copy(message = entry.message.copy(editAttempt = entry.message.editAttempt.copy(
+                        phase = MessageEditPhase.Failed, failure = MessageEditFailure.Interrupted,
+                    )))
+                })
+            })
+        })
+    }
+
+    private fun mutateMessage(chatId: String, messageId: String, transform: (ChatMessage) -> ChatMessage) {
+        mutateChat(chatId) { chat -> chat.copy(timeline = chat.timeline.map { entry ->
+            if (entry is ChatTimelineEntry.Message && entry.id == messageId) entry.copy(message = transform(entry.message)) else entry
+        }) }
+    }
+
     fun sendText(chatId: String, text: String): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return false
@@ -1453,6 +1560,8 @@ class AppViewModel(
                                 replyToMessageId = null,
                                 reactions = emptyList(),
                                 deletionState = dev.ipf.whitenoise.model.MessageDeletionState.DeletedByCurrentProfile,
+                                editHistory = null,
+                                editAttempt = null,
                             ),
                         )
                     } else {
@@ -1510,6 +1619,11 @@ class AppViewModel(
                             reactions = emptyList(),
                             deliveryState = MessageDeliveryState.Sent,
                             deletionState = dev.ipf.whitenoise.model.MessageDeletionState.None,
+                            editHistory = null,
+                            editAttempt = null,
+                            createdAtMillis = null,
+                            receivedAtMillis = null,
+                            expiresAtMillis = null,
                         ),
                     )
                 }
@@ -1901,6 +2015,7 @@ class AppViewModel(
         uiState.activeProfile?.people?.firstOrNull { it.id == personId }
 
     private fun activate(profile: Profile, updatesStoredProfile: Boolean) {
+        interruptMessageEdits()
         cancelCreatedChatOpen()
         cancelProfileSave()
         dismissChatBatch()

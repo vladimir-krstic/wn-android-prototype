@@ -428,3 +428,12 @@ selection, reaction configuration and forwarding continue to use
   paging, zoom protection, normal-photo dismissal, video dismissal, and composer
   cancellation without applying staged exclusions. Rendering-bleed reproduction
   and visual acceptance on a current device build remain pending.
+
+## B09 editing and reading extension
+
+The [message editing and reading brief](message-editing-and-reading.md) adds
+accepted/pending edit separation, original/revision history, full reading,
+per-chat collapse, native passage selection and structured source-aware text.
+The ordinary composer draft, selection, reply and attachments remain independent
+of the edit task. The clean host gate passes 343 unit tests and both APKs; ten
+new UI cases compile. Device/visual acceptance remains pending.

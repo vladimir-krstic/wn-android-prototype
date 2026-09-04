@@ -122,6 +122,16 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B09: C038–C041's edit/history, full-reader, passage-selection
+and structured-document contracts are implemented and host-verified. Per-chat
+collapse and Read more retain access to complete text; native selection preserves
+source spans for Copy/speech. Pending/failed edits stay separate from accepted
+content, with retry/discard and owner/revision protection. See
+[message-editing-and-reading.md](../screens/message-editing-and-reading.md).
+The clean gate passed 343 unit tests, zero lint errors and both APKs; ten new UI
+cases compile. Encoded Nostr reference resolution/cards remain B30. Historical
+device evidence below does not verify this build.
+
 2026-09-04 production B08: C035, C037 and C047 are implemented and host-verified.
 The existing conversation now pages older/newer history, searches the complete
 local history with loaded fallback/retry, recovers exact targets and restores
