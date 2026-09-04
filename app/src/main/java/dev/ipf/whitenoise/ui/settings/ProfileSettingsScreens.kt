@@ -134,6 +134,7 @@ fun SettingsScreen(
     onDeveloperTools: () -> Unit,
     onSignOut: (dev.ipf.whitenoise.model.SignOutOptions) -> Unit,
     onFolders: () -> Unit = {},
+    onReadAloud: () -> Unit = {},
     initiallyShowSwitcher: Boolean = false,
     exitAttempt: dev.ipf.whitenoise.model.ProfileExitAttempt? = null,
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
@@ -219,6 +220,11 @@ fun SettingsScreen(
                         icon = R.drawable.ic_settings_notifications,
                         iconTag = "notifications",
                         onClick = onNotifications,
+                    )
+                    SettingsDivider()
+                    SettingsHubLink(
+                        title = stringResource(R.string.read_aloud), icon = R.drawable.ic_volume_up,
+                        iconTag = "read_aloud", onClick = onReadAloud,
                     )
                     SettingsDivider()
                     SettingsHubLink(

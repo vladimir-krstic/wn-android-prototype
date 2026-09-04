@@ -203,3 +203,16 @@ range timing refines the current passage. Production reconnects its authoritativ
 history projection and playback controller. Profile/background boundaries cancel
 the local queue and return ownership; B16 owns preferences/auto-read and Q06's
 background integration boundary.
+
+## Production B16 Read Aloud preferences and auto-read
+
+`docs/screens/read-aloud-preferences.md` maps pinned TextToSpeechScreen,
+TtsEngineResolver/Selection/Catalog, TtsVoice/Rate/MediaMix/AutoRead preferences,
+TtsAudioFocusOwner and ConversationTtsEffects/AutoReadCursor into
+`SpeechPreferences.kt`, `SpeechPlatform.kt`, `ReadAloudController.kt`,
+`ReadAloudSettingsScreen.kt` and the existing conversation/settings routes.
+The local cursor uses prototype chronology and captured unread IDs; production
+reconnects authoritative history, settings and audio ownership. The
+TtsPlaybackForegroundService/AppState lock-boundary contract is represented only
+by `SpeechBackgroundExample` and `SpeechDeveloperDialog`. These example controls
+must not be migrated as a real notification, service, clock or lock authority.

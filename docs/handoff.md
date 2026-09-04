@@ -1,10 +1,13 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B15 are implemented and host-verified.
+2026-09-04: production parity B01–B16 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. Continue with B16. Q05 is resolved by the approved checked wipe
+record evidence. B16 is complete within its local scope: native engine/voice
+selection, profile-owned consent/rate/media controls, global/per-chat auto-read,
+and developer engine/audio/background-control outcomes. Continue with B17.
+B16's commit title is `B16: Add Read Aloud preferences and auto-read`. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -49,9 +52,10 @@ Pause freezes current progress; resume restarts the sentence. Native word timing
 or chunk fallback drives highlighting/following. Manual scroll suspends follow;
 profile/background boundaries clear playback. File reading remains scoped to its
 reader. See `docs/screens/read-aloud-transport.md`. Fifteen new UI/platform cases
-compile. B16 owns engine/voice/rate/mixing/auto-read preferences and background
-control fixtures; real services remain outside scope.
-Latest host gate: 465 unit tests, zero lint errors, both APKs;
+compile. B16 adds the preferences/auto-read coordinator and local background
+controls; see `docs/screens/read-aloud-preferences.md`. Eight new UI cases compile.
+Actual background services/notifications remain outside Q06; no device execution.
+Latest host gate: 510 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic

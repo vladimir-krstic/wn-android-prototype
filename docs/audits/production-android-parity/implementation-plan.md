@@ -19,7 +19,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B13: implemented and host-verified 2026-09-04; 414 unit tests, zero lint errors, both APKs and 13 new compiled UI/platform cases. [Selected brief and evidence](../../screens/text-attachments-and-shared-content.md). Commit title: `B13: Add text attachment reading and shared media libraries`.
 - B14: implemented and host-verified 2026-09-04; 432 unit tests, zero lint errors, both APKs and 13 new compiled UI/platform cases. [Selected brief and evidence](../../screens/location-sharing.md). Commit title: `B14: Add location selection and sharing`.
 - B15: implemented and host-verified 2026-09-04; 465 unit tests, zero lint errors, both APKs and 15 new compiled UI/platform cases. [Selected brief and evidence](../../screens/read-aloud-transport.md). Commit title: `B15: Add Read Aloud transport and source navigation`.
-- B16–B32: pending; linked decisions apply only to their named slices.
+- B16: implemented and host-verified 2026-09-04; 510 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Selected brief and evidence](../../screens/read-aloud-preferences.md). Commit title: `B16: Add Read Aloud preferences and auto-read`. Q06 remains outside local background-control scope.
+- B17–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -41,7 +42,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B13** | Text attachment reader and expanded shared media | C055, C056, C059 | B11 | Implemented; host verified; real installation remains outside Q06 scope |
 | **B14** | Location sharing state flow | C058 | B11 | Implemented; host verified; real location/map integration remains outside Q06 scope |
 | **B15** | Read Aloud transport and source navigation | C061, C062 | B08 | Implemented; host verified |
-| **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Blocked slices: Q06 |
+| **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Implemented; host verified; real services remain outside Q06 |
 | **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Blocked slices: Q06 |
 | **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Ready |
 | **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Ready |
@@ -286,6 +287,11 @@ Capabilities: C061, C062. Dependencies: B08.
 **Non-goals:** No backend, network transport, Marmot, real signing/encryption, persistence, installer, notification delivery, background service or device automation unless a later explicit request expands the selected batch. Do not restyle system-owned surfaces or redesign unrelated screens.
 
 ### B16 — Read Aloud preferences and auto-read
+
+**Status:** Implemented and host-verified. C063–C066 are covered within the
+local prototype contract; real background playback/notification service is still
+outside Q06. [Evidence](../../screens/read-aloud-preferences.md#implementation-evidence):
+510 passing unit tests, zero lint errors, both APKs and eight new compiled UI cases.
 
 Capabilities: C063, C064, C065, C066. Dependencies: B15.
 

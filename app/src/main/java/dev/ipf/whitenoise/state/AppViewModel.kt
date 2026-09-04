@@ -428,6 +428,12 @@ class AppViewModel(
         return changed
     }
 
+    fun updateSpeechPreferences(profileId: String, reduce: (dev.ipf.whitenoise.model.SpeechPreferences) -> dev.ipf.whitenoise.model.SpeechPreferences) {
+        updateActiveProfile { profile ->
+            if (profile.id != profileId) profile else profile.copy(settings = profile.settings.copy(speech = reduce(profile.settings.speech)))
+        }
+    }
+
     fun updateProfileSettings(settings: ProfileSettings): Boolean {
         val normalized = if (settings.localNotifications) {
             settings

@@ -326,6 +326,7 @@ fun ConversationScreen(
     val readState = remember(chat, profile.id) {
         ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat, profile.id), chat, profile.id)
     }
+    val speechEntryUnreadIds = remember(profile.id, chat.id) { readState.unreadIds.toSet() }
     val items = remember(chat.timeline, history.windowIds, history.boundaryId, history.request, history.scanning, history.scanFailed) {
         buildList {
             fun control(id: String) { add(ConversationItem.NoticeItem(ChatTimelineEntry.Notice(id, ""))) }
@@ -415,6 +416,13 @@ fun ConversationScreen(
     val standaloneSpeechProfile = rememberUpdatedState(profile.copy(chats = profile.chats.filterNot { it.id == chat.id } + chat))
     if (LocalReadAloudController.current == null) androidx.compose.runtime.SideEffect {
         readAloudController.profile = { standaloneSpeechProfile.value }; readAloudController.reconcile()
+    }
+    var speechEntryOpened by remember(readAloudController, profile.id, chat.id) { mutableStateOf(false) }
+    LaunchedEffect(chat, readAloudController.ready, readAloudController.isForeground, profile.settings.speech, initialViewportSettled) {
+        if (readAloudController.ready && !speechEntryOpened) {
+            readAloudController.openChat(profile.id, chat, speechEntryUnreadIds); speechEntryOpened = true
+        }
+        if (initialViewportSettled) readAloudController.observeChat(chat)
     }
     val speechSession = readAloudController.session?.takeIf { it.owner.profileId == profile.id && it.owner.chatId == chat.id }
     val attachmentReaderPresented = LocalAttachmentAccess.current.presented

@@ -92,6 +92,7 @@ data class ProfileSettings(
     val fileDownloadPolicy: MediaDownloadPolicy = MediaDownloadPolicy.Never,
     val sentMediaQuality: SentMediaQuality = SentMediaQuality.Standard,
     val relays: List<ProfileRelay> = ProfileRelayFixtures.defaults,
+    val speech: SpeechPreferences = SpeechPreferences(),
 )
 
 object ProfileRelayFixtures {

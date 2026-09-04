@@ -122,6 +122,16 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B16: C063–C066 are implemented and host-verified within
+local scope. Read Aloud settings adds offline engine/voice discovery and fallback,
+profile-scoped consent, System/preset/custom rate and explicit media mixing.
+Global/per-chat auto-read owns captured unread backlog, bounded arrivals and
+manual/profile/foreground guards. Developer Tools exposes catalog/audio failures
+and a separate local notification/lock-controls example; no service or notification
+is created. The host gate passes 510 unit tests, zero lint errors and both APKs;
+eight new UI cases compile only. See
+[read-aloud-preferences.md](../screens/read-aloud-preferences.md#implementation-evidence).
+
 2026-09-04 production B15: C061/C062 are implemented and host-verified. One
 foreground engine serves message/file reading with an owned immutable queue,
 pause/resume/stop, sentence/message transport, history edge loading/retry and

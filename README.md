@@ -17,14 +17,14 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B15 are implemented and host-verified.
-[B15 Read Aloud](docs/screens/read-aloud-transport.md#implementation-evidence)
-adds shared foreground playback, sentence/message controls, history retry,
-source return and source-mapped passage seeking/highlighting. The latest host
-gate passes 465 unit tests, zero lint errors and both APKs. Fifteen new
-UI/platform cases compile only; device speech and visual acceptance remain pending.
+Production Android parity batches B01–B16 are implemented and host-verified.
+[B16 Read Aloud preferences](docs/screens/read-aloud-preferences.md#implementation-evidence)
+adds engine/voice selection and consent, rate/media controls, per-chat auto-read,
+and local background-control outcomes. The latest host gate passes 510 unit
+tests, zero lint errors and both APKs. Eight new UI interaction cases compile
+only; device speech and visual acceptance remain pending.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks the remaining B16–B32 batches and per-batch commits.
+tracks the remaining B17–B32 batches and per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`

@@ -202,7 +202,7 @@ fun WhiteNoiseNavHost(
                 launchSingleTop = true
             }
         }
-    }, modifier = modifier) { speechModifier ->
+    }, modifier = modifier, onPreferences = appViewModel::updateSpeechPreferences) { speechModifier ->
     MessageOperationsHost(
         profile = uiState.activeProfile, forward = uiState.activeProfileId?.let { appViewModel.messageForwards[it] },
         onAdvanceForward = { id, revision -> uiState.activeProfileId?.let { appViewModel.advanceMessageForward(it, id, revision) } },
@@ -350,6 +350,7 @@ fun WhiteNoiseNavHost(
                 onProfileKeys = { navController.navigate(AppRoute.ProfileKeys) },
                 onNotifications = { navController.navigate(AppRoute.Notifications) },
                 onAppearance = { navController.navigate(AppRoute.Appearance) },
+                onReadAloud = { navController.navigate(AppRoute.ReadAloud) },
                 onPrivacy = { navController.navigate(AppRoute.PrivacySecurity) },
                 onDataUsage = { navController.navigate(AppRoute.DataUsage) },
                 onRelays = { navController.navigate(AppRoute.ProfileRelays) },
@@ -364,6 +365,11 @@ fun WhiteNoiseNavHost(
                 onFolders = { uiState.activeProfileId?.let { navController.navigate(AppRoute.Folders(it)) } },
                 initiallyShowSwitcher = route.showProfileSwitcher,
             )
+        }
+        composable<AppRoute.ReadAloud> {
+            uiState.activeProfile?.let { profile ->
+                dev.ipf.whitenoise.ui.settings.ReadAloudSettingsScreen(profile, onBack = { navController.popBackStack() })
+            }
         }
         composable<AppRoute.Folders> { entry ->
             val route = entry.toRoute<AppRoute.Folders>()

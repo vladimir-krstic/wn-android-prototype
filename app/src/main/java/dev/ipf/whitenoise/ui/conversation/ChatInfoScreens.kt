@@ -306,6 +306,8 @@ fun ChatInfoScreen(
                             title = stringResource(R.string.message_collapse_long), checked = chat.collapseLongMessages,
                             onCheckedChange = onCollapseLongMessages, subtitle = stringResource(R.string.message_collapse_long_detail),
                         )
+                        dev.ipf.whitenoise.ui.settings.SettingsDivider()
+                        dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
                     }
                 }
                 item(key = "technical_actions") {

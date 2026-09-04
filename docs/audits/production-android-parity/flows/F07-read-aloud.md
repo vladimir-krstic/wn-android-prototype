@@ -19,10 +19,10 @@ These labels are the audit recommendation and follow current prototype terminolo
 | C060 · Read an authored message aloud and stop | Existing equivalent | Trigger its named entry/action; cancel with Back where available | Preserve behavior |
 | C061 · Speech transport queue and return to source | B15 implemented; host verified | Existing message/reader actions; Back keeps navigation; Stop ends queue | Shared foreground sentence/message transport, paused navigation, bounded history/retry and source-validated return. Profile/sign-out/background changes cancel playback and stale return. |
 | C062 · Speech passage highlighting and seeking | B15 implemented; host verified | Native selection, Read from here or Choose sentence; manual scroll suspends follow | Exact authored/Markdown offsets, optional word timing with chunk fallback, pause-frozen progress, accessible sentence choice and Resume following. Speech positioning does not acknowledge unseen messages. |
-| C063 · Engine and offline voice selection with availability | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | New Read Aloud settings: discovering/none/usable, per-engine voice, offline-only eligibility, saved voice fallback, unknown engine trust consent and settings recovery. |
-| C064 · Speech rate and media mixing | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | System/preset/custom rate plus explicit speech-over-media setting and quiet/medium/loud; deterministic audio-focus/other-media states without background services. |
-| C065 · Global and per-chat automatic reading | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Global default plus per-chat inherit/on/off and arrival cursor. Suppress duplicates, history replay and reading after lock/sign-out. |
-| C066 · Background speech and controls at lock boundaries | Decision required | Trigger its named entry/action; cancel with Back where available | Specify local lifecycle state and notification-control fixture; real foreground playback/service is an explicit Q06 expansion. |
+| C063 · Engine and offline voice selection with availability | B16 implemented; host verified | Open Settings → Read Aloud; Cancel/Back leaves the choice unchanged | Catalog recovery, exact offline voices/fallback and transactional engine/voice selection. Unknown engine use needs profile-scoped consent before text. |
+| C064 · Speech rate and media mixing | B16 implemented; host verified | Choose System/preset/custom rate, explicit media mixing and volume | Local rate validation, utterance-boundary native rate/volume, focus-loss pause and deterministic media/focus refusal. |
+| C065 · Global and per-chat automatic reading | B16 implemented; host verified | Global switch or Chat/Group Info inherit/on/off; open a conversation | Captured unread backlog then owned bounded arrivals; duplicate/history suppression and manual/profile/foreground guards. |
+| C066 · Background speech and controls at lock boundaries | B16 local example implemented; Q06 real services excluded | Developer Tools → Read Aloud outcomes; session-owned controls and clock steps | Notification start failure, stale controls, background/foreground, immediate/delayed lock and profile exit. Actual native speech stops on background. |
 
 ## Production integration seam
 
@@ -54,3 +54,13 @@ retain a conversation queue. The local profile-change cancellation contract
 supersedes production's optional account-switch resolver. Engine preferences,
 auto-read and background-control fixtures remain B16. No device/visual result
 or background-service capability is claimed.
+
+## B16 implementation evidence
+
+The [selected brief](../../../screens/read-aloud-preferences.md#implementation-evidence)
+records native discovery/selection, profile settings, consent, media/focus policy,
+auto-read coordination and the separate local background-controls example.
+The full gate passes 510 unit tests, zero lint errors and both APKs; 45 new host
+cases pass and eight new UI cases compile only. Q06 continues to exclude real
+background playback, notifications/services and device execution. No visual or
+hardware speech result is claimed.

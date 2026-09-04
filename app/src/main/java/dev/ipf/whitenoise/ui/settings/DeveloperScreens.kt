@@ -125,6 +125,8 @@ fun DeveloperToolsScreen(
     var photoEditorOpen by remember { mutableStateOf(false) }
     val speech = dev.ipf.whitenoise.ui.conversation.LocalReadAloudController.current
     var speechOpen by remember { mutableStateOf(false) }
+    var speechPreferencesOpen by remember { mutableStateOf(false) }
+    if (speechPreferencesOpen && speech != null) SpeechDeveloperDialog(profile, speech) { speechPreferencesOpen = false }
     if (speechOpen && speech != null) ScenarioChoiceDialog("Read Aloud history", dev.ipf.whitenoise.model.SpeechEdgeScenario.entries,
         speech.edgeScenario, { it.name }, { speech.setEdgeScenario(profile.id, it) }, { speechOpen = false })
     var locationOpen by remember { mutableStateOf(false) }
@@ -219,7 +221,10 @@ fun DeveloperToolsScreen(
                 item { SettingsSection("Access testing") }
                 item {
                     SettingsGroup {
-                        if (speech != null) SettingsLink("Read Aloud history outcomes", speech.edgeScenario.name, { speechOpen = true })
+                        if (speech != null) {
+                            SettingsLink("Read Aloud history outcomes", speech.edgeScenario.name, { speechOpen = true })
+                            SettingsLink("Read Aloud engine, audio and background outcomes", onClick = { speechPreferencesOpen = true })
+                        }
                         SettingsLink("History loading scenarios", historyScenario.developerLabel, { historyOpen = true })
                         SettingsDivider()
                         SettingsLink("Message edit outcomes", messageEditScenario.developerLabel, { editOpen = true })

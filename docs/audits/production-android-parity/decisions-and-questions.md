@@ -55,7 +55,7 @@ default nor the scope of real external operations.
 
 - **Scope:** C049, C058, C059, C066, C070, C084, C086, C090, C094, C095 and C121 touch media permissions, location/maps, background services, shortcuts/share targets, notification delivery/actions, app authentication, or APK installation.
 - **Recommendation:** First implement deterministic app-owned states and launch contracts where already approved. Keep networking/services/installers off. Approve each real permission or service only with its bounded implementation batch; prefer permissionless system surfaces.
-- **Blocks:** device-executed capability, not the audit specs or deterministic UI/state implementations. B11 implements C049 with bundled access states and a standard Photo Picker; real library permission/MediaStore access remains outside the prototype scope. B14 implements C058 through coordinate entry, one-shot local outcomes and explicit permissionless external Maps handoff; GPS, map tiles/geocoding, new permissions and device execution remain outside scope.
+- **Blocks:** device-executed capability, not the audit specs or deterministic UI/state implementations. B11 implements C049 with bundled access states and a standard Photo Picker; real library permission/MediaStore access remains outside the prototype scope. B14 implements C058 through coordinate entry, one-shot local outcomes and explicit permissionless external Maps handoff; GPS, map tiles/geocoding, new permissions and device execution remain outside scope. B16 implements C066 as a developer-only lifecycle/notification-controls example; actual native speech stops in the background. Real speech services, notification delivery and hardware validation remain outside scope.
 
 <a id="q07"></a>
 

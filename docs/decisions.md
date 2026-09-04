@@ -3887,3 +3887,33 @@ No service, new permission or external audio/network capability is introduced.
 The [selected brief](screens/read-aloud-transport.md#implementation-evidence)
 records official Android sources and exact evidence. The host gate passes 465
 unit tests, zero lint errors and both APKs; 15 new UI/platform cases compile only.
+
+## WN-ANDROID-0136 — Profile-owned speech preferences and bounded auto-read
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B16; host verified, device/visual acceptance pending.
+
+Read Aloud has one Settings destination and a per-chat inherit/on/off choice.
+Engine/voice changes configure a candidate before adoption; cancelled, failed or
+stale results retain the previous engine and selection. Voices require exact
+engine/name/locale identity and installed offline eligibility. Missing saved
+voices retain their preference and disclose the effective fallback. Public
+Android enumeration cannot verify the bound package, so runtime trust stays
+unknown and explicit profile/engine consent precedes authored text.
+
+System/preset/custom rate and opt-in speech-over-media volume apply at utterance
+boundaries. Normal focus loss retains a paused queue; mixing leaves other audio
+untouched. Auto-read is off by default, captures unread IDs before acknowledgements,
+scans at most 100 backlog rows and queues at most 50 eligible messages per intake.
+Arrivals append at the logical tail and cannot restart the active utterance.
+Successful manual starts end automatic ownership; failed replacements retain the
+old paused queue. Explicit Stop, profile exit and disabled effective auto-read
+invalidate automatic continuation. Background stops actual speech; foreground
+return can read fresh arrivals only when no newer/manual session owns playback.
+
+Q06's service/notification/lock behavior is represented by a separate developer
+example with an explicit clock and session-owned controls. No real background
+service, notification, permission or lock authority is introduced. The
+[selected brief](screens/read-aloud-preferences.md#implementation-evidence)
+records production seams and official sources. Host validation passes 510 unit
+tests, zero lint errors and both APKs; eight new UI cases compile only.

@@ -119,6 +119,16 @@ data class SpeechSession(
         else SpeechReturnTarget(id, owner, current.item)
     val navigable get() = phase !in setOf(SpeechPhase.Loading, SpeechPhase.EdgeError, SpeechPhase.Unavailable)
 
+    /** Append at the logical tail without disturbing the current callback or parsing history. */
+    fun append(items: List<SpeechItem>): SpeechSession {
+        val known = catalog.mapTo(mutableSetOf()) { it.id }
+        val added = items.filter { it.authored.isNotBlank() && known.add(it.id) }
+        if (added.isEmpty()) return this
+        val next = catalog + added
+        return copy(catalog = next, window = if (windowStart + window.size == catalog.size && window.size < windowSize)
+            prepare(next, windowStart, windowSize, locale) else window)
+    }
+
     fun pause(): SpeechSession = if (phase == SpeechPhase.Speaking) copy(phase = SpeechPhase.Paused, revision = revision + 1) else this
     fun resume(): SpeechSession = if (phase in setOf(SpeechPhase.Paused, SpeechPhase.EngineError)) copy(phase = SpeechPhase.Speaking, revision = revision + 1, chunkIndex = 0, rangeEnd = 0, rangeStart = 0) else this
     fun fail(expected: SpeechToken): SpeechSession = if (token == expected) copy(phase = SpeechPhase.EngineError, revision = revision + 1, rangeEnd = 0, rangeStart = 0) else this

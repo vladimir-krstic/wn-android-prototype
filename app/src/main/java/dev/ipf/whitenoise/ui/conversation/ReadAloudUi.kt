@@ -39,11 +39,13 @@ import kotlinx.coroutines.delay
 
 @Composable
 internal fun ReadAloudHost(profile: Profile?, onSource: (SpeechReturnTarget) -> Unit,
-    modifier: Modifier = Modifier, content: @Composable (Modifier) -> Unit) {
+    modifier: Modifier = Modifier, onPreferences: (String, (SpeechPreferences) -> SpeechPreferences) -> Unit = { _, _ -> },
+    content: @Composable (Modifier) -> Unit) {
     val controller = LocalReadAloudController.current ?: rememberOwnedReadAloudController()
     val liveProfile = rememberUpdatedState(profile)
     val liveSource = rememberUpdatedState(onSource)
-    SideEffect { controller.profile = { liveProfile.value }; controller.onSource = { liveSource.value(it) }; controller.reconcile() }
+    val livePreferences = rememberUpdatedState(onPreferences)
+    SideEffect { controller.profile = { liveProfile.value }; controller.updatePreferences = { id, reduce -> livePreferences.value(id, reduce) }; controller.onSource = { liveSource.value(it) }; controller.reconcile() }
     val session = controller.session?.takeIf { it.owner.profileId == profile?.id }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(session?.id, session?.revision, lifecycle) {
@@ -52,6 +54,7 @@ internal fun ReadAloudHost(profile: Profile?, onSource: (SpeechReturnTarget) -> 
         }
     }
     CompositionLocalProvider(LocalReadAloudController provides controller) {
+        SpeechConsentDialog(controller)
         val visible = session != null && controller.modalCount == 0
         Column(modifier.fillMaxSize()) {
             content(Modifier.weight(1f).then(if (visible) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).union(WindowInsets.ime)) else Modifier))
