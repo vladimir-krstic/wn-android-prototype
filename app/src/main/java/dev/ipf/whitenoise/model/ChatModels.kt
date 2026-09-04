@@ -247,7 +247,11 @@ data class Chat(
     val readState: ConversationReadState? = null,
     val collapseLongMessages: Boolean = true,
     val messageDeletion: MessageDeleteOperation? = null,
+    val groupRoster: GroupRoster = GroupRoster(),
+    val publicInviteAvatar: ProfileAvatar = avatar,
 ) {
+    val visibleAvatar: ProfileAvatar get() = if (isGroup && membership == ChatMembership.Invited) publicInviteAvatar else avatar
+
     val isGroup: Boolean
         get() = kind == ChatKind.Group
 

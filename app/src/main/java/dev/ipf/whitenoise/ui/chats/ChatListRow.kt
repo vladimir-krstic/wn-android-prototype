@@ -142,7 +142,7 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
         leadingContent = {
             if (selecting) androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = null)
             else Box {
-                ProfileAvatar(chat.title, chat.avatar, Modifier.size(52.dp).testTag("chat.avatar.${chat.id}"), contentDescription = null)
+                ProfileAvatar(chat.title, chat.visibleAvatar, Modifier.size(52.dp).testTag("chat.avatar.${chat.id}"), contentDescription = null)
                 if (chat.isPinned) {
                     Surface(modifier = Modifier.size(20.dp).align(Alignment.BottomEnd), shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
                         Box(contentAlignment = Alignment.Center) {

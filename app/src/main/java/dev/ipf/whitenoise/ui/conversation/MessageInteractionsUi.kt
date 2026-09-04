@@ -738,7 +738,7 @@ internal fun ForwardMessagesSheet(
                                         leadingContent = {
                                             ProfileAvatar(
                                                 chat.title,
-                                                chat.avatar,
+                                                chat.visibleAvatar,
                                                 Modifier.size(48.dp),
                                                 contentDescription = null,
                                             )

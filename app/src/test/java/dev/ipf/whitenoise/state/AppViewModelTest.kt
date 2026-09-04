@@ -20,6 +20,7 @@ import dev.ipf.whitenoise.navigation.OnboardingOrigin
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -154,7 +155,7 @@ class AppViewModelTest {
         val profile = viewModel.uiState.activeProfile!!
 
         assertNull(viewModel.createGroup(" ", "", ProfileAvatar.Monogram, listOf("maya-chen")))
-        assertNull(viewModel.createGroup("Crew", "", ProfileAvatar.Monogram, emptyList()))
+        assertNotNull(viewModel.createGroup("Solo", "", ProfileAvatar.Monogram, emptyList()))
         val chatId = viewModel.createGroup(
             name = "  Weekend Crew  ",
             description = "  A quiet plan.  ",

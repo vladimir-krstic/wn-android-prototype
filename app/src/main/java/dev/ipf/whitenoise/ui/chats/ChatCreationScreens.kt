@@ -2,6 +2,11 @@
 
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.model.*
+import dev.ipf.whitenoise.ui.conversation.LocalGroupWork
+import dev.ipf.whitenoise.ui.conversation.GroupCreateStatus
+import dev.ipf.whitenoise.ui.conversation.GroupEmojiImageDialog
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -231,6 +236,7 @@ fun PersonProfileScreen(
     onAddToGroup: (String) -> Boolean = { false },
     onSavePrivateContact: (String, String) -> Boolean = { _, _ -> false },
     onStartGroup: () -> Unit = {},
+    contextGroup: Chat? = null,
     groupScenario: GroupContactScenario = GroupContactScenario.Success,
     onRetryRoster: () -> Unit = {},
     onApplyGroups: (List<String>, GroupContactAction) -> GroupContactResult = { ids, _ ->
@@ -336,6 +342,10 @@ fun PersonProfileScreen(
                         },
                         modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
                     )
+                }
+                if (contextGroup != null) {
+                    dev.ipf.whitenoise.ui.conversation.GroupRosterPanel(profile, contextGroup)
+                    dev.ipf.whitenoise.ui.conversation.GroupMemberWorkPanel(profile, contextGroup)
                 }
                 if (groupRole != null) {
                     SettingsSection(stringResource(R.string.profile_actions))
@@ -556,8 +566,8 @@ fun NewGroupScreen(
         bottomBar = {
             CreationBottomAction(
                 onClick = { onContinue(selectedIds) },
-                enabled = selectedIds.isNotEmpty(),
-                label = stringResource(R.string.continue_action),
+                enabled = true,
+                label = stringResource(if (selectedIds.isEmpty()) R.string.group_solo_create else R.string.continue_action),
             )
         },
     ) {
@@ -616,7 +626,14 @@ fun GroupSetupScreen(
     onCreate: (String, String, ProfileAvatar) -> Boolean,
     modifier: Modifier = Modifier,
     onOpenRelays: () -> Unit = {},
+    creationOrigin: String? = null,
 ) {
+    val workController = LocalGroupWork.current
+    val work = workController?.creation?.takeIf { it.profileId == profile.id && it.origin == creationOrigin }
+    val editable = work == null
+    var timer by rememberSaveable(profile.id) { mutableStateOf(DisappearingDuration.Off) }
+    var timerOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
+    var emojiOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val groupName = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
@@ -630,6 +647,7 @@ fun GroupSetupScreen(
     var isPreparingPhoto by remember { mutableStateOf(false) }
     var photoError by remember { mutableStateOf(false) }
     var relayError by remember { mutableStateOf(false) }
+    val presentedAvatar = work?.draft?.image ?: avatar
     val selectedPeople = selectedPersonIds.mapNotNull { id -> profile.people.firstOrNull { it.id == id } }
 
     fun prepare(uri: android.net.Uri) {
@@ -664,19 +682,13 @@ fun GroupSetupScreen(
         bottomBar = {
             CreationBottomAction(
                 onClick = {
-                    if (
-                        !onCreate(
-                            groupName.text.toString(),
-                            description.text.toString(),
-                            avatar,
-                        )
-                    ) {
-                        relayError = true
-                    }
+                    val accepted = if (workController != null && creationOrigin != null) workController.beginCreate(
+                        profile.id, creationOrigin, GroupEditDraft(groupName.text.toString(), description.text.toString(), avatar, ProfileAvatar.Monogram), selectedPersonIds, timer,
+                    ) else onCreate(groupName.text.toString(), description.text.toString(), avatar)
+                    if (!accepted) relayError = true
                 },
                 enabled = groupName.text.isNotBlank() &&
-                    selectedPeople.isNotEmpty() &&
-                    !isPreparingPhoto,
+                    editable && !isPreparingPhoto,
                 label = stringResource(R.string.create_group),
             )
         },
@@ -698,7 +710,7 @@ fun GroupSetupScreen(
                 ) {
                     ProfileAvatar(
                         name = groupName.text.toString(),
-                        avatar = avatar,
+                        avatar = presentedAvatar,
                         modifier = Modifier
                             .size(120.dp)
                             .testTag("group_setup.avatar"),
@@ -707,9 +719,9 @@ fun GroupSetupScreen(
                     )
                     Box {
                         AvatarPhotoButton(
-                            hasPhoto = avatar != ProfileAvatar.Monogram,
+                            hasPhoto = presentedAvatar != ProfileAvatar.Monogram,
                             onClick = { menuOpen = true },
-                            enabled = !isPreparingPhoto,
+                            enabled = editable && !isPreparingPhoto,
                             modifier = Modifier.testTag("group_setup.photoAction"),
                         )
                         WhiteNoiseDropdownMenu(
@@ -741,6 +753,7 @@ fun GroupSetupScreen(
                                         onClick = { webPickerOpen = true },
                                     ),
                                 )
+                                add(WhiteNoiseMenuItem(label = stringResource(R.string.group_emoji_create), icon = R.drawable.ic_add, onClick = { emojiOpen = true }))
                                 if (avatar != ProfileAvatar.Monogram) {
                                     add(
                                         WhiteNoiseMenuItem(
@@ -791,19 +804,26 @@ fun GroupSetupScreen(
                 ) {
                     WhiteNoiseTextField(
                         state = groupName,
-                        modifier = Modifier.fillMaxWidth(),
+                        enabled = editable,
+                        modifier = Modifier.fillMaxWidth().testTag("group_setup.name"),
                         label = { Text(stringResource(R.string.group_name)) },
                         lineLimits = TextFieldLineLimits.SingleLine,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     )
                     WhiteNoiseTextField(
                         state = description,
+                        enabled = editable,
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(stringResource(R.string.group_description)) },
                         lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 6),
                     )
                 }
+                dev.ipf.whitenoise.ui.settings.SettingsGroup(Modifier.padding(top = WhiteNoiseSpacing.Section)) {
+                    dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.disappearing_messages_title), value = timer.label, onClick = { timerOpen = true }, enabled = editable)
+                }
+                if (work != null) GroupCreateStatus(work, { workController.retryCreate(work.id) }, { workController.skipFailedTimer(work.id) })
                 SettingsSection(stringResource(R.string.members))
+                if (selectedPeople.isEmpty()) SettingsExplainer(stringResource(R.string.group_solo_detail))
                 selectedPeople.forEachIndexed { index, person ->
                     CreationPersonRow(
                         person = person,
@@ -824,6 +844,13 @@ fun GroupSetupScreen(
             }
         }
     }
+    if (emojiOpen) GroupEmojiImageDialog({ emojiOpen = false }) { image ->
+        processingGeneration++; processingJob?.cancel(); isPreparingPhoto = false
+        avatar = image; photoError = false; webChoiceId = null; emojiOpen = false
+    }
+    if (timerOpen) dev.ipf.whitenoise.ui.settings.SpeechSettingsChoices(stringResource(R.string.disappearing_messages_title), DisappearingDuration.entries.map { duration ->
+        dev.ipf.whitenoise.ui.settings.SpeechSettingOption(duration.label, timer == duration) { timer = duration; timerOpen = false }
+    }, { timerOpen = false })
     if (webPickerOpen) {
         AvatarWebImagePicker(
             currentChoiceId = webChoiceId,

@@ -68,7 +68,7 @@ object GroupContactPolicy {
     fun eligible(profile: Profile, personId: String, action: GroupContactAction): List<Chat> = profile.chats.filter { chat ->
         chat.isGroup && chat.membership == ChatMembership.Active && personId != profile.id &&
             profile.people.any { it.id == personId } &&
-            chat.members.any { it.personId == profile.id && it.role == GroupRole.Admin } &&
+            chat.hasAuthoritativeGroupAdmin(profile.id) &&
             when (action) {
                 GroupContactAction.Invite -> chat.members.none { it.personId == personId }
                 GroupContactAction.Promote -> chat.members.any { it.personId == personId && it.role == GroupRole.Member }

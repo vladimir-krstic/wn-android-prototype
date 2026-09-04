@@ -21,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import dev.ipf.whitenoise.state.AppViewModel
+import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.model.GroupRole
 import dev.ipf.whitenoise.model.AccessMethod
 import dev.ipf.whitenoise.model.AccessPhase
@@ -195,6 +196,7 @@ fun WhiteNoiseNavHost(
         } }
     }
 
+    dev.ipf.whitenoise.ui.conversation.GroupWorkHost(appViewModel.groupWork) {
     dev.ipf.whitenoise.ui.conversation.ComposerCaptureHost(appViewModel.composerCapture) {
     dev.ipf.whitenoise.ui.conversation.ReadAloudHost(uiState.activeProfile, onSource = { target ->
         if (dev.ipf.whitenoise.model.SpeechOwnership.owns(appViewModel.uiState.activeProfile, target)) {
@@ -640,7 +642,7 @@ fun WhiteNoiseNavHost(
             if (profile != null && person != null) {
                 val contextChat = route.chatId?.let(appViewModel::chat)
                 val member = contextChat?.members?.firstOrNull { it.personId == person.id }
-                val actorIsAdmin = contextChat?.members?.firstOrNull { it.personId == profile.id }?.role == GroupRole.Admin
+                val actorIsAdmin = contextChat?.hasAuthoritativeGroupAdmin(profile.id) == true && !appViewModel.groupWork.locked(GroupOwner(profile.id, contextChat.id))
                 PersonProfileScreen(
                     profile = profile,
                     person = person,
@@ -658,14 +660,15 @@ fun WhiteNoiseNavHost(
                     onToggleBlock = { appViewModel.toggleBlocked(person.id) },
                     showMessageAction = contextChat == null,
                     groupRole = member?.role,
+                    contextGroup = contextChat,
                     canManageGroup = contextChat?.isGroup == true && actorIsAdmin && person.id != profile.id,
                     onToggleAdmin = {
                         val chat = contextChat ?: return@PersonProfileScreen false
-                        appViewModel.setGroupMemberAdmin(chat.id, person.id, member?.role != GroupRole.Admin)
+                        appViewModel.groupWork.beginMembers(GroupOwner(profile.id, chat.id), if (member?.role == GroupRole.Admin) GroupMemberAction.Revoke else GroupMemberAction.Promote, listOf(person.id))
                     },
                     onRemoveFromGroup = {
                         val chat = contextChat ?: return@PersonProfileScreen false
-                        appViewModel.removeGroupMember(chat.id, person.id)
+                        appViewModel.groupWork.beginMembers(GroupOwner(profile.id, chat.id), GroupMemberAction.Remove, listOf(person.id))
                     },
                     onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) },
                     onGroupsInCommon = {
@@ -709,21 +712,14 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.GroupSetup> { entry ->
             val route = entry.toRoute<AppRoute.GroupSetup>()
             uiState.activeProfile?.let { profile ->
-                GroupSetupScreen(
-                    profile = profile,
-                    selectedPersonIds = route.selectedPersonIds,
-                    onBack = { navController.popBackStack() },
-                    onCreate = { name, description, avatar ->
-                        val request = if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.startGroupConversation(
-                            name, description, avatar, route.selectedPersonIds, entry.id,
-                        ) else null
-                        if (request != null && !appViewModel.createdChatProjectionUnavailable) {
-                            appViewModel.completeCreatedChatOpen(request.id, entry.id)?.let { openConversation(it, clearsCreationFlow = true) }
-                        }
-                        request != null
-                    },
-                    onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) },
-                )
+                val work = appViewModel.groupWork.creation
+                androidx.compose.runtime.DisposableEffect(entry.id) { onDispose { appViewModel.groupWork.leaveCreation(entry.id) } }
+                LaunchedEffect(work?.id, work?.phase) {
+                    if (work?.phase == GroupCreatePhase.Ready) appViewModel.groupWork.takeCreated(work.id, entry.id)?.let { openConversation(it, clearsCreationFlow = true) }
+                }
+                GroupSetupScreen(profile, route.selectedPersonIds, onBack = { navController.popBackStack() },
+                    onCreate = { _, _, _ -> false }, creationOrigin = entry.id,
+                    onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) })
             }
         }
         composable<AppRoute.Conversation> { entry ->
@@ -887,6 +883,7 @@ fun WhiteNoiseNavHost(
             appViewModel.chat(route.chatId)?.let { chat ->
                 EditGroupScreen(
                     chat = chat,
+                    profile = uiState.activeProfile,
                     onBack = { navController.popBackStack() },
                     onSave = { name, description, avatar -> appViewModel.editGroup(chat.id, name, description, avatar) },
                 )
@@ -901,7 +898,7 @@ fun WhiteNoiseNavHost(
                     profile,
                     chat,
                     onBack = { navController.popBackStack() },
-                    onAdd = { appViewModel.addGroupMembers(chat.id, it) },
+                    onAdd = { appViewModel.groupWork.beginMembers(GroupOwner(profile.id, chat.id), GroupMemberAction.Invite, it) },
                 )
             }
         }
@@ -931,6 +928,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
     }
     }

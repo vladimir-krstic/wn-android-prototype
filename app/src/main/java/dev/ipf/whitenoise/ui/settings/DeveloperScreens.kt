@@ -173,6 +173,15 @@ fun DeveloperToolsScreen(
         profileSaveScenario, { it.developerLabel }, onProfileSaveScenario, { profileSaveScenariosOpen = false })
     var peopleScenariosOpen by remember { mutableStateOf(false) }
     var groupScenariosOpen by remember { mutableStateOf(false) }
+    val groupWork = dev.ipf.whitenoise.ui.conversation.LocalGroupWork.current
+    var groupWorkChoice by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
+    if (groupWork != null) when (groupWorkChoice) {
+        "roster" -> ScenarioChoiceDialog("Group roster", dev.ipf.whitenoise.model.GroupRosterScenario.entries, groupWork.rosterScenario, { it.developerLabel }, groupWork::chooseRoster, { groupWorkChoice = null })
+        "members" -> ScenarioChoiceDialog("Group member updates", dev.ipf.whitenoise.model.GroupMutationScenario.entries, groupWork.mutationScenario, { it.developerLabel }, groupWork::chooseMutation, { groupWorkChoice = null })
+        "images" -> ScenarioChoiceDialog("Group images", dev.ipf.whitenoise.model.GroupImageScenario.entries, groupWork.imageScenario, { it.developerLabel }, groupWork::chooseImage, { groupWorkChoice = null })
+        "create" -> ScenarioChoiceDialog("Group creation", dev.ipf.whitenoise.model.GroupCreateScenario.entries, groupWork.createScenario, { it.developerLabel }, groupWork::chooseCreate, { groupWorkChoice = null })
+    }
+
     if (peopleScenariosOpen) ScenarioChoiceDialog("People search", dev.ipf.whitenoise.model.PeopleSearchScenario.entries,
         peopleSearchScenario, { it.developerLabel }, onPeopleSearchScenario, { peopleScenariosOpen = false })
     if (groupScenariosOpen) ScenarioChoiceDialog("Group contact actions", dev.ipf.whitenoise.model.GroupContactScenario.entries,
@@ -264,6 +273,12 @@ fun DeveloperToolsScreen(
                         SettingsLink("People search scenarios", peopleSearchScenario.developerLabel, { peopleScenariosOpen = true })
                         SettingsDivider()
                         SettingsLink("Group contact scenarios", groupContactScenario.developerLabel, { groupScenariosOpen = true })
+                        if (groupWork != null) {
+                            SettingsDivider(); SettingsLink("Group roster", groupWork.rosterScenario.developerLabel, { groupWorkChoice = "roster" })
+                            SettingsDivider(); SettingsLink("Group member updates", groupWork.mutationScenario.developerLabel, { groupWorkChoice = "members" })
+                            SettingsDivider(); SettingsLink("Group images", groupWork.imageScenario.developerLabel, { groupWorkChoice = "images" })
+                            SettingsDivider(); SettingsLink("Group creation", groupWork.createScenario.developerLabel, { groupWorkChoice = "create" })
+                        }
                         SettingsDivider()
                         SettingsSwitch("Next created chat cannot open", createdChatUnavailable, onCreatedChatUnavailable)
                         SettingsDivider()

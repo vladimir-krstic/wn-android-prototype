@@ -21,7 +21,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B15: implemented and host-verified 2026-09-04; 465 unit tests, zero lint errors, both APKs and 15 new compiled UI/platform cases. [Selected brief and evidence](../../screens/read-aloud-transport.md). Commit title: `B15: Add Read Aloud transport and source navigation`.
 - B16: implemented and host-verified 2026-09-04; 510 unit tests, zero lint errors, both APKs and eight new compiled UI cases. [Selected brief and evidence](../../screens/read-aloud-preferences.md). Commit title: `B16: Add Read Aloud preferences and auto-read`. Q06 remains outside local background-control scope.
 - B17: implemented and host-verified 2026-09-04; 550 unit tests, zero lint errors, both APKs and ten new compiled UI cases. [Selected brief and evidence](../../screens/dictation-and-voice-recording.md). Commit title: `B17: Add dictation and owned voice recording`. Q06 real microphone/recognition remains outside scope.
-- B18–B32: pending; linked decisions apply only to their named slices.
+- B18: implemented and host-verified 2026-09-04; 575 unit tests, zero lint errors, both APKs and ten new compiled UI/bitmap cases. [Selected brief and evidence](../../screens/group-setup-images-and-roster.md). Commit title: `B18: Add group setup, image and roster recovery`. Warm roster presentation drift reconciled.
+- B19–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -45,7 +46,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B15** | Read Aloud transport and source navigation | C061, C062 | B08 | Implemented; host verified |
 | **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Implemented; host verified; real services remain outside Q06 |
 | **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Implemented; host verified; real microphone/recognition remains outside Q06 scope |
-| **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Ready |
+| **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Implemented; host verified |
 | **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Ready |
 | **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Blocked slices: Q03 |
 | **B21** | Inbound sharing, shortcuts and profile links | C084, C085, C086, C087, C088 | B01, B11 | Blocked slices: Q06 |
@@ -330,6 +331,13 @@ Commit: `B17: Add dictation and owned voice recording`. Q06 real capture remains
 ### B18 — Group setup image and authoritative roster states
 
 Capabilities: C072, C073, C074. Dependencies: B03, B11.
+
+**Implemented and host-verified 2026-09-04:** solo group creation, independent
+initial-timer/open retries, private/public and emoji images, roster authority and
+member pending/convergence/recovery. 575 passing unit tests, zero lint errors,
+both APKs and ten new compiled UI/bitmap cases.
+[Implementation evidence](../../screens/group-setup-images-and-roster.md#implementation-evidence).
+Commit: `B18: Add group setup, image and roster recovery`.
 
 **Implementation:** Add explicit no-other-member setup and initial timer; distinguish created group from failed timer application and failed opening. One/two emoji image, unsupported/limit states, private group photo versus public invite avatar, image loading/upload retry. Preserve public preview continuity. Add unknown/loading/failed roster, pending invites, per-person mutation lock, retry and stale completion handling before enabling role-sensitive commands.
 

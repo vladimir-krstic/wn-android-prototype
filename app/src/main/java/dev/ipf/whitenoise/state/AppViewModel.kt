@@ -55,6 +55,7 @@ import dev.ipf.whitenoise.model.ChatRelayPolicy
 import dev.ipf.whitenoise.model.ChatMessage
 import dev.ipf.whitenoise.model.ComposerAvailability
 import dev.ipf.whitenoise.model.GroupMember
+import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.model.GroupRole
 import dev.ipf.whitenoise.model.DisappearingDuration
 import dev.ipf.whitenoise.model.MuteDuration
@@ -186,6 +187,28 @@ class AppViewModel(
         }
         activate(profile, updatesStoredProfile = true)
         if (origin == OnboardingOrigin.AddProfile) addShowcaseProfiles()
+    }
+
+    val groupWork: GroupWorkController by lazy {
+        GroupWorkController(
+            profiles = { uiState.profiles }, activeId = { uiState.activeProfileId },
+            signedIn = { it in uiState.signedInProfileIds },
+            changeRoster = { owner, roster -> if (uiState.activeProfileId == owner.profileId)
+                mutateChat(owner.chatId) { it.copy(groupRoster = roster) } },
+            commitMembers = { owner, action, ids ->
+                if (uiState.activeProfileId != owner.profileId) false else when (action) {
+                    GroupMemberAction.Invite -> addGroupMembers(owner.chatId, ids)
+                    GroupMemberAction.Promote -> ids.singleOrNull()?.let { setGroupMemberAdmin(owner.chatId, it, true) } ?: false
+                    GroupMemberAction.Revoke -> ids.singleOrNull()?.let { setGroupMemberAdmin(owner.chatId, it, false) } ?: false
+                    GroupMemberAction.Remove -> ids.singleOrNull()?.let { removeGroupMember(owner.chatId, it) } ?: false
+                }
+            },
+            commitEdit = { owner, draft -> uiState.activeProfileId == owner.profileId &&
+                editGroup(owner.chatId, draft.name, draft.description, draft.image, draft.publicImage) },
+            create = { draft, ids -> createGroup(draft.name, draft.description, draft.image, ids, publicAvatar = draft.publicImage) },
+            applyTimer = { owner, timer -> uiState.activeProfileId == owner.profileId && chat(owner.chatId)?.hasAuthoritativeGroupAdmin(owner.profileId) == true &&
+                (chat(owner.chatId)?.disappearingDuration == timer || setChatDisappearing(owner.chatId, timer)) },
+        )
     }
 
     val composerCapture: ComposerCaptureController by lazy {
@@ -654,6 +677,7 @@ class AppViewModel(
             lastRetainedProfileId = activeId.takeUnless { wipeData },
         )
         composerCapture.reconcile()
+        groupWork.reconcile()
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
@@ -746,6 +770,7 @@ class AppViewModel(
             signedInProfileIds = uiState.signedInProfileIds - profileId,
         )
         composerCapture.reconcile()
+        groupWork.reconcile()
         return true
     }
 
@@ -782,6 +807,7 @@ class AppViewModel(
         dismissChatBatch()
         uiState = AppUiState()
         composerCapture.reconcile()
+        groupWork.reconcile()
         createdChatSequence = 0
         return true
     }
@@ -2186,6 +2212,7 @@ class AppViewModel(
         avatar: ProfileAvatar,
         selectedPersonIds: List<String>,
         requestedChatId: String? = null,
+        publicAvatar: ProfileAvatar = ProfileAvatar.Monogram,
     ): String? {
         val profile = uiState.activeProfile ?: return null
         val trimmedName = name.trim()
@@ -2200,8 +2227,9 @@ class AppViewModel(
             }
             result
         }
-        if (trimmedName.isEmpty() || uniqueIds.isEmpty() || profile.chatRelayUrls.isEmpty()) return null
+        if (trimmedName.isEmpty() || profile.chatRelayUrls.isEmpty()) return null
 
+        if (selectedPersonIds.isNotEmpty() && uniqueIds.isEmpty()) return null
         val id = requestedChatId ?: nextChatId("group")
         if (profile.chats.any { it.id == id }) return null
         val chat = Chat(
@@ -2211,6 +2239,7 @@ class AppViewModel(
             title = trimmedName,
             description = description.trim(),
             avatar = avatar,
+            publicInviteAvatar = publicAvatar,
             preview = "You created the group.",
             members = listOf(GroupMember(profile.id, GroupRole.Admin)) +
                 uniqueIds.map { GroupMember(it, GroupRole.Member) },
@@ -2231,21 +2260,23 @@ class AppViewModel(
         name: String,
         description: String,
         avatar: ProfileAvatar,
+        publicAvatar: ProfileAvatar? = null,
     ): Boolean {
         val profileId = uiState.activeProfileId ?: return false
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) return false
         var changed = false
         mutateChat(chatId) { chat ->
-            val isAdmin = chat.members.firstOrNull { it.personId == profileId }?.role == GroupRole.Admin
+            val isAdmin = chat.hasAuthoritativeGroupAdmin(profileId) && groupWork.permitsPrimitive(GroupOwner(profileId, chatId))
             if (!chat.isGroup || !isAdmin || chat.membership != ChatMembership.Active) return@mutateChat chat
-            if (chat.title == trimmedName && chat.description == description.trim() && chat.avatar == avatar) return@mutateChat chat
+            if (chat.title == trimmedName && chat.description == description.trim() && chat.avatar == avatar && (publicAvatar == null || publicAvatar == chat.publicInviteAvatar)) return@mutateChat chat
             changed = true
             val (day, minute) = nextTimelinePosition(chat)
             chat.copy(
                 title = trimmedName,
                 description = description.trim(),
                 avatar = avatar,
+                publicInviteAvatar = publicAvatar ?: chat.publicInviteAvatar,
                 timeline = chat.timeline + ChatTimelineEntry.Event(
                     id = "$chatId-edited-${createdChatSequence++}",
                     text = "You updated the group info.",
@@ -2262,7 +2293,7 @@ class AppViewModel(
         val profile = uiState.activeProfile ?: return false
         var changed = false
         mutateChat(chatId) { chat ->
-            val isAdmin = chat.members.firstOrNull { it.personId == profile.id }?.role == GroupRole.Admin
+            val isAdmin = chat.hasAuthoritativeGroupAdmin(profile.id) && groupWork.permitsPrimitive(GroupOwner(profile.id, chatId))
             if (!chat.isGroup || !isAdmin || chat.membership != ChatMembership.Active) return@mutateChat chat
             val existing = chat.members.map { it.personId }.toSet()
             val additions = personIds.distinct().mapNotNull { id ->
@@ -2290,7 +2321,7 @@ class AppViewModel(
         if (personId == profileId) return false
         var changed = false
         mutateChat(chatId) { chat ->
-            val actorIsAdmin = chat.members.firstOrNull { it.personId == profileId }?.role == GroupRole.Admin
+            val actorIsAdmin = chat.hasAuthoritativeGroupAdmin(profileId) && groupWork.permitsPrimitive(GroupOwner(profileId, chatId))
             val member = chat.members.firstOrNull { it.personId == personId }
             val desired = if (isAdmin) GroupRole.Admin else GroupRole.Member
             if (!actorIsAdmin || member == null || member.role == desired || chat.membership != ChatMembership.Active) return@mutateChat chat
@@ -2317,7 +2348,7 @@ class AppViewModel(
         if (personId == profileId) return false
         var changed = false
         mutateChat(chatId) { chat ->
-            val actorIsAdmin = chat.members.firstOrNull { it.personId == profileId }?.role == GroupRole.Admin
+            val actorIsAdmin = chat.hasAuthoritativeGroupAdmin(profileId) && groupWork.permitsPrimitive(GroupOwner(profileId, chatId))
             val member = chat.members.firstOrNull { it.personId == personId }
             if (!actorIsAdmin || member == null || chat.membership != ChatMembership.Active) return@mutateChat chat
             if (member.role == GroupRole.Admin && chat.members.count { it.role == GroupRole.Admin } <= 1) return@mutateChat chat
@@ -2404,6 +2435,8 @@ class AppViewModel(
                 profiles.first { candidate -> candidate.id == profile.id }.diagnostics.hasSeenPrompt
             },
         )
+        composerCapture.reconcile()
+        groupWork.reconcile()
     }
 
     private fun addShowcaseProfiles() {
@@ -2422,7 +2455,8 @@ class AppViewModel(
         updateActiveProfile { profile ->
             profile.copy(chats = profile.chats.map { before ->
                 if (before.id != chatId) before else {
-                    val after = transform(before)
+                    val transformed = transform(before)
+                    val after = if (transformed.members != before.members) transformed.copy(groupRoster = transformed.groupRoster.copy(revision = before.groupRoster.revision + 1)) else transformed
                     if (after.readState != null && after.timeline != before.timeline) {
                         val read = dev.ipf.whitenoise.model.ConversationReading.reconcile(after.readState, after, profile.id)
                         after.copy(readState = read, unreadCount = read.unreadIds.size)
@@ -2446,6 +2480,7 @@ class AppViewModel(
             },
         )
         composerCapture.reconcile()
+        groupWork.reconcile()
     }
 
     private fun insertAfterPinned(chats: List<Chat>, chat: Chat): List<Chat> {

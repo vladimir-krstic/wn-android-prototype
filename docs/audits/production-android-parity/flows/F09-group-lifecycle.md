@@ -45,3 +45,16 @@ Use the approved product language and terminology. Production strings in the mat
 ## Dependencies and decisions
 
 Batches: B18, B19, B25. Decisions: Q04. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+
+## B18 implementation evidence
+
+C072–C074 are covered on 2026-09-04: explicit solo setup and initial timer;
+create-once/timer/open recovery; separate private/public and emoji image editing;
+roster loading/unknown/failure, seeded presentation and authoritative commits;
+member pending/convergence, primitive locks and exact profile/revision retry.
+The [selected brief](../../../screens/group-setup-images-and-roster.md#implementation-evidence)
+records 575 passing unit tests, zero lint errors, both APKs and ten new compiled
+UI/bitmap cases. Production master warm-roster presentation is reconciled.
+B19 lifecycle/transfer/export and B25 technical details remain pending; the table
+above preserves the original complete flow contract. Device/visual acceptance is
+separate from this host verification.

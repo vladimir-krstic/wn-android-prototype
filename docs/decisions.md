@@ -3942,3 +3942,34 @@ The [selected brief](screens/dictation-and-voice-recording.md#implementation-evi
 records pinned production seams, source drift and the scoped custom gesture.
 Host validation passes 550 unit tests, zero lint errors and both APKs; ten new
 UI cases compile only. No new permission, provider Activity or service is added.
+
+## WN-ANDROID-0138 — Group creation stages, image visibility and roster authority
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B18; host verified, device/visual acceptance pending.
+
+An explicit solo-group path keeps the creator as admin and permits adding people
+later. Creation, initial timer application and opening are separate owned stages;
+retrying after creation reuses the same group and never duplicates it. Timer
+failure leaves the existing timer and offers retry or opening the usable group.
+Submitted details remain read-only until the flow ends.
+
+Private group photos and public invite images have distinct state and previews.
+Existing fixtures preserve their public image; new private group images default
+to no public invite image. Edit Group retains the accepted staged Save boundary,
+including images, with prepared-draft retry and source/roster validation. Emoji
+selection uses the existing catalog; one/two glyphs generate one fixed neutral
+image so the accepted content is not re-rendered differently for each recipient.
+Platform image work stays off the UI thread; no third-party runtime is added.
+
+A warm membership/admin seed permits opening Add People during roster refresh,
+matching current production master. Only an authoritative Ready roster permits
+commit. Unknown, failed and inconsistent states cannot borrow authority from
+cached rows. Pending member work holds the group commit lock and shows per-person
+status; convergence survives navigation after acceptance. Stale requests, source
+changes and profile round trips cannot apply an old mutation.
+
+The [selected brief](screens/group-setup-images-and-roster.md#implementation-evidence)
+records current production drift and migration seams. Host validation passes 575
+unit tests, zero lint errors and both APKs; ten new UI/bitmap cases compile only.
+All upload, creation and roster state remains deterministic and in memory.

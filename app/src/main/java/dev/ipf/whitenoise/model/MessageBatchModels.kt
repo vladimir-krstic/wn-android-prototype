@@ -31,7 +31,7 @@ object MessageDeletion {
     fun canDeleteForEveryone(message: ChatMessage, profile: Profile, chat: Chat): Boolean =
         !message.isDeleted && chat.composerAvailability(profile) == ComposerAvailability.Available &&
             (!chat.isGroup || chat.members.any { it.personId == profile.id }) &&
-            (message.authorId == profile.id || (chat.isGroup && chat.members.any { it.personId == profile.id && it.role == GroupRole.Admin }))
+            (message.authorId == profile.id || chat.hasAuthoritativeGroupAdmin(profile.id))
 
     /** Freeze the explicit per-item scope; a later permission loss never changes it. */
     fun plan(profile: Profile, chat: Chat, ids: Set<String>, scope: MessageDeletionScope): List<MessageDeleteItem>? {

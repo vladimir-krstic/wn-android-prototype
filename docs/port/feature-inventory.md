@@ -122,6 +122,15 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B18: C072–C074 are implemented and host-verified. Solo
+creation, initial timer and open recovery preserve one group ID; private/public
+images remain separate through staged editing, loading/upload failures and retry.
+One/two catalog emoji produce an owned opaque image. Authoritative roster states,
+warm-picker presentation, member pending/convergence and primitive role/lock gates
+protect commits across navigation and profile changes. The host gate passes 575
+unit tests, zero lint errors and both APKs; ten new UI/bitmap cases compile only.
+See [group-setup-images-and-roster.md](../screens/group-setup-images-and-roster.md#implementation-evidence).
+
 2026-09-04 production B17: C067–C070 are implemented and host-verified within
 local scope. A profile/chat/request lease separates voice from dictation; inline
 controls preserve native draft editing. Manual/silence completion and default

@@ -79,3 +79,16 @@ B17 retains its pinned capture contracts. Roster/admin availability, Nostr event
 reading, installer handoffs, Amber grants, contact-follow presentation and startup
 must be checked in the relevant later batches/final reconciliation. This scoped
 check does not replace the immutable baseline or claim the other drift is done.
+
+## Implementation drift check — B18, 2026-09-04
+
+A fresh `ls-remote` still resolves master to
+`911040c7e1c31652638c8cfd72812d1f3a694b9b` with no main ref. B18 reconciles
+GroupDetailsScreen and GroupRosterLoadStatus: known membership/admin permits
+opening the picker while Loading, and confirmation still requires Ready.
+The Controllers diff changes no member-roster/commit method. The extracted
+ChatListGroupSeed now preserves unrecoverable alongside disbanding/disbanded on
+cold/profile-switch frames; B19 must reconcile that C078 behavior. Its admin
+seed remains conservative. The larger authoritative timeline-window ordering,
+Nostr, installation, Amber/contact/startup changes remain for the relevant later
+batch or final audit, not implicitly completed by B18.

@@ -1,13 +1,13 @@
 # Android port handoff
 
-2026-09-04: production parity B01–B17 are implemented and host-verified.
+2026-09-04: production parity B01–B18 are implemented and host-verified.
 The active goal covers B01–B32 with one commit per completed batch
 (`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
 tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. B17 is complete within its local scope: dictation preferences,
-owned draft capture/delivery/review, typed recognition failures and voice
-hold/release/cancel/lock with native tap-to-lock. Continue with B18.
-B17's commit title is `B17: Add dictation and owned voice recording`. Q05 is resolved by the approved checked wipe
+record evidence. B18 is complete within its local scope: solo groups, separate
+create/timer/open recovery, private/public and emoji image editing, authoritative
+roster loading and owned member pending/convergence/retry. Continue with B19.
+B18's commit title is `B18: Add group setup, image and roster recovery`. Q05 is resolved by the approved checked wipe
 default. Developer Tools now provides access/startup/sign-out outcomes and local
 key availability. B03 adds people-search/group scenarios and created-chat opening
 recovery; `docs/screens/people-discovery-and-private-details.md` records private
@@ -63,11 +63,21 @@ compile only. No microphone/recognizer is started. Production master advanced to
 `911040c7e1c31652638c8cfd72812d1f3a694b9b`; its seven-commit diff changes no capture
 sources. Review roster/Nostr/installer/startup drift in relevant later batches
 and final reconciliation; keep the immutable audit baseline.
-Latest host gate: 550 unit tests, zero lint errors, both APKs;
+B18 adds `GroupWorkController`, shared roster authority/primitive locks and separate
+private/public images. New group setup allows no other members and captures an
+initial timer. Once created, retries reuse that group and preserve applied stages.
+Group edits retain prepared drafts; emoji selection renders opaque local image
+bytes. Member commands show pending/convergence/failure with fresh role/revision
+checks. See `docs/screens/group-setup-images-and-roster.md`. Ten new UI/bitmap
+cases compile only. B18 reconciles warm-roster Add People presentation at the same
+master hash. B19 must preserve the new ChatListGroupSeed unrecoverable and terminal
+lifecycle behavior on cold/profile-switch frames. Timeline ordering drift remains
+for final reconciliation alongside Nostr/installer/startup seams.
+Latest host gate: 575 unit tests, zero lint errors, both APKs;
 14 pre-existing warnings. No runtime backend, new permission or device validation.
 
 The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B18–B32. This
+boundary. Production Android parity remains in progress through B19–B32. This
 handoff describes the shape that should remain stable while visual polish proceeds
 one screen or bounded flow at a time.
 

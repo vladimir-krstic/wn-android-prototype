@@ -1618,7 +1618,7 @@ private fun ConversationTopBar(
             ) {
                 ProfileAvatar(
                     chat.title,
-                    chat.avatar,
+                    chat.visibleAvatar,
                     Modifier.size(40.dp).testTag("conversation.header.avatar"),
                     contentDescription = null,
                 )

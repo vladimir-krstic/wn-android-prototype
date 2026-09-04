@@ -230,3 +230,17 @@ local fixed transcripts, elapsed ticks and failure choices are not services.
 The prototype retains release-to-review plus explicit Send and uses a stricter
 any-draft-change-to-review guard specified by B17. The seven-commit master drift
 through `911040c7e1c31652638c8cfd72812d1f3a694b9b` changes no capture sources.
+
+## Production B18 group setup, images and roster
+
+`docs/screens/group-setup-images-and-roster.md` maps NewGroupSetupScreen/NewGroupCreate,
+GroupEditScreen, GroupImageWorkflow, GroupEmojiImagePicker/Renderer and
+GroupRosterMutationUi/LoadStatus into `GroupWork.kt`, `GroupWorkController.kt`,
+`GroupWorkUi.kt`, `GroupEditorScreen.kt` and `GroupEmojiImage.kt`, wired through
+existing creation/info/member routes. Production reconnects its authoritative
+member roster/revision, group commit lock and actual image/retention callbacks.
+Private group image and public invite preview are distinct local fields; preserve
+the production legacy-image migration semantics when reconnecting real uploads.
+Current master permits warm seeded picker presentation but still gates commit on
+Ready. B19 owns the ChatListGroupSeed cold-frame terminal/unrecoverable checks.
+The prototype retains staged Edit Group Save and existing initial timer presets.

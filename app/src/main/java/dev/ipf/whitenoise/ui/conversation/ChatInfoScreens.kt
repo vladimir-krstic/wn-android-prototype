@@ -2,6 +2,8 @@
 
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.model.*
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -156,10 +158,10 @@ fun ChatInfoScreen(
     var onlyAdminWarning by remember { mutableStateOf(false) }
     val directPersonId = (chat.kind as? dev.ipf.whitenoise.model.ChatKind.Direct)?.personId
     val directPerson = profile.people.firstOrNull { it.id == directPersonId }
-    val activeRole = chat.members.firstOrNull { it.personId == profile.id }?.role
-    val canAdmin = chat.isGroup &&
-        activeRole == GroupRole.Admin &&
-        chat.membership == ChatMembership.Active
+    val owner = GroupOwner(profile.id, chat.id)
+    val workController = LocalGroupWork.current
+    val canAdmin = chat.hasGroupAdmin(profile.id)
+    val canCommit = chat.hasAuthoritativeGroupAdmin(profile.id) && workController?.locked(owner) != true
     val counts = remember(chat.timeline) { SharedContentProjection.counts(chat, profile) }
     val title = stringResource(if (chat.isGroup) R.string.group_info else R.string.chat_info)
     val technicalActions = listOf(
@@ -317,6 +319,8 @@ fun ChatInfoScreen(
                 }
                 if (chat.isGroup) {
                     item(key = "members_heading") { SettingsSection(stringResource(R.string.members)) }
+                    item(key = "roster_status") { GroupRosterPanel(profile, chat) }
+                    item(key = "member_work") { GroupMemberWorkPanel(profile, chat) }
                     itemsIndexed(chat.members, key = { _, member -> "member.${member.personId}" }) { index, member ->
                         ChatInfoMemberRow(
                             profile = profile,
@@ -324,6 +328,7 @@ fun ChatInfoScreen(
                             index = index,
                             count = chat.members.size,
                             onMember = onMember,
+                            pending = workController?.memberWork?.get(owner)?.let { it.running && member.personId in it.personIds } == true,
                         )
                     }
                     if (canAdmin) {
@@ -334,11 +339,13 @@ fun ChatInfoScreen(
                                         title = stringResource(R.string.edit_group),
                                         icon = R.drawable.ic_edit,
                                         onClick = onEditGroup,
+                                        enabled = canCommit,
                                     ),
                                     ChatInfoAction(
                                         title = stringResource(R.string.add_people),
                                         icon = R.drawable.ic_group_add,
                                         onClick = onAddPeople,
+                                        enabled = chat.canPresentMemberAdministration(profile.id) && workController?.locked(owner) != true,
                                     ),
                                 ),
                                 modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
@@ -476,7 +483,7 @@ private fun ChatInfoIdentity(chat: Chat, directPerson: Person?) {
                 ) {
                     ProfileAvatar(
                         name = chat.title,
-                        avatar = chat.avatar,
+                        avatar = chat.visibleAvatar,
                         modifier = Modifier.size(avatarSize).testTag("chat_info.avatar"),
                         contentDescription = stringResource(R.string.profile_photo_for, chat.title),
                     )
@@ -579,6 +586,7 @@ private data class ChatInfoAction(
     val subtitle: String? = null,
     val destructive: Boolean = false,
     val showChevron: Boolean = true,
+    val enabled: Boolean = true,
 )
 
 @Composable
@@ -591,6 +599,7 @@ private fun ChatInfoActionGroup(actions: List<ChatInfoAction>, modifier: Modifie
             val contentColor = if (action.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
             ListItem(
                 onClick = action.onClick,
+                enabled = action.enabled,
                 content = { Text(action.title) },
                 supportingContent = action.subtitle?.let { { Text(it) } },
                 leadingContent = {
@@ -619,13 +628,14 @@ private fun ChatInfoMemberRow(
     index: Int,
     count: Int,
     onMember: (String) -> Unit,
+    pending: Boolean = false,
 ) {
     val isSelf = member.personId == profile.id
     val person = if (isSelf) null else profile.people.firstOrNull { it.id == member.personId }
     val name = if (isSelf) stringResource(R.string.you) else person?.displayName ?: member.personId
     val headline: @Composable () -> Unit = { Text(name) }
     val supporting: @Composable () -> Unit = {
-        Text(stringResource(if (member.role == GroupRole.Admin) R.string.admin else R.string.member))
+        Text(stringResource(if (pending) R.string.group_member_updating else if (member.role == GroupRole.Admin) R.string.admin else R.string.member))
     }
     val leading: @Composable () -> Unit = {
         ProfileAvatar(
@@ -801,158 +811,8 @@ fun EditGroupScreen(
     chat: Chat,
     onBack: () -> Unit,
     onSave: (String, String, ProfileAvatar) -> Boolean,
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val name = rememberSaveable(chat.id, saver = TextFieldState.Saver) {
-        TextFieldState(initialText = chat.title)
-    }
-    val description = rememberSaveable(chat.id, saver = TextFieldState.Saver) {
-        TextFieldState(initialText = chat.description)
-    }
-    var avatar by remember(chat.avatar) { mutableStateOf(chat.avatar) }
-    var job by remember { mutableStateOf<Job?>(null) }
-    var preparationGeneration by remember { mutableIntStateOf(0) }
-    var isPreparingPhoto by remember { mutableStateOf(false) }
-    var photoError by remember { mutableStateOf(false) }
-    var saveError by remember { mutableStateOf(false) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) {
-            val generation = ++preparationGeneration
-            job?.cancel()
-            job = scope.launch {
-                isPreparingPhoto = true
-                photoError = false
-                try {
-                    val bytes = AvatarImageProcessor.prepare(context.contentResolver, uri)
-                    if (generation != preparationGeneration) return@launch
-                    if (bytes == null) {
-                        photoError = true
-                    } else {
-                        avatar = ProfileAvatar.DeviceImage(bytes)
-                    }
-                } finally {
-                    if (generation == preparationGeneration) isPreparingPhoto = false
-                }
-            }
-        }
-    }
-    DisposableEffect(Unit) { onDispose { job?.cancel() } }
-
-    Scaffold(
-        contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = { WhiteNoiseTopBar(stringResource(R.string.edit_group), onBack) },
-        bottomBar = {
-            InfoBottomAction(
-                label = stringResource(R.string.save),
-                enabled = name.text.isNotBlank() && !isPreparingPhoto,
-                onClick = {
-                    saveError = !onSave(
-                        name.text.toString(),
-                        description.text.toString(),
-                        avatar,
-                    )
-                    if (!saveError) onBack()
-                },
-            )
-        },
-    ) { padding ->
-        AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .widthIn(max = 520.dp)
-                    .fillMaxSize()
-                    .whiteNoiseVerticalScroll(rememberScrollState())
-                    .padding(
-                        horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                        vertical = WhiteNoiseSpacing.Section,
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Section),
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                ) {
-                    ProfileAvatar(name.text.toString(), avatar, Modifier.size(120.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FilledTonalButton(
-                            onClick = {
-                                picker.launch(
-                                    PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly,
-                                    ),
-                                )
-                            },
-                            enabled = !isPreparingPhoto,
-                        ) {
-                            Text(
-                                stringResource(
-                                    if (avatar == ProfileAvatar.Monogram) {
-                                        R.string.add_photo
-                                    } else {
-                                        R.string.change_photo
-                                    },
-                                ),
-                            )
-                        }
-                        if (avatar != ProfileAvatar.Monogram) {
-                            TextButton(
-                                onClick = { avatar = ProfileAvatar.Monogram },
-                                enabled = !isPreparingPhoto,
-                            ) {
-                                Text(
-                                    stringResource(R.string.remove_photo),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
-                        }
-                    }
-                    if (isPreparingPhoto) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Text(stringResource(R.string.preparing_photo))
-                        }
-                    }
-                    if (photoError) {
-                        StateError(stringResource(R.string.photo_error))
-                    }
-                }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
-                ) {
-                    WhiteNoiseTextField(
-                        state = name,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.group_name)) },
-                        lineLimits = TextFieldLineLimits.SingleLine,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    )
-                    WhiteNoiseTextField(
-                        state = description,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.group_description)) },
-                        lineLimits = TextFieldLineLimits.MultiLine(
-                            minHeightInLines = 3,
-                            maxHeightInLines = 6,
-                        ),
-                    )
-                }
-                if (saveError) {
-                    StateError(stringResource(R.string.couldnt_save_group))
-                }
-            }
-        }
-    }
-}
+    profile: Profile? = null,
+) { GroupEditorScreen(chat, profile, onBack, onSave) }
 
 @Composable
 fun AddGroupMembersScreen(
@@ -963,7 +823,12 @@ fun AddGroupMembersScreen(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var selected by rememberSaveable { mutableStateOf(emptySet<String>()) }
-    val existing = remember(chat.members) { chat.members.map { it.personId }.toSet() }
+    val controller = LocalGroupWork.current
+    val owner = GroupOwner(profile.id, chat.id)
+    val work = controller?.memberWork?.get(owner)
+    val existing = chat.members.map { it.personId }.toSet() + work?.takeIf { it.running && it.action == GroupMemberAction.Invite }?.personIds.orEmpty()
+    val canCommit = chat.hasAuthoritativeGroupAdmin(profile.id) && controller?.locked(owner) != true
+    var failed by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     val people = remember(profile.people, profile.id, existing, query) {
         profile.people
             .filter { it.id !in existing && it.id != profile.id }
@@ -976,8 +841,8 @@ fun AddGroupMembersScreen(
         bottomBar = {
             InfoBottomAction(
                 label = stringResource(R.string.add_people),
-                enabled = selected.isNotEmpty(),
-                onClick = { if (onAdd(selected.toList())) onBack() },
+                enabled = selected.isNotEmpty() && canCommit,
+                onClick = { if (onAdd(selected.toList())) onBack() else failed = true },
             )
         },
     ) { padding ->
@@ -986,6 +851,9 @@ fun AddGroupMembersScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
             ) {
+                item { GroupRosterPanel(profile, chat) }
+                item { GroupMemberWorkPanel(profile, chat) }
+                if (failed) item { StateError(stringResource(R.string.group_members_failed)) }
                 item {
                     InfoSearchField(query = query, onQueryChange = { query = it })
                 }
