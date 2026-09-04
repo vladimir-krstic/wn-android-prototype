@@ -119,6 +119,7 @@ import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import dev.ipf.whitenoise.ui.settings.SettingsSection
 import dev.ipf.whitenoise.ui.settings.copyToClipboard
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import dev.ipf.whitenoise.state.canManageRetention
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -159,6 +160,8 @@ fun ChatInfoScreen(
     val directPersonId = (chat.kind as? dev.ipf.whitenoise.model.ChatKind.Direct)?.personId
     val directPerson = profile.people.firstOrNull { it.id == directPersonId }
     val owner = GroupOwner(profile.id, chat.id)
+    val retentionController = LocalRetention.current
+    var retentionRejected by remember(profile.id, chat.id) { mutableStateOf(false) }
     val workController = LocalGroupWork.current
     val canAdmin = chat.hasGroupAdmin(profile.id)
     val canCommit = chat.hasAuthoritativeGroupAdmin(profile.id) && workController?.locked(owner) != true
@@ -258,7 +261,7 @@ fun ChatInfoScreen(
                         QuickInfoAction(
                             label = stringResource(R.string.disappearing),
                             icon = R.drawable.ic_timer,
-                            state = chat.disappearingDuration.label,
+                            state = retentionLabel(chat.disappearingDuration),
                             modifier = Modifier.weight(1f),
                             onClick = { disappearingSheet = true },
                         )
@@ -312,6 +315,7 @@ fun ChatInfoScreen(
                         dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
                     }
                 }
+                item(key = "retention_work") { RetentionWorkPanel(profile, chat) }
                 item(key = "transcript_export") { TranscriptPanel(profile, chat) }
                 item(key = "technical_actions") {
                     ChatInfoActionGroup(
@@ -372,37 +376,15 @@ fun ChatInfoScreen(
             onSelect = { onMute(it); muteSheet = false },
         )
     }
-    if (disappearingSheet) {
-        ModalBottomSheet(onDismissRequest = { disappearingSheet = false }) {
-            WhiteNoiseSheetHeader(stringResource(R.string.disappearing_messages_title))
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = WhiteNoiseSpacing.Related)) {
-                DisappearingDuration.entries.forEach { duration ->
-                    val selected = duration == chat.disappearingDuration
-                    ListItem(
-                        headlineContent = { Text(duration.label) },
-                        trailingContent = {
-                            RadioButton(
-                                selected = selected,
-                                onClick = null,
-                                modifier = Modifier.clearAndSetSemantics { },
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .toggleable(
-                                value = selected,
-                                role = Role.RadioButton,
-                                onValueChange = {
-                                    onDisappearing(duration)
-                                    disappearingSheet = false
-                                },
-                            ),
-                    )
-                }
-            }
-        }
-    }
+    RetentionConfirmation(profile, chat)
+    if (disappearingSheet) RetentionPicker(chat.disappearingDuration,
+        editable = chat.canManageRetention(profile.id) && workController?.locked(owner) != true,
+        onDismiss = { disappearingSheet = false; retentionRejected = false }, onPick = { duration ->
+            val accepted = duration == chat.disappearingDuration || if (retentionController != null)
+                retentionController.begin(owner, duration) else { onDisappearing(duration); true }
+            retentionRejected = !accepted
+            if (accepted) disappearingSheet = false
+        }, error = if (retentionRejected) stringResource(R.string.retention_changed) else null)
     if (leaveConfirmation) {
         AlertDialog(
             onDismissRequest = { leaveConfirmation = false },
@@ -783,7 +765,10 @@ fun SharedContentScreen(
             SharedContentLibrary(content, category, media, { viewerSelection = it }, onGoToMessage)
         }
     }
-    LaunchedEffect(media) { if (media.isEmpty()) viewerSelection = null }
+    LaunchedEffect(media) {
+        if (media.none { it.key == viewerSelection?.initialKey }) viewerSelection = null
+        if (media.none { it.key == forwardMediaKey }) forwardMediaKey = null
+    }
     viewerSelection?.takeIf { media.isNotEmpty() }?.let { selection ->
         ReadOnlyMediaViewer(selection = selection.copy(items = media), onDismiss = { viewerSelection = null },
             onForward = { item -> forwardMediaKey = item.key; viewerSelection = null },

@@ -819,7 +819,7 @@ fun GroupSetupScreen(
                     )
                 }
                 dev.ipf.whitenoise.ui.settings.SettingsGroup(Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                    dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.disappearing_messages_title), value = timer.label, onClick = { timerOpen = true }, enabled = editable)
+                    dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.disappearing_messages_title), value = dev.ipf.whitenoise.ui.conversation.retentionLabel(timer), onClick = { timerOpen = true }, enabled = editable)
                 }
                 if (work != null) GroupCreateStatus(work, { workController.retryCreate(work.id) }, { workController.skipFailedTimer(work.id) })
                 SettingsSection(stringResource(R.string.members))
@@ -848,9 +848,8 @@ fun GroupSetupScreen(
         processingGeneration++; processingJob?.cancel(); isPreparingPhoto = false
         avatar = image; photoError = false; webChoiceId = null; emojiOpen = false
     }
-    if (timerOpen) dev.ipf.whitenoise.ui.settings.SpeechSettingsChoices(stringResource(R.string.disappearing_messages_title), DisappearingDuration.entries.map { duration ->
-        dev.ipf.whitenoise.ui.settings.SpeechSettingOption(duration.label, timer == duration) { timer = duration; timerOpen = false }
-    }, { timerOpen = false })
+    if (timerOpen) dev.ipf.whitenoise.ui.conversation.RetentionPicker(timer, editable = editable,
+        onDismiss = { timerOpen = false }, onPick = { timer = it; timerOpen = false })
     if (webPickerOpen) {
         AvatarWebImagePicker(
             currentChoiceId = webChoiceId,

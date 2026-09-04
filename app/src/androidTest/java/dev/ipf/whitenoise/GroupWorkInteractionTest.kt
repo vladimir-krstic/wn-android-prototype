@@ -39,7 +39,8 @@ class GroupWorkInteractionTest {
         show { GroupSetupScreen(profile, emptyList(), {}, { _, _, _ -> false }, creationOrigin = "setup") }
         rule.onNodeWithTag("group_setup.name").performTextInput("Solo")
         rule.onNodeWithText("Disappearing messages", substring = false).performScrollTo().performClick()
-        rule.onNodeWithText("1 Day", substring = false).performClick()
+        rule.onNodeWithText("1 day", substring = false).performScrollTo().performClick()
+        rule.onNodeWithText("Save").performClick()
         rule.onNodeWithText("Create Group").performClick()
         rule.onNodeWithTag("group_setup.name").assertIsNotEnabled()
         rule.onNodeWithText("Creating group…").assertExists()
@@ -50,7 +51,8 @@ class GroupWorkInteractionTest {
         show { GroupSetupScreen(profile, emptyList(), {}, { _, _, _ -> false }, creationOrigin = "setup") }
         rule.onNodeWithTag("group_setup.name").performTextInput("Solo")
         rule.onNodeWithText("Disappearing messages", substring = false).performScrollTo().performClick()
-        rule.onNodeWithText("1 Day", substring = false).performClick()
+        rule.onNodeWithText("1 day", substring = false).performScrollTo().performClick()
+        rule.onNodeWithText("Save").performClick()
         rule.onNodeWithText("Create Group").performClick(); createStep(); createStep()
         rule.onNodeWithText("Retry timer").performScrollTo().assertIsEnabled()
         val id = vm.groupWork.creation!!.chatId

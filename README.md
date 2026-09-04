@@ -17,15 +17,15 @@ was bootstrapped from a clean Kotlin/Compose foundation.
 
 ## Current Android baseline
 
-Production Android parity batches B01–B19 are implemented and host-verified.
-[B19 group administration and transcripts](docs/screens/group-administration-and-transcript.md#implementation-evidence)
-adds staged administration transfer/leave, disband recovery, frozen/ended groups
-and complete local transcript export through Android Files.
-The latest host gate passes 617 unit tests, zero lint errors and both APKs.
+Production Android parity batches B01–B20 are implemented and host-verified.
+[B20 disappearing timers and expiry](docs/screens/disappearing-timers-and-expiry.md#implementation-evidence)
+adds custom durations, pruning confirmation, saved message countdowns and consistent
+expiry cleanup, with separate timer-save and history-refresh recovery.
+The latest host gate passes 655 unit tests, zero lint errors and both APKs.
 Nine new UI cases compile only; device and visual acceptance remain pending.
-Group operations remain deterministic in memory; exports write only a user-selected document.
+Timer work and foreground expiry remain deterministic in memory.
 [The implementation plan](docs/audits/production-android-parity/implementation-plan.md)
-tracks the remaining B20–B32 batches and per-batch commits.
+tracks the remaining B21–B32 batches and per-batch commits.
 
 - Application ID: `dev.ipf.whitenoise.android.prototype`
 - Namespace: `dev.ipf.whitenoise`

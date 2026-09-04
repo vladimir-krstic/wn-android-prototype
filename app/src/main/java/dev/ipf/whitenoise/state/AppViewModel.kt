@@ -208,10 +208,68 @@ class AppViewModel(
             commitEdit = { owner, draft -> uiState.activeProfileId == owner.profileId &&
                 editGroup(owner.chatId, draft.name, draft.description, draft.image, draft.publicImage) },
             create = { draft, ids -> createGroup(draft.name, draft.description, draft.image, ids, publicAvatar = draft.publicImage) },
-            additionalLock = { groupLifecycle.locked(it) },
+            additionalLock = { groupLifecycle.locked(it) || retention.locked(it) },
             applyTimer = { owner, timer -> uiState.activeProfileId == owner.profileId && chat(owner.chatId)?.hasAuthoritativeGroupAdmin(owner.profileId) == true &&
                 (chat(owner.chatId)?.disappearingDuration == timer || setChatDisappearing(owner.chatId, timer)) },
         )
+    }
+
+    val retention: RetentionController by lazy {
+        RetentionController(
+            profiles = { uiState.profiles }, activeId = { uiState.activeProfileId }, signedIn = { it in uiState.signedInProfileIds },
+            otherLocked = { groupWork.memberEditLocked(it) || groupLifecycle.locked(it) },
+            commit = { owner, before, after, prune ->
+                if (uiState.activeProfileId != owner.profileId || chat(owner.chatId)?.disappearingDuration != before) false
+                else applyRetention(owner, after, prune)
+            },
+            removeExpired = ::removeExpiredMessages,
+            addExample = ::addRetentionExample,
+        )
+    }
+
+    private fun applyRetention(owner: GroupOwner, duration: DisappearingDuration, prune: Set<String>): Boolean {
+        val current = chat(owner.chatId)?.takeIf { uiState.activeProfileId == owner.profileId && it.canManageRetention(owner.profileId) } ?: return false
+        if (current.disappearingDuration == duration) return false
+        mutateChat(owner.chatId) { chat ->
+            val cleaned = MessageRetentionPolicy.remove(chat, prune, owner.profileId)
+            val (day, minute) = nextTimelinePosition(cleaned)
+            cleaned.copy(disappearingDuration = duration, timeline = cleaned.timeline + ChatTimelineEntry.Event(
+                id = "${owner.chatId}-retention-${createdChatSequence++}",
+                text = if (duration == DisappearingDuration.Off) "You turned off disappearing messages." else "You set disappearing messages to ${duration.label}.",
+                dayOrdinal = day, dayLabel = "Today", minuteOfDay = minute))
+        }
+        reconcileExpiredOperations(owner, prune)
+        return true
+    }
+
+    private fun removeExpiredMessages(owner: GroupOwner, ids: Set<String>) {
+        uiState = uiState.copy(profiles = uiState.profiles.map { p -> if (p.id != owner.profileId) p else
+            p.copy(chats = p.chats.map { c -> if (c.id != owner.chatId) c else MessageRetentionPolicy.remove(c, ids, p.id) }) })
+        reconcileExpiredOperations(owner, ids)
+        composerCapture.reconcile(); transcript.reconcile()
+    }
+
+    private fun reconcileExpiredOperations(owner: GroupOwner, ids: Set<String>) {
+        if (ids.isEmpty()) return
+        messageForwards = messageForwards.mapValues { (_, op) ->
+            if (!op.isRunning || op.sourceProfileId != owner.profileId || op.sourceChatId != owner.chatId || op.messages.none { it.id in ids }) op else
+                op.copy(revision = op.revision + 1, targets = op.targets.map { target -> if (target.phase == MessageForwardTargetPhase.Completed) target else
+                    target.copy(phase = MessageForwardTargetPhase.Failed, failure = MessageForwardFailure.Expired) }).settled()
+        }
+    }
+
+    private fun addRetentionExample(owner: GroupOwner, example: RetentionExample, now: Long) {
+        val profile = uiState.activeProfile?.takeIf { it.id == owner.profileId && it.developerTools.isEnabled } ?: return
+        val chat = chat(owner.chatId) ?: return
+        if (chat.composerAvailability(profile) != ComposerAvailability.Available) return
+        val received = example == RetentionExample.Waiting
+        val other = if (chat.isGroup) chat.members.firstOrNull { it.personId != profile.id }?.personId else (chat.kind as? ChatKind.Direct)?.personId
+        val author = if (received) other ?: return else profile.id
+        val sentAt = if (example == RetentionExample.NearExpiry) now - 25_000 else now
+        val (day, minute) = nextTimelinePosition(chat)
+        val message = MessageRetentionPolicy.capture(ChatMessage("${chat.id}-retention-example-${createdChatSequence++}", author, day, "Today", minute, "Now",
+            text = "See you at the trail.", createdAtMillis = sentAt), DisappearingDuration.ThirtySeconds, sentAt, received)
+        mutateChat(chat.id) { it.copy(timeline = it.timeline + ChatTimelineEntry.Message(message), preview = message.text, timestamp = "Now") }
     }
 
     val transcript: TranscriptController by lazy { TranscriptController { uiState.activeProfile?.takeIf { it.id in uiState.signedInProfileIds } } }
@@ -219,7 +277,7 @@ class AppViewModel(
     val groupLifecycle: GroupLifecycleController by lazy {
         GroupLifecycleController(
             profiles = { uiState.profiles }, activeId = { uiState.activeProfileId }, signedIn = { it in uiState.signedInProfileIds },
-            otherLocked = { groupWork.memberEditLocked(it) },
+            otherLocked = { groupWork.memberEditLocked(it) || retention.locked(it) },
             commit = { owner, stage, target, convergenceFailed ->
                 val current = uiState.profiles.firstOrNull { it.id == owner.profileId }?.chats?.firstOrNull { it.id == owner.chatId }
                 if (owner.profileId !in uiState.signedInProfileIds || current == null ||
@@ -720,6 +778,7 @@ class AppViewModel(
         groupWork.reconcile()
         groupLifecycle.reconcile()
         transcript.reconcile()
+        retention.reconcile()
         return if (signedIn.isEmpty()) ProfileExitDestination.Welcome else ProfileExitDestination.ProfileSwitcher
     }
 
@@ -815,6 +874,7 @@ class AppViewModel(
         groupWork.reconcile()
         groupLifecycle.reconcile()
         transcript.reconcile()
+        retention.reconcile()
         return true
     }
 
@@ -854,6 +914,7 @@ class AppViewModel(
         groupWork.reconcile()
         groupLifecycle.reconcile()
         transcript.reconcile()
+        retention.reconcile()
         createdChatSequence = 0
         return true
     }
@@ -884,7 +945,9 @@ class AppViewModel(
         if (visible.isEmpty()) return false
         val read = dev.ipf.whitenoise.model.ConversationReading.reconcile(chat.readState ?: dev.ipf.whitenoise.model.ConversationReading.initial(chat, profileId), chat, profileId)
         val changed = dev.ipf.whitenoise.model.ConversationReading.seen(read, visible)
-        mutateChat(chatId) { it.copy(readState = changed, unreadCount = changed.unreadIds.size, isMarkedUnread = false) }
+        mutateChat(chatId) { it.copy(readState = changed, unreadCount = changed.unreadIds.size, isMarkedUnread = false,
+            timeline = it.timeline.map { entry -> if (entry is ChatTimelineEntry.Message && entry.id in visible)
+                entry.copy(message = MessageRetentionPolicy.read(entry.message, retention.nowMillis)) else entry }) }
         return true
     }
 
@@ -903,6 +966,8 @@ class AppViewModel(
                 unreadCount = 0,
                 isMarkedUnread = unread,
                 readState = chat.readState?.copy(unreadIds = emptySet()),
+                timeline = if (unread) chat.timeline else chat.timeline.map { entry -> if (entry is ChatTimelineEntry.Message)
+                    entry.copy(message = MessageRetentionPolicy.read(entry.message, retention.nowMillis)) else entry },
             )
         }
     }
@@ -916,7 +981,8 @@ class AppViewModel(
         updateActiveProfile { profile ->
             profile.copy(
                 chats = profile.chats.map { chat ->
-                    if (chat.isArchived) chat else chat.copy(unreadCount = 0, isMarkedUnread = false, readState = chat.readState?.copy(unreadIds = emptySet()))
+                    if (chat.isArchived) chat else chat.copy(unreadCount = 0, isMarkedUnread = false, readState = chat.readState?.copy(unreadIds = emptySet()), timeline = chat.timeline.map { entry -> if (entry is ChatTimelineEntry.Message)
+                        entry.copy(message = MessageRetentionPolicy.read(entry.message, retention.nowMillis)) else entry })
                 },
             )
         }
@@ -938,32 +1004,9 @@ class AppViewModel(
 
     fun setChatDisappearing(chatId: String, duration: DisappearingDuration): Boolean {
         val current = chat(chatId) ?: return false
-        val profileId = uiState.activeProfileId ?: return false
-        if (current.isGroup && (!current.hasAuthoritativeGroupAdmin(profileId) || !groupWork.permitsPrimitive(GroupOwner(profileId, chatId)))) return false
-        var changed = false
-        mutateChat(chatId) { chat ->
-            if (chat.disappearingDuration == duration || chat.membership != ChatMembership.Active) {
-                chat
-            } else {
-                changed = true
-                val (day, minute) = nextTimelinePosition(chat)
-                chat.copy(
-                    disappearingDuration = duration,
-                    timeline = chat.timeline + ChatTimelineEntry.Event(
-                        id = "$chatId-disappearing-${createdChatSequence++}",
-                        text = if (duration == DisappearingDuration.Off) {
-                            "You turned off disappearing messages."
-                        } else {
-                            "You set disappearing messages to ${duration.label}."
-                        },
-                        dayOrdinal = day,
-                        dayLabel = "Today",
-                        minuteOfDay = minute,
-                    ),
-                )
-            }
-        }
-        return changed
+        val owner = GroupOwner(uiState.activeProfileId ?: return false, chatId)
+        if (!current.canManageRetention(owner.profileId) || !groupWork.permitsPrimitive(owner)) return false
+        return applyRetention(owner, duration, MessageRetentionPolicy.pruneIds(current, duration, retention.nowMillis))
     }
 
     fun setChatArchived(chatId: String, archived: Boolean) {
@@ -2066,6 +2109,8 @@ class AppViewModel(
                 else {
                     val (day, minute) = nextTimelinePosition(targetChat!!)
                     val copy = MessageForwarding.copyForDestination(operation.messages[target.sent], operation.id, targetChat, destination.id, target.sent, day, minute)
+                        .copy(retention = null, expiresAtMillis = null, createdAtMillis = retention.nowMillis)
+                        .let { MessageRetentionPolicy.capture(it, targetChat.disappearingDuration, retention.nowMillis, received = false) }
                     uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != destination.id) profile else profile.copy(chats = profile.chats.map { chat ->
                         if (chat.id != target.chatId || chat.timeline.any { it.id == copy.id }) chat else {
                             val updated = chat.copy(timeline = chat.timeline + ChatTimelineEntry.Message(copy),
@@ -2191,7 +2236,8 @@ class AppViewModel(
                                     text = text,
                                     attachments = attachments,
                                     replyToMessageId = replyMessageId,
-                                ),
+                                    createdAtMillis = retention.nowMillis,
+                                ).let { MessageRetentionPolicy.capture(it, chat.disappearingDuration, retention.nowMillis, received = false) },
                             ),
                         )
                     }
@@ -2497,6 +2543,7 @@ class AppViewModel(
         groupWork.reconcile()
         groupLifecycle.reconcile()
         transcript.reconcile()
+        retention.reconcile()
     }
 
     private fun addShowcaseProfiles() {
@@ -2543,6 +2590,7 @@ class AppViewModel(
         groupWork.reconcile()
         groupLifecycle.reconcile()
         transcript.reconcile()
+        retention.reconcile()
     }
 
     private fun insertAfterPinned(chats: List<Chat>, chat: Chat): List<Chat> {

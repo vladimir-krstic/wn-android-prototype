@@ -196,7 +196,7 @@ fun WhiteNoiseNavHost(
         } }
     }
 
-    dev.ipf.whitenoise.ui.conversation.GroupWorkHost(appViewModel.groupWork, appViewModel.groupLifecycle, appViewModel.transcript) {
+    dev.ipf.whitenoise.ui.conversation.GroupWorkHost(appViewModel.groupWork, appViewModel.groupLifecycle, appViewModel.transcript, appViewModel.retention) {
     dev.ipf.whitenoise.ui.conversation.ComposerCaptureHost(appViewModel.composerCapture) {
     dev.ipf.whitenoise.ui.conversation.ReadAloudHost(uiState.activeProfile, onSource = { target ->
         if (dev.ipf.whitenoise.model.SpeechOwnership.owns(appViewModel.uiState.activeProfile, target)) {

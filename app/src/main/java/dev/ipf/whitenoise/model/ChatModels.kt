@@ -24,23 +24,6 @@ enum class MuteDuration(val label: String) {
     Always("Always"),
 }
 
-enum class DisappearingDuration(val label: String) {
-    Off("Off"),
-    OneDay("1 Day"),
-    OneWeek("1 Week"),
-    FourWeeks("4 Weeks"),
-
-    ;
-
-    val compactLabel: String
-        get() = when (this) {
-            Off -> "Off"
-            OneDay -> "1d"
-            OneWeek -> "1w"
-            FourWeeks -> "4w"
-        }
-}
-
 enum class ChatDeliveryState {
     None,
     Failed,
@@ -206,6 +189,7 @@ data class ChatMessage(
     val createdAtMillis: Long? = null,
     val receivedAtMillis: Long? = null,
     val expiresAtMillis: Long? = null,
+    val retention: MessageRetention? = null,
     val editHistory: MessageEditHistory? = null,
     val editAttempt: MessageEditAttempt? = null,
 ) {

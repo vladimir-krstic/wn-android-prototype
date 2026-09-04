@@ -23,7 +23,8 @@ The order follows state ownership and user dependencies. A later batch may be se
 - B17: implemented and host-verified 2026-09-04; 550 unit tests, zero lint errors, both APKs and ten new compiled UI cases. [Selected brief and evidence](../../screens/dictation-and-voice-recording.md). Commit title: `B17: Add dictation and owned voice recording`. Q06 real microphone/recognition remains outside scope.
 - B18: implemented and host-verified 2026-09-04; 575 unit tests, zero lint errors, both APKs and ten new compiled UI/bitmap cases. [Selected brief and evidence](../../screens/group-setup-images-and-roster.md). Commit title: `B18: Add group setup, image and roster recovery`. Warm roster presentation drift reconciled.
 - B19: implemented and host-verified 2026-09-04; 617 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/group-administration-and-transcript.md). Commit title: `B19: Add group administration, disbanding and transcript export`. Cold/terminal group-seed drift reconciled.
-- B20–B32: pending; linked decisions apply only to their named slices.
+- B20: implemented and host-verified 2026-09-04; 655 unit tests, zero lint errors, both APKs and nine new compiled UI cases. [Selected brief and evidence](../../screens/disappearing-timers-and-expiry.md). Commit title: `B20: Add disappearing timers and message expiry`. Q03 resolved from production source.
+- B21–B32: pending; linked decisions apply only to their named slices.
 - Device and user visual acceptance remain separate from host verification.
 
 ## Sequence
@@ -49,7 +50,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Implemented; host verified; real microphone/recognition remains outside Q06 scope |
 | **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Implemented; host verified |
 | **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Implemented; host verified |
-| **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Blocked slices: Q03 |
+| **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Implemented; host verified; Q03 resolved |
 | **B21** | Inbound sharing, shortcuts and profile links | C084, C085, C086, C087, C088 | B01, B11 | Blocked slices: Q06 |
 | **B22** | Global and per-chat notification settings | C089, C090, C091, C092, C093 | B05 | Blocked slices: Q06 |
 | **B23** | Notification routing and inline actions | C094 | B21, B22 | Blocked slices: Q06 |
@@ -376,7 +377,15 @@ Commit: `B19: Add group administration, disbanding and transcript export`.
 
 Capabilities: C081, C082, C083. Dependencies: B09, B18.
 
-**Implementation:** Add production presets and bounded units from seconds through years with validation and read-only member state. Production explicitly prunes older plaintext on timer change; prototype sets a value/event. Confirm retroactive consequences and reconcile production after-seen help with actual update semantics before final copy. Use fixed clock/read anchors for expiry, remaining-time semantics and removal; reconcile selection/search/reply/media/TTS when a message expires.
+**Status: Implemented and host-verified, 2026-09-04.**
+[Evidence](../../screens/disappearing-timers-and-expiry.md#implementation-evidence)
+covers presets/custom validation, owned pruning confirmation and mutation/refresh
+recovery, pinned send/first-read expiry, and canonical cleanup across projections,
+readers, drafts, forwarding, transcript and speech. Q03 is resolved. 655 unit tests,
+zero lint errors and both APKs pass; nine new UI cases compile only.
+Commit: `B20: Add disappearing timers and message expiry`.
+
+**Implementation:** Add production presets and bounded units from seconds through years with validation and read-only member state. Enabling/shortening confirms pruning; Off/longer does not prune. Separate countdown help describes immutable send/first-read anchors, as resolved by Q03. Use fixed clock/read anchors for expiry, remaining-time semantics and removal; reconcile selection/search/reply/media/TTS when a message expires.
 
 **Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/ChatModels.kt`, `app/src/main/java/dev/ipf/whitenoise/state/AppViewModel.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/TimelineMessageContent.kt`.
 

@@ -470,7 +470,7 @@ class AppViewModelTest {
         val chat = viewModel.chat("fiatjaf")!!
         assertEquals(dev.ipf.whitenoise.model.DisappearingDuration.OneWeek, chat.disappearingDuration)
         assertEquals(before + 1, chat.timeline.size)
-        assertEquals("You set disappearing messages to 1 Week.", (chat.timeline.last() as ChatTimelineEntry.Event).text)
+        assertEquals("You set disappearing messages to 1 week.", (chat.timeline.last() as ChatTimelineEntry.Event).text)
         assertFalse(viewModel.setChatDisappearing("fiatjaf", dev.ipf.whitenoise.model.DisappearingDuration.OneWeek))
     }
 

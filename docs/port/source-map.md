@@ -258,3 +258,18 @@ The latest ChatListGroupSeed terminal/unrecoverable preservation is covered.
 Transcript handoff follows local Q07 Files destination; its separately identified
 local JSON schema does not fabricate production wire-event fields. Restore the
 full production export schema and engine timeline reader during migration.
+
+
+## Production B20 disappearing timers and expiry
+
+`docs/screens/disappearing-timers-and-expiry.md` maps DisappearingDuration,
+DisappearingMessages, GroupDetailsScreen timer confirmation, Controllers
+updateMessageRetention/localExpiryRow/read deferral and DisappearingMessageSweep
+to `DisappearingMessages.kt`, `RetentionController.kt`, `RetentionUi.kt` and
+AppViewModel's send/forward/read/prune callbacks. Conversation/Shared Content and
+existing attachment/speech ownership consume the canonical timeline after removal.
+Reconnect authoritative saved expiry/duration, first-read anchors, optimistic-ID
+transfer and engine sweep/refetch during migration. Preserve accepted mutation
+when refresh fails and never infer expiry for unpinned history from current policy.
+Q03 is resolved in WN-ANDROID-0140. No relevant retention drift exists through
+master `911040c7e1c31652638c8cfd72812d1f3a694b9b`; broader ordering remains open.

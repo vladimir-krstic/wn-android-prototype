@@ -4001,3 +4001,32 @@ backend, persistence service or production wire archive is implied.
 The [selected brief](screens/group-administration-and-transcript.md#implementation-evidence)
 records source drift and exact migration seams. Host validation passes 617 unit
 tests, zero lint errors and both APKs; nine new UI cases compile only.
+
+
+## WN-ANDROID-0140 — Timer pruning, immutable countdowns and expiry ownership
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B20; host verified, device/visual acceptance pending.
+
+Q03 is resolved from the production controller, picker and expiry tests. Enabling
+or shortening a timer requires consequence confirmation and prunes older plaintext.
+Off, unchanged and longer settings do not prune. This is distinct from ordinary
+row expiry: each retained message owns its send-time duration or explicit deadline.
+Received messages wait for first read; sent messages start at send. Later policy
+changes do not rewrite countdowns or resurrect removed content. Unpinned old
+history and durable group events do not gain a deadline from the current timer.
+Separate help explains these rules, replacing ambiguous universal after-seen copy.
+
+Nine presets and bounded custom seconds through years share a staged native picker.
+A month is 30 days and a year 365 days. Non-admin members can inspect the setting.
+Timer work binds to profile/chat, policy, roster and proposed pruning; it shares
+the group commit lock. Accepted updates survive refresh failure and refresh retry
+never repeats deletion. Stale consent and profile callbacks cannot commit.
+
+The fixed in-memory foreground clock removes canonical content, updates previews,
+read state and draft replies, and invalidates selections/readers, pending forwarding,
+transcripts and speech. Forwarded copies capture their destination's timer.
+The [selected brief](screens/disappearing-timers-and-expiry.md#implementation-evidence)
+records evidence and migration seams. Host validation passes 655 unit tests,
+zero lint errors and both APKs; nine new UI cases compile only. No backend,
+background expiry service, durable storage or new permission is added.

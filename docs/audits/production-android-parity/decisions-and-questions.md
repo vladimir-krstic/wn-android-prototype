@@ -23,9 +23,9 @@ These questions affect only the linked capability slices. The recommendation is 
 
 ### Q03 — Retroactive disappearing-message deletion
 
-- **Conflict:** C082 production reloads after changing retention because older plaintext may be pruned immediately, while its help also says messages disappear after being seen. The prototype currently only changes a timer fixture.
-- **Recommendation:** Treat the production controller consequence as authoritative for timer changes, show a destructive confirmation when existing content will be removed, and use separate copy for the countdown anchor. Confirm this before writing final copy.
-- **Blocks:** destructive mutation details in B20; timer UI and expiry fixtures can proceed.
+- **Resolved in B20:** The authorized production parity scope and source distinguish two operations. Enabling/shortening prunes older plaintext after destructive confirmation; Off/longer does not. Ordinary expiry uses each row's saved deadline/duration, with first-read deferral for received messages and send-time anchoring for outgoing messages. Unpinned history never borrows the current timer; group events remain.
+- **Copy and behavior:** Explain timer-change pruning separately from message countdowns. Preserve accepted policy if history refresh fails; retry refresh only. Later settings do not rewrite old deadlines or restore removed content.
+- **Evidence:** [B20 brief](../../screens/disappearing-timers-and-expiry.md#implementation-evidence) and WN-ANDROID-0140 record production seams, exact copy and host verification. No remaining B20 decision block.
 
 <a id="q04"></a>
 

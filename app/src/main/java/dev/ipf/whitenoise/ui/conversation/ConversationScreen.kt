@@ -323,6 +323,8 @@ fun ConversationScreen(
     onInterruptMessageEdits: () -> Unit = {},
 ) {
     DictationOriginHost(profile, chat)
+    val retentionController = LocalRetention.current
+    LaunchedEffect(profile.id, chat.id, retentionController?.example) { retentionController?.open(dev.ipf.whitenoise.model.GroupOwner(profile.id, chat.id)) }
     val groupStateController = LocalGroupLifecycle.current
     val groupRosterController = LocalGroupWork.current
     LaunchedEffect(profile.id, chat.id, groupStateController?.stateScenario, groupRosterController?.rosterScenario) {
@@ -736,6 +738,16 @@ fun ConversationScreen(
         if (editMessageId !in available) editMessageId = null
         if (readerMessageId !in available) readerMessageId = null
         if (historyMessageId !in available) historyMessageId = null
+        if (focusedMessageId !in available) focusedMessageId = null
+        if (exportMessageId !in available) exportMessageId = null
+        selectedMessageIds = selectedMessageIds.intersect(available)
+        if (selectedMessageIds.isEmpty()) isSelecting = false
+        forwardMessageIds = forwardMessageIds?.intersect(available)?.takeIf { it.isNotEmpty() }
+        deleteMessageIds = deleteMessageIds?.intersect(available)?.takeIf { it.isNotEmpty() }
+        if (forwardMediaKey?.messageId !in available) forwardMediaKey = null
+        if (viewerSelection?.initialKey?.messageId !in available) viewerSelection = null
+        localVoiceTranscripts = localVoiceTranscripts.filterKeys { it in available }
+        visibleVoiceTranscriptIds = visibleVoiceTranscriptIds.intersect(available)
     }
     CompositionLocalProvider(LocalSpeechOwner provides dev.ipf.whitenoise.model.SpeechOwner(profile.id, chat.id), LocalMessageReading provides MessageReadingActions(
         collapse = chat.collapseLongMessages && !isSearching,
@@ -1907,7 +1919,7 @@ private fun MessageRow(
         threshold = replyThresholdPx,
         maximum = replyMaximumPx,
     )
-    val showTime = item.endsCluster
+    val showTime = item.endsCluster || message.retention != null
     val hasMetadata = message.reactions.isNotEmpty() || showTime
     val metadataGeometry = messageMetadataGeometry(
         hasReactions = message.reactions.isNotEmpty(),
@@ -2347,6 +2359,7 @@ private fun MessageBubbleWithMetadata(
             )
             val candidate = subcompose("metadata.measure.$maximumReactionPills") {
                 MessageMetadataContent(
+                    retentionMessage = message,
                     messageId = message.id,
                     timeLabel = message.timeLabel,
                     outgoing = outgoing,
@@ -2395,6 +2408,7 @@ private fun MessageBubbleWithMetadata(
         val summary = ReactionCatalog.summary(message.reactions, profile.id, selectedLimit)
         val metadata = subcompose("metadata.final.$selectedLimit") {
             MessageMetadataContent(
+                retentionMessage = message,
                 messageId = message.id,
                 timeLabel = message.timeLabel,
                 outgoing = outgoing,
@@ -2696,6 +2710,7 @@ private fun ReplyQuote(
 
 @Composable
 private fun MessageMetadataContent(
+    retentionMessage: ChatMessage,
     messageId: String,
     timeLabel: String,
     outgoing: Boolean,
@@ -2740,6 +2755,9 @@ private fun MessageMetadataContent(
         verticalAlignment = Alignment.Top,
     ) {
         if (!outgoing && showTime) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MessageExpiryIndicator(retentionMessage, semanticsEnabled = !measurementOnly)
+                if (retentionMessage.retention != null) Spacer(Modifier.width(4.dp))
             MessageTime(
                 messageId = messageId,
                 timeLabel = timeLabel,
@@ -2748,6 +2766,7 @@ private fun MessageMetadataContent(
                 testTagEnabled = !measurementOnly,
                 verticalOffsetPx = timestampVerticalOffsetPx,
             )
+            }
         }
         if (!outgoing && showTime && summary.isNotEmpty()) Spacer(Modifier.width(4.dp))
         if (summary.isNotEmpty()) {
@@ -2762,6 +2781,9 @@ private fun MessageMetadataContent(
         }
         if (outgoing && showTime && summary.isNotEmpty()) Spacer(Modifier.width(4.dp))
         if (outgoing && showTime) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MessageExpiryIndicator(retentionMessage, semanticsEnabled = !measurementOnly)
+                if (retentionMessage.retention != null) Spacer(Modifier.width(4.dp))
             MessageTime(
                 messageId = messageId,
                 timeLabel = timeLabel,
@@ -2770,6 +2792,7 @@ private fun MessageMetadataContent(
                 testTagEnabled = !measurementOnly,
                 verticalOffsetPx = timestampVerticalOffsetPx,
             )
+            }
         }
     }
 }

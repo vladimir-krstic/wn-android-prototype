@@ -1,5 +1,10 @@
 # F10 — Disappearing messages and expiration
 
+B20/C081–C083 are implemented and host-verified. The
+[selected brief](../../../screens/disappearing-timers-and-expiry.md#implementation-evidence)
+records exact behavior, source seams, 655 passing unit tests and nine compiled UI
+cases. Device and visual acceptance remain pending.
+
 ## Purpose and current composition
 
 Timer changes are admin-only and destructive consequences are named before commit. Fixed clocks/read anchors make expiry reproducible. Removed content disappears consistently from every projection.
@@ -8,7 +13,7 @@ Prototype surface: `model/ChatModels.kt; state/AppViewModel.kt; ui/conversation/
 
 ## Required content and proposed copy
 
-Use **Disappearing messages**, **Off**, exact duration labels, **Custom time**, **Set timer**, and a consequence-specific confirmation. Avoid “after seen” until Q03 identifies the actual countdown anchor.
+Use **Disappearing messages**, **Off**, exact duration labels, **Custom time**, **Set timer**, and a consequence-specific confirmation. Q03 is resolved: received messages start on first read; outgoing messages start at send. Explain confirmed timer-change pruning separately.
 
 These labels are the audit recommendation and follow current prototype terminology. Validate exact surrounding help/error copy in the selected screen brief against each matrix source link; preserve production security and destructive consequences without exposing implementation terms.
 
@@ -16,9 +21,9 @@ These labels are the audit recommendation and follow current prototype terminolo
 
 | Capability | Initial state | Event / Back behavior | Observable result |
 | --- | --- | --- | --- |
-| C081 · Expanded disappearing timers and custom duration | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Add production presets and bounded units from seconds through years with validation and read-only member state. |
-| C082 · Timer-change pruning and consequence confirmation | Decision required | Trigger its named entry/action; cancel with Back where available | Production explicitly prunes older plaintext on timer change; prototype sets a value/event. Confirm retroactive consequences and reconcile production after-seen help with actual update semantics before final copy. |
-| C083 · Message expiration indicators and cleanup | Deterministic gap fixture | Trigger its named entry/action; cancel with Back where available | Use fixed clock/read anchors for expiry, remaining-time semantics and removal; reconcile selection/search/reply/media/TTS when a message expires. |
+| C081 · Expanded disappearing timers and custom duration | Current preset/custom value | Stage choices; Save accepts, Back/Cancel discards | Nine presets, bounded seconds–years validation and read-only member help are implemented. |
+| C082 · Timer-change pruning and consequence confirmation | Current policy and authoritative role | Enable/shorten confirms pruning; Cancel preserves history | Owned apply and accepted refresh failure/retry are distinct. Off/longer does not prune. Q03 resolved. |
+| C083 · Message expiration indicators and cleanup | Waiting/read/send countdown | First read anchors once; foreground fixed clock expires due rows | Remaining-time semantics and canonical cleanup reconcile projections, reply/selection, media/readers, forwarding/export and speech. |
 
 ## Production integration seam
 
@@ -37,4 +42,4 @@ Use the approved product language and terminology. Production strings in the mat
 
 ## Dependencies and decisions
 
-Batches: B20. Decisions: Q03. Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.
+Batches: B20 complete. Decisions: Q03 resolved (WN-ANDROID-0140). Facts are the matrix's cited production behavior and current prototype evidence. UI placement and proposed copy remain recommendations until the selected screen brief records them.

@@ -106,3 +106,17 @@ pinned transfer/disband/transcript contracts and the B18 warm roster behavior.
 The full engine export schema is a documented migration seam, not fabricated
 local state. This does not complete unrelated timeline-window ordering,
 Nostr-event, installer, Amber/contact or startup drift.
+
+
+## Implementation drift check — B20, 2026-09-04
+
+Fresh master remains `911040c7e1c31652638c8cfd72812d1f3a694b9b`, without main.
+The seven-commit diff changes no duration, retention picker, expiry indicator or
+retention/read-anchor test. Controllers changes around retention mentions concern
+timeline structures and seed extraction, not timer rules. The immutable baseline's
+GroupDetailsScreen confirmation, updateMessageRetention accepted-before-refresh
+ordering, DisappearingMessageSweep and read-anchor tests resolve Q03 as distinct
+policy-pruning and row-deadline operations. B20 implements those owned local states;
+its [brief](../../screens/disappearing-timers-and-expiry.md#implementation-evidence)
+records 655 passing unit tests and nine compiled UI cases. This does not finish
+broader authoritative timeline-window, Nostr, installer, Amber/contact/startup drift.

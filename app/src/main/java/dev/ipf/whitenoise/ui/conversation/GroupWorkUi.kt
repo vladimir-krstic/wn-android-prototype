@@ -24,9 +24,11 @@ internal val LocalGroupWork = staticCompositionLocalOf<GroupWorkController?> { n
 internal fun GroupWorkHost(controller: GroupWorkController,
     lifecycleController: dev.ipf.whitenoise.state.GroupLifecycleController? = null,
     transcriptController: dev.ipf.whitenoise.state.TranscriptController? = null,
+    retentionController: dev.ipf.whitenoise.state.RetentionController? = null,
     content: @Composable () -> Unit) {
     if (lifecycleController != null) GroupLifecycleHost(lifecycleController)
     if (transcriptController != null) TranscriptHost(transcriptController)
+    if (retentionController != null) RetentionHost(retentionController)
     SideEffect { controller.reconcile() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     controller.rosterLoads.values.forEach { load -> key(load.owner) {
@@ -49,7 +51,7 @@ internal fun GroupWorkHost(controller: GroupWorkController,
             delay(500); controller.advanceCreate(work.id, work.phase)
         } }
     }
-    CompositionLocalProvider(LocalGroupWork provides controller, LocalGroupLifecycle provides lifecycleController, LocalTranscript provides transcriptController, content = content)
+    CompositionLocalProvider(LocalGroupWork provides controller, LocalGroupLifecycle provides lifecycleController, LocalTranscript provides transcriptController, LocalRetention provides retentionController, content = content)
 }
 
 @Composable
