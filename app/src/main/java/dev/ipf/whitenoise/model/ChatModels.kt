@@ -176,6 +176,8 @@ data class MessageAttachment(
     val isAvailable: Boolean = true,
     val mimeType: String? = null,
     val sourceImages: List<ProfileAvatar> = emptyList(),
+    val photoEdits: Map<Int, PhotoEditRecipe> = emptyMap(),
+    val photoFrameQualities: Map<Int, PhotoQuality> = emptyMap(),
     val photoQuality: PhotoQuality? = null,
     val metadataPolicy: PhotoMetadataPolicy? = null,
     val deviceContact: SharedDeviceContact? = null,

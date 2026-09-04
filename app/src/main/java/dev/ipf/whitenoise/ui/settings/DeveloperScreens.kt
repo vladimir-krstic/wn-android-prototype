@@ -84,6 +84,8 @@ fun DeveloperToolsScreen(
     onRecentMediaAccess: (dev.ipf.whitenoise.model.RecentMediaAccess) -> Unit = {},
     attachmentTransferScenario: dev.ipf.whitenoise.model.AttachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success,
     onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
+    photoEditorScenario: dev.ipf.whitenoise.model.PhotoEditorScenario = dev.ipf.whitenoise.model.PhotoEditorScenario.Success,
+    onPhotoEditorScenario: (dev.ipf.whitenoise.model.PhotoEditorScenario) -> Unit = {},
     onMessageForwardScenario: (dev.ipf.whitenoise.model.MessageForwardScenario) -> Unit = {},
     globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
     onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
@@ -116,6 +118,9 @@ fun DeveloperToolsScreen(
     var deleteOpen by remember { mutableStateOf(false) }
     var recentOpen by remember { mutableStateOf(false) }
     var transferOpen by remember { mutableStateOf(false) }
+    var photoEditorOpen by remember { mutableStateOf(false) }
+    if (photoEditorOpen) ScenarioChoiceDialog("Photo editor", dev.ipf.whitenoise.model.PhotoEditorScenario.entries,
+        photoEditorScenario, { it.developerLabel }, onPhotoEditorScenario, { photoEditorOpen = false })
     if (recentOpen) ScenarioChoiceDialog("Recent media access", dev.ipf.whitenoise.model.RecentMediaAccess.entries,
         recentMediaAccess, { it.name }, onRecentMediaAccess, { recentOpen = false })
     if (transferOpen) ScenarioChoiceDialog("Attachment transfer", dev.ipf.whitenoise.model.AttachmentTransferScenario.entries,
@@ -207,6 +212,8 @@ fun DeveloperToolsScreen(
                         SettingsLink("Recent media access", recentMediaAccess.name, { recentOpen = true })
                         SettingsDivider()
                         SettingsLink("Attachment transfer outcomes", attachmentTransferScenario.developerLabel, { transferOpen = true })
+                        SettingsDivider()
+                        SettingsLink("Photo editor outcomes", photoEditorScenario.developerLabel, { photoEditorOpen = true })
                         SettingsDivider()
                         SettingsLink("Message forwarding outcomes", messageForwardScenario.developerLabel, { forwardOpen = true })
                         SettingsDivider()

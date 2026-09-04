@@ -539,6 +539,8 @@ fun WhiteNoiseNavHost(
                     onRecentMediaAccess = appViewModel::selectRecentMediaAccess,
                     attachmentTransferScenario = appViewModel.attachmentTransferScenario,
                     onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
+                    photoEditorScenario = appViewModel.nextPhotoEditorScenario,
+                    onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
                     onMessageForwardScenario = appViewModel::selectMessageForwardScenario,
                     globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
                     onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
@@ -707,6 +709,9 @@ fun WhiteNoiseNavHost(
                 androidx.compose.runtime.CompositionLocalProvider(dev.ipf.whitenoise.ui.conversation.LocalAttachmentEnvironment provides
                     dev.ipf.whitenoise.ui.conversation.AttachmentEnvironment(
                         recentAccess = appViewModel.recentMediaAccess,
+                        editorSession = appViewModel.photoEditorSession?.takeIf { it.profileId == profile.id && it.chatId == chat.id },
+                        openEditor = { attachmentId, imageIndex -> appViewModel.openPhotoEditor(profile.id, chat.id, attachmentId, imageIndex) },
+                        editorEvent = appViewModel::photoEditorAction,
                         replacePhotos = { expected, quality, prepared -> appViewModel.replaceDraftPhotos(profile.id, chat.id, expected, quality, prepared) },
                         transfer = { messageId, attachmentId, action, revision -> appViewModel.attachmentTransferAction(profile.id, chat.id, messageId, attachmentId, action, revision) },
                     )) {

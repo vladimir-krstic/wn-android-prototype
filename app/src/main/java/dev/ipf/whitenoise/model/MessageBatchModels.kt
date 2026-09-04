@@ -135,7 +135,7 @@ object MessageForwarding {
             dayLabel = "Today", minuteOfDay = minute, timeLabel = "Now", replyToMessageId = null, reactions = emptyList(),
             deliveryState = MessageDeliveryState.Sent, deletionState = MessageDeletionState.None,
             editHistory = null, editAttempt = null, createdAtMillis = null, receivedAtMillis = null, expiresAtMillis = null,
-            attachments = source.attachments.mapIndexed { attachmentIndex, it -> it.copy(id = "${target.id}-forward-$operationId-$index-media-$attachmentIndex", sourceImages = emptyList(), transfer = null) })
+            attachments = source.attachments.mapIndexed { attachmentIndex, it -> it.copy(id = "${target.id}-forward-$operationId-$index-media-$attachmentIndex", sourceImages = emptyList(), photoEdits = emptyMap(), photoFrameQualities = emptyMap(), transfer = null) })
 }
 
 fun messageAttachmentPreview(attachments: List<MessageAttachment>): AttachmentPreview? {

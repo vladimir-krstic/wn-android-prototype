@@ -3779,3 +3779,33 @@ Evidence: `docs/screens/composer-attachment-actions.md`, `AttachmentModelsTest`,
 `AttachmentStateTest` and compiled `AttachmentAcquisitionTest`; 381 passing host
 unit tests, zero lint errors and both APKs. Current official sources are linked
 in the selected brief. No device or visual verification is claimed.
+
+## WN-ANDROID-0132 — Draft photo edits stay reversible and frame-owned
+
+- Date: 2026-09-04
+- Status: Implemented under authorized B12 production parity; host verified,
+  device and visual acceptance pending.
+
+Retain each original image, normalized crop/rotation/ink recipe and per-frame
+quality in the in-memory draft. A save replaces only the selected frame after
+profile/chat/attachment/revision/source validation; caption, reply, siblings and
+review exclusion remain intact. Sending or forwarding drops originals and edit
+metadata so only flattened rendered content leaves the draft.
+
+Preserve the user's explicit B11 Low/Standard/High choice. Original with edits
+uses a disclosed High-quality render, while an unchanged Original may retain
+sanitized encoded content. A whole-draft quality change replays every recipe
+from its original and replaces individual frame overrides. The composer reports
+mixed quality when applicable. Reset returns to the editor's opening recipe and
+quality; closing dirty work requires discard confirmation.
+
+Use a bounded native canvas for crop/rotation/ink because Material has no complete
+photo editor component. Native controls, scrollable tool rows, coordinate-slider
+alternatives and live feedback own the surrounding interaction/accessibility.
+The five production ink colors are literal photo content; they do not change
+monochrome semantic chrome or resolve B26/Q01 customization. Erasing applies to
+a separate annotation layer, preserving the source photo.
+
+Evidence and current official guidance: [draft photo editor brief](screens/draft-photo-editor.md#implementation-evidence).
+The clean gate passes 399 unit tests, both APKs and zero lint errors; nine new
+UI/rendering cases compile. No device/visual verification is claimed.

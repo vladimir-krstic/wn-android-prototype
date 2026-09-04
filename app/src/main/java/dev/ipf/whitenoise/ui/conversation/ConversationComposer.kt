@@ -494,7 +494,7 @@ fun FullConversationComposer(
         save = { if (it == null) emptyList() else listOf(it.name.orEmpty(), it.phone.orEmpty(), it.email.orEmpty()) },
         restore = { if (it.size != 3) null else SharedDeviceContact(it[0].ifBlank { null }, it[1].ifBlank { null }, it[2].ifBlank { null }) },
     )) { mutableStateOf<SharedDeviceContact?>(null) }
-    var mediaViewerAttachmentId by remember { mutableStateOf<String?>(null) }
+    var mediaViewerAttachmentId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var isExpanded by rememberSaveable(chat.id) { mutableStateOf(false) }
     val expansionProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f) }
     var isDraggingExpansion by remember { mutableStateOf(false) }
@@ -514,7 +514,7 @@ fun FullConversationComposer(
 
     androidx.compose.runtime.SideEffect {
         onOverlayPresentationChanged(attachmentMenuOpen || contactPickerOpen || recentMediaOpen || qualityOpen ||
-            deviceContact != null || showCameraPermissionRecovery || mediaViewerAttachmentId != null)
+            deviceContact != null || showCameraPermissionRecovery || mediaViewerAttachmentId != null || attachmentEnvironment.editorSession != null)
     }
 
     fun nextId(prefix: String): String {
@@ -977,7 +977,12 @@ fun FullConversationComposer(
                             )
                             if (chat.draftAttachments.any { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }) {
                                 TextButton({ qualityOpen = true }, enabled = !isPreparing, modifier = Modifier.testTag("composer.photo.quality")) {
-                                    Text(stringResource(R.string.photo_quality) + ": " + photoQualityLabel(chat.draftPhotoQuality))
+                                    val qualities = chat.draftAttachments.filter { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }.flatMap { attachment ->
+                                        attachment.images.indices.map { index -> dev.ipf.whitenoise.model.PhotoEditing.effectiveQuality(
+                                            attachment.photoFrameQualities[index] ?: attachment.photoQuality ?: chat.draftPhotoQuality,
+                                            attachment.photoEdits[index] ?: dev.ipf.whitenoise.model.PhotoEditRecipe()) }
+                                    }.distinct()
+                                    Text(stringResource(R.string.photo_quality) + ": " + if (qualities.size > 1) stringResource(R.string.photo_quality_mixed) else photoQualityLabel(qualities.firstOrNull() ?: chat.draftPhotoQuality))
                                 }
                                 val bytes = chat.draftAttachments.mapNotNull { it.fileSizeBytes }.sumOf { it.toLong() }
                                 if (bytes > 0) Text(stringResource(R.string.photo_prepared_size, android.text.format.Formatter.formatShortFileSize(context, bytes)),
@@ -1187,12 +1192,16 @@ fun FullConversationComposer(
         DraftMediaViewer(
             attachments = chat.draftAttachments.filter(MessageAttachment::isVisual),
             initialAttachmentId = initialAttachmentId,
+            onEdit = { attachmentId, index -> attachmentEnvironment.openEditor(attachmentId, index) },
             onDismiss = { mediaViewerAttachmentId = null },
             onApplyExcluded = { excludedIds ->
                 excludedIds.forEach(onRemoveAttachment)
                 mediaViewerAttachmentId = null
             },
         )
+    }
+    attachmentEnvironment.editorSession?.let { session ->
+        PhotoEditorDialog(session) { event -> attachmentEnvironment.editorEvent(session.id, event) }
     }
 }
 
@@ -2087,16 +2096,20 @@ private fun ContactPickerSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DraftMediaViewer(
+internal fun DraftMediaViewer(
     attachments: List<MessageAttachment>,
     initialAttachmentId: String,
+    onEdit: (String, Int) -> Unit,
     onDismiss: () -> Unit,
     onApplyExcluded: (Set<String>) -> Unit,
 ) {
     if (attachments.isEmpty()) return
-    var includedIds by remember(attachments) { mutableStateOf(attachments.map { it.id }.toSet()) }
-    val initialPage = attachments.indexOfFirst { it.id == initialAttachmentId }.coerceAtLeast(0)
-    val pagerState = rememberPagerState(initialPage = initialPage) { attachments.size }
+    val frames = attachments.flatMap { attachment ->
+        (0 until attachment.images.size.coerceAtLeast(1)).map { index -> attachment to index }
+    }
+    var excludedIds by rememberSaveable(initialAttachmentId) { mutableStateOf(emptyList<String>()) }
+    val initialPage = frames.indexOfFirst { it.first.id == initialAttachmentId }.coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = initialPage) { frames.size }
     val coroutineScope = rememberCoroutineScope()
     val dismissState = rememberGalleryDismissState(onDismiss)
     Dialog(
@@ -2119,9 +2132,16 @@ private fun DraftMediaViewer(
                         }
                     },
                     actions = {
+                        frames.getOrNull(pagerState.currentPage)?.let { (attachment, index) ->
+                            if (attachment.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos)) {
+                                TextButton({ onEdit(attachment.id, index) }, modifier = Modifier.testTag("conversation.media.edit")) {
+                                    Text(stringResource(R.string.photo_editor_title))
+                                }
+                            }
+                        }
                         TextButton(
                             onClick = {
-                                onApplyExcluded(attachments.map { it.id }.toSet() - includedIds)
+                                onApplyExcluded(excludedIds.toSet().intersect(attachments.map { it.id }.toSet()))
                             },
                         ) {
                             Text(stringResource(R.string.done))
@@ -2144,16 +2164,12 @@ private fun DraftMediaViewer(
                     pageSpacing = WhiteNoiseSpacing.Section,
                     userScrollEnabled = !dismissState.isInProgress,
                     overscrollEffect = null,
-                    key = { attachments[it].id },
+                    key = { "${frames[it].first.id}:${frames[it].second}" },
                 ) { page ->
-                    val attachment = attachments[page]
-                    val included = attachment.id in includedIds
+                    val (attachment, imageIndex) = frames[page]
+                    val included = attachment.id !in excludedIds
                     val onIncludedChange: (Boolean) -> Unit = { nextIncluded ->
-                        includedIds = if (nextIncluded) {
-                            includedIds + attachment.id
-                        } else {
-                            includedIds - attachment.id
-                        }
+                        excludedIds = if (nextIncluded) excludedIds - attachment.id else (excludedIds + attachment.id).distinct()
                     }
                     Box(
                         Modifier
@@ -2162,7 +2178,7 @@ private fun DraftMediaViewer(
                             .background(MaterialTheme.colorScheme.background),
                         contentAlignment = Alignment.Center,
                     ) {
-                        attachment.images.firstOrNull()?.let { image ->
+                        attachment.images.getOrNull(imageIndex)?.let { image ->
                             DraftMediaPreviewImage(
                                 image = image,
                                 page = page,
@@ -2182,7 +2198,7 @@ private fun DraftMediaViewer(
                         }
                     }
                 }
-                if (attachments.size > 1) {
+                if (frames.size > 1) {
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().height(72.dp).clipToBounds(),
                         overscrollEffect = null,
@@ -2191,7 +2207,8 @@ private fun DraftMediaViewer(
                             vertical = WhiteNoiseSpacing.Related,
                         ),
                     ) {
-                        itemsIndexed(attachments, key = { _, item -> item.id }) { index, attachment ->
+                        itemsIndexed(frames, key = { _, item -> "${item.first.id}:${item.second}" }) { index, frame ->
+                            val (attachment, imageIndex) = frame
                             val selected = pagerState.currentPage == index
                             val interactionSource = remember(attachment.id) {
                                 MutableInteractionSource()
@@ -2199,7 +2216,7 @@ private fun DraftMediaViewer(
                             val positionDescription = stringResource(
                                 R.string.media_item_position,
                                 index + 1,
-                                attachments.size,
+                                frames.size,
                             )
                             Box(
                                 modifier = Modifier
@@ -2240,7 +2257,7 @@ private fun DraftMediaViewer(
                                             "conversation.media.thumbnail.unselected"
                                         },
                                     )
-                                attachment.images.firstOrNull()?.let {
+                                attachment.images.getOrNull(imageIndex)?.let {
                                     ComposerImage(image = it, modifier = imageModifier)
                                 } ?: Box(
                                     modifier = imageModifier.background(

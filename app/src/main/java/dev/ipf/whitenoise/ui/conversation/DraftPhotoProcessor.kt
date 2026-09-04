@@ -27,20 +27,29 @@ internal object DraftPhotoProcessor {
         } finally { bitmap.recycle() }
     }
     suspend fun prepare(context: Context, attachment: MessageAttachment, quality: PhotoQuality): MessageAttachment? = try {
-        prepareImage(context, attachment, quality)
+        prepareImage(context, attachment.copy(photoFrameQualities = emptyMap()), quality)
     } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
     catch (_: Exception) { null }
 
     private suspend fun prepareImage(context: Context, attachment: MessageAttachment, quality: PhotoQuality): MessageAttachment? = withContext(Dispatchers.IO) {
         val sources = attachment.sourceImages.ifEmpty { attachment.images }
         if (sources.size > 1) {
-            val frames = sources.map { image -> prepare(context, attachment.copy(images = listOf(image), sourceImages = emptyList()), quality) }
+            val frames = sources.mapIndexed { index, image -> prepare(context, attachment.copy(images = listOf(image), sourceImages = emptyList(),
+                photoEdits = attachment.photoEdits[index]?.let { mapOf(0 to it) }.orEmpty()), quality) }
             if (frames.any { it == null }) return@withContext null
             return@withContext attachment.copy(images = frames.flatMap { it!!.images }, sourceImages = sources,
                 photoQuality = quality, fileSizeBytes = frames.sumOf { it!!.fileSizeBytes ?: 0 },
+                pixelWidth = frames.first()!!.pixelWidth, pixelHeight = frames.first()!!.pixelHeight, mimeType = null,
                 metadataPolicy = if (frames.any { it!!.metadataPolicy == PhotoMetadataPolicy.SafeFallback }) PhotoMetadataPolicy.SafeFallback else frames.first()!!.metadataPolicy)
         }
         val source = sources.firstOrNull() ?: return@withContext null
+        val recipe = attachment.photoEdits[0]
+        if (recipe != null && !recipe.isOriginal) {
+            val rendered = PhotoEditorRenderer.renderFrame(context, source, recipe, quality).attachment ?: return@withContext null
+            return@withContext attachment.copy(images = rendered.images, sourceImages = listOf(source), photoQuality = quality,
+                fileSizeBytes = rendered.fileSizeBytes, pixelWidth = rendered.pixelWidth, pixelHeight = rendered.pixelHeight,
+                mimeType = rendered.mimeType, metadataPolicy = rendered.metadataPolicy)
+        }
         val bytes = when (source) {
             is ProfileAvatar.DeviceImage -> source.bytes
             is ProfileAvatar.Asset -> bundledSource(context, source.asset) ?: return@withContext null

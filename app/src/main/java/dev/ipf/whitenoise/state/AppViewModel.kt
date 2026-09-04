@@ -1,5 +1,18 @@
 package dev.ipf.whitenoise.state
 
+import dev.ipf.whitenoise.model.PhotoEditorSession
+import dev.ipf.whitenoise.model.PhotoEditorScenario
+import dev.ipf.whitenoise.model.PhotoEditorEvent
+import dev.ipf.whitenoise.model.PhotoEditorPhase
+import dev.ipf.whitenoise.model.PhotoEditorFailure
+import dev.ipf.whitenoise.model.PhotoEditHistory
+import dev.ipf.whitenoise.model.PhotoEditRecipe
+import dev.ipf.whitenoise.model.PhotoEditing
+import dev.ipf.whitenoise.model.PhotoCropPreset
+import dev.ipf.whitenoise.model.PhotoEditorTool
+import dev.ipf.whitenoise.model.PhotoStroke
+import dev.ipf.whitenoise.model.PhotoEditLimit
+
 import dev.ipf.whitenoise.model.*
 
 import dev.ipf.whitenoise.model.ChatOrganization
@@ -716,6 +729,8 @@ class AppViewModel(
         nextMessageEditScenario = MessageEditScenario.Success
         nextMessageDeleteScenario = MessageDeleteScenario.Success
         nextMessageForwardScenario = MessageForwardScenario.Success
+        photoEditorSession = null
+        nextPhotoEditorScenario = PhotoEditorScenario.Success
         recentMediaAccess = dev.ipf.whitenoise.model.RecentMediaAccess.Full
         attachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success
         messageForwards = emptyMap()
@@ -1419,6 +1434,105 @@ class AppViewModel(
         }
     }
 
+    private var photoEditorGeneration = 0L
+    var photoEditorSession by mutableStateOf<PhotoEditorSession?>(null)
+        private set
+    var nextPhotoEditorScenario by mutableStateOf(PhotoEditorScenario.Success)
+        private set
+
+    fun selectPhotoEditorScenario(value: PhotoEditorScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextPhotoEditorScenario = value
+    }
+
+    fun openPhotoEditor(profileId: String, chatId: String, attachmentId: String, imageIndex: Int): Boolean {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return false
+        val chat = chat(chatId) ?: return false
+        if (composerAvailability(chatId) != ComposerAvailability.Available) return false
+        val attachment = chat.draftAttachments.firstOrNull { it.id == attachmentId } ?: return false
+        if (attachment.kind !in setOf(dev.ipf.whitenoise.model.MessageAttachmentKind.Photo, dev.ipf.whitenoise.model.MessageAttachmentKind.Photos) ||
+            attachment.images.getOrNull(imageIndex) == null || photoEditorSession?.phase == PhotoEditorPhase.Saving) return false
+        photoEditorSession = PhotoEditorSession(++photoEditorGeneration, profileId, chatId, attachmentId, imageIndex,
+            attachment, PhotoEditHistory(initial = attachment.photoEdits[imageIndex] ?: PhotoEditRecipe()),
+            attachment.photoFrameQualities[imageIndex] ?: attachment.photoQuality ?: chat.draftPhotoQuality,
+            nextStrokeId = (attachment.photoEdits[imageIndex]?.strokes?.maxOfOrNull { it.id } ?: 0) + 1, scenario = nextPhotoEditorScenario)
+        nextPhotoEditorScenario = PhotoEditorScenario.Success
+        return true
+    }
+
+    fun photoEditorAction(sessionId: Long, event: PhotoEditorEvent): Boolean {
+        val session = photoEditorSession?.takeIf { it.id == sessionId } ?: return false
+        if (session.profileId != uiState.activeProfileId || session.profileId !in uiState.signedInProfileIds) return false
+        if (event == PhotoEditorEvent.Close) {
+            if (session.phase == PhotoEditorPhase.Saving) return false
+            photoEditorSession = null
+            return true
+        }
+        val attachment = chat(session.chatId)?.draftAttachments?.firstOrNull { it.id == session.attachmentId }
+        if (attachment != session.expectedAttachment || composerAvailability(session.chatId) != ComposerAvailability.Available) {
+            photoEditorSession = session.copy(phase = PhotoEditorPhase.Failed, revision = session.revision + 1, failure = PhotoEditorFailure.SourceChanged)
+            return false
+        }
+        fun publish(next: PhotoEditorSession): Boolean {
+            photoEditorSession = next.copy(revision = session.revision + 1)
+            return true
+        }
+        if (event is PhotoEditorEvent.Loaded) {
+            if (session.phase != PhotoEditorPhase.Loading || event.revision != session.revision) return false
+            val failure = event.failure ?: if (!PhotoEditing.validSource(event.width, event.height)) PhotoEditorFailure.InvalidSource else null
+            return publish(session.copy(sourceWidth = event.width, sourceHeight = event.height,
+                phase = if (failure == null) PhotoEditorPhase.Ready else PhotoEditorPhase.Failed, failure = failure,
+                scenario = if (session.scenario == PhotoEditorScenario.LoadFailure) PhotoEditorScenario.Success else session.scenario))
+        }
+        if (event is PhotoEditorEvent.Saved) {
+            if (session.phase != PhotoEditorPhase.Saving || event.revision != session.revision) return false
+            val frame = event.attachment
+            val image = frame?.images?.singleOrNull() as? ProfileAvatar.DeviceImage
+            if (event.failure != null || frame == null || image == null || image.bytes.isEmpty() || image.bytes.size > 32 * 1024 * 1024 ||
+                (frame.pixelWidth ?: 0) <= 0 || (frame.pixelHeight ?: 0) <= 0) {
+                return publish(session.copy(phase = PhotoEditorPhase.Failed, failure = event.failure ?: PhotoEditorFailure.SaveFailed, scenario = PhotoEditorScenario.Success))
+            }
+            // Only the selected frame may be committed; renderer output cannot replace draft identity or siblings.
+            val images = attachment.images.mapIndexed { index, before -> if (index == session.imageIndex) image else before }
+            val output = attachment.copy(images = images, sourceImages = attachment.sourceImages.ifEmpty { attachment.images },
+                photoEdits = attachment.photoEdits + (session.imageIndex to session.history.current),
+                photoFrameQualities = attachment.photoFrameQualities + (session.imageIndex to session.requestedQuality),
+                metadataPolicy = frame.metadataPolicy, mimeType = frame.mimeType.takeIf { images.size == 1 },
+                fileSizeBytes = if (images.all { it is ProfileAvatar.DeviceImage }) images.sumOf { (it as ProfileAvatar.DeviceImage).bytes.size } else null,
+                pixelWidth = if (session.imageIndex == 0) frame.pixelWidth else attachment.pixelWidth,
+                pixelHeight = if (session.imageIndex == 0) frame.pixelHeight else attachment.pixelHeight)
+            mutateChat(session.chatId) { current -> current.copy(draftAttachments = current.draftAttachments.map { if (it.id == session.attachmentId) output else it }) }
+            photoEditorSession = null
+            return true
+        }
+        if (event == PhotoEditorEvent.Retry) {
+            if (session.phase != PhotoEditorPhase.Failed || session.failure == PhotoEditorFailure.SourceChanged) return false
+            return publish(session.copy(phase = if (session.sourceWidth > 0 && session.failure in setOf(PhotoEditorFailure.SaveFailed, PhotoEditorFailure.MemoryLimit)) PhotoEditorPhase.Saving else PhotoEditorPhase.Loading,
+                failure = null, scenario = PhotoEditorScenario.Success))
+        }
+        if (!session.editable) return false
+        val ready = session.copy(phase = PhotoEditorPhase.Ready, failure = null, limit = null)
+        val next = when (event) {
+            is PhotoEditorEvent.SelectTool -> ready.copy(tool = event.tool)
+            is PhotoEditorEvent.SelectColor -> ready.copy(color = event.color)
+            is PhotoEditorEvent.SelectWidth -> ready.copy(width = event.width)
+            is PhotoEditorEvent.SelectQuality -> ready.copy(requestedQuality = event.quality)
+            is PhotoEditorEvent.SelectPreset -> ready.copy(tool = PhotoEditorTool.Crop, preset = event.preset,
+                history = session.history.commit(session.history.current.copy(crop = PhotoEditing.preset(event.preset, session.sourceWidth, session.sourceHeight, session.history.current.quarterTurns, session.history.current.crop))))
+            is PhotoEditorEvent.Crop -> ready.copy(tool = PhotoEditorTool.Crop, preset = PhotoCropPreset.Free, history = session.history.commit(session.history.current.copy(crop = event.crop)))
+            is PhotoEditorEvent.Stroke -> {
+                if (session.tool == PhotoEditorTool.Crop || event.points.isEmpty()) return false
+                val (history, limit) = session.history.add(PhotoStroke(session.nextStrokeId, event.points, session.width, session.color, session.tool == PhotoEditorTool.Erase))
+                ready.copy(history = history, nextStrokeId = session.nextStrokeId + 1, limit = limit ?: PhotoEditLimit.StrokePoints.takeIf { event.limited })
+            }
+            PhotoEditorEvent.Rotate -> ready.copy(tool = PhotoEditorTool.Crop, preset = PhotoCropPreset.Free, history = session.history.commit(session.history.current.copy(quarterTurns = (session.history.current.quarterTurns + 1) % 4)))
+            PhotoEditorEvent.Undo -> ready.copy(history = session.history.undo(), preset = PhotoCropPreset.Free)
+            PhotoEditorEvent.Redo -> ready.copy(history = session.history.redo(), preset = PhotoCropPreset.Free)
+            PhotoEditorEvent.Reset -> ready.copy(history = session.history.reset(), requestedQuality = session.initialQuality, preset = if (session.history.initial.crop == dev.ipf.whitenoise.model.PhotoCrop()) PhotoCropPreset.Original else PhotoCropPreset.Free)
+            PhotoEditorEvent.Save -> ready.copy(phase = PhotoEditorPhase.Saving)
+        }
+        return publish(next)
+    }
+
     var recentMediaAccess by mutableStateOf(dev.ipf.whitenoise.model.RecentMediaAccess.Full)
         private set
     var attachmentTransferScenario by mutableStateOf(dev.ipf.whitenoise.model.AttachmentTransferScenario.Success)
@@ -1529,7 +1643,7 @@ class AppViewModel(
         val linkPreview = LinkPreviewDetector.first(trimmed)
             ?.takeUnless { it.url == chat.suppressedDraftLinkUrl }
             ?.attachment("$chatId-link-${createdChatSequence + 1}")
-        val attachments = chat.draftAttachments.map { it.copy(sourceImages = emptyList(), transfer = if (it.kind in setOf(dev.ipf.whitenoise.model.MessageAttachmentKind.Photo, dev.ipf.whitenoise.model.MessageAttachmentKind.Photos,
+        val attachments = chat.draftAttachments.map { it.copy(sourceImages = emptyList(), photoEdits = emptyMap(), photoFrameQualities = emptyMap(), transfer = if (it.kind in setOf(dev.ipf.whitenoise.model.MessageAttachmentKind.Photo, dev.ipf.whitenoise.model.MessageAttachmentKind.Photos,
             dev.ipf.whitenoise.model.MessageAttachmentKind.Video, dev.ipf.whitenoise.model.MessageAttachmentKind.File, dev.ipf.whitenoise.model.MessageAttachmentKind.Gif))
             dev.ipf.whitenoise.model.AttachmentTransfer(direction = dev.ipf.whitenoise.model.AttachmentTransferDirection.Upload, scenario = attachmentTransferScenario) else null) } + listOfNotNull(linkPreview)
         if (trimmed.isEmpty() && attachments.isEmpty()) return false
@@ -1789,6 +1903,7 @@ class AppViewModel(
     }
     fun interruptMessageOperations(profileId: String? = uiState.activeProfileId) {
         if (profileId == null) return
+        if (photoEditorSession?.profileId == profileId) photoEditorSession = null
         messageForwards = messageForwards.mapValues { (_, op) ->
             if (!op.isRunning || profileId !in setOf(op.sourceProfileId, op.destinationProfileId)) op else op.copy(revision = op.revision + 1,
                 targets = op.targets.map { if (it.phase == MessageForwardTargetPhase.Completed) it else it.copy(phase = MessageForwardTargetPhase.Failed, failure = MessageForwardFailure.SessionChanged) }).settled()

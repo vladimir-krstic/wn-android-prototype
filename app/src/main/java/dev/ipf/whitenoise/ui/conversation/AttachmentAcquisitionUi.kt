@@ -39,6 +39,9 @@ import kotlinx.coroutines.delay
 
 internal data class AttachmentEnvironment(
     val recentAccess: RecentMediaAccess = RecentMediaAccess.Full,
+    val editorSession: PhotoEditorSession? = null,
+    val openEditor: (String, Int) -> Boolean = { _, _ -> false },
+    val editorEvent: (Long, PhotoEditorEvent) -> Boolean = { _, _ -> false },
     val replacePhotos: (List<MessageAttachment>, PhotoQuality, List<MessageAttachment>) -> Boolean = { _, _, _ -> false },
     val transfer: (String, String, String, Long) -> Unit = { _, _, _, _ -> },
 )

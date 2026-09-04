@@ -154,3 +154,16 @@ AttachmentTransferCoordinator and ContactShare/ContactPreview into
 quality; production must reconnect authoritative cache/transfer/media grants.
 System Photo Picker, document creation, contact phone-row selection and Sharesheet
 remain platform-owned. No production database, permission or transport is copied.
+
+## Production B12 draft photo editor
+
+`docs/screens/draft-photo-editor.md` maps pinned production PhotoEditorScreen,
+PhotoEditorState, PhotoEditRecipe, PhotoEditTransform, PhotoEditorRenderer and
+PhotoEditorCommitter into `PhotoEditorModels.kt`, `PhotoEditorUi.kt`,
+`PhotoEditorRenderer.kt`, `AppViewModel.kt` and the existing draft media preview.
+The prototype retains originals and recipes in memory, and commits exactly one
+frame after revision/source/owner checks. B11 quality reprocessing replays those
+recipes; send/forward strips original sources and edit metadata. Production
+reconnects its draft source/staging/commit stores rather than copying in-memory
+fixtures into persistence. App chrome stays monochrome; five ink colors describe
+photo content, independently of the B26 appearance decision.

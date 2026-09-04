@@ -122,6 +122,15 @@ UI cases compile. Device/visual acceptance remains pending.
 
 ## Conversation
 
+2026-09-04 production B12: C050 is implemented and host-verified. Selected draft
+and album-frame editing adds crop presets, rotation, ink/erase, undo/redo/reset,
+dirty discard, bounded rendering and load/save recovery. Original sources and
+per-frame recipes/quality remain reversible; saves preserve sibling frames,
+caption/reply and review exclusion. Stale owner/source completions cannot commit.
+The clean gate passed 399 unit tests, both APKs and zero lint errors; nine new
+UI/bitmap cases compile. Device and visual acceptance remain pending. See
+[`draft-photo-editor.md`](../screens/draft-photo-editor.md#implementation-evidence).
+
 2026-09-04 production B11: C046/C049/C051/C052/C054/C057 are implemented and
 host-verified within the prototype boundary. Message save/share reports per-item
 results, recent media exposes bundled access states, reversible draft quality
