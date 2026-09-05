@@ -32,6 +32,7 @@ internal fun WhiteNoiseCompactSearchField(
     placeholder: String,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    emptyTrailingIcon: (@Composable () -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val fieldColors = TextFieldDefaults.colors(
@@ -84,7 +85,7 @@ internal fun WhiteNoiseCompactSearchField(
                         }
                     }
                 } else {
-                    null
+                    emptyTrailingIcon
                 },
                 shape = MaterialTheme.shapes.extraLarge,
                 colors = fieldColors,

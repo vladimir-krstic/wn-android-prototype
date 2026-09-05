@@ -50,11 +50,11 @@ existing create-once/timer/open recovery.
 
 Actions: “Disappearing messages”, “Custom time”, “Set timer”, “Save”, “Cancel”,
 “Retry”. Read-only group help: “Only admins can change this”. Explanation:
-“New messages you receive start their countdown when you read them. Messages you
-send start theirs when sent.” Confirmation: “Set disappearing timer?” and
+“Timers start when you read or send a message.” Confirmation: “Set disappearing timer?” and
 “Messages older than %1$s will be permanently removed for everyone.”
 Turning Off or lengthening does not show this destructive confirmation. Existing
-message countdowns do not change; explain that beside the timer help. Progress,
+message countdowns do not change. The picker omits the longer explanatory
+paragraph per the 2026-09-05 user direction. Progress,
 failed apply and accepted-but-refreshing outcomes must remain distinct.
 
 ## Ownership, state and cleanup
@@ -147,3 +147,11 @@ first-read anchors, timeline refetch/filtering and expiry scheduling. Keep the
 accepted-policy-versus-refresh outcome separate. Replace the fixed clock and
 local fixtures with those existing engine facts; do not apply the current group
 timer to unpinned history. Durable group-system events remain outside expiry.
+
+## 2026-09-05 — concise timer explanation
+
+The timer picker now uses one short sentence: “Timers start when you read or
+send a message.” The extra existing-countdown/removal paragraph is removed,
+including its unused string resources. All four translated resource sets use
+the same concise explanation. Timer choices, custom duration, Save/Cancel and
+confirmation behavior are unchanged. This copy-only change adds no tests.

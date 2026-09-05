@@ -3,6 +3,7 @@ package dev.ipf.whitenoise.ui.conversation
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.core.net.toUri
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -51,6 +53,10 @@ internal fun DictationOriginHost(profile: Profile, chat: Chat) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val speech = LocalReadAloudController.current
     DisposableEffect(controller, owner) { controller.open(owner); onDispose { controller.close(owner) } }
+    InlineDictationPlatform(controller, owner)
+    val inline = controller.inlineDictation?.takeIf { it.owner == owner }
+    LaunchedEffect(inline?.id, inline?.capturing) { if (inline?.capturing == true) speech?.pause() }
+    androidx.activity.compose.BackHandler(enabled = inline?.capturing == true) { controller.pauseInline(owner) }
     val attempt = controller.attempts[owner] ?: return
     var open by rememberSaveable(owner.profileId, owner.chatId, attempt.id) { mutableStateOf(true) }
     LaunchedEffect(controller.presentationRevision) { if (controller.presentationOwner == owner) open = true }
@@ -130,22 +136,22 @@ internal fun DictationOriginHost(profile: Profile, chat: Chat) {
 }
 
 @Composable
-internal fun DictationActiveControls(owner: ComposerCaptureOwner) {
+internal fun InlineDictationError(owner: ComposerCaptureOwner) {
     val controller = LocalComposerCapture.current ?: return
-    val attempt = controller.attempts[owner]?.takeIf { it.capturing } ?: return
-    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related)
-        .testTag("dictation.controls"), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-        Text(stringResource(when (attempt.phase) {
-            DictationPhase.Preparing -> R.string.dictation_preparing
-            DictationPhase.Listening -> R.string.dictation_listening
-            else -> R.string.dictation_processing
-        }), Modifier.semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.typography.labelLarge)
-        if (attempt.retainedText.isNotBlank()) Text(attempt.retainedText, maxLines = 2,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.testTag("dictation.partial"))
-        if (attempt.phase != DictationPhase.Listening) LinearProgressIndicator(Modifier.fillMaxWidth())
-        Row(horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-            TextButton(onClick = { controller.cancel(owner, attempt.id) }) { Text(stringResource(R.string.cancel)) }
-            if (attempt.phase == DictationPhase.Listening) TextButton(onClick = { controller.finish(owner, attempt.id) }) { Text(stringResource(R.string.dictation_done)) }
+    val failure = controller.inlineDictation?.takeIf { it.owner == owner }?.failure ?: return
+    val context = LocalContext.current
+    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = WhiteNoiseSpacing.Related),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Text(stringResource(dictationFailureString(failure)), Modifier.weight(1f)
+            .semantics { liveRegion = LiveRegionMode.Polite }.testTag("dictation.error"),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        if (failure == DictationFailure.PermissionPermanentlyDenied) {
+            IconButton(onClick = {
+                runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    "package:${context.packageName}".toUri())) }
+            }) {
+                Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_emoji_settings), stringResource(R.string.speech_android_settings))
+            }
         }
     }
 }

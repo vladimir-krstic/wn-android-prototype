@@ -18,11 +18,6 @@ class AppRouteTest {
     }
 
     @Test
-    fun profileExitCanRequestTheSettingsProfileSwitcher() {
-        assertEquals(true, AppRoute.Settings(showProfileSwitcher = true).showProfileSwitcher)
-    }
-
-    @Test
     fun conversationDiagnosticsRetainOnlyTheScopedChatArgument() {
         assertEquals("fiatjaf", AppRoute.Diagnostics("fiatjaf").chatId)
         assertEquals("fiatjaf", AppRoute.ConversationDebug("fiatjaf").chatId)

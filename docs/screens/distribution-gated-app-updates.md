@@ -47,7 +47,7 @@ The pinned production baseline is
 - A self-managed fixture exposes **App updates** in Settings. Unknown, checking,
   failed and current states tap to check/retry. Available state starts the
   update review.
-- Chats shows a compact update icon immediately before Filters only for a newer
+- Chats shows a compact update icon immediately before Search only for a newer
   release on a self-managed distribution. It opens Settings without beginning
   update resolution. Search and selection mode omit the icon. Ordinary Chats
   has no update banner or dismiss action; previous banner dismissal does not
@@ -63,16 +63,17 @@ The pinned production baseline is
   Retry starts a new resolution generation.
 - A permission-required outcome occurs only after verification and returns to
   Ready after the deterministic permission review.
-- **Install** consumes only a Ready state. In B32 it models the handoff outcome;
-  Q06 retains the real Android installer and permission flow.
+- **Install** consumes only a Ready state. Successful prototype completion marks
+  the target version installed for this session; rechecks stay current. A fresh
+  app launch seeds the available update again. Cancellation/failure keeps it
+  available. Q06 retains the real Android installer and permission flow.
 
 ## Entry, navigation, Back, and exit
 
-Self-managed Settings places a gray **App updates** row immediately below the
-profile/account switcher and before preferences.
-Chats shows the warning as the first content card above connection state. Both
-The Chats update icon opens Settings, where an available update row starts the
-app-owned modal flow.
+Self-managed Settings places a white **App updates** row immediately below the
+profile/account switcher and before preferences (the corresponding semantic
+surface in dark themes). The Chats update icon opens Settings, where an
+available update row starts the app-owned modal flow.
 
 Dialog Back, outside dismissal and Cancel stop the owned generation and return
 to the same Chats or Settings destination. Navigation between those destinations
@@ -93,18 +94,22 @@ unavailable Android installer handoff.
 
 ## Android composition
 
-The Chats warning is a neutral elevated Material card inside the existing lazy
-content order. It uses visible status text, one primary **Update now** action
-and an icon-only close action with the explicit **Dismiss update** name only
-when the release can be dismissed.
+Chats uses a native 48 dp IconButton containing a 32 dp teal scalloped download
+emblem. Settings uses the same emblem while an update is available, inside the
+normal grouped white surface. Non-available Settings states use a neutral icon.
+The user explicitly approved this update-only teal accent as an exception to the
+monochrome identity. The dark teal glyph contrasts against its lighter teal fill;
+the emblem shape stays fixed through interaction.
 
-Settings uses the established grouped link with a neutral gray container. It
-shows only the available target version, or a concise check/current/failure
-status; installed version and release-gap counts are omitted from ordinary
-update surfaces. Modal Material alerts own confirmation, cancellation and
-errors. Resolving and verifying use indeterminate progress; download uses a
-determinate Material progress indicator. The UI uses the existing monochrome
-semantic roles and shared 4/8 dp rhythm.
+The shape uses Material 3's [Cookie9Sided](https://developer.android.com/reference/kotlin/androidx/compose/material3/MaterialShapes)
+with the first-party [toShape](https://developer.android.com/reference/kotlin/androidx/compose/material3/toShape.composable)
+adapter, checked 2026-09-05, and the existing Material download symbol. This is a
+composition of native Material elements, not a claim that Google prescribes a
+specific update badge. No dependencies are added.
+
+Settings shows only the target version or concise check/current/failure status.
+Material alerts own confirmation, cancellation and errors. Resolving/verifying
+use indeterminate progress; download uses determinate progress.
 
 ## Behavior and state
 
@@ -240,3 +245,28 @@ The host gate `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebug
 passes 895 unit tests with zero failures/errors/skips, zero lint errors (18
 warnings, including two unused legacy banner labels, and two hints), and both debug APKs. Updated interaction cases
 compile only; no device/visual inspection was requested.
+
+## 2026-09-05 — temporary update emblem and session completion
+
+The latest direction replaces the gray Settings container with the shared white
+row and adds the same teal scalloped download emblem to Settings and Chats.
+Successful simulated installation now advances installedVersion and check state
+to Current, invalidates stale generations and hides the Chats indicator.
+Rechecking or switching distribution cannot advertise the already installed
+fixture; cancellation and installer failure leave availability intact. A fresh
+AppUpdateController restores the launch fixture. Real installation remains Q06.
+
+AppUpdatesTest covers successful ordinary/important updates, rechecks,
+distribution changes, stale completion, cancellation and failed installation.
+AppUpdateInteractionTest now verifies Install removes the header entry and leaves
+Settings without an update card. Host validation is recorded in the latest parity
+ledger entry; interaction tests are compiled only, with visual acceptance pending.
+
+## 2026-09-05 — hide the card when current
+
+Explicit user direction: Current has no Settings update card or reserved spacing.
+`AppUpdates.showsSettingsCard` governs both the root item and the reusable card;
+`showsSettings` remains the distribution capability gate so future checks are
+not blocked. Unknown/checking/failure/available behavior remains intact.
+`AppUpdatesTest` covers current visibility and rechecking; interaction cases assert
+card absence for Current and after Install, plus the existing failure retry copy.

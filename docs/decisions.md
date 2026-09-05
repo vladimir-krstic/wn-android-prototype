@@ -4429,3 +4429,53 @@ retry when launch/recognition fails, save pending ownership across recreation,
 and reject stale completions. Normal and reset behavior use the device; fixed
 success/cancel/unavailable outcomes remain explicit Developer Tools choices.
 [Implementation and validation](screens/global-search.md#2026-09-05--native-voice-search-repair).
+
+## Main avatar opens profile switching; current updates stay hidden — 2026-09-05
+
+Explicitly approved: the Chats avatar/chevron opens the shared modal profile
+switcher. Rows show profile identity, inactive unread badges and the active check;
+selection closes immediately onto that profile’s Chats. Add Profile and Settings
+are icon-led footer actions. This supersedes the avatar → Settings-only entry.
+Use the shared neutral sheet and white segmented rows with native tap targets.
+
+When the app is Current, omit the Settings update card entirely. Keep update
+checking capability independent of this visibility rule.
+
+## Profile switcher has one entry; folder management is compact — 2026-09-05
+
+Latest explicit direction removes the main-avatar chevron and Settings-owned
+profile switching. Main Chats uses the avatar-only switcher; sign-out with other
+profiles lands there with its sheet open. Settings retains the identity card for
+Share & Connect. Folder management uses a 32 dp tonal circle and 18 dp pencil,
+while native 48 dp minimum touch targets remain on both controls.
+
+## Folder management uses a transparent bookmark-manager action — 2026-09-05
+
+Latest explicit direction replaces the folder-strip pencil with Material Symbols
+Rounded `bookmark_manager` and removes the tonal circle. Keep the compact icon
+weight, native touch target and Manage folders destination. This supersedes the
+32 dp tonal-circle presentation recorded above.
+
+## Composer dictation and staged full-width expansion — 2026-09-05
+
+Explicitly approved: microphone before record/Send; the fourth visual line or
+manual text expansion integrates a small unfilled Add icon into the capsule.
+Text spans the inner width above its controls. Measure automatic eligibility at
+compact width to avoid reflow loops. Expansion proceeds height then width, and
+collapse width then height. Keep one editor node throughout; retain existing
+dictation, attachment, voice review, focus and inset contracts. See the composer
+brief for layout, interaction and validation evidence.
+
+## Live composer dictation — 2026-09-05
+
+Explicit user direction supersedes WN-ANDROID-0137's deterministic dictation,
+app pre-start disclosure, separate transcript/review and completion settings.
+Use Android SpeechRecognizer with the standard RECORD_AUDIO runtime permission
+and service visibility query. Stream partials into the existing editor; Pause
+retains text, editing/caret changes pause, and resume captures the new selection.
+Final utterances continue only while explicitly active. X exits dictation while
+keeping the draft; sending remains explicit. Hide voice-note recording during
+this mode and show a pulsing red mic with Pause. Keep profile/chat/request capture
+ownership and release/destroy recognition on pause or lifecycle exit. No backend
+or app network permission is added. See the composer brief for current behavior,
+platform sources, recovery and verification limits.

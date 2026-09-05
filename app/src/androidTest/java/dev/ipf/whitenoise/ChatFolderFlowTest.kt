@@ -157,21 +157,42 @@ class ChatFolderFlowTest {
             onCreateFolder = { vm.createChatFolder(owner, it) }, onAddToFolder = { vm.assignChatFolder(owner, chat.id, it) }) } }
         rule.onNodeWithTag("chat_info.list").performScrollToNode(hasText("Add to Folder"))
         rule.onNodeWithText("Add to Folder").performClick()
-        rule.onNodeWithText("From Info").performClick()
+        rule.onNodeWithTag("chat.folderAdd").assertIsNotEnabled()
+        rule.onNodeWithText("From Info").performScrollTo().performClick().assertIsOn()
+        rule.runOnIdle { assertTrue(vm.uiState.activeProfile!!.chatFolders.single { it.id == folder }.chatIds.isEmpty()) }
+        rule.onNodeWithText("Cancel").performClick()
+        rule.onNodeWithText("Add to Folder").performClick()
+        rule.onNodeWithTag("chat.folderAdd").assertIsNotEnabled()
+        rule.onNodeWithText("From Info").performScrollTo().performClick().assertIsOn()
+        rule.onNodeWithTag("chat.folderAdd").performClick()
         rule.runOnIdle { assertEquals(setOf(chat.id), vm.uiState.activeProfile!!.chatFolders.single { it.id == folder }.chatIds) }
     }
-    @Test fun settingsEntryCreatesFolderAndReturnsToManagement() {
+    @Test fun examplePillsFilterChatsDirectly() {
+        val vm = model()
+        rule.setContent { WhiteNoiseTheme { ChatsScreen(vm.uiState, {}, {}, vm::markChatUnread,
+            vm::toggleChatPin, vm::setChatMute, vm::setChatArchived, vm::leaveChat, {}) } }
+        listOf("work" to "product-circle", "weekend" to "weekend-walks").forEach { (folder, chat) ->
+            rule.onNodeWithTag("chats.folders").performScrollToNode(hasTestTag("chats.folder.$folder"))
+            rule.onNodeWithTag("chats.folder.$folder").performClick().assertIsSelected()
+            rule.onNodeWithTag("chat.row.$chat").assertIsDisplayed()
+            rule.onNodeWithTag("chat.row.catalog-direct-text").assertDoesNotExist()
+        }
+    }
+
+    @Test fun foldersAreManagedFromChatsInsteadOfSettings() {
         val vm = model(); lateinit var nav: NavHostController
         rule.setContent { nav = rememberNavController(); WhiteNoiseTheme { WhiteNoiseNavHost(nav, vm) } }
         rule.runOnIdle { nav.navigate(AppRoute.Settings()) }
-        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Folders"))
-        rule.onNodeWithText("Folders").performClick()
+        rule.onNodeWithText("Folders").assertDoesNotExist()
+        rule.runOnIdle { nav.popBackStack() }
+        rule.onNodeWithTag("chats.folders").performScrollToNode(hasTestTag("chats.manageFolders"))
+        rule.onNodeWithTag("chats.manageFolders").performClick()
         rule.onNodeWithContentDescription("New Folder").performClick()
-        rule.onNodeWithTag("folder.name").performTextInput("From Settings")
+        rule.onNodeWithTag("folder.name").performTextInput("From Chats")
         rule.onNodeWithText("Save").performClick()
-        rule.onNodeWithText("From Settings").assertExists()
+        rule.onNodeWithText("From Chats").assertExists()
         rule.onNodeWithTag("folder.name").assertDoesNotExist()
-        rule.runOnIdle { assertEquals(1, vm.uiState.activeProfile!!.chatFolders.count { it.name == "From Settings" }) }
+        rule.runOnIdle { assertEquals(1, vm.uiState.activeProfile!!.chatFolders.count { it.name == "From Chats" }) }
     }
 
 }

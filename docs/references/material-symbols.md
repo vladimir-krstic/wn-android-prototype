@@ -95,3 +95,22 @@ The user-selected Folders entry and folder-name rows use the same unmodified
 | Android resource | Official XML | SHA-256 |
 | --- | --- | --- |
 | `ic_folder` | [folder](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/folder/default/24px.xml) | `0899d6f45c49899b7bdaa42a591a6f4b953514af2f45b290805da744ffadc8d0` |
+
+## User Profile action icons — 2026-09-05
+
+Unmodified 24 dp rounded Android exports from Google’s official repository,
+under the same Apache-2.0 license above.
+
+| Android resource | Official XML | SHA-256 |
+| --- | --- | --- |
+| `ic_person_remove` | [person_remove](https://raw.githubusercontent.com/google/material-design-icons/master/symbols/android/person_remove/materialsymbolsrounded/person_remove_24px.xml) | `af74f04e6c7522ca2758145052200e009d1c8eca77d28a6bf8ff48822c227eeb` |
+| `ic_admin_panel_settings` | [admin_panel_settings](https://raw.githubusercontent.com/google/material-design-icons/master/symbols/android/admin_panel_settings/materialsymbolsrounded/admin_panel_settings_24px.xml) | `caca5ec1695d4a01932e414b4e6a0c53e1f5d1061a9697ebd4c2afadd71efc98` |
+| `ic_block` | [block](https://raw.githubusercontent.com/google/material-design-icons/master/symbols/android/block/materialsymbolsrounded/block_24px.xml) | `d5bc15da5d1909c57e872fa80449f5411ff1ff4bc488db1e5ad389b34353de4a` |
+
+## Folder management — 2026-09-05
+
+Unmodified Material Symbols Rounded export, under the Apache-2.0 license above.
+
+| Android resource | Official XML | SHA-256 |
+| --- | --- | --- |
+| `ic_bookmark_manager` | [bookmark_manager](https://raw.githubusercontent.com/google/material-design-icons/master/symbols/android/bookmark_manager/materialsymbolsrounded/bookmark_manager_24px.xml) | `980c3d9d9871c60be074c6266ca6ae4f57b12e0ea0e9db1a57bc523c42d901c7` |

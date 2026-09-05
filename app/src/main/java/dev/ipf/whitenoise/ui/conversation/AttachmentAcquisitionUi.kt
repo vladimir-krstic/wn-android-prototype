@@ -32,6 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import kotlinx.coroutines.delay
@@ -94,12 +95,12 @@ internal fun DeviceContactPreview(contact: SharedDeviceContact, onDismiss: () ->
     var email by rememberSaveable(contact) { mutableStateOf(contact.email != null) }
     val selected = contact.selected(name, phone, email)
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.device_contact)) },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+        text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
             Text(stringResource(R.string.contact_choose_fields))
             listOf(Triple(contact.name, name, { v: Boolean -> name = v }), Triple(contact.phone, phone, { v: Boolean -> phone = v }), Triple(contact.email, email, { v: Boolean -> email = v }))
-                .forEach { (value, checked, change) -> if (value != null) Row(Modifier.fillMaxWidth().toggleable(checked, role = Role.Checkbox, onValueChange = change).padding(vertical = 4.dp)) {
-                    Checkbox(checked, null); Text(value, Modifier.weight(1f).padding(12.dp))
-                } }
+                .forEach { (value, checked, change) -> if (value != null)
+                    dev.ipf.whitenoise.ui.components.WhiteNoiseDialogCheckRow(value, checked, change)
+                }
         } }, confirmButton = { TextButton({ onAdd(selected) }, enabled = selected.fields.isNotEmpty(), modifier = Modifier.testTag("contact.preview.add")) { Text(stringResource(R.string.attachment_add)) } },
         dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } })
 }

@@ -21,17 +21,22 @@ loading its window must finish before scrolling/highlighting. Preserve the
 established newest-first order and bounded previous/next behavior. Closing search
 preserves the draft and restores its prior logical viewport.
 
-Opening a chat captures its initial unread boundary instead of marking the entire
-chat read. Mark only received rows actually visible after viewport settlement;
-search, overlays and backgrounded screens do not consume unread messages.
-Keep unread IDs in profile/chat-owned memory so partial reading survives Back.
-Fixture summary counts seed the most recent received rows; subsequent counts
-derive from those concrete IDs. Off-tail arrivals freeze the first unread target
-for that stack, do not scroll the reader, and do not replace the target as more
-messages arrive. The jump first visits that boundary, then offers the latest
-messages. A separate next-unread-mention action resolves and highlights its target
-before advancing read state through that intentionally visited mention. Missing
-targets never advance read state. Ordinary page loads do not imply reading.
+Opening a chat captures its first unread message and count. Land at the separator
+above that message, including when its history window must load first. The
+separator is a noninteractive horizontal line with a centered localized count.
+Keep its anchor/count stable as visible messages are acknowledged during the
+visit, include newly received unread messages in that section, and remove it
+when replying. Deletion advances a missing anchor to the next surviving section
+message. Returning for a new visit captures the remaining unread messages.
+
+Mark only received rows actually visible after viewport settlement; search,
+overlays and backgrounded screens do not consume unread messages. Keep unread
+IDs in profile/chat-owned memory so partial reading survives Back. Fixture
+summary counts seed the most recent received rows; subsequent counts derive
+from concrete IDs. No unread/mention jump or bulk-read button appears. The
+existing small down arrow always targets the latest message after the accepted
+one-viewport threshold, without temporarily highlighting the last bubble
+(explicit user direction, 2026-09-05). Page loads and navigation requests do not imply reading.
 
 Message Details retains its content, reactions and people. Add status, a truthful
 Sent/Received/Created timestamp, sender-claimed time only when it meaningfully
@@ -81,7 +86,7 @@ Verify bounded older/newer pages and exact targets, deduplication and deletion,
 failed-page retention/retry, exhaustive search with loaded fallback and stable
 result identity, restored viewport/draft, cancellation and profile ownership.
 Prove captured unread boundaries, off-tail arrival stability, visible-only reads,
-explicit mention advancement and no stale/failed-target read. Verify timestamp
+stable divider retention, reply dismissal and no stale/failed-target read. Verify timestamp
 precedence, skew threshold, Created/Received/Streaming and expiry/copy semantics.
 Run the host gate and compile durable UI cases before the B08 commit; current-build
 device behavior and visual acceptance remain separate.
@@ -143,26 +148,82 @@ Commit title: `B08: Add conversation history and unread recovery`.
 
 ## 2026-09-05 latest-message jump polish
 
-The jump control appears only after the initial viewport settles and the distance
-to the latest messages reaches two transcript viewport heights. It is a native
-FilledTonalIconButton containing only a down arrow, aligned to the trailing edge
-above the composer; the containing stack also aligns children to that edge when
-a mention action is present. Accessible latest/unread labels, target recovery,
-unread targeting, mention navigation and search/selection suppression remain.
+Latest user direction supersedes the earlier two-viewport threshold. Show the
+arrow after one full usable transcript viewport above the tail, excluding the
+composer's covered area. Keep it at the trailing edge above the composer. Use a
+32 dp circular SmallFloatingActionButton with a 20 dp down arrow, native shadow,
+semantic surfaceContainerHigh/onSurface contrast and the native 48 dp minimum
+interaction target. Material owns elevation and pressed/focus feedback.
+The latest-message accessible label, recovery and search/selection suppression
+remain. The subsequent unread-divider change removes unread/mention targeting.
 
-Distance uses Compose's public
-[ScrollIndicatorState](https://developer.android.com/reference/kotlin/androidx/compose/foundation/ScrollIndicatorState)
-(reviewed 2026-09-05). Lazy-list pixel totals/offsets are native estimates for
-variable-height content; newer unloaded entries extend that estimate using the
-loaded average. Invalid/unmeasured metrics never expose the control. The visible
-viewport adapts to available height. No message-count threshold or custom gesture
-handler is introduced.
+The prior ScrollIndicatorState estimates changed their average row height as
+galleries entered and left the viewport, making visibility oscillate. Replace
+that estimate with ConversationTailJump: cache measured heights by stable row
+key and sum the actual trailing geometry, spacing and bottom inset. Measurements
+survive older-page insertion and clear when width/density/font scale changes.
+Transient empty layouts retain the previous visibility instead of blinking.
+When a distant jump restores unmeasured trailing rows, use a fixed viewport
+fallback per unknown row; unloaded newer history retains a recovery action.
+This fallback is limited to unmeasured history, not ordinary scrolling from the
+tail. The exact distance is available once those rows have been measured.
 
-Unit regressions cover the two-viewport boundary, returning near the tail,
-viewport resizing, unloaded newer history and invalid/overflow metrics. A Compose
-regression covers icon-only semantics and return from older loaded history; it is
-compiled only. Host gate: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`.
+Sources reviewed 2026-09-05:
+- [Native small FAB and elevation](https://developer.android.com/develop/ui/compose/components/fab#small)
+- [ScrollIndicatorState estimates](https://developer.android.com/reference/kotlin/androidx/compose/foundation/ScrollIndicatorState)
+
+ConversationTailJumpTest covers the one-viewport boundary, alternating gallery
+heights, reverse scrolling, page insertion, transient layouts, resizing, distant
+history and overflow. The existing Compose jump-and-return flow compiles only.
+Host gate passed: 905 unit tests, zero lint errors (18 existing warnings),
+and both APKs assembled. `git diff --check` passes. Device visual acceptance
+remains pending.
+
+## Unread separator follow-up — 2026-09-05
+
+Explicit user direction replaces unread navigation actions with Signal-style
+reading separation. Current first-party references reviewed:
+- [Signal divider anchor/count and reply dismissal](https://github.com/signalapp/Signal-Android/blob/main/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationItemDecorations.kt)
+- [Signal initial unread landing](https://github.com/signalapp/Signal-Android/blob/main/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt)
+- [Signal separator layout](https://github.com/signalapp/Signal-Android/blob/main/app/src/main/res/layout/conversation_item_last_seen.xml)
+
+Native Compose uses a 1 dp semantic outline divider, labelMedium/onSurface count,
+24 dp top clearance, 8 dp line/label spacing and 16 dp bottom clearance on the
+existing transcript margins. It has merged reading semantics and no click action.
+`ConversationUnreadDivider` owns captured IDs separately from mutable read state;
+`ConversationHistoryUiState` saves the section across recreation. Initial landing
+uses the separator's keyed row rather than clipping it by aligning its message.
+The old unread-stack model, mention button, read-through navigation callback and
+unused labels are removed. The profile-owned visible-only read API is unchanged.
+
+Six host regressions cover capture, reading/re-entry, arrivals, reply, deletion
+and exclusion of own messages/events. Compose coverage checks initial separator
+visibility, absent unread buttons, latest-only jump, and reading/recreation/reply
+retention. Host gate passed: 909 unit tests, zero lint errors (18 existing
+warnings), and both debug APKs assembled. The final additional Compose case
+compiles; UI execution and visual acceptance remain pending.
+
+## 2026-09-05 — closer tail arrow with shorter shadow
+
+Explicit screenshot feedback moves the arrow 16 dp toward the composer by
+subtracting Scaffold’s existing FAB bottom spacing from the extra measured
+composer clearance (clamped at zero). The 32 dp visual, 20 dp chevron, native
+48 dp touch target and system/IME inset handling remain. Native FAB elevation
+is half the previous defaults: 3 dp resting/pressed/focused, 4 dp hovered.
+The one-viewport threshold and stable visibility model are unchanged.
+
+Host gate `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed: 910 unit tests, zero failures/errors/skips, zero lint errors and both APKs.
 Device visual acceptance remains pending.
 
-Host result: 898 unit tests pass, lint reports zero errors, both debug APKs
-assemble, and `git diff --check` passes. The added Compose flow compiles only.
+## 2026-09-05 — tail arrow matches translucent date pills
+
+Latest direction supersedes the smaller, elevated arrow. Restore a 40 dp circle
+and 24 dp chevron, with the exact pinned date-pill surfaceDim/alpha and onSurface
+foreground. Set native FAB elevation to zero for resting, pressed, focused and
+hovered states. The closer composer placement, 48 dp touch target, one-viewport
+threshold and stable visibility logic remain intact.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 909 unit tests, zero lint errors and both APKs. Device visual
+acceptance remains pending.

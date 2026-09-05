@@ -21,6 +21,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +49,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -125,6 +128,10 @@ fun ChatsScreen(
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
     onSettings: () -> Unit = {},
+    onSelectProfile: (String) -> Unit = {},
+    onAddProfile: () -> Unit = {},
+    showProfileSwitcher: Boolean = false,
+    onProfileSwitcherShown: () -> Unit = {},
     onProfileRelays: () -> Unit = {},
     onUndo: (ChatListUndo) -> Unit = {},
     onOpenSearchMessage: (String, String) -> Boolean = { _, _ -> false },
@@ -145,6 +152,13 @@ fun ChatsScreen(
     appUpdates: AppUpdateController? = null,
 ) {
     val profile = uiState.activeProfile
+    var profileSwitcherOpen by rememberSaveable(profile?.id) { mutableStateOf(false) }
+    LaunchedEffect(showProfileSwitcher) {
+        if (showProfileSwitcher) {
+            profileSwitcherOpen = true
+            onProfileSwitcherShown()
+        }
+    }
     val searchChatsDescription = stringResource(R.string.search_chats)
     val closeSearchDescription = stringResource(R.string.close_search)
     var scopeName by rememberSaveable(profile?.id) { mutableStateOf(ChatScope.Chats.name) }
@@ -352,6 +366,7 @@ fun ChatsScreen(
                                 profile = profile,
                                 updateState = appUpdates?.state,
                                 onSettings = { menuTarget = null; onSettings() },
+                                onSwitchProfile = { menuTarget = null; profileSwitcherOpen = true },
                                 onSearch = { isSearching = true },
                                 searchChatsDescription = searchChatsDescription,
                             )
@@ -564,6 +579,16 @@ fun ChatsScreen(
             folderTargets = emptyList()
         },
     )
+    if (profileSwitcherOpen) {
+        ProfileSwitcherSheet(
+            profiles = uiState.signedInProfiles,
+            activeProfileId = profile?.id,
+            onDismiss = { profileSwitcherOpen = false },
+            onSelectProfile = { profileSwitcherOpen = false; onSelectProfile(it) },
+            onAddProfile = { profileSwitcherOpen = false; onAddProfile() },
+            onSettings = { profileSwitcherOpen = false; onSettings() },
+        )
+    }
     ownedAttempt?.let { attempt ->
         ChatBatchProgress(attempt, onAdvanceBatch,
             onDismiss = { selectedIds = ChatOrganization.reconcile(attempt.failedIds, rows); onDismissBatch() },
@@ -577,20 +602,22 @@ private fun ChatsTopBar(
     profile: Profile?,
     updateState: dev.ipf.whitenoise.model.AppUpdateState?,
     onSettings: () -> Unit,
+    onSwitchProfile: () -> Unit,
     onSearch: () -> Unit,
     searchChatsDescription: String,
 ) {
-    val settingsDescription = profile?.let {
-        stringResource(R.string.open_settings_for, it.name)
+    val switchProfileDescription = profile?.let {
+        stringResource(R.string.switch_profile_for, it.name)
     }
     TopAppBar(
         title = {},
         navigationIcon = {
             profile?.let {
                 IconButton(
-                    onClick = onSettings,
-                    modifier = Modifier.padding(start = WhiteNoiseSpacing.Related).semantics {
-                        settingsDescription?.let { description ->
+                    onClick = onSwitchProfile,
+                    modifier = Modifier.padding(start = WhiteNoiseSpacing.Related)
+                        .testTag("chats.switchProfile").semantics {
+                        switchProfileDescription?.let { description ->
                             contentDescription = description
                         }
                     },
@@ -619,6 +646,7 @@ private fun ChatsTopBar(
 }
 
 /** Saved folders keep their management order; selecting an active pill never clears it. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatFolderPills(
     profile: Profile?,
@@ -628,6 +656,15 @@ private fun ChatFolderPills(
     onScopeChange: (ChatScope) -> Unit,
     onFolders: () -> Unit,
 ) {
+    val scrolled = (LocalWhiteNoiseHeaderScroll.current?.state?.overlappedFraction ?: 0f) > 0.01f
+    val containerColor by animateColorAsState(
+        if (scrolled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
+        label = "Folder row background",
+    )
+    val selectedColor by animateColorAsState(
+        if (scrolled) MaterialTheme.colorScheme.surfaceContainerLowest else MaterialTheme.colorScheme.surfaceContainerHigh,
+        label = "Selected folder background",
+    )
     val folders = profile?.chatFolders.orEmpty()
     val selectedIndex = when {
         folderId != null -> folders.indexOfFirst { it.id == folderId } + 1
@@ -644,35 +681,38 @@ private fun ChatFolderPills(
     }
     LazyRow(
         state = listState,
-        modifier = Modifier.fillMaxWidth().testTag("chats.folders"),
+        modifier = Modifier.fillMaxWidth().background(containerColor).testTag("chats.folders"),
         contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
         horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         item(key = "scope:chats") {
             ChatFolderPill(chatScopeLabel(ChatScope.Chats), folderId == null && scope == ChatScope.Chats,
-                "chats.scope.chats", { onScopeChange(ChatScope.Chats) })
+                "chats.scope.chats", selectedColor, { onScopeChange(ChatScope.Chats) })
         }
         items(folders, key = { "folder:${it.id}" }) { folder ->
             ChatFolderPill(folder.name, folder.id == folderId,
-                "chats.folder.${folder.id}", { onFolderChange(folder.id) })
+                "chats.folder.${folder.id}", selectedColor, { onFolderChange(folder.id) })
         }
         item(key = "scope:left") {
             ChatFolderPill(chatScopeLabel(ChatScope.Left), folderId == null && scope == ChatScope.Left,
-                "chats.scope.left", { onScopeChange(ChatScope.Left) })
+                "chats.scope.left", selectedColor, { onScopeChange(ChatScope.Left) })
         }
         item(key = "manage") {
-            TextButton(onClick = onFolders, modifier = Modifier.testTag("chats.manageFolders")) {
-                Icon(painterResource(R.drawable.ic_folder), contentDescription = null,
-                    modifier = Modifier.size(18.dp))
-                Text(stringResource(R.string.chat_folders), modifier = Modifier.padding(start = WhiteNoiseSpacing.Related))
+            IconButton(onClick = onFolders,
+                modifier = Modifier.minimumInteractiveComponentSize().size(32.dp).testTag("chats.manageFolders")) {
+                Icon(
+                    painterResource(R.drawable.ic_bookmark_manager),
+                    contentDescription = stringResource(R.string.manage_folders),
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ChatFolderPill(label: String, selected: Boolean, tag: String, onClick: () -> Unit) {
+private fun ChatFolderPill(label: String, selected: Boolean, tag: String, selectedColor: Color, onClick: () -> Unit) {
     FilterChip(
         selected = selected,
         onClick = onClick,
@@ -683,7 +723,7 @@ private fun ChatFolderPill(label: String, selected: Boolean, tag: String, onClic
         colors = FilterChipDefaults.filterChipColors(
             containerColor = Color.Transparent,
             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            selectedContainerColor = selectedColor,
             selectedLabelColor = MaterialTheme.colorScheme.onSurface,
         ),
     )
@@ -729,6 +769,11 @@ private fun ChatsSearchTopBar(
                 value = query,
                 onValueChange = onQueryChange,
                 placeholder = stringResource(R.string.search_chats),
+                emptyTrailingIcon = {
+                    IconButton(onClick = onVoice, enabled = !voicePending) {
+                        Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.global_voice))
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("chats.searchField")
@@ -756,9 +801,6 @@ private fun ChatsSearchTopBar(
                     onDismiss = { onFilterMenuOpenChange(false) },
                     onCategory = onFilterCategory, onClear = onClearFilters,
                 )
-            }
-            IconButton(onClick = onVoice, enabled = !voicePending) {
-                Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.global_voice))
             }
         },
         scrollBehavior = LocalWhiteNoiseHeaderScroll.current,

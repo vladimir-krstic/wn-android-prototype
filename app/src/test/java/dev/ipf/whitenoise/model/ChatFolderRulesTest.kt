@@ -8,6 +8,22 @@ class ChatFolderRulesTest {
     private fun direct(id: String) = Chat(id, 0, ChatKind.Direct("person-$id"), "Chat $id")
     private fun group(id: String) = Chat(id, 1, ChatKind.Group, "Group $id", description = "Outdoor plans", members = listOf(GroupMember("me", GroupRole.Admin), GroupMember("friend", GroupRole.Member)))
 
+    @Test fun exampleFoldersHaveLivePeopleAndKeywordRules() {
+        val profile = ProfileFixtures.marmota
+        fun folder(id: String) = profile.chatFolders.single { it.id == id }
+        fun ids(id: String) = ChatFolders.rows(profile.chats, folder(id)).map { it.id }.toSet()
+        assertTrue(ids("friends").containsAll(setOf("maya-chen", "nora-bennett")))
+        assertTrue("product-circle" in ids("work")) // Muted work chats are included.
+        assertTrue("weekend-walks" in ids("weekend"))
+        listOf("friends", "work", "weekend").forEach {
+            assertTrue(folder(it).chatIds.isEmpty())
+            assertTrue(ids(it).size < profile.chats.size)
+            assertFalse("catalog-direct-text" in ids(it))
+        }
+        val newGroup = profile.chats.single { it.id == "product-circle" }.copy(id = "launch", title = "Product launch")
+        assertTrue(newGroup in ChatFolders.rows(profile.chats + newGroup, folder("work")))
+    }
+
     @Test fun emptyRuleAndIncludeMutedAloneCannotSwallowList() {
         val chats = listOf(direct("a"), group("b"))
         assertTrue(ChatFolders.rows(chats, ChatFolder("f", "Empty")).isEmpty())

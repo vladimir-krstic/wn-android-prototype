@@ -193,7 +193,9 @@ internal fun ReadOnlyMediaViewer(
                 val stillImage = !video && item.attachment.kind != MessageAttachmentKind.Gif
                 if (video) {
                     MediaViewerVideo(
-                        item = item,
+                        attachment = item.attachment,
+                        image = item.image,
+                        playbackKey = item.key.stableId,
                         active = pagerState.settledPage == page && !pagerState.isScrollInProgress,
                         controlsVisible = chromeVisible,
                         bottomControlsInset = bottomChromeHeight,

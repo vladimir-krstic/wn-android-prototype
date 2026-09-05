@@ -214,6 +214,9 @@ class ConversationScreenTest {
     fun composerRemoveUsesOneAccessibleTargetAndConcentricVisualCircle() {
         setConversation("catalog-composer-photo")
 
+        composeRule.onNodeWithTag("composer.photo.quality").assertDoesNotExist()
+        composeRule.onNodeWithText("Photo quality", substring = true).assertDoesNotExist()
+
         composeRule.onNodeWithTag("conversation.composer.remove.target", useUnmergedTree = true)
             .assertWidthIsEqualTo(48.dp)
             .assertHeightIsEqualTo(48.dp)
@@ -624,7 +627,11 @@ class ConversationScreenTest {
         composeRule.onNodeWithText("Camera").assertIsDisplayed()
         composeRule.onNodeWithText("Photos and videos").assertIsDisplayed()
         composeRule.onNodeWithText("Files").assertIsDisplayed()
-        composeRule.onNodeWithText("White Noise person").assertIsDisplayed()
+        composeRule.onNodeWithText("Contact").assertIsDisplayed()
+        composeRule.onNodeWithText("White Noise person").assertDoesNotExist()
+        composeRule.onNodeWithText("Device contact").assertDoesNotExist()
+        composeRule.onNodeWithText("Recent media").assertDoesNotExist()
+        composeRule.onNodeWithText("Photo quality").assertDoesNotExist()
         composeRule.onNodeWithText("GIF").assertDoesNotExist()
 
         val add = composeRule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode()
@@ -753,13 +760,21 @@ class ConversationScreenTest {
     }
 
     @Test
-    fun physicalTapStartsLockedRecordingAndReviewStaysInline() {
+    fun physicalTapShowsSingleRecordingRowAndReviewKeepsDismissAction() {
         setConversation("fiatjaf")
         val voice = composeRule.onNodeWithTag("conversation.voice")
 
         voice.performTouchInput { click() }
-        composeRule.onNodeWithText("Recording locked").assertIsDisplayed()
-        composeRule.onNodeWithTag("conversation.voice.recording.waveform").assertHeightIsEqualTo(24.dp)
+        composeRule.onNodeWithText("Recording locked").assertDoesNotExist()
+        composeRule.onNodeWithText("Cancel", substring = false).assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Cancel").assertDoesNotExist()
+        composeRule.onNodeWithTag("conversation.composer.surface").assertHeightIsEqualTo(48.dp)
+        val waveform = composeRule.onNodeWithTag("conversation.voice.recording.waveform")
+        waveform.assertHeightIsEqualTo(24.dp)
+        val waveformBounds = waveform.fetchSemanticsNode().boundsInRoot
+        val stopBounds = composeRule.onNodeWithTag("conversation.voice.stop").fetchSemanticsNode().boundsInRoot
+        assertTrue(waveformBounds.right <= stopBounds.left + 1f)
+        assertTrue(abs(waveformBounds.center.y - stopBounds.center.y) < 1.5f)
         composeRule.onNodeWithTag("conversation.voice.stop").assertHeightIsAtLeast(48.dp)
         composeRule.onNodeWithTag("conversation.voice.stop.icon", useUnmergedTree = true)
             .assertWidthIsEqualTo(20.dp).assertHeightIsEqualTo(20.dp)
@@ -871,9 +886,9 @@ class ConversationScreenTest {
         setConversation("fiatjaf")
 
         composeRule.onNodeWithContentDescription("Add Attachment").performClick()
-        composeRule.onNodeWithText("White Noise person").performClick()
+        composeRule.onNodeWithText("Contact").performClick()
 
-        composeRule.onNodeWithText("White Noise person").assertIsDisplayed()
+        composeRule.onNodeWithText("Contact").assertIsDisplayed()
         composeRule.onNodeWithTag("conversation.contact.search").assertHeightIsAtLeast(56.dp)
         val sheet = composeRule.onNodeWithTag("conversation.contact.sheet").fetchSemanticsNode().boundsInRoot
         val windowHeight = composeRule.activity.window.decorView.height.toFloat()

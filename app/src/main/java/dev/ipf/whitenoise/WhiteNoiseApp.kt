@@ -149,6 +149,7 @@ private val chatPrivacyRoutes = setOf(
     dev.ipf.whitenoise.navigation.AppRoute.Conversation::class.qualifiedName,
     dev.ipf.whitenoise.navigation.AppRoute.MessageDetails::class.qualifiedName,
     dev.ipf.whitenoise.navigation.AppRoute.ChatInfo::class.qualifiedName,
+    dev.ipf.whitenoise.navigation.AppRoute.GroupMembers::class.qualifiedName,
     dev.ipf.whitenoise.navigation.AppRoute.SharedContent::class.qualifiedName,
     dev.ipf.whitenoise.navigation.AppRoute.EditGroup::class.qualifiedName,
     dev.ipf.whitenoise.navigation.AppRoute.AddGroupMembers::class.qualifiedName,

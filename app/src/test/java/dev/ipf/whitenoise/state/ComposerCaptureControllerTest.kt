@@ -110,4 +110,89 @@ class ComposerCaptureControllerTest {
     @Test fun mismatchedDraftAtStartCannotCaptureAStaleSelection() {
         setup(); assertFalse(c.begin(owner, "Old text", 0, 3)); assertTrue(c.attempts.isEmpty()); assertNull(c.lease)
     }
+    private fun inline(start: Int = 5, end: Int = start): Long {
+        assertTrue(c.beginInline(owner, current.chats.single().draftText, start, end))
+        return c.inlineDictation!!.id
+    }
+    @Test fun inlinePartialsReplaceTheUtteranceWithoutDuplicatingOrSending() {
+        setup(); val id = inline()
+        c.inlineReady(owner, id)
+        c.inlineResult(owner, id, "good", false)
+        assertEquals("Hello good", current.chats.single().draftText)
+        c.inlineResult(owner, id, "good morning", false)
+        assertEquals("Hello good morning", current.chats.single().draftText)
+        assertEquals(InlineDictationPhase.Listening, c.inlineDictation!!.phase)
+        assertEquals(18, c.insertion!!.value.cursor)
+        assertTrue(sends.isEmpty())
+    }
+    @Test fun inlinePauseThenResumeUsesEditedTextAndNewSelection() {
+        setup(); val oldId = inline()
+        c.inlineResult(owner, oldId, "world", false); c.pauseInline(owner)
+        edit("Hello dear world")
+        val nextId = inline(6, 10)
+        c.inlineResult(owner, oldId, "late result", true)
+        assertEquals("Hello dear world", current.chats.single().draftText)
+        c.inlineResult(owner, nextId, "bright", false)
+        assertEquals("Hello bright world", current.chats.single().draftText)
+        assertEquals(12, c.insertion!!.value.cursor)
+    }
+    @Test fun inlineFinalContinuesAtUtteranceEndAndNeverUsesLegacyAutoSend() {
+        current = current.copy(settings = current.settings.copy(dictation = DictationPreferences(delivery = DictationDeliveryMode.Send)))
+        setup(); val id = inline()
+        assertTrue(c.attempts.isEmpty())
+        c.inlineResult(owner, id, "world", true)
+        val nextId = c.inlineDictation!!.id
+        assertNotEquals(id, nextId)
+        c.inlineResult(owner, id, "duplicate", true)
+        c.inlineResult(owner, nextId, "again", false)
+        assertEquals("Hello world again", current.chats.single().draftText)
+        assertTrue(sends.isEmpty())
+        c.endInline(owner)
+        assertNull(c.inlineDictation); assertNull(c.lease)
+        assertEquals("Hello world again", current.chats.single().draftText)
+    }
+    @Test fun inlineEditingDuringRecognitionPausesBeforeLateResultsCanOverwriteIt() {
+        setup(); val id = inline(); c.inlineResult(owner, id, "world", false)
+        edit("My correction")
+        c.inlineResult(owner, id, "late", true)
+        assertEquals("My correction", current.chats.single().draftText)
+        assertEquals(InlineDictationPhase.Paused, c.inlineDictation!!.phase)
+        assertNull(c.lease)
+    }
+    @Test fun inlineBackgroundAndNavigationPauseWithoutAutomaticRestart() {
+        setup(); val id = inline(); c.inlineResult(owner, id, "world", false)
+        c.background(); c.open(owner); c.inlineResult(owner, id, "late", true)
+        assertFalse(c.inlineDictation!!.capturing); assertNull(c.lease)
+        assertEquals("Hello world", current.chats.single().draftText)
+        val resumed = inline(11); c.close(owner); c.open(owner)
+        c.inlineResult(owner, resumed, "late", false)
+        assertFalse(c.inlineDictation!!.capturing)
+        assertEquals("Hello world", current.chats.single().draftText)
+    }
+    @Test fun inlineMembershipLossAndSignoutReleaseMicrophone() {
+        setup(); val id = inline()
+        current = current.copy(chats = listOf(current.chats.single().copy(membership = ChatMembership.Left)))
+        c.reconcile(); c.inlineResult(owner, id, "late", false)
+        assertNull(c.lease); assertFalse(c.inlineDictation!!.capturing)
+        assertEquals("Hello", current.chats.single().draftText)
+        signedIn = false; c.reconcile(); assertNull(c.inlineDictation)
+    }
+    @Test fun inlineFailureRetainsPartialsAndRetryRejectsOldProviderCallbacks() {
+        setup(); val id = inline(); c.inlineResult(owner, id, "world", false)
+        c.inlineFailure(owner, id, DictationFailure.Network)
+        assertEquals(DictationFailure.Network, c.inlineDictation!!.failure); assertNull(c.lease)
+        val resumed = inline(11)
+        c.inlineFailure(owner, id, DictationFailure.Unknown)
+        assertEquals(resumed, c.inlineDictation!!.id); assertNull(c.inlineDictation!!.failure)
+        c.inlineResult(owner, resumed, "again", false)
+        assertEquals("Hello world again", current.chats.single().draftText)
+    }
+    @Test fun inlineAndVoiceCannotHoldMicrophoneAtTheSameTime() {
+        setup(); assertTrue(c.acquireVoice(owner, 100))
+        assertFalse(c.beginInline(owner, "Hello", 5, 5))
+        c.releaseVoice(owner, 100); inline()
+        assertFalse(c.acquireVoice(owner, 101))
+        c.pauseInline(owner); assertTrue(c.acquireVoice(owner, 101))
+    }
+
 }

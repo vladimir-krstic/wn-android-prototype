@@ -21,7 +21,8 @@ rules include muted chats to preserve existing Unread/Archived behavior.
 
 ## Entry, Back and composition
 
-Folders opens from Settings and the end of the horizontal Chats pill row. Use the existing Settings detail
+Folder management opens from Manage folders at the end of the horizontal Chats
+pill row; there is no Folders entry in Settings. Use the existing Settings detail
 canvas, adaptive measure, native ListItem rows, shared tonal fields, switches,
 menus and task controls. New/Edit is a typed profile/folder-owned destination.
 Name and description precede Included Chats, automatic People/Keyword/constraint
@@ -155,3 +156,85 @@ regression. Current-build device inspection and visual acceptance remain pending
 Host gate: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
 passes with 895 unit tests and zero lint errors. Both APKs assemble; Compose
 interaction tests compile only. `git diff --check` passes.
+
+
+## 2026-09-05 scroll surface and example folders
+
+Latest direction adds a neutral surfaceContainer backing beneath the pill row
+when the pinned app bar reports scrolled content. The selected pill switches to
+surfaceContainerLowest on that gray backing; at the top it uses surfaceContainerHigh
+on the regular surface. Both use onSurface text, while unselected labels retain
+onSurfaceVariant and transparent fills. Color changes animate and are tied to the
+same restored/programmatic scroll state used by the header; pill shapes stay fixed.
+
+Folders is removed from Settings. Named pills filter chats immediately. An icon-only tonal Manage folders button remains at the end for creation,
+editing, ordering and deletion; it is distinct from the filter pills and retains
+its localized accessible label.
+
+The populated Marmota profile seeds Friends (Maya/Nora person rules), Work
+(product keyword, groups only, including muted), and Weekend (weekend keyword,
+groups only). These are editable custom folders with live rules, not manual ID
+lists. They follow Unread in initial ordering. Empty profiles retain only the
+standard defaults. Restore Default Folders preserves custom examples; it does
+not recreate deleted examples. Unit coverage verifies live membership and default
+restoration with custom folders. Compiled interaction coverage verifies direct
+pill filtering and management from Chats, with no Settings entry.
+
+Example-folder host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 899 unit tests, zero lint errors and both debug APKs assembled.
+Interaction tests compile only; device visual acceptance remains pending.
+
+## 2026-09-05 — folder assignment dialog
+
+The shared Add to Folder picker uses left-aligned folder icons and labels with
+trailing native checkboxes. One destination can be checked per assignment;
+checking another replaces the pending destination, and Add applies it. Cancel
+or Back discards the pending choice. Add is disabled without an existing folder.
+New Folder has an aligned plus icon and opens the existing name/Save flow.
+Draft state is keyed to the profile; folder removal disables stale confirmation.
+The scrollable content uses shared 8 dp row gaps and dialog-owned outer insets.
+
+`WhiteNoiseDialogCheckRow` also aligns the content-filter and contact-sharing
+checkbox lists, with white controls on the gray dialog canvas, a 56 dp minimum
+row, wrapping labels and one full-row checkbox semantics target. Folder rows
+retain a decorative 24 dp folder icon. No platform-owned dialog is changed.
+`ChatFolderFlowTest` covers pending selection, Cancel and explicit Add; execution
+and visual acceptance remain pending device authorization.
+
+## 2026-09-05 — compact folder-management action
+
+Explicit user direction removes the visible Manage folders label. The existing
+edit icon sits in a native `FilledTonalIconButton` at the end of the pill row,
+using the theme’s neutral secondaryContainer/onSecondaryContainer roles. Native
+shape, focus, ripple and minimum touch target remain intact, and TalkBack/Voice
+Access retain the localized Manage folders label. The management route and
+existing `chats.manageFolders` interaction-test target are unchanged.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 910 unit tests, zero lint errors and both APKs assembled. Existing
+folder-management interaction tests compile; no device inspection was performed.
+
+## 2026-09-05 — folder-action visual weight
+
+Follow-up screenshot feedback reduces the folder-management tonal circle to
+32 dp, matching the filter-pill height, with an explicit 18 dp edit icon.
+`minimumInteractiveComponentSize` retains its 48 dp interaction area. The neutral
+secondary colors, accessible label, placement and management destination remain.
+
+Refinement host validation: full Gradle gate passed with 909 unit tests, zero lint
+errors and both APKs; final sign-out UI regression compiled separately. Device
+inspection remains pending. See the latest parity-ledger entry for scope.
+
+## 2026-09-05 — bookmark manager action
+
+Latest user direction replaces the pencil with Google's unmodified Material
+Symbols Rounded `bookmark_manager` asset and removes the resting tonal circle.
+Use standard `IconButton`, retaining the compact 18 dp artwork, 32 dp component
+size, native 48 dp minimum interaction area and localized Manage folders label.
+Placement, management navigation and native focus/press feedback remain intact.
+This supersedes the tonal background in the preceding visual-weight refinement.
+[Android icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button)
+governs the standard transparent action. Device visual acceptance is pending.
+
+Host validation: `./gradlew lintDebug assembleDebug` passed. No device inspection
+was performed for this icon/style change.

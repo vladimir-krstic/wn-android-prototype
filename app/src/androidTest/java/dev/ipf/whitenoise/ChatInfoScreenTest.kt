@@ -18,6 +18,10 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -56,6 +60,36 @@ import org.junit.runner.RunWith
 class ChatInfoScreenTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<EmptyTestActivity>()
+
+    @Test fun groupIdentityMovesIntoHeaderAfterNameScrollsAway() {
+        checkScrollingIdentity("weekend-walks")
+    }
+
+    @Test fun directIdentityMovesIntoHeaderAfterNameScrollsAway() {
+        checkScrollingIdentity("maya-chen")
+    }
+
+    private fun checkScrollingIdentity(chatId: String) {
+        val chat = ProfileFixtures.marmota.chats.first { it.id == chatId }
+        val restoration = StateRestorationTester(composeRule)
+        restoration.setContent { WhiteNoiseTheme { InfoUnderTest(chat) } }
+        composeRule.onNodeWithTag("chat_info.header_identity").assertDoesNotExist()
+        val name = composeRule.onNodeWithTag("chat_info.name").fetchSemanticsNode()
+        val list = composeRule.onNodeWithTag("chat_info.list")
+        val scrollToNameBottom = name.boundsInRoot.bottom - list.fetchSemanticsNode().boundsInRoot.top
+        list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, scrollToNameBottom - 2f) }
+        composeRule.onNodeWithTag("chat_info.header_identity").assertDoesNotExist()
+        list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 4f) }
+        composeRule.onNodeWithTag("chat_info.header_avatar").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat_info.header_name").assertIsDisplayed()
+        restoration.emulateSavedInstanceStateRestore()
+        composeRule.onNodeWithTag("chat_info.header_identity").assertIsDisplayed()
+        list.performScrollToNode(hasText("Archive"))
+        composeRule.onNodeWithTag("chat_info.header_identity").assertIsDisplayed()
+        list.performScrollToIndex(0)
+        composeRule.onNodeWithTag("chat_info.name").assertIsDisplayed()
+        composeRule.onNodeWithTag("chat_info.header_identity").assertDoesNotExist()
+    }
 
     @Test fun muteUsesTheSameImmediateSelectionDialogAsChats() {
         val profile = ProfileFixtures.marmota

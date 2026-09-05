@@ -71,6 +71,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -387,25 +389,32 @@ fun PersonProfileScreen(
                                 leading = { GroupAvatarStack(groups) },
                             )
                         }
+                    } else {
+                        row {
+                            SettingsAction(title = stringResource(R.string.contact_add_to_group),
+                                onClick = { groupAction = GroupContactAction.Invite },
+                                leading = { ProfileActionIcon(R.drawable.ic_group_add) })
+                        }
                     }
                     row {
-                        SettingsAction(title = stringResource(R.string.contact_private_details), onClick = { showPrivateDetails = true })
+                        SettingsAction(title = stringResource(R.string.contact_private_details), onClick = { showPrivateDetails = true },
+                            leading = { ProfileActionIcon(R.drawable.ic_edit) })
                     }
                     row {
                         SettingsAction(title = stringResource(R.string.contact_start_group), onClick = onStartGroup,
                             leading = { ProfileActionIcon(R.drawable.ic_group_add) })
                     }
                     row {
-                        SettingsAction(title = stringResource(R.string.contact_add_groups), onClick = { groupAction = GroupContactAction.Invite })
-                    }
-                    row {
-                        SettingsAction(title = stringResource(R.string.contact_promote_groups), onClick = { groupAction = GroupContactAction.Promote })
+                        SettingsAction(title = stringResource(R.string.contact_promote_groups), onClick = { groupAction = GroupContactAction.Promote },
+                            leading = { ProfileActionIcon(R.drawable.ic_admin_panel_settings) })
                     }
                     row {
                         SettingsAction(
                             title = stringResource(if (person.isFollowing) R.string.unfollow else R.string.follow),
                             onClick = onToggleFollow,
-                            leading = { ProfileActionIcon(R.drawable.ic_settings_person_add) },
+                            leading = { ProfileActionIcon(
+                                if (person.isFollowing) R.drawable.ic_person_remove else R.drawable.ic_settings_person_add,
+                            ) },
                         )
                     }
                     row {
@@ -417,7 +426,7 @@ fun PersonProfileScreen(
                             },
                             leading = {
                                 ProfileActionIcon(
-                                    if (person.isBlocked) R.drawable.ic_check else R.drawable.ic_close,
+                                    if (person.isBlocked) R.drawable.ic_check else R.drawable.ic_block,
                                     destructive = !person.isBlocked,
                                 )
                             },
@@ -433,7 +442,9 @@ fun PersonProfileScreen(
                                     if (groupRole == GroupRole.Admin) R.string.remove_admin else R.string.make_admin,
                                 ),
                                 onClick = { showRoleConfirmation = true },
-                                leading = { ProfileActionIcon(R.drawable.ic_person) },
+                                leading = { ProfileActionIcon(
+                                    if (groupRole == GroupRole.Admin) R.drawable.ic_person else R.drawable.ic_admin_panel_settings,
+                                ) },
                             )
                         }
                         row {
@@ -441,7 +452,7 @@ fun PersonProfileScreen(
                                 title = stringResource(R.string.remove_from_group),
                                 destructive = true,
                                 onClick = { showRemoveConfirmation = true },
-                                leading = { ProfileActionIcon(R.drawable.ic_delete, destructive = true) },
+                                leading = { ProfileActionIcon(R.drawable.ic_person_remove, destructive = true) },
                             )
                         }
                     }
@@ -530,12 +541,19 @@ fun GroupsInCommonScreen(
         val completed = ids.filter(onAddToGroup); GroupContactResult(completed, ids - completed.toSet())
     },
 ) {
-    var showAddToGroup by rememberSaveable(person.id) { mutableStateOf(false) }
+    var showAddToGroup by rememberSaveable(profile.id, person.id) { mutableStateOf(false) }
     val groups = remember(profile.chats, person.id) { profile.groupsSharedWith(person.id) }
     SettingsScaffold(
         title = stringResource(R.string.groups_in_common),
         onBack = onBack,
         modifier = modifier.fillMaxSize(),
+        bottomBar = {
+            CreationBottomAction(
+                label = stringResource(if (groups.isEmpty()) R.string.contact_add_to_group else R.string.add_to_another_group),
+                icon = R.drawable.ic_group_add,
+                onClick = { showAddToGroup = true },
+            )
+        },
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().testTag("groups_in_common.list"),
@@ -561,13 +579,6 @@ fun GroupsInCommonScreen(
                                 GroupLink(group = group, onClick = { onOpenGroup(group.id) })
                             }
                         }
-                    }
-                    row {
-                        SettingsAction(
-                            title = stringResource(R.string.add_to_another_group),
-                            onClick = { showAddToGroup = true },
-                            leading = { ProfileActionIcon(R.drawable.ic_group_add) },
-                        )
                     }
                 }
             }
@@ -936,6 +947,7 @@ internal fun PersonIdentityHeader(
     showIdentityValues: Boolean,
     onCopy: () -> Unit,
     testTagPrefix: String = "person_profile",
+    onNameBottom: (Float) -> Unit = {},
 ) {
     var viewing by remember(person.id, person.avatar, person.banner) { mutableStateOf<ProfileAvatar?>(null) }
     viewing?.let { ProfileImageViewer(person.id, person.displayName, it, onDismiss = { viewing = null }) }
@@ -965,7 +977,7 @@ internal fun PersonIdentityHeader(
                         top = WhiteNoiseSpacing.FormField,
                         end = WhiteNoiseSpacing.CompactScreenMargin,
                     )
-                    .testTag("$testTagPrefix.name"),
+                    .testTag("$testTagPrefix.name").onGloballyPositioned { onNameBottom(it.positionInWindow().y + it.size.height) },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,

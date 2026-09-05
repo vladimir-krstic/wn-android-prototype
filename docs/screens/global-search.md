@@ -195,3 +195,25 @@ open, including an empty query and filter-only browsing. Closing Search restores
 normal banner eligibility without dismissing the update or changing its state.
 
 Debug APK assembly and whitespace checks pass. No device inspection was performed.
+
+## 2026-09-05 — microphone inside the search field
+
+The global-search header places Voice Search in the field's native trailing
+icon slot only while the query is empty. Any typed or recognized text replaces
+it with Clear search; clearing restores the mic. Filters remains the sole
+adjacent toolbar action and keeps the existing anchored menu and active state.
+The field gains the width previously occupied by the standalone mic button.
+
+WhiteNoiseCompactSearchField accepts an optional empty trailing slot; other
+search directories retain their existing behavior. Native 48 dp icon targets,
+accessible Voice Search / Clear search labels, and pending-request disabling
+remain. Recognition handoff, cancellation, retries, stale-result ownership,
+recreation and filter policy are unchanged. No new platform integration or
+permission is added.
+
+GlobalSearchFlowTest adds the mic/clear swap and nested field placement case;
+VoiceSearchFlowTest and the deterministic voice case now start from an empty
+query and exercise clearing before a new recording. Existing stale-query,
+profile, cancellation, retry and recreation coverage remains. Host validation
+is recorded in the parity ledger; UI tests compile only, with device/visual
+and actual microphone verification still pending.

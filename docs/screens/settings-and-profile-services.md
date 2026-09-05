@@ -104,14 +104,14 @@ The Settings-owned profile switcher uses
 `WhiteNoiseModalBottomSheet` and `WhiteNoiseSheetHeader`: continuous
 surfaceContainer, no extra handle/title spacer, 24 dp text insets, 8 dp
 body gap and trailing native Close. Its 48 dp two-line rows keep active-first
-stable order, a selected active container/check, inactive aggregate unread
+stable order, an active check, inactive aggregate unread
 badges capped at 99+, and a pinned Add Profile action.
 Diagnostics and destructive-task sheets use the same shared presentation;
 their profile ownership and dismissal/confirmation behavior are unchanged.
 
 2026-09-04 production-parity B32 follow-up: one app-wide update controller
 adds a self-managed **App updates** group and the matching Chats warning. The
-Settings row covers checking, current, available and retry states before opening
+Settings row covers checking, available and retry states before opening
 the shared review flow. Store-managed distribution removes both entry points.
 One- and two-release warnings can be dismissed for the exact latest version;
 warnings three or more releases behind cannot. The prototype models review,
@@ -477,3 +477,24 @@ not restyled. See `app-menus.md` for the exact API/pin and regression evidence.
   accessibility. Encrypted export requires matching password fields in one
   focused dialog; raw export names its consequence before Android's document
   creator opens; document-write failure gives a recoverable error dialog.
+
+## 2026-09-05 — shared quick switcher and current-update visibility
+
+Chats now reuses the profile sheet with Add Profile and Settings footer rows.
+Profile rows share white containers, active checks and existing unread badges;
+the Settings-owned sheet retains its Add Profile footer. The update card and its
+spacing are omitted when update state is Current, including after installation.
+Check capability remains available to the controller independently of visibility.
+
+## 2026-09-05 — profile switching belongs to Chats
+
+Latest direction removes the Settings profile-management row, inline alternate
+profiles, Add Profile duplicate and Settings-owned switcher sheet. The identity
+card still opens Share & Connect. Switching and adding profiles use the main
+avatar sheet; sign-out with remaining profiles now lands on Chats and opens that
+same sheet once. Settings Back no longer has an inline expansion to collapse.
+Settings no longer accepts profile-selection callbacks or switcher route flags.
+
+Refinement host validation: full Gradle gate passed with 909 unit tests, zero lint
+errors and both APKs; final sign-out UI regression compiled separately. Device
+inspection remains pending. See the latest parity-ledger entry for scope.

@@ -144,7 +144,7 @@
     <string name="search_chats">搜尋聊天</string>
     <string name="close_search">關閉搜尋</string>
     <string name="clear_search">清除搜尋</string>
-    <string name="open_settings_for">開啟設定%1$s</string>
+    <string name="switch_profile_for">切換個人檔案，%1$s</string>
     <string name="open_share_connect_for">開啟共享連線( C)%1$s</string>
     <string name="actions_for">行動%1$s</string>
     <string name="new_message">新信件</string>
@@ -344,6 +344,7 @@
     </plurals>
     <string name="delete_selected_messages">刪除選中信件</string>
     <string name="forward_selected_messages">轉發選中信件</string>
+    <string name="manage_folders">管理資料夾</string>
     <string name="select_chats">選擇聊天</string>
     <string name="select_messages">選擇訊息</string>
     <string name="close_selection">關閉選擇</string>
@@ -631,10 +632,7 @@
     <string name="history_target_failed">無法裝入此信件 。</string>
     <string name="history_searching">正在搜尋所有聊天曆史…</string>
     <string name="history_search_failed">無法搜尋所有歷史。 顯示已裝入信件中的匹配 。</string>
-    <string name="history_unread_boundary">未讀信件</string>
-    <string name="history_jump_unread">跳轉到未讀信件</string>
     <string name="history_jump_latest">跳轉到最近的訊息</string>
-    <string name="history_jump_mention">下一個未讀引用</string>
     <string name="message_status">狀態</string>
     <string name="message_created_at">已建立</string>
     <string name="message_sent_at">已傳送</string>
@@ -711,8 +709,6 @@
     <string name="photo_quality_high">高</string>
     <string name="photo_quality_original">原始</string>
     <string name="photo_quality_explanation">照片位置和識別後設資料被刪除。 原始儲存支援的影象資料;其他格式被安全地重新編碼. 影片和檔案儲存其原始資料.</string>
-    <string name="photo_quality_fallback">這種格式被重新編碼到最多4096 px,以刪除識別後設資料.</string>
-    <string name="photo_prepared_size">編寫:%1$s</string>
     <string name="attachment_queued">佇列</string>
     <string name="attachment_uploading">上傳中…</string>
     <string name="attachment_downloading">正在下載…</string>
@@ -737,10 +733,9 @@
     <string name="attachment_gif_unavailable">沒有動畫</string>
     <string name="attachment_gif_static">靜態影象</string>
     <string name="attachment_gif_description">動畫影象</string>
-    <string name="photo">相片</string>
     <string name="attachment_add">新增</string>
     <string name="attachment_retry">重試</string>
-    <string name="white_noise_person">White Noise人員</string>
+    <string name="attachment_contact">聯絡人</string>
     <string name="recent_add_marmot">新增marmot圖片</string>
     <string name="recent_add_fox">新增狐狸照片</string>
     <string name="recent_add_badger">新增錯誤照片</string>
@@ -804,7 +799,6 @@
     <string name="photo_editor_undo_done">更改已撤銷</string>
     <string name="photo_editor_redo_done">更改重做</string>
     <string name="photo_editor_original_edited">編輯的照片使用高品質. 原影象儲存供進一步編輯.</string>
-    <string name="photo_quality_mixed">混合</string>
     <string name="photo_editor_frame">圖片%1$d</string>
     <string name="photo_editor_coordinate_value">%1$s: %2$d%%</string>
     <string name="attachment_reader_title">檔案</string>
@@ -933,18 +927,7 @@
     <string name="speech_use_engine">使用引擎</string>
     <string name="speech_dismiss">關閉</string>
     <string name="dictation_title">拼寫</string>
-    <string name="dictation_finish">完成拼寫</string>
-    <string name="dictation_manual">當我拍完</string>
-    <plurals name="dictation_silence">
-        <item quantity="other">之後%1$d安靜的秒</item>
-    </plurals>
-    <string name="dictation_result">完成時</string>
-    <string name="dictation_paste">貼上成草稿</string>
-    <string name="dictation_send">傳送訊息</string>
-    <string name="dictation_paste_detail">在傳送前審查或編輯文字</string>
-    <string name="dictation_send_detail">如果此聊天和草稿沒有變化, 則在拼寫結束時傳送 。</string>
-    <string name="dictation_send_safety">如果草案、成員或會議發生變化,保留案文供審查。</string>
-    <string name="dictation_settings_detail">選擇拼寫完成的時間及其文字發生的情況 。</string>
+    <string name="dictation_settings_detail">語音會直接轉換為訊息文字。暫停後可編輯，輕點麥克風即可從游標位置繼續。準備好後再傳送。</string>
     <string name="dictation_disclosure_title">外部語音辨識</string>
     <string name="dictation_disclosure_detail">您的語音服務可以傳送指定音訊給其提供者 。 拼寫文字貼上在您的草稿中, 除非您允許在拼寫設定中傳送信件 。</string>
     <string name="dictation_start">開始拼寫</string>
@@ -967,11 +950,6 @@
     <string name="dictation_failed">無法翻譯演講。</string>
     <string name="dictation_retry">重試</string>
     <string name="dictation_copied">已複製</string>
-    <string name="voice_capture_locked">正在鎖定記錄</string>
-    <string name="voice_capture_lock">鎖定錄音</string>
-    <string name="voice_capture_cancel">要取消的釋出</string>
-    <string name="voice_capture_release">釋放供審查</string>
-    <string name="voice_capture_drag">要取消或向上滑到鎖定的幻燈片</string>
     <string name="voice_capture_short">保持更長的時間來記錄。</string>
     <string name="voice_capture_failed">無法記錄此語音資訊 。</string>
     <string name="group_solo_create">建立無其它成員</string>
@@ -1066,8 +1044,7 @@
         <item quantity="other">%1$d編寫歷史條目</item>
     </plurals>
     <string name="retention_off">關</string>
-    <string name="retention_explainer">讀取新信件後, 將開始倒計時 。 傳送時您傳送的訊息開始 。</string>
-    <string name="retention_existing_deadlines">改變 timer不會改變已經開始的倒計時。 刪除的訊息不會返回 。</string>
+    <string name="retention_explainer">閱讀或傳送訊息時開始計時。</string>
     <string name="retention_readonly">只有管理員可以變更</string>
     <string name="retention_custom">自訂時間</string>
     <string name="retention_custom_value">自定義 time: %1$s</string>
@@ -1835,4 +1812,8 @@
     <string name="sign_out_wipe_detail">此配置圖和所有本地資料將被永久刪除 。 先前的聊天不會返回 。</string>
     <string name="support_chat_relay_required">選擇連線 在啟動支援聊天前聊天訊息中繼 。</string>
     <string name="unread">未讀</string>
+    <string name="profile_download_image">下載</string>
+    <string name="group_see_all_members">查看全部</string>
+    <string name="contact_add_to_group">新增至群組</string>
+    <string name="dictation_resume">繼續聽寫</string>
 </resources>

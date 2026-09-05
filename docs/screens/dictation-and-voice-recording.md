@@ -1,5 +1,12 @@
 # Dictation and voice-note interaction
 
+Current dictation behavior is superseded by the user-approved
+[live composer dictation](composer-media-and-speech.md#2026-09-05--live-editable-composer-dictation)
+revision on 2026-09-05. The B17 contract below is historical; it no longer governs
+recognition, entry, disclosure, completion, settings or transcript presentation.
+Active voice recording now shows only the single waveform/Stop row described in
+the composer brief.
+
 ## Scope and evidence
 
 B17 implements C067–C070 after B11. Preserve the established composer, recorded

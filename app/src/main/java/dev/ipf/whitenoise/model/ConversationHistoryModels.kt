@@ -14,7 +14,7 @@ enum class HistoryScenario(val developerLabel: String) {
 }
 enum class HistoryPhase { Loading, Failed, Unavailable }
 data class HistoryRequest(val id: Long, val operation: HistoryOperation, val scenario: HistoryScenario,
-    val targetId: String? = null, val markThrough: Boolean = false, val phase: HistoryPhase = HistoryPhase.Loading,
+    val targetId: String? = null, val phase: HistoryPhase = HistoryPhase.Loading,
     val scrollOffset: Int = 0, val highlight: Boolean = true)
 
 /** Stable entry IDs describe the loaded UI window; the authoritative local history stays intact. */
@@ -51,19 +51,8 @@ object ConversationHistory {
 }
 
 data class ConversationReadState(val unreadIds: Set<String>, val observedIds: Set<String>)
-data class ConversationUnreadJump(val pendingId: String? = null, val stackActive: Boolean = false, val initialized: Boolean = false)
 
 object ConversationReading {
-    /** Compose supplies pixel estimates for lazy content; include newer, unloaded history. */
-    fun showTailJump(contentPx: Int, offsetPx: Int, viewportPx: Int, loadedItems: Int, newerItems: Int = 0): Boolean {
-        if (contentPx <= 0 || offsetPx < 0 || viewportPx <= 0 || loadedItems <= 0 ||
-            contentPx == Int.MAX_VALUE || offsetPx == Int.MAX_VALUE || viewportPx == Int.MAX_VALUE
-        ) return false
-        val loadedDistance = (contentPx.toLong() - offsetPx - viewportPx).coerceAtLeast(0)
-        val newerDistance = contentPx.toLong() * newerItems.coerceAtLeast(0) / loadedItems
-        return loadedDistance + newerDistance >= viewportPx.toLong() * 2
-    }
-
     fun actuallyVisible(itemStart: Int, itemSize: Int, viewportStart: Int, viewportEnd: Int): Boolean {
         if (itemSize <= 0 || viewportEnd <= viewportStart) return false
         val overlap = minOf(itemStart + itemSize, viewportEnd) - maxOf(itemStart, viewportStart)
@@ -92,12 +81,62 @@ object ConversationReading {
             Regex("(?i)(?<![\\p{L}\\p{N}_])@${Regex.escape(name)}(?![\\p{L}\\p{N}_])").containsMatchIn(message.text)
         } }.map { it.id }
     }
-    fun jump(current: ConversationUnreadJump, state: ConversationReadState, chat: Chat, nearTail: Boolean): ConversationUnreadJump {
-        if (state.unreadIds.isEmpty()) return ConversationUnreadJump(initialized = true)
-        if (!current.initialized) return ConversationUnreadJump(stackActive = true, initialized = true)
-        if (nearTail) return ConversationUnreadJump(stackActive = true, initialized = true)
-        if (current.pendingId != null) return if (current.pendingId in state.unreadIds) current else current.copy(pendingId = null)
-        if (current.stackActive) return current
-        return ConversationUnreadJump(firstUnread(state, chat), stackActive = true, initialized = true)
+
+}
+
+/** Tail distance uses stable row keys, not an average that changes with each visible gallery. */
+class ConversationTailJump {
+    data class Row(val id: String, val offsetPx: Int, val sizePx: Int)
+    private val measuredHeights = mutableMapOf<String, Int>()
+    private var measuredWidth = 0
+    private var visible = false
+
+    fun update(
+        keys: List<String>, rows: List<Row>, viewportPx: Int, viewportEndPx: Int,
+        afterPaddingPx: Int, spacingPx: Int, widthPx: Int, hasNewer: Boolean = false,
+    ): Boolean {
+        // Keep the previous state through transient empty/re-measuring layouts.
+        if (viewportPx <= 0 || widthPx <= 0 || rows.isEmpty()) return visible
+        if (measuredWidth != widthPx) {
+            measuredHeights.clear()
+            measuredWidth = widthPx
+        }
+        measuredHeights.keys.retainAll(keys.toSet())
+        rows.filter { it.sizePx > 0 }.forEach { measuredHeights[it.id] = it.sizePx }
+        val last = rows.last()
+        val lastIndex = keys.indexOf(last.id)
+        if (lastIndex < 0) return visible
+        var distance = last.offsetPx.toLong() + last.sizePx + afterPaddingPx - viewportEndPx
+        for (index in lastIndex + 1 until keys.size) {
+            // A distant target/restored window may contain unmeasured newer rows.
+            // Use a fixed viewport fallback, never a changing visible-row average.
+            distance += (measuredHeights[keys[index]] ?: viewportPx).toLong() + spacingPx.coerceAtLeast(0)
+        }
+        visible = hasNewer || distance >= viewportPx
+        return visible
+    }
+}
+
+/** A visit-owned reading boundary. Acknowledging visible messages never moves it. */
+data class ConversationUnreadDivider(val firstId: String, val messageIds: Set<String>) {
+    fun reconcile(chat: Chat, profileId: String): ConversationUnreadDivider? {
+        val messages = ConversationProjection.orderedEntries(chat).filterIsInstance<ChatTimelineEntry.Message>()
+            .map { it.message }.filterNot { it.isDeleted }
+        val anchor = messages.indexOfFirst { it.id == firstId || it.id in messageIds }
+        if (anchor < 0) return null
+        val following = messages.drop(anchor)
+        // Replying ends the unread section for this visit, as in Signal.
+        if (following.any { it.authorId == profileId }) return null
+        val unread = ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat, profileId), chat, profileId).unreadIds
+        val ids = following.filter { it.id in messageIds || it.id in unread }.mapTo(linkedSetOf()) { it.id }
+        return ids.firstOrNull()?.let { ConversationUnreadDivider(it, ids) }
+    }
+
+    companion object {
+        fun capture(chat: Chat, profileId: String): ConversationUnreadDivider? {
+            val read = ConversationReading.reconcile(chat.readState ?: ConversationReading.initial(chat, profileId), chat, profileId)
+            val first = ConversationReading.firstUnread(read, chat) ?: return null
+            return ConversationUnreadDivider(first, read.unreadIds).reconcile(chat, profileId)
+        }
     }
 }

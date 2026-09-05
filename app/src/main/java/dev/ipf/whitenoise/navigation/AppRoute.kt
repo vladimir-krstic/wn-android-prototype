@@ -61,6 +61,9 @@ sealed interface AppRoute {
     data class ChatInfo(val chatId: String) : AppRoute
 
     @Serializable
+    data class GroupMembers(val profileId: String, val chatId: String) : AppRoute
+
+    @Serializable
     data class SharedContent(val chatId: String, val category: String) : AppRoute
 
     @Serializable
@@ -73,7 +76,7 @@ sealed interface AppRoute {
     data class ChatRelays(val chatId: String) : AppRoute
 
     @Serializable
-    data class Settings(val showProfileSwitcher: Boolean = false) : AppRoute
+    class Settings : AppRoute
 
     @Serializable
     data object ShareConnect : AppRoute

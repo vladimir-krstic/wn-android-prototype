@@ -147,9 +147,11 @@ fun WhiteNoiseNavHost(
         }
     }
 
+    var showMainProfileSwitcher by rememberSaveable { mutableStateOf(false) }
     fun finishProfileExit(destination: ProfileExitDestination) {
+        showMainProfileSwitcher = destination == ProfileExitDestination.ProfileSwitcher
         val route: AppRoute = when (destination) {
-            ProfileExitDestination.ProfileSwitcher -> AppRoute.Settings(showProfileSwitcher = true)
+            ProfileExitDestination.ProfileSwitcher -> AppRoute.SignedIn
             ProfileExitDestination.Welcome -> AppRoute.Welcome()
         }
         navController.navigate(route) {
@@ -355,6 +357,10 @@ fun WhiteNoiseNavHost(
                 onLeave = appViewModel::leaveChat,
                 onDelete = { appViewModel.deleteEndedChat(it) },
                 onSettings = { navController.navigate(AppRoute.Settings()) },
+                onSelectProfile = appViewModel::selectProfile,
+                onAddProfile = { navController.navigate(AppRoute.Welcome(OnboardingOrigin.AddProfile)) },
+                showProfileSwitcher = showMainProfileSwitcher,
+                onProfileSwitcherShown = { showMainProfileSwitcher = false },
                 onProfileRelays = { navController.navigate(AppRoute.ProfileRelays) },
                 onUndo = appViewModel::undoChatListAction,
                 onFolders = { uiState.activeProfileId?.let { navController.navigate(AppRoute.Folders(it)) } },
@@ -378,13 +384,10 @@ fun WhiteNoiseNavHost(
                 onDismiss = appViewModel::dismissDiagnosticsPrompt,
             )
         }
-        composable<AppRoute.Settings> { entry ->
-            val route = entry.toRoute<AppRoute.Settings>()
+        composable<AppRoute.Settings> {
             SettingsScreen(
                 uiState = uiState,
                 onBack = { navController.popBackStack() },
-                onSelectProfile = appViewModel::selectProfile,
-                onAddProfile = { navController.navigate(AppRoute.Welcome(OnboardingOrigin.AddProfile)) },
                 onShareConnect = { navController.navigate(AppRoute.ShareConnect) },
                 onEditProfile = { navController.navigate(AppRoute.EditProfile) },
                 onProfileKeys = { navController.navigate(AppRoute.ProfileKeys) },
@@ -406,8 +409,6 @@ fun WhiteNoiseNavHost(
                 onAdvanceExit = { id, step -> appViewModel.advanceProfileExit(id, step)?.let(::finishProfileExit) },
                 onRetryExit = appViewModel::retryProfileExit,
                 onDismissExit = appViewModel::dismissProfileExit,
-                onFolders = { uiState.activeProfileId?.let { navController.navigate(AppRoute.Folders(it)) } },
-                initiallyShowSwitcher = route.showProfileSwitcher,
             )
         }
         composable<AppRoute.Dictation> {
@@ -927,7 +928,6 @@ fun WhiteNoiseNavHost(
                     searchRequestId = searchRequest,
                     onHistoryScenario = { appViewModel.consumeHistoryScenario(profile.id, it) },
                     onMessagesVisible = { appViewModel.markConversationVisible(profile.id, chat.id, it) },
-                    onReadThroughMention = { appViewModel.markConversationThrough(profile.id, chat.id, it) },
                     onEditMessage = { id, text, revision -> appViewModel.beginMessageEdit(profile.id, chat.id, id, text, revision) },
                     onAdvanceMessageEdit = { id, request -> appViewModel.advanceMessageEdit(profile.id, chat.id, id, request) },
                     onRetryMessageEdit = { appViewModel.retryMessageEdit(profile.id, chat.id, it) },
@@ -955,6 +955,7 @@ fun WhiteNoiseNavHost(
                     chat = chat,
                     onBack = { navController.popBackStack() },
                     onAbout = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) },
+                    onAllMembers = { navController.navigate(AppRoute.GroupMembers(profile.id, chat.id)) },
                     onMember = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) },
                     onSharedContent = { category ->
                         navController.navigate(AppRoute.SharedContent(chat.id, category.name))
@@ -982,6 +983,18 @@ fun WhiteNoiseNavHost(
                     onAddToFolder = { appViewModel.assignChatFolder(profile.id, chat.id, it) },
                     onCollapseLongMessages = { appViewModel.setCollapseLongMessages(profile.id, chat.id, it) },
                 )
+            }
+        }
+        composable<AppRoute.GroupMembers> { entry ->
+            val route = entry.toRoute<AppRoute.GroupMembers>()
+            val profile = uiState.activeProfile?.takeIf { it.id == route.profileId }
+            val chat = profile?.chats?.firstOrNull { it.id == route.chatId && it.isGroup }
+            if (profile == null || chat == null) {
+                LaunchedEffect(route.profileId, route.chatId) { showSignedInRoot() }
+            } else {
+                dev.ipf.whitenoise.ui.conversation.GroupMembersScreen(profile, chat,
+                    onBack = { navController.popBackStack() },
+                    onMember = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) })
             }
         }
         composable<AppRoute.SharedContent> { entry ->

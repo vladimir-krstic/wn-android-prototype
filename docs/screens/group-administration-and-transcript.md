@@ -170,3 +170,58 @@ migration retain `ConversationTranscriptExport`’s full engine-event schema and
 paging contract. Android’s existing Q07 explicit document-destination choice
 supplies the local handoff; the production cache-and-Sharesheet path remains a
 separate platform integration decision for that repository.
+
+## 2026-09-05 — grouped actions and surrounding spacing
+
+Transcript export now uses a white grouped action row with a download icon and
+8 dp clearance on each side vertically. Status and retry/save actions keep the
+existing flow and shared content inset. Administration actions use SettingsAction
+rows with one outer margin and native positional shapes, excluding hidden leave
+rows. See [Chat Info spacing audit](chat-and-group-information.md#2026-09-05--action-group-spacing-audit)
+for scope and validation. No Files interaction was executed during host checks.
+
+## 2026-09-05 — transcript export modal
+
+Explicit user direction replaces the inline export status/actions with the shared
+`WhiteNoiseAlertDialog`. Tapping Export transcript opens preparation immediately,
+then shows Transcript ready to save with Save transcript and Cancel. Only Save
+moves to the existing Android Files destination chooser. Cancellation, outside
+tap and Back discard preparation/ready work and return to unchanged Chat Info.
+Writing completes before dismissal; success, picker cancellation and retryable
+errors stay inside the modal. No additional inline rows or spacing are inserted.
+
+Both direct chats and groups reuse `TranscriptPanel`. Existing localized copy,
+source ownership, stale-result guards and `CreateDocument` behavior are preserved.
+The dialog uses native title/icon/action slots, shared gray canvas, wrapping text
+and polite status semantics. [Official Compose dialog guidance](https://developer.android.com/develop/ui/compose/components/dialog)
+supports the two-action confirmation pattern.
+
+`GroupLifecycleInteractionTest` covers modal entry, preparation cancellation,
+explicit Save before destination choice, ready cancellation, and failure/retry.
+System Files and device visual acceptance remain pending; interaction tests are
+host-compiled only.
+
+Host gate: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 910 unit tests, zero failures/errors/skips, zero lint errors and both
+APKs assembled. Device/visual acceptance remains pending.
+
+## 2026-09-05 — stable transcript dialog through loading
+
+Latest feedback keeps one modal instance and stable geometry across preparation
+and ready states. Save transcript is present from the start but disabled until
+Ready; Cancel stays available while preparation can be cancelled. Both action
+slots remain mounted in later states, with Retry on failure and Dismiss after
+completion. Saving disables dismissal until the existing write completes.
+
+The status slot measures all localized status copy at the actual available width
+and font scale, exposing only the current text to accessibility. This reserves
+adaptive content space without a hardcoded modal height. Event count and progress
+area remain visible; indeterminate progress becomes complete at Ready. No dialog
+replacement or conditional insertion of Save/progress changes the layout.
+`GroupLifecycleInteractionTest` checks disabled Save during preparation and the
+same dialog node, dialog bounds and Save-button bounds at Ready, followed by
+explicit destination selection. Device execution remains pending.
+
+Host gate `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed: 909 unit tests, zero failures/errors/skips, zero lint errors, both APKs.
+The geometry regression is compiled only; device visual acceptance is pending.

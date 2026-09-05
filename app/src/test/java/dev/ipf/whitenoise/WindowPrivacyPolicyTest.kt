@@ -48,6 +48,7 @@ class WindowPrivacyPolicyTest {
         assertTrue(isChatPrivacyRoute(AppRoute.Conversation::class.qualifiedName + "/{chatId}"))
         assertTrue(isChatPrivacyRoute(AppRoute.MessageDetails::class.qualifiedName + "/{chatId}/{messageId}"))
         assertTrue(isChatPrivacyRoute(AppRoute.ChatInfo::class.qualifiedName + "/{chatId}"))
+        assertTrue(isChatPrivacyRoute(AppRoute.GroupMembers::class.qualifiedName + "/{profileId}/{chatId}"))
         assertFalse(isChatPrivacyRoute(AppRoute.SignedIn::class.qualifiedName))
         assertFalse(isChatPrivacyRoute(AppRoute.PrivacySecurity::class.qualifiedName))
     }

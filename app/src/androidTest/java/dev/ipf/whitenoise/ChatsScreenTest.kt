@@ -81,7 +81,7 @@ class ChatsScreenTest {
     }
 
     @Test
-    fun topBarOpensSettingsAndKeepsSearchAndScopesOnDemand() {
+    fun topBarSwitcherOpensSettingsAndKeepsSearchAndScopesOnDemand() {
         val profile = ProfileFixtures.marmota
         var settingsOpened = false
         composeRule.setContent {
@@ -102,7 +102,9 @@ class ChatsScreenTest {
         }
 
         composeRule.onNodeWithText("Search Chats").assertIsNotDisplayed()
-        composeRule.onNodeWithContentDescription("Open Settings for Marmota").performClick()
+        composeRule.onNodeWithTag("chats.switchProfile").performClick()
+        composeRule.runOnIdle { check(!settingsOpened) }
+        composeRule.onNodeWithTag("profile_switcher.settings").performClick()
         composeRule.runOnIdle { check(settingsOpened) }
 
         composeRule.onNodeWithTag("chats.scope.chats").assertIsSelected()
@@ -483,6 +485,8 @@ class ChatsScreenTest {
         composeRule.onNodeWithText("User Profile").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Copy public key").assertIsDisplayed().performClick()
         composeRule.onNodeWithContentDescription("Copied").assertIsDisplayed()
+        composeRule.onNodeWithText("Add to a group").assertDoesNotExist()
+        composeRule.onNodeWithText("Add to groups").assertDoesNotExist()
         composeRule.onNodeWithText("Groups in Common").performScrollTo().performClick()
         composeRule.runOnIdle { check(groupsOpened) }
         composeRule.onNodeWithText("Remove Contact").performScrollTo().assertIsDisplayed()
@@ -555,7 +559,8 @@ class ChatsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Add to groups").performScrollTo().performClick()
+        composeRule.onNodeWithText("Groups in Common").assertDoesNotExist()
+        composeRule.onNodeWithText("Add to a group").performScrollTo().performClick()
         composeRule.onNodeWithTag("contact.group.catalog-group-sole-admin").performScrollTo().performClick()
         composeRule.onNodeWithTag("contact.groups.apply").performClick()
         composeRule.onNodeWithText("Add Tim to this group? They may receive group messages after joining.").assertIsDisplayed()
@@ -582,6 +587,8 @@ class ChatsScreenTest {
 
         composeRule.onNodeWithText("Weekend Walks").performClick()
         composeRule.runOnIdle { check(openedGroup == "weekend-walks") }
-        composeRule.onNodeWithText("Add to Another Group").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Add to Another Group").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Add to groups").assertIsDisplayed()
+        composeRule.onNodeWithTag("contact.groups.search").assertIsDisplayed()
     }
 }

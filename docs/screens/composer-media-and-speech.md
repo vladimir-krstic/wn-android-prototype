@@ -320,3 +320,170 @@ row and a selected-field preview. Existing camera, Photo Picker, Files, draft
 shelf, voice and media-viewer behavior remain governed here. The B11 clean gate
 passes 381 unit tests, zero lint errors and both APKs; new UI/platform cases are
 compiled only. No historical device evidence verifies the current build.
+
+## 2026-09-05 — draft video gallery playback parity
+
+Explicit user direction gives composer-gallery video pages the same Media3
+`MediaViewerVideo` component as sent-message gallery pages. The shared component
+accepts attachment, poster and stable playback key directly; drafts do not create
+fake sent-message records. Video contributes one pager frame. Photo previews and
+editing remain unchanged.
+
+Use the existing Play/Pause, seeking, skip, mute, playback speed, buffering and
+compact-height controls. Start paused. Only the settled foreground page owns a
+player; scrolling/dismissing, leaving the foreground or closing releases it.
+Position, mute and speed reuse the existing saveable playback state. Media remains
+limited to selected content URIs and the existing bundled clip, with no new
+permission, dependency, network source or external-app handoff.
+
+Composer Include/Exclude and Done/Cancel remain available. Reserve 48 dp beneath
+video controls for the existing inclusion target; the thumbnail strip stays
+outside the player. TalkBack touch exploration keeps controls accessible.
+`MediaViewerVideoTest` adds draft playback/pause/seek, speed controls, no-overlap
+with inclusion and applying exclusion through Done. Existing foreground-release
+and sent-gallery regressions exercise the same player. Tests are compiled only;
+current device playback/visual acceptance remains pending.
+
+Shared implementation follows the existing [Media3 Compose player guidance](https://developer.android.com/media/media3/ui/compose).
+
+Host validation: `testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed: 909 unit tests, zero failures/errors/skips, zero lint errors (18 warnings
+and two hints), and both APKs assembled. No device playback inspection performed.
+
+## 2026-09-05 — dictation and full-width multiline composer
+
+Explicit user direction adds a 24 dp microphone immediately before the existing
+record waveform (or Send for a sendable draft), with a native 48 dp target. It
+starts the existing owner-bound dictation flow with the current selection; review,
+disclosure, capture exclusion and cancellation stay with the shared controller.
+The attachment-menu entry was removed by the subsequent user direction below.
+
+The fourth visual line, whether wrapped or entered, automatically widens the
+text composer across the available screen margin. Measure against its compact
+editor width with current typography and density even while wide, so reflow
+cannot oscillate between layouts. One through three lines retain the separate
+Add circle. At four or more, first grow a bottom action row, then widen the
+capsule to include Add at the left. Add becomes an unfilled 24 dp icon, matching
+microphone/waveform artwork, with a 48 dp touch target. Text uses the full inner
+width above the controls, with the existing 14 dp horizontal and 12 dp vertical
+editor insets. Keep the existing outer 16 dp margins, 24 dp capsule corners and
+semantic surface/outline colors. Existing attachment and caption limits remain.
+
+Manual expansion still reaches 24 dp below the header: height settles first,
+then the surface widens. Collapse contracts width before height. A composer that
+still has at least four compact-width lines returns to its content-height wide
+layout after manual collapse. Downward dragging contracts width before following
+height; extending an already-wide multiline composer keeps its width. Springs
+are interruptible and non-bouncy; native animation scale applies. Recording and
+voice review keep their established presentation and capture behavior.
+
+Use a single Foundation editor in a small Compose Layout rather than switching
+between separate Row/Column editor trees: this preserves focus, selection,
+composition and mention painting. Measure the action row separately, reserve it
+below text in the wide state and use relative placement for RTL. The existing
+menu owner remains mounted while its Add control becomes part of the capsule.
+Back, Expand/Collapse accessibility actions, IME/insets and timeline interaction
+restrictions retain their existing contract.
+
+`ComposerLayoutFlowTest` covers the explicit fourth line, soft wrapping without
+reflow flicker, selection, attachment-menu access and both animation sequences.
+`DictationCaptureTest` exercises the direct microphone and its position before
+recording. The existing expansion-policy unit case covers the three/four-line
+boundary. UI cases are compiled only; device motion/visual acceptance is pending.
+
+Official guidance: [Compose animation](https://developer.android.com/develop/ui/compose/animation/composables-modifiers)
+and [text fields](https://developer.android.com/develop/ui/compose/text/user-input).
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 909 unit tests, zero failures/errors/skips, zero lint errors
+(18 warnings/three hints), and both APKs assembled. New interaction and motion
+cases compile only; no device or emulator inspection was performed.
+
+## 2026-09-05 — single dictation entry
+
+Latest user direction removes Dictation and its pending-review variant from the
+Add attachment menu. The composer microphone remains the entry for starting
+dictation or reopening retained review. The menu now contains Camera, Photos
+and videos, Files, Location and Contact. Updated existing dictation interaction
+coverage to use the microphone, assert the absent menu entry and reopen review
+through the microphone. No capture, permission or navigation behavior changes.
+
+Host validation: `./gradlew assembleDebug assembleDebugAndroidTest` passed; the
+updated interaction tests compile. No device execution was performed.
+
+## 2026-09-05 — restore the single-row live recording UI
+
+Latest explicit correction removes visible locked/release/drag instructions,
+Cancel and Lock actions from active recording. Show only one live waveform with
+Stop immediately after it, in the existing 48 dp composer row. Waveform height
+remains 24 dp and Stop uses its existing 20 dp red square/48 dp accessible target.
+The X remains in stopped recording review. Existing tap/hold capture, system Back
+cancellation, lifecycle cleanup and review behavior remain intact.
+
+The existing recording interaction regression now asserts absent lock/Cancel
+copy, a 48 dp composer, waveform/Stop alignment and subsequent review with X.
+No new UI or permission flow is introduced. Device inspection remains pending.
+
+Host validation: `./gradlew assembleDebug assembleDebugAndroidTest` passed.
+The updated recording/review interaction regression compiles; no device run.
+
+## 2026-09-05 — live, editable composer dictation
+
+Latest explicit user direction supersedes the earlier sample-driven dictation,
+app disclosure, separate transcript/review, Done/Cancel and auto-send settings.
+The composer microphone starts Android SpeechRecognizer directly (after Android's
+microphone permission prompt when necessary). This is the user-authorized scope
+expansion to actual dictation; the app adds RECORD_AUDIO and the recognition-service
+package query, with no app INTERNET permission or backend.
+
+Partial recognition updates the existing composer editor immediately. Each
+utterance replaces its own provisional text at the captured selection instead
+of appending repeated partials. Final results establish the next utterance's
+insertion point. Partial-result timing depends on the installed speech service.
+A pulsing semantic-error red 24 dp microphone indicates capture, followed by a
+48 dp Pause action. Hide the voice-note waveform, duplicate Message placeholder
+and separate transcript controls throughout dictation. The leading X uses the
+same presentation as stopped voice review and exits dictation without discarding
+the editable draft.
+
+Pause releases capture and leaves text editable. Editing or moving the selection
+also pauses before another recognition callback can overwrite the change. Tap
+the microphone again to capture a fresh selection in the edited draft. Paused
+mode offers the microphone and explicit Send when appropriate. No dictation
+completion or legacy preference sends automatically. Settings now explains this
+flow and links to Android voice settings instead of offering obsolete finish/
+auto-send choices. Translations are updated in all five resource sets.
+
+System Back and background/navigation pause capture; returning never restarts it
+automatically. Ownership and eligibility guard every callback, and permission
+results also require the current session. Membership loss releases the microphone;
+sign-out/removal clears owned capture state. Provider/no-speech/permission errors
+pause inline and retain draft text for retry; permanent permission denial offers
+Android app settings. Preparation times out after 15 seconds. Recognition is
+cancelled and destroyed when the session ends, pauses or leaves the origin.
+
+The single native editor retains keyboard, selection, mention styling, RTL,
+font scaling and compact/fourth-line/manual-expansion behavior. Existing voice
+capture stays mutually exclusive through the shared owned lease. The retained
+legacy deterministic reducer tests document the earlier contract, not the
+current composer dictation UI.
+
+Official sources: [SpeechRecognizer](https://developer.android.com/reference/android/speech/SpeechRecognizer),
+[RecognitionListener](https://developer.android.com/reference/android/speech/RecognitionListener)
+and [RecognizerIntent](https://developer.android.com/reference/android/speech/RecognizerIntent).
+
+Evidence: eight new ComposerCaptureControllerTest cases cover revised partials,
+selection replacement, final continuation without auto-send, stale callbacks,
+edit/background/navigation/membership/sign-out, failure retry and voice exclusion.
+DictationCaptureTest now covers inline entry, absent old controls, pause/edit/
+selection/resume, retained draft on X/background, inline recovery and revised settings,
+with the platform recognizer disabled in the UI test host. AppResourceIntegrityTest
+expects the newly authorized audio permission. Device recognition, live partial
+timing and visual acceptance remain unverified.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 917 unit tests, no failures/errors/skips, zero lint errors
+(18 warnings and three hints), and both APKs assembled. The final Back-priority
+change additionally passed `./gradlew lintDebug assembleDebug assembleDebugAndroidTest`.
+Interaction tests compile only. No device recognition, installation or visual
+inspection was performed.

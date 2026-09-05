@@ -306,6 +306,8 @@ object ComposerExpansionPolicy {
     const val CompactCaptionLines = 6
     const val CompactTranscriptLines = 8
 
+    fun usesFullWidth(compactLineCount: Int): Boolean = compactLineCount >= 4
+
     fun compactLineLimit(hasAttachments: Boolean): Int =
         if (hasAttachments) CompactCaptionLines else CompactTextLines
 

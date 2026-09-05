@@ -79,8 +79,11 @@ the global baseline or import its changed timelines/timestamps.
   and Search. The default Chats title is empty; Unread, Archived, and Left
   remain visible titles. New Message is an icon-only native FAB; its slot
   becomes Check Relays when creation is unavailable and hides during search.
-- The avatar opens Settings; profile switching and profile addition live in
-  the Settings profile header rather than in a Chats-owned switcher.
+- The avatar and small chevron open the shared profile switcher directly from
+  Chats. Selecting a signed-in profile closes the sheet and updates the chat list;
+  Add Profile and Settings are icon-led actions at the bottom. Settings retains
+  its existing profile-management entry. This supersedes the former avatar →
+  Settings-only entry.
 - Enter search from the top-app-bar search action and expose a normal Android
   back/cancel affordance while search is active. The active top-app-bar field
   is a compact 48 dp contextual treatment with `bodyLarge` query text, not the
@@ -368,3 +371,43 @@ cases compile only; no device/emulator use or visual verification is claimed.
 Current official [Android Sharesheet guidance](https://developer.android.com/develop/ui/compose/sharing/send)
 was checked for ACTION_SEND, text/plain and createChooser ownership. The app
 keeps the existing scanner and system-owned share presentation.
+
+
+2026-09-05 folder follow-up: the horizontal pill strip shares the gray scrolled
+header surface and uses a contrasting light-equivalent selected capsule. The
+populated profile includes live Friends, Work and Weekend folder examples.
+Management remains in the row as Manage folders; Settings has no Folders entry.
+See [the folder brief](chat-folders.md).
+
+## 2026-09-05 — main-screen quick profile switcher
+
+Approved main-avatar entry reuses `ProfileSwitcherSheet`: neutral gray sheet,
+white segmented profile rows with avatars, names, short public keys, active check
+and inactive unread badges. Native TextButton wraps the avatar/chevron with a
+single accessible Switch profile label; no swipe-only gesture is required.
+Dismiss/Back changes nothing. Selection closes before invoking the existing
+profile transition, keeping Chats as the route and preserving each profile’s
+chat data. Add Profile opens the existing onboarding origin; Settings opens the
+existing hub. No new authentication or storage layer.
+
+`ChatsProfileSwitcherFlowTest` covers switching/return, active selection, sheet
+closure, unchanged chat data, Settings and Add Profile routes. `ChatsScreenTest`
+keeps scope/search coverage through the revised Settings entry. These interaction
+checks are compiled only; device acceptance remains pending.
+
+Official pattern references: [Compose modal bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets)
+and [Google profile entry for account switching](https://support.google.com/googleplay/answer/2521798?hl=en).
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed (910 unit tests, zero failures/errors/skips, zero lint errors; both APKs).
+
+## 2026-09-05 — avatar-only switcher entry
+
+Explicit direction removes the avatar chevron. The native IconButton shows only
+the 40 dp active avatar, preserving the localized Switch profile accessible label
+and 48 dp touch target. Settings no longer duplicates profile switching; successful
+sign-out with remaining profiles requests the main sheet once on Chats.
+
+Refinement host validation: full Gradle gate passed with 909 unit tests, zero lint
+errors and both APKs; final sign-out UI regression compiled separately. Device
+inspection remains pending. See the latest parity-ledger entry for scope.

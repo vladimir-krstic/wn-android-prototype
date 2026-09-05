@@ -2,6 +2,8 @@
 
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
+
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import android.content.Intent
 import androidx.compose.foundation.layout.*
@@ -27,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
+import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
@@ -123,12 +126,27 @@ fun ContactGroupsSheet(
     val title = stringResource(if (action == GroupContactAction.Invite) R.string.contact_add_groups else R.string.contact_promote_groups)
     WhiteNoiseModalBottomSheet(onDismissRequest = onDismiss) {
         WhiteNoiseSheetHeader(title = title, onClose = onDismiss)
-        LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin)) {
-            item {
-                WhiteNoiseTextField(query, modifier = Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.contact_find_groups)) }, lineLimits = TextFieldLineLimits.SingleLine)
-            }
+        WhiteNoiseTextField(
+            query,
+            modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
+                .padding(top = WhiteNoiseSpacing.Related, bottom = WhiteNoiseSpacing.FormField)
+                .testTag("contact.groups.search"),
+            label = { Text(stringResource(R.string.contact_find_groups)) },
+            lineLimits = TextFieldLineLimits.SingleLine,
+        )
+        LazyColumn(
+            Modifier.fillMaxWidth().weight(1f, fill = false),
+            contentPadding = PaddingValues(
+                horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                vertical = WhiteNoiseSpacing.Related,
+            ),
+        ) {
             if (resolving) item {
-                Column(Modifier.padding(vertical = WhiteNoiseSpacing.FormField)) {
+                Column(
+                    Modifier.padding(vertical = WhiteNoiseSpacing.Related),
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                ) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     Text(stringResource(R.string.contact_roster_loading))
                 }
@@ -146,7 +164,15 @@ fun ContactGroupsSheet(
                         shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, groups.size),
                         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                             selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                        leadingContent = { Checkbox(checked = group.id in selected, onCheckedChange = null,
+                        leadingContent = {
+                            ProfileAvatar(
+                                name = group.title,
+                                avatar = group.avatar,
+                                modifier = Modifier.size(48.dp),
+                                contentDescription = null,
+                            )
+                        },
+                        trailingContent = { Checkbox(checked = group.id in selected, onCheckedChange = null,
                             modifier = Modifier.clearAndSetSemantics { }) },
                         modifier = Modifier.fillMaxWidth().testTag("contact.group.${group.id}"),
                     ) { Text(group.title) }

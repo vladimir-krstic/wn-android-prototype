@@ -144,7 +144,7 @@
     <string name="search_chats">Поиск чатов</string>
     <string name="close_search">Закрыть поиск</string>
     <string name="clear_search">Очистить поиск</string>
-    <string name="open_settings_for">Откройте настройки для %1$s.</string>
+    <string name="switch_profile_for">Сменить профиль, %1$s</string>
     <string name="open_share_connect_for">Откройте «Поделиться и подключиться» для %1$s</string>
     <string name="actions_for">Действия для %1$s</string>
     <string name="new_message">Новое сообщение</string>
@@ -377,6 +377,7 @@
     </plurals>
     <string name="delete_selected_messages">Удалить выбранные сообщения</string>
     <string name="forward_selected_messages">Переслать выбранные сообщения</string>
+    <string name="manage_folders">Управление папками</string>
     <string name="select_chats">Выберите чаты</string>
     <string name="select_messages">Выберите сообщения</string>
     <string name="close_selection">Закрыть выбор</string>
@@ -688,10 +689,7 @@
     <string name="history_target_failed">Не удалось загрузить это сообщение.</string>
     <string name="history_searching">Поиск по всей истории чатов…</string>
     <string name="history_search_failed">Не удалось выполнить поиск по всей истории. Показаны совпадения в загруженных сообщениях.</string>
-    <string name="history_unread_boundary">Непрочитанные сообщения</string>
-    <string name="history_jump_unread">Перейти к непрочитанным сообщениям</string>
     <string name="history_jump_latest">Перейти к последним сообщениям</string>
-    <string name="history_jump_mention">Следующее непрочитанное упоминание</string>
     <string name="message_status">Статус</string>
     <string name="message_created_at">Создано</string>
     <string name="message_sent_at">Отправлено</string>
@@ -780,8 +778,6 @@
     <string name="photo_quality_high">Высокое</string>
     <string name="photo_quality_original">Исходное</string>
     <string name="photo_quality_explanation">Местоположение фотографии и идентификационные метаданные удаляются. В оригинале сохраняются поддерживаемые данные изображения; другие форматы безопасно перекодируются. Видео и файлы сохраняют свои исходные данные.</string>
-    <string name="photo_quality_fallback">Этот формат был перекодирован до размера 4096 пикселей, чтобы удалить идентифицирующие метаданные.</string>
-    <string name="photo_prepared_size">Подготовлено: %1$s</string>
     <string name="attachment_queued">В очереди</string>
     <string name="attachment_uploading">Отправка…</string>
     <string name="attachment_downloading">Загрузка…</string>
@@ -806,10 +802,9 @@
     <string name="attachment_gif_unavailable">Анимация недоступна</string>
     <string name="attachment_gif_static">Статическое изображение</string>
     <string name="attachment_gif_description">Анимированное изображение</string>
-    <string name="photo">Фото</string>
     <string name="attachment_add">Добавить</string>
     <string name="attachment_retry">Повторить</string>
-    <string name="white_noise_person">White Noise человек</string>
+    <string name="attachment_contact">Контакт</string>
     <string name="recent_add_marmot">Добавить фото marmot</string>
     <string name="recent_add_fox">Добавить фото лисы</string>
     <string name="recent_add_badger">Добавить фото барсука</string>
@@ -873,7 +868,6 @@
     <string name="photo_editor_undo_done">Изменение отменено</string>
     <string name="photo_editor_redo_done">Изменение переделано</string>
     <string name="photo_editor_original_edited">Отредактированные фотографии имеют высокое качество. Исходное изображение сохраняется для дальнейшего редактирования.</string>
-    <string name="photo_quality_mixed">Смешанный</string>
     <string name="photo_editor_frame">Фото %1$d</string>
     <string name="photo_editor_coordinate_value">%1$s: %2$d%%</string>
     <string name="attachment_reader_title">Файл</string>
@@ -1002,21 +996,7 @@
     <string name="speech_use_engine">Использовать движок</string>
     <string name="speech_dismiss">Закрыть</string>
     <string name="dictation_title">Диктант</string>
-    <string name="dictation_finish">Закончить диктант</string>
-    <string name="dictation_manual">Когда я нажимаю Готово</string>
-    <plurals name="dictation_silence">
-        <item quantity="one">После %1$d секунды молчания</item>
-        <item quantity="other">После %1$d секунд молчания</item>
-        <item quantity="few">После %1$d секунды молчания</item>
-        <item quantity="many">После %1$d секунды молчания</item>
-    </plurals>
-    <string name="dictation_result">Когда закончите</string>
-    <string name="dictation_paste">Вставить в черновик</string>
-    <string name="dictation_send">Отправить сообщение</string>
-    <string name="dictation_paste_detail">Просмотрите или отредактируйте текст перед отправкой</string>
-    <string name="dictation_send_detail">Отправьте сообщение после завершения диктовки, если этот чат и черновик не изменились.</string>
-    <string name="dictation_send_safety">Если проект, членство или сессия изменятся, сохраните текст для рассмотрения.</string>
-    <string name="dictation_settings_detail">Выберите, когда закончится диктовка и что произойдет с ее текстом.</string>
+    <string name="dictation_settings_detail">Речь сразу появляется в сообщении. Приостановите диктовку для правки, затем нажмите микрофон, чтобы продолжить у курсора. Отправьте, когда будете готовы.</string>
     <string name="dictation_disclosure_title">Внешнее распознавание речи</string>
     <string name="dictation_disclosure_detail">Ваша речевая служба может отправлять продиктованный звук своему провайдеру. Продиктованный текст вставляется в черновик, если вы не включили параметр «Отправить сообщение» в настройках «Диктовки».</string>
     <string name="dictation_start">Начать диктовку</string>
@@ -1039,11 +1019,6 @@
     <string name="dictation_failed">Не удалось расшифровать речь.</string>
     <string name="dictation_retry">Повторить</string>
     <string name="dictation_copied">Скопировано</string>
-    <string name="voice_capture_locked">Запись заблокирована</string>
-    <string name="voice_capture_lock">Блокировка записи</string>
-    <string name="voice_capture_cancel">Отпустите, чтобы отменить</string>
-    <string name="voice_capture_release">Выпустить на проверку</string>
-    <string name="voice_capture_drag">Проведите пальцем для отмены или вверх для блокировки.</string>
     <string name="voice_capture_short">Удерживайте дольше для записи.</string>
     <string name="voice_capture_failed">Не удалось записать это голосовое сообщение.</string>
     <string name="group_solo_create">Создать без других участников</string>
@@ -1141,8 +1116,7 @@
         <item quantity="many">Запись истории %1$d подготовлена</item>
     </plurals>
     <string name="retention_off">Выкл.</string>
-    <string name="retention_explainer">Обратный отсчет новых сообщений, которые вы получаете, начинается, когда вы их читаете. Сообщения, которые вы отправляете, начинаются с их отправки.</string>
-    <string name="retention_existing_deadlines">Изменение timer не меняет уже начавшийся обратный отсчет. Удаленные сообщения не вернутся.</string>
+    <string name="retention_explainer">Отсчёт начинается при прочтении или отправке сообщения.</string>
     <string name="retention_readonly">Изменить это могут только администраторы</string>
     <string name="retention_custom">Своё время</string>
     <string name="retention_custom_value">Пользовательский time: %1$s</string>
@@ -1949,4 +1923,8 @@
     <string name="sign_out_wipe_detail">Этот профиль и все локальные данные будут удалены без возможности восстановления. Предыдущие чаты не вернутся.</string>
     <string name="support_chat_relay_required">Прежде чем начинать чат поддержки, выберите подключенную ретрансляцию сообщений чата.</string>
     <string name="unread">Непрочитанные</string>
+    <string name="profile_download_image">Скачать</string>
+    <string name="group_see_all_members">Показать всех</string>
+    <string name="contact_add_to_group">Добавить в группу</string>
+    <string name="dictation_resume">Продолжить диктовку</string>
 </resources>

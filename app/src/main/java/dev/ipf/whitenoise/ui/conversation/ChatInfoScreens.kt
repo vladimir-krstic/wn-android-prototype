@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import dev.ipf.whitenoise.ui.components.trackWhiteNoiseHeader
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -67,6 +68,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +80,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -149,6 +154,7 @@ fun ChatInfoScreen(
     onCollapseLongMessages: (Boolean) -> Unit = {},
     onNotifications: (() -> Unit)? = null,
     onBubbleColors: () -> Unit = {},
+    onAllMembers: () -> Unit = {},
 ) {
     var folderPicker by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var folderFailed by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
@@ -163,6 +169,17 @@ fun ChatInfoScreen(
     var onlyAdminWarning by remember { mutableStateOf(false) }
     val directPersonId = (chat.kind as? dev.ipf.whitenoise.model.ChatKind.Direct)?.personId
     val directPerson = profile.people.firstOrNull { it.id == directPersonId }
+    val listState = rememberLazyListState()
+    var nameBottom by remember(profile.id, chat.id) { mutableStateOf<Float?>(null) }
+    var headerBottom by remember { mutableFloatStateOf(0f) }
+    val showHeaderIdentity by remember(listState, profile.id, chat.id) {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 ||
+                (headerBottom > 0f && nameBottom?.let { it <= headerBottom } == true)
+        }
+    }
+    val identityName = directPerson?.displayName ?: chat.title
+    val identityAvatar = directPerson?.avatar ?: chat.visibleAvatar
     val owner = GroupOwner(profile.id, chat.id)
     val retentionController = LocalRetention.current
     var retentionRejected by remember(profile.id, chat.id) { mutableStateOf(false) }
@@ -220,6 +237,19 @@ fun ChatInfoScreen(
             WhiteNoiseTopBar(
                 title = "",
                 onBack = onBack,
+                modifier = Modifier.onGloballyPositioned { headerBottom = it.positionInWindow().y + it.size.height },
+                titleContent = {
+                    if (showHeaderIdentity) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                            modifier = Modifier.testTag("chat_info.header_identity")) {
+                            ProfileAvatar(identityName, identityAvatar,
+                                modifier = Modifier.size(32.dp).testTag("chat_info.header_avatar"), contentDescription = null)
+                            Text(identityName, modifier = Modifier.weight(1f).testTag("chat_info.header_name"), maxLines = 1,
+                                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
+                        }
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             )
         },
@@ -227,10 +257,12 @@ fun ChatInfoScreen(
         AdaptiveContent(Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().testTag("chat_info.list"),
+                state = listState,
                 contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
             ) {
                 item(key = "identity") {
-                    ChatInfoIdentity(chat = chat, directPerson = directPerson)
+                    ChatInfoIdentity(chat = chat, directPerson = directPerson,
+                        onNameBottom = { nameBottom = it })
                 }
                 item(key = "quick_actions") {
                     Row(
@@ -320,15 +352,13 @@ fun ChatInfoScreen(
                         row {
                             dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
                         }
-                    }
-                }
-                if (onNotifications != null) item(key = "notification_controls") {
-                    dev.ipf.whitenoise.ui.settings.SettingsGroup {
-                        row {
-                            dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.notification_sounds_title),onClick = onNotifications)
-                        }
-                        row {
-                            dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.chat_bubble_colors),onClick = onBubbleColors)
+                        if (onNotifications != null) {
+                            row {
+                                dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.notification_sounds_title), onClick = onNotifications)
+                            }
+                            row {
+                                dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.chat_bubble_colors), onClick = onBubbleColors)
+                            }
                         }
                     }
                 }
@@ -343,15 +373,27 @@ fun ChatInfoScreen(
                     item(key = "members_heading") { SettingsSection(stringResource(R.string.members)) }
                     item(key = "roster_status") { GroupRosterPanel(profile, chat) }
                     item(key = "member_work") { GroupMemberWorkPanel(profile, chat) }
-                    itemsIndexed(chat.members, key = { _, member -> "member.${member.personId}" }) { index, member ->
+                    itemsIndexed(chat.members.take(5), key = { _, member -> "member.${member.personId}" }) { index, member ->
                         ChatInfoMemberRow(
                             profile = profile,
                             member = member,
                             index = index,
-                            count = chat.members.size,
+                            count = minOf(5, chat.members.size),
                             onMember = onMember,
                             pending = workController?.memberWork?.get(owner)?.let { it.running && member.personId in it.personIds } == true,
                         )
+                    }
+                    if (chat.members.size > 5) {
+                        item(key = "all_members") {
+                            ChatInfoActionGroup(
+                                actions = listOf(ChatInfoAction(
+                                    title = stringResource(R.string.group_see_all_members),
+                                    icon = R.drawable.ic_group,
+                                    onClick = onAllMembers,
+                                )),
+                                modifier = Modifier.padding(top = WhiteNoiseSpacing.Related).testTag("chat_info.all_members"),
+                            )
+                        }
                     }
                     if (canAdmin) {
                         item(key = "management") {
@@ -374,13 +416,13 @@ fun ChatInfoScreen(
                             )
                         }
                     }
-                    item(key = "group_lifecycle") { GroupLifecyclePanel(profile, chat, onBack) }
                     item(key = "lifecycle") {
                         ChatInfoActionGroup(
                             actions = lifecycleActions,
                             modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                         )
                     }
+                    item(key = "group_lifecycle") { GroupLifecyclePanel(profile, chat, onBack) }
                 }
             }
         }
@@ -452,7 +494,7 @@ fun ChatInfoScreen(
 }
 
 @Composable
-private fun ChatInfoIdentity(chat: Chat, directPerson: Person?) {
+private fun ChatInfoIdentity(chat: Chat, directPerson: Person?, onNameBottom: (Float) -> Unit) {
     val context = LocalContext.current
     var copied by rememberSaveable(chat.id, directPerson?.id) { mutableStateOf(false) }
     LaunchedEffect(copied) {
@@ -478,6 +520,7 @@ private fun ChatInfoIdentity(chat: Chat, directPerson: Person?) {
                     copied = true
                 },
                 testTagPrefix = "chat_info",
+                onNameBottom = onNameBottom,
             )
         } else {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -494,7 +537,7 @@ private fun ChatInfoIdentity(chat: Chat, directPerson: Person?) {
                     )
                     Text(
                         text = chat.title,
-                        modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField).testTag("chat_info.name"),
+                        modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField).testTag("chat_info.name").onGloballyPositioned { onNameBottom(it.positionInWindow().y + it.size.height) },
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
@@ -598,7 +641,7 @@ private data class ChatInfoAction(
 private fun ChatInfoActionGroup(actions: List<ChatInfoAction>, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) {
         actions.forEachIndexed { index, action ->
             val contentColor = if (action.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
@@ -622,6 +665,28 @@ private fun ChatInfoActionGroup(actions: List<ChatInfoAction>, modifier: Modifie
                     leadingContentColor = contentColor,
                 ),
             )
+        }
+    }
+}
+
+@Composable
+fun GroupMembersScreen(profile: Profile, chat: Chat, onBack: () -> Unit, onMember: (String) -> Unit) {
+    val owner = GroupOwner(profile.id, chat.id)
+    val work = LocalGroupWork.current?.memberWork?.get(owner)
+    dev.ipf.whitenoise.ui.settings.SettingsScaffold(
+        title = stringResource(R.string.members), onBack = onBack,
+        modifier = Modifier.testTag("group_members.screen"),
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().testTag("group_members.list"),
+            contentPadding = PaddingValues(top = WhiteNoiseSpacing.Related, bottom = WhiteNoiseSpacing.Section),
+        ) {
+            item(key = "roster_status") { GroupRosterPanel(profile, chat) }
+            item(key = "member_work") { GroupMemberWorkPanel(profile, chat) }
+            itemsIndexed(chat.members, key = { _, member -> member.personId }) { index, member ->
+                ChatInfoMemberRow(profile, member, index, chat.members.size, onMember,
+                    pending = work?.let { it.running && member.personId in it.personIds } == true)
+            }
         }
     }
 }
@@ -653,7 +718,7 @@ private fun ChatInfoMemberRow(
     val rowModifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
-        .padding(bottom = if (index == count - 1) 0.dp else 2.dp)
+        .padding(bottom = if (index == count - 1) 0.dp else ListItemDefaults.SegmentedGap)
         .testTag("chat_info.member.${member.personId}")
     val shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, count)
     val colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)

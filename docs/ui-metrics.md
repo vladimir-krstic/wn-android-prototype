@@ -82,6 +82,9 @@ choice row rather than nesting settings-row padding inside dialog padding.
   gray-canvas/white-component hierarchy as the Settings root without literal
   light-theme colors. System-owned surfaces and specialized camera/media
   presentations retain their platform or feature-specific treatment.
+- Ordinary app-owned alerts use `WhiteNoiseAlertDialog`, including files with
+  wildcard Material imports; explicitly alias it as `AlertDialog` where needed.
+  This keeps dialog canvas and nested text-field fills distinct.
 - The field content inset is 16 dp. Above-field labels and supporting/error
   text align to that same directional start line; Material's 24 dp leading
   icon artwork also begins on it inside the standard 48 dp slot. Keep the
@@ -909,3 +912,23 @@ producing 8 dp between rounded selection surfaces. The fixed “Select chats”
 header leaves the only count in the pinned bottom controls. Use shared 16 dp
 horizontal and 8 dp vertical insets, native tonal actions and a centered tonal
 count capsule over the transparent canvas; no full-width bottom backing.
+
+### Conversation tail jump — 2026-09-05 follow-up
+
+The latest user-directed arrow uses a 40 dp circular small FAB, 24 dp
+arrow and 48 dp minimum interaction area. It matches the pinned date pill’s
+surfaceDim with PinnedDayHeaderSurfaceAlpha and onSurface foreground. Native FAB
+elevation is zero in every state, so there is no shadow.
+Measured composer clearance subtracts Scaffold’s existing 16 dp FAB bottom gap,
+moving the arrow 16 dp closer while keeping its touch target above the composer. Show it after one usable transcript viewport;
+composer occlusion does not count toward that viewport height.
+
+## Multiline composer action row — 2026-09-05
+
+Latest user direction adds a 24 dp dictation microphone before the 24 dp waveform,
+each in a 48 dp target. On the fourth compact-width visual line, or manual text
+expansion, the capsule spans the available width inside the existing 16 dp outer
+margins. Add becomes an unfilled 24 dp icon at bottom-start in its 48 dp target;
+text spans the capsule above the action row with 14 dp horizontal and 12 dp
+vertical insets. Grow height before width; contract width before height. This
+supersedes the always-separate Add presentation for multiline/expanded text.

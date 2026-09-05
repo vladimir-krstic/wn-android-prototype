@@ -30,12 +30,13 @@ class ChatFolderStateTest {
     }
     @Test fun deletingAllDefaultsStaysDeletedUntilExplicitRestore() {
         val vm = model(); val owner = vm.uiState.activeProfileId!!
+        val custom = vm.uiState.activeProfile!!.chatFolders.filter { it.systemKind == null }
         ChatFolders.defaults.forEach { assertTrue(vm.deleteChatFolder(owner, it.id)) }
-        assertTrue(vm.uiState.activeProfile!!.chatFolders.isEmpty())
+        assertEquals(custom, vm.uiState.activeProfile!!.chatFolders)
         vm.completeSignIn(OnboardingOrigin.AddProfile)
         assertEquals(ChatFolders.defaults, vm.uiState.activeProfile!!.chatFolders)
-        vm.selectProfile(owner); assertTrue(vm.uiState.activeProfile!!.chatFolders.isEmpty())
-        vm.restoreChatFolders(owner); assertEquals(ChatFolders.defaults, vm.uiState.activeProfile!!.chatFolders)
+        vm.selectProfile(owner); assertEquals(custom, vm.uiState.activeProfile!!.chatFolders)
+        vm.restoreChatFolders(owner); assertEquals(custom + ChatFolders.defaults, vm.uiState.activeProfile!!.chatFolders)
     }
     @Test fun reorderedEditedDefaultSurvivesRestoreAndProfileSwitch() {
         val vm = model(); val owner = vm.uiState.activeProfileId!!

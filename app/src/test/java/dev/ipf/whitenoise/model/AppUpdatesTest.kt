@@ -8,6 +8,20 @@ import org.junit.Test
 
 class AppUpdatesTest {
     @Test
+    fun currentReleaseHidesSettingsCardWithoutDisablingChecks() {
+        val available = AppUpdates.initial("0.1")
+        assertTrue(AppUpdates.showsSettingsCard(available))
+        val current = AppUpdates.previewCheck(available, AppUpdateCheckScenario.Current)
+        assertFalse(AppUpdates.showsSettingsCard(current))
+        val checking = AppUpdates.beginCheck(current)
+        assertEquals(AppUpdateCheckPhase.Checking, checking.check.phase)
+        assertTrue(AppUpdates.showsSettingsCard(checking))
+        assertFalse(AppUpdates.showsSettingsCard(AppUpdates.completeCheck(checking, checking.check.generation)))
+        assertTrue(AppUpdates.showsSettingsCard(AppUpdates.previewCheck(current, AppUpdateCheckScenario.Failure)))
+        assertFalse(AppUpdates.showsSettingsCard(AppUpdates.selectDistribution(available, AppUpdateDistribution.StoreManaged)))
+    }
+
+    @Test
     fun storeManagedDistributionHasNoInAppUpdateSurfaceOrFlow() {
         val state = AppUpdates.selectDistribution(
             AppUpdates.initial("0.1"),
@@ -143,7 +157,41 @@ class AppUpdatesTest {
         state = AppUpdates.requestInstall(state)
         assertEquals(AppSelfUpdatePhase.Failed, state.selfUpdate.phase)
         assertEquals(AppSelfUpdateFailure.Install, state.selfUpdate.failure)
+        assertEquals("0.1", state.installedVersion)
+        assertTrue(AppUpdates.isAvailable(state))
         assertEquals(AppSelfUpdatePhase.Resolving, AppUpdates.retry(state).selfUpdate.phase)
+    }
+
+    @Test
+    fun completedUpdateStaysCurrentAcrossRechecksUntilFreshLaunch() {
+        for (scenario in listOf(AppUpdateCheckScenario.Available, AppUpdateCheckScenario.ImportantAvailable)) {
+            val initial = AppUpdates.previewCheck(AppUpdates.initial("0.1"), scenario)
+            var state = readyState(initial)
+            val oldGeneration = state.selfUpdate.generation
+            state = AppUpdates.requestInstall(state)
+            assertEquals(initial.check.latestVersion, state.installedVersion)
+            assertEquals(AppUpdateCheckPhase.Current, state.check.phase)
+            assertFalse(AppUpdates.isAvailable(state))
+            assertEquals(state, AppUpdates.advanceSelfUpdate(state, oldGeneration))
+            assertEquals(state, AppUpdates.beginSelfUpdate(state))
+
+            state = AppUpdates.beginCheck(state)
+            state = AppUpdates.completeCheck(state, state.check.generation)
+            assertEquals(AppUpdateCheckPhase.Current, state.check.phase)
+            assertFalse(AppUpdates.isAvailable(state))
+            state = AppUpdates.selectDistribution(state, AppUpdateDistribution.StoreManaged)
+            state = AppUpdates.selectDistribution(state, AppUpdateDistribution.SelfManaged)
+            assertEquals(AppUpdateCheckPhase.Current, state.check.phase)
+            assertFalse(AppUpdates.isAvailable(state))
+        }
+        assertTrue(AppUpdates.isAvailable(AppUpdates.initial("0.1")))
+    }
+
+    @Test
+    fun cancellingReadyUpdateKeepsItAvailable() {
+        val state = AppUpdates.cancel(readyState(AppUpdates.initial("0.1")))
+        assertEquals("0.1", state.installedVersion)
+        assertTrue(AppUpdates.isAvailable(state))
     }
 
     private fun readyState(start: AppUpdateState): AppUpdateState {

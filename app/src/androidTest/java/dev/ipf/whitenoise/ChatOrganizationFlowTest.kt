@@ -125,15 +125,15 @@ class ChatOrganizationFlowTest {
         val vm = model()
         rule.setContent { WhiteNoiseTheme { Chats(vm) } }
         action(first, "Add to Folder")
-        rule.onNodeWithText("New Folder").performClick()
+        rule.onNodeWithText("New Folder").performScrollTo().performClick()
         rule.onNodeWithText("Save").assertIsNotEnabled()
-        rule.onNodeWithTag("chat.folderName").performTextInput("Friends")
+        rule.onNodeWithTag("chat.folderName").performScrollTo().performTextInput("My Friends")
         rule.onNodeWithText("Save").performClick()
         rule.onNodeWithText("Done").performClick()
-        rule.onNodeWithTag("chats.folders").performScrollToNode(hasText("Friends"))
-        rule.onNodeWithText("Friends").performClick()
+        rule.onNodeWithTag("chats.folders").performScrollToNode(hasText("My Friends"))
+        rule.onNodeWithText("My Friends").performClick()
         rule.onNodeWithTag("chat.row.$first").assertIsDisplayed()
-        rule.runOnIdle { assertEquals(setOf(first), vm.uiState.activeProfile!!.chatFolders.single { it.name == "Friends" }.chatIds) }
+        rule.runOnIdle { assertEquals(setOf(first), vm.uiState.activeProfile!!.chatFolders.single { it.name == "My Friends" }.chatIds) }
     }
     @Test fun offlineRetryPreservesRowsThroughFailureAndRecovery() {
         val vm = model(); vm.selectChatConnectionScenario(ChatConnectionScenario.RetryFailure)

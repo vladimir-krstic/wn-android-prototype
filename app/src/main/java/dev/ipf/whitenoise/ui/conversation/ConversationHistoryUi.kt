@@ -21,11 +21,11 @@ import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 
 /** Screen-owned requests cancel when the conversation leaves composition; only stable IDs are saved. */
-internal class ConversationHistoryUiState(window: Set<String>, observed: Set<String>, boundary: String?) {
+internal class ConversationHistoryUiState(window: Set<String>, observed: Set<String>, divider: ConversationUnreadDivider?) {
     var windowIds by mutableStateOf(window)
     var observedIds by mutableStateOf(observed)
-    var boundaryId by mutableStateOf(boundary)
-    var jump by mutableStateOf(ConversationUnreadJump())
+    var unreadDivider by mutableStateOf(divider)
+    val boundaryId: String? get() = unreadDivider?.firstId
     var request by mutableStateOf<HistoryRequest?>(null)
     var readyTarget by mutableStateOf<HistoryRequest?>(null)
     var scan by mutableStateOf<List<ConversationSearchResult>?>(null)
@@ -38,8 +38,8 @@ internal class ConversationHistoryUiState(window: Set<String>, observed: Set<Str
         request = HistoryRequest(++generation, operation, scenario)
         readyTarget = null
     }
-    fun target(chat: Chat, id: String, scenario: HistoryScenario, markThrough: Boolean = false, offset: Int = 0, highlight: Boolean = true) {
-        val next = HistoryRequest(++generation, HistoryOperation.Target, scenario, id, markThrough, scrollOffset = offset, highlight = highlight)
+    fun target(chat: Chat, id: String, scenario: HistoryScenario, offset: Int = 0, highlight: Boolean = true) {
+        val next = HistoryRequest(++generation, HistoryOperation.Target, scenario, id, scrollOffset = offset, highlight = highlight)
         readyTarget = null
         if (id in windowIds && ConversationHistory.target(chat, id) != null && scenario == HistoryScenario.Success) {
             request = null; readyTarget = next
@@ -63,6 +63,7 @@ internal class ConversationHistoryUiState(window: Set<String>, observed: Set<Str
         }
     }
     fun reconcileArrivals(chat: Chat, profileId: String, followTail: Boolean) {
+        unreadDivider = unreadDivider?.reconcile(chat, profileId)
         val entries = ConversationProjection.orderedEntries(chat)
         val ids = entries.mapTo(hashSetOf()) { it.id }
         val added = entries.filter { it.id !in observedIds }
@@ -78,20 +79,20 @@ internal class ConversationHistoryUiState(window: Set<String>, observed: Set<Str
 }
 
 private val HistoryUiSaver = listSaver<ConversationHistoryUiState, Any>(
-    save = { listOf(ArrayList(it.windowIds), ArrayList(it.observedIds), it.boundaryId.orEmpty(), it.jump.pendingId.orEmpty(), it.jump.stackActive, it.jump.initialized) },
+    save = { listOf(ArrayList(it.windowIds), ArrayList(it.observedIds), it.boundaryId.orEmpty(), ArrayList(it.unreadDivider?.messageIds.orEmpty())) },
     restore = {
         @Suppress("UNCHECKED_CAST")
-        ConversationHistoryUiState((it[0] as List<String>).toSet(), (it[1] as List<String>).toSet(), (it[2] as String).ifEmpty { null }).apply {
-            jump = ConversationUnreadJump((it[3] as String).ifEmpty { null }, it[4] as Boolean, it[5] as Boolean)
-        }
+        ConversationHistoryUiState((it[0] as List<String>).toSet(), (it[1] as List<String>).toSet(),
+            (it[2] as String).ifEmpty { null }?.let { first ->
+                ConversationUnreadDivider(first, (it[3] as List<String>).toSet())
+            })
     },
 )
 
 @Composable
 internal fun rememberConversationHistory(profile: Profile, chat: Chat): ConversationHistoryUiState {
     val state = rememberSaveable(profile.id, chat.id, saver = HistoryUiSaver) {
-        val read = chat.readState ?: ConversationReading.initial(chat, profile.id)
-        ConversationHistoryUiState(ConversationHistory.initial(chat), chat.timeline.mapTo(hashSetOf()) { it.id }, ConversationReading.firstUnread(read, chat))
+        ConversationHistoryUiState(ConversationHistory.initial(chat), chat.timeline.mapTo(hashSetOf()) { it.id }, ConversationUnreadDivider.capture(chat, profile.id))
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val currentChat by rememberUpdatedState(chat)

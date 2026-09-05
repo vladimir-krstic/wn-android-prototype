@@ -1,17 +1,26 @@
 package dev.ipf.whitenoise.ui.updates
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -44,7 +53,24 @@ fun AppUpdateIconButton(
         onClick = onOpenSettings,
         modifier = modifier.testTag("appUpdate.openSettings").semantics { stateDescription = availability },
     ) {
-        Icon(painterResource(R.drawable.ic_download), contentDescription = stringResource(R.string.app_updates_title))
+        UpdateEmblem(contentDescription = stringResource(R.string.app_updates_title))
+    }
+}
+
+// An availability accent, scoped to updates rather than the app's action palette.
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun UpdateEmblem(contentDescription: String? = null) {
+    Box(
+        modifier = Modifier.size(32.dp).background(Color(0xFF55D6C2), MaterialShapes.Cookie9Sided.toShape()),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_download),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp),
+            tint = Color(0xFF00382F),
+        )
     }
 }
 
@@ -54,7 +80,7 @@ fun AppUpdateSettingsGroup(
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (!AppUpdates.showsSettings(state)) return
+    if (!AppUpdates.showsSettingsCard(state)) return
     val subtitle = when (state.check.phase) {
         AppUpdateCheckPhase.Unknown -> stringResource(R.string.app_update_settings_unknown)
         AppUpdateCheckPhase.Checking -> stringResource(R.string.app_update_settings_checking)
@@ -64,7 +90,6 @@ fun AppUpdateSettingsGroup(
     }
     SettingsGroup(
         modifier = modifier.testTag("appUpdate.settings"),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         row {
             SettingsLink(
@@ -73,11 +98,15 @@ fun AppUpdateSettingsGroup(
                 onClick = onAction,
                 enabled = state.check.phase != AppUpdateCheckPhase.Checking,
                 leading = {
-                    Icon(
-                        painterResource(R.drawable.ic_download),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (AppUpdates.isAvailable(state)) {
+                        UpdateEmblem()
+                    } else {
+                        Icon(
+                            painterResource(R.drawable.ic_download),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 },
             )
         }

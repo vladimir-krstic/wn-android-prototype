@@ -26,9 +26,10 @@ Q07 retains explicit Android document destinations for Save.
   states cannot be replaced by a stale completion or another profile's result.
 - Decode bundled animated content with the platform; stop it in the background
   and expose static/error recovery where animation is unsupported or invalid.
-- Keep White Noise Person separate from Device Contact. The latter picks one
-  granted phone row, previews selectable fields, and queues a vCard with readable
-  text. It never queries the entire address book or infers a White Noise profile.
+- The attachment menu has one **Contact** action, opening the searchable
+  in-app contact picker. Device contact and Recent media are removed from this
+  menu by explicit user direction (2026-09-05). Photo quality remains contextual
+  to draft photos and the photo editor, not an attachment-source menu item.
 
 ## Composition, navigation and copy
 
@@ -127,3 +128,36 @@ run in this task. Host build/logic evidence does not constitute visual acceptanc
 
 
 Source anchors: [MessageAttachmentExport.kt:47](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageAttachmentExport.kt:47), [AttachmentAcquisitionUi.kt:100](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/AttachmentAcquisitionUi.kt:100), [DraftPhotoProcessor.kt:18](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/DraftPhotoProcessor.kt:18), [AttachmentModels.kt:41](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/model/AttachmentModels.kt:41), [AnimatedAttachmentImage.kt:32](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/AnimatedAttachmentImage.kt:32), [AttachmentAcquisitionUi.kt:65](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/AttachmentAcquisitionUi.kt:65).
+
+## Attachment menu simplification — 2026-09-05
+
+The menu now contains Camera, Photos and videos, Files, Location, Contact and
+Dictation when available. Contact retains the existing searchable picker and
+contact-card draft behavior. Its menu and sheet title use the same short label
+in all five bundled locales. Removed unreachable device-contact launcher/preview
+and recent-media sheet wiring from the composer. Existing acquisition helpers
+and photo processing remain available to their independent callers.
+
+`ConversationScreenTest` covers the reduced menu and Contact picker navigation.
+Host gate `testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed: 901 unit tests, zero lint errors, and both APKs assembled. Updated UI
+cases compiled only; no device or visual inspection performed.
+
+## Compact media previews — 2026-09-05
+
+User direction removes quality labels beneath composer previews, media and chat
+bubbles. The composer no longer shows the photo-quality action, encoded-size
+summary or re-encoding explanation below its draft shelf. Removed the now-unused
+whole-draft quality dialog wiring and labels. Bubble and media-viewer rendering
+already omits quality summaries. Import processing and explicit photo-editor /
+Data Usage quality settings retain their existing behavior. This supersedes the
+earlier composer quality-display requirement.
+
+The existing photo-composer UI case asserts the quality row is absent. Host
+`testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest` passed:
+901 unit tests, zero lint errors, and both APKs assembled. UI cases compiled
+only; device and visual acceptance remain pending.
+
+2026-09-05 follow-up: Dictation is removed from the attachment menu; the composer
+microphone owns both start and retained-review entry. The menu contains Camera,
+Photos and videos, Files, Location and Contact.

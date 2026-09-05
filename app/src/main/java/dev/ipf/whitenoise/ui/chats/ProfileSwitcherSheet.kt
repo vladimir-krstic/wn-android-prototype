@@ -37,6 +37,8 @@ import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.settings.profileSwitcherPresentation
+import dev.ipf.whitenoise.ui.settings.SettingsGroup
+import dev.ipf.whitenoise.ui.settings.SettingsAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +48,7 @@ fun ProfileSwitcherSheet(
     onDismiss: () -> Unit,
     onSelectProfile: (String) -> Unit,
     onAddProfile: () -> Unit,
+    onSettings: (() -> Unit)? = null,
 ) {
     val presentedProfiles = profileSwitcherPresentation(profiles, activeProfileId)
     val currentProfileDescription = stringResource(R.string.current_profile)
@@ -116,11 +119,7 @@ fun ProfileSwitcherSheet(
                             }
                         },
                         colors = ListItemDefaults.colors(
-                            containerColor = if (item.isActive) {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerLowest
-                            },
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                         ),
                         modifier = Modifier
                             .testTag("profile_switcher.profile.${profile.id}")
@@ -130,7 +129,20 @@ fun ProfileSwitcherSheet(
                     )
                 }
             }
-            WhiteNoiseButton(
+            if (onSettings != null) {
+                SettingsGroup(Modifier.padding(vertical = 16.dp)) {
+                    row {
+                        SettingsAction(stringResource(R.string.add_profile), onAddProfile,
+                            modifier = Modifier.testTag("profile_switcher.add_profile"),
+                            leading = { Icon(painterResource(R.drawable.ic_settings_person_add), null) })
+                    }
+                    row {
+                        SettingsAction(stringResource(R.string.ui_settings), onSettings,
+                            modifier = Modifier.testTag("profile_switcher.settings"),
+                            leading = { Icon(painterResource(R.drawable.ic_emoji_settings), null) })
+                    }
+                }
+            } else WhiteNoiseButton(
                 onClick = onAddProfile,
                 modifier = Modifier
                     .fillMaxWidth()

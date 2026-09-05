@@ -30,6 +30,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntSize
@@ -182,6 +184,7 @@ fun ProfileImageViewer(ownerKey: String, title: String, image: ProfileAvatar, on
     var scale by remember(ownerKey, image) { mutableFloatStateOf(1f) }
     var offset by remember(ownerKey, image) { mutableStateOf(Offset.Zero) }
     var viewport by remember { mutableStateOf(IntSize.Zero) }
+    var menu by remember(ownerKey, image) { mutableStateOf(false) }
     var pendingSave by remember(ownerKey, image) { mutableStateOf<Bitmap?>(null) }
     val savedCopy = stringResource(R.string.media_saved)
     val failedCopy = stringResource(R.string.media_save_error)
@@ -205,14 +208,41 @@ fun ProfileImageViewer(ownerKey: String, title: String, image: ProfileAvatar, on
     }
     Dialog(onDismissRequest = { if (scale > 1f) reset() else onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         SettingsScaffold(title = title, onBack = onDismiss, modifier = Modifier.fillMaxSize().testTag("profile.image_viewer"), topBarActions = {
-            IconButton(onClick = { pendingSave = bitmap; if (runCatching { save.launch("white-noise-profile-image.jpg") }.isFailure) { pendingSave = null; scope.launch { snackbar.showSnackbar(failedCopy) } } }, enabled = bitmap != null) {
-                Icon(painterResource(R.drawable.ic_download), stringResource(R.string.save))
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_options))
+                }
+                WhiteNoiseDropdownMenu(expanded = menu, onDismissRequest = { menu = false }, items = buildList {
+                    add(WhiteNoiseMenuItem(stringResource(R.string.profile_download_image), icon = R.drawable.ic_download,
+                        enabled = bitmap != null, onClick = {
+                            pendingSave = bitmap
+                            if (runCatching { save.launch("white-noise-profile-image.jpg") }.isFailure) {
+                                pendingSave = null
+                                scope.launch { snackbar.showSnackbar(failedCopy) }
+                            }
+                        }))
+                    onEdit?.let { edit ->
+                        add(WhiteNoiseMenuItem(stringResource(R.string.profile_edit), icon = R.drawable.ic_edit, onClick = edit))
+                    }
+                })
             }
         }) {
             Column(Modifier.fillMaxSize()) {
                 val zoomLabel = stringResource(R.string.zoom_level, (scale * 100).roundToInt())
+                val zoomIn = stringResource(R.string.zoom_in)
+                val zoomOut = stringResource(R.string.zoom_out)
+                val resetZoom = stringResource(R.string.reset_zoom)
                 Box(Modifier.fillMaxWidth().weight(1f).clipToBounds().onSizeChanged { viewport = it; offset = clamp(offset, scale) }
-                    .transformable(transform, canPan = { scale > 1f }).semantics { stateDescription = zoomLabel }.testTag("profile.image_viewer.image"), contentAlignment = Alignment.Center) {
+                    .transformable(transform, canPan = { scale > 1f }).semantics {
+                        stateDescription = zoomLabel
+                        customActions = buildList {
+                            if (bitmap != null && scale < 4f) add(CustomAccessibilityAction(zoomIn) { zoom(scale + .5f); true })
+                            if (bitmap != null && scale > 1f) {
+                                add(CustomAccessibilityAction(zoomOut) { zoom(scale - .5f); true })
+                                add(CustomAccessibilityAction(resetZoom) { reset(); true })
+                            }
+                        }
+                    }.testTag("profile.image_viewer.image"), contentAlignment = Alignment.Center) {
                     when {
                         decoded.loading -> CircularProgressIndicator()
                         bitmap != null -> Image(bitmap.asImageBitmap(), title, Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y }, contentScale = ContentScale.Fit)
@@ -220,12 +250,7 @@ fun ProfileImageViewer(ownerKey: String, title: String, image: ProfileAvatar, on
                     }
                 }
                 SnackbarHost(snackbar)
-                FlowRow(Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.Related), horizontalArrangement = Arrangement.Center) {
-                    TextButton(onClick = { zoom(scale + .5f) }, enabled = bitmap != null && scale < 4f) { Text(stringResource(R.string.zoom_in)) }
-                    TextButton(onClick = { zoom(scale - .5f) }, enabled = bitmap != null && scale > 1f) { Text(stringResource(R.string.zoom_out)) }
-                    TextButton(onClick = ::reset, enabled = scale > 1f) { Text(stringResource(R.string.reset_zoom)) }
-                    onEdit?.let { TextButton(onClick = it) { Text(stringResource(R.string.profile_edit)) } }
-                }
+
             }
         }
     }

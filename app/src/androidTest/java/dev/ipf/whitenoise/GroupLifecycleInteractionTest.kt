@@ -85,9 +85,48 @@ class GroupLifecycleInteractionTest {
     @Test fun transcriptPreparationHasCancellationAndNeverClaimsSaved() {
         val owner = group(); show(owner, transcript = true)
         rule.onNodeWithText("Export transcript").performClick()
+        rule.onNodeWithTag("transcript.dialog").assertIsDisplayed()
         rule.onNodeWithText("Preparing transcript…").assertExists()
+        rule.onNodeWithText("Save transcript").assertIsDisplayed().assertIsNotEnabled()
         rule.onNodeWithText("Cancel").performClick()
-        rule.onNodeWithText("Transcript export cancelled").assertExists(); rule.onNodeWithText("Transcript saved").assertDoesNotExist()
+        rule.onNodeWithTag("transcript.dialog").assertDoesNotExist()
+        rule.runOnIdle { assertNull(vm.transcript.work) }
+        rule.onNodeWithText("Transcript saved").assertDoesNotExist()
+    }
+    @Test fun transcriptReadyModalRequiresExplicitSaveBeforeChoosingDestination() {
+        val owner = group(); show(owner, transcript = true)
+        rule.onNodeWithText("Export transcript").performClick()
+        val loadingDialog = rule.onNodeWithTag("transcript.dialog").fetchSemanticsNode()
+        val loadingSave = rule.onNodeWithText("Save transcript").assertIsNotEnabled().fetchSemanticsNode()
+        rule.runOnIdle {
+            val id = vm.transcript.work!!.id
+            vm.transcript.advance(id)
+            val w = vm.transcript.work!!
+            vm.transcript.encoded(id, ConversationTranscript.encode(w.source, w.entries))
+        }
+        rule.onNodeWithTag("transcript.dialog").assertIsDisplayed()
+        rule.onNodeWithText("Transcript ready to save").assertIsDisplayed()
+        val readyDialog = rule.onNodeWithTag("transcript.dialog").fetchSemanticsNode()
+        val readySave = rule.onNodeWithText("Save transcript").assertIsEnabled().fetchSemanticsNode()
+        assertEquals(loadingDialog.id, readyDialog.id)
+        assertEquals(loadingDialog.boundsInRoot, readyDialog.boundsInRoot)
+        assertEquals(loadingSave.boundsInRoot, readySave.boundsInRoot)
+        rule.runOnIdle { assertEquals(TranscriptPhase.Ready, vm.transcript.work!!.phase) }
+        rule.onNodeWithText("Save transcript").performClick()
+        rule.runOnIdle { assertEquals(TranscriptPhase.ChoosingDestination, vm.transcript.work!!.phase) }
+    }
+    @Test fun cancellingReadyTranscriptClosesModalWithoutSaving() {
+        val owner = group(); show(owner, transcript = true)
+        rule.onNodeWithText("Export transcript").performClick()
+        rule.runOnIdle {
+            val id = vm.transcript.work!!.id
+            vm.transcript.advance(id)
+            val w = vm.transcript.work!!
+            vm.transcript.encoded(id, ConversationTranscript.encode(w.source, w.entries))
+        }
+        rule.onNodeWithText("Cancel").performClick()
+        rule.onNodeWithTag("transcript.dialog").assertDoesNotExist()
+        rule.runOnIdle { assertNull(vm.transcript.work) }
     }
     @Test fun transcriptWriteFailureIsVisibleAndRetryRestartsPreparation() {
         val owner = group(); show(owner, transcript = true)

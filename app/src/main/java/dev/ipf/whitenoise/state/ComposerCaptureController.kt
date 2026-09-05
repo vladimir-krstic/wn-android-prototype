@@ -5,7 +5,7 @@ import dev.ipf.whitenoise.model.*
 
 data class DictationInsertion(val requestId: Long, val owner: ComposerCaptureOwner, val value: DictationTextResult)
 
-/** App-owned, in-memory capture coordination. No microphone or recognition service is started. */
+/** App-owned capture coordination; Android recognition is owned by the visible UI lifecycle. */
 @Stable
 class ComposerCaptureController(
     private val profiles: () -> List<Profile>,
@@ -15,6 +15,9 @@ class ComposerCaptureController(
     private val sendDraft: (ComposerCaptureOwner, DictationDraft, String) -> Boolean,
     private val updatePreferences: (String, (DictationPreferences) -> DictationPreferences) -> Unit,
 ) {
+    var inlineDictation by mutableStateOf<InlineDictationSession?>(null)
+        private set
+    private var applyingInlineResult = false
     var attempts by mutableStateOf<Map<ComposerCaptureOwner, DictationAttempt>>(emptyMap())
         private set
     var lease by mutableStateOf<ComposerCaptureLease?>(null)
@@ -51,6 +54,11 @@ class ComposerCaptureController(
     private val memberships = mutableMapOf<ComposerCaptureOwner, Pair<ChatMembership, List<GroupMember>>>()
     private val eligibility = mutableMapOf<ComposerCaptureOwner, ComposerAvailability>()
     fun reconcile() {
+        inlineDictation?.let { live ->
+            if (profile(live.owner) == null || chat(live.owner) == null) endInline(live.owner)
+            else if (!available(live.owner) || visible != live.owner ||
+                (!applyingInlineResult && chat(live.owner)?.draftText != live.text)) pauseInline(live.owner)
+        }
         val retained = attempts.filterKeys { profile(it) != null && chat(it) != null }
         if (retained != attempts) attempts = retained
         snapshots.keys.toList().forEach { owner ->
@@ -87,10 +95,12 @@ class ComposerCaptureController(
     fun close(owner: ComposerCaptureOwner) {
         if (visible != owner) return
         visible = null
+        pauseInline(owner)
         attempts[owner]?.let { publish(it.interrupt()) }
         if (lease?.owner == owner) lease = null
     }
     fun background() {
+        inlineDictation?.let { pauseInline(it.owner) }
         attempts.values.filter { !it.terminal }.forEach { publish(it.interrupt()) }
         lease = null
     }
@@ -119,6 +129,70 @@ class ComposerCaptureController(
     fun releaseVoice(owner: ComposerCaptureOwner, requestId: Long) {
         if (lease == ComposerCaptureLease(owner, requestId, ComposerCaptureMode.Voice)) lease = null
     }
+    fun beginInline(owner: ComposerCaptureOwner, text: String, start: Int, end: Int): Boolean {
+        reconcile()
+        if (visible != owner || !available(owner) || chat(owner)?.draftText != text || lease != null) return false
+        val base = snapshot(owner, start, end) ?: return false
+        attempts[owner]?.takeIf { !it.terminal }?.let { publish(it.cancel()) }
+        val session = InlineDictationSession(++nextId, owner, base)
+        inlineDictation = session
+        lease = ComposerCaptureLease(owner, session.id, ComposerCaptureMode.Dictation)
+        return true
+    }
+
+    fun pauseInline(owner: ComposerCaptureOwner) {
+        val live = inlineDictation?.takeIf { it.owner == owner } ?: return
+        inlineDictation = live.copy(phase = InlineDictationPhase.Paused)
+        if (lease == ComposerCaptureLease(owner, live.id, ComposerCaptureMode.Dictation)) lease = null
+    }
+
+    /** Exit dictation mode; text already placed in the draft stays editable. */
+    fun endInline(owner: ComposerCaptureOwner) {
+        pauseInline(owner)
+        if (inlineDictation?.owner == owner) inlineDictation = null
+    }
+
+    private fun activeInline(owner: ComposerCaptureOwner, id: Long): InlineDictationSession? {
+        reconcile()
+        return inlineDictation?.takeIf { it.owner == owner && it.id == id && it.capturing &&
+            visible == owner && available(owner) && lease == ComposerCaptureLease(owner, id, ComposerCaptureMode.Dictation) }
+    }
+
+    fun inlineReady(owner: ComposerCaptureOwner, id: Long) {
+        activeInline(owner, id)?.let { inlineDictation = it.copy(phase = InlineDictationPhase.Listening) }
+    }
+
+    fun inlineFailure(owner: ComposerCaptureOwner, id: Long, failure: DictationFailure) {
+        val live = activeInline(owner, id) ?: return
+        pauseInline(owner)
+        inlineDictation = live.copy(phase = InlineDictationPhase.Paused, failure = failure)
+    }
+
+    fun inlineResult(owner: ComposerCaptureOwner, id: Long, recognized: String, final: Boolean) {
+        val live = activeInline(owner, id) ?: return
+        if (recognized.isBlank()) {
+            if (final) pauseInline(owner)
+            return
+        }
+        // Android partial callbacks revise one utterance; replace it from its original selection.
+        val result = DictationText.insert(live.base, recognized)
+        applyingInlineResult = true
+        val accepted = try { writeDraft(owner, result.text) } finally { applyingInlineResult = false }
+        if (!accepted) { inlineFailure(owner, id, DictationFailure.Unknown); return }
+        if (inlineDictation?.let { it.id == id && it.owner == owner && it.capturing } != true ||
+            visible != owner || !available(owner) ||
+            lease != ComposerCaptureLease(owner, id, ComposerCaptureMode.Dictation)) return
+        inlineDictation = live.copy(text = result.text, cursor = result.cursor)
+        insertion = DictationInsertion(++nextId, owner, result)
+        if (final) {
+            // The provider ended an utterance. Continue only inside this explicit active session.
+            val base = snapshot(owner, result.cursor) ?: run { pauseInline(owner); return }
+            val next = InlineDictationSession(++nextId, owner, base)
+            inlineDictation = next
+            lease = ComposerCaptureLease(owner, next.id, ComposerCaptureMode.Dictation)
+        }
+    }
+
     fun begin(owner: ComposerCaptureOwner, expectedText: String, start: Int, end: Int): Boolean {
         reconcile()
         if (visible != owner || !available(owner)) return false

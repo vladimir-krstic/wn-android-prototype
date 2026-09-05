@@ -84,7 +84,7 @@ class ConversationReadingStateTest {
         val chat = ProfileFixtures.marmota.chats.first { it.timeline.size > 20 }
         val target = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().first().id
         val state = ConversationHistoryUiState(emptySet(), emptySet(), null)
-        state.target(chat, target, HistoryScenario.Success, markThrough = true)
+        state.target(chat, target, HistoryScenario.Success)
         state.complete(chat.copy(timeline = chat.timeline.filterNot { it.id == target }), state.request!!)
         assertEquals(HistoryPhase.Unavailable, state.request!!.phase); assertNull(state.readyTarget)
     }

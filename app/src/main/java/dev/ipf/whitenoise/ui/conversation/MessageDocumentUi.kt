@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context

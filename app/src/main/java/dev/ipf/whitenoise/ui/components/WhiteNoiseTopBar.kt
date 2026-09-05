@@ -27,11 +27,12 @@ fun WhiteNoiseTopBar(
     scrollBehavior: TopAppBarScrollBehavior? = LocalWhiteNoiseHeaderScroll.current,
     containerColor: Color = MaterialTheme.colorScheme.surface,
     scrolledContainerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    titleContent: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     TopAppBar(
         modifier = modifier,
-        title = { Text(title, style = titleStyle) },
+        title = titleContent ?: { Text(title, style = titleStyle) },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(

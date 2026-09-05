@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog as MaterialAlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -132,3 +134,28 @@ fun WhiteNoiseDialogChoiceRow(
 fun Modifier.whiteNoiseDialogSelection(selected: Boolean): Modifier =
     clip(MaterialTheme.shapes.large)
         .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent)
+
+/** Dialog-owned insets, consistent label spacing and a single checkbox accessibility target. */
+@Composable
+fun WhiteNoiseDialogCheckRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        modifier.fillMaxWidth().heightIn(min = 56.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .toggleable(checked, role = Role.Checkbox, onValueChange = onCheckedChange)
+            .padding(WhiteNoiseSpacing.Related),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+    ) {
+        leadingIcon?.invoke()
+        Text(title, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge)
+        Checkbox(checked, onCheckedChange = null, modifier = Modifier.clearAndSetSemantics { })
+    }
+}

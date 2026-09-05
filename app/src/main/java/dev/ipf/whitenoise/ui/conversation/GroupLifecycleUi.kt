@@ -9,7 +9,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -57,99 +59,105 @@ internal fun GroupLifecyclePanel(profile: Profile, chat: Chat, onLeft: () -> Uni
             controller.dismiss(owner, work.id); onLeft()
         }
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+    Column(Modifier.fillMaxWidth().padding(top = WhiteNoiseSpacing.Related),
         verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-        if (chat.groupLifecycle != GroupLifecycle.Active) {
-            Text(stringResource(lifecycleNotice(chat.groupLifecycle)), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-        }
-        if (work != null && (work.stage != GroupLifecycleStage.Complete || work.failure != null)) {
-            Column(Modifier.testTag("group.lifecycle.status").semantics { liveRegion = LiveRegionMode.Polite }) {
-                Text(stringResource(when {
-                    work.failure == GroupLifecycleFailure.SourceChanged -> R.string.group_action_changed
-                    work.failure != null && work.steppedDown -> R.string.group_leave_partial
-                    work.failure != null && work.granted -> R.string.group_transfer_partial
-                    work.failure != null -> R.string.group_action_failed
-                    work.stage == GroupLifecycleStage.Grant -> R.string.group_transferring
-                    work.stage == GroupLifecycleStage.StepDown -> R.string.group_stepping_down
-                    work.stage == GroupLifecycleStage.Leave -> R.string.group_leaving
-                    work.stage == GroupLifecycleStage.Converge || work.stage == GroupLifecycleStage.AcceptDisband -> R.string.group_disband_pending
-                    work.stage == GroupLifecycleStage.Recover -> R.string.group_repairing
-                    else -> R.string.group_updating
-                }))
-                if (work.running) LinearProgressIndicator(Modifier.fillMaxWidth())
-                else {
-                    if (work.failure == GroupLifecycleFailure.SourceChanged && work.granted) Text(stringResource(R.string.group_transfer_partial))
-                    if (work.failure == GroupLifecycleFailure.SourceChanged && work.steppedDown) Text(stringResource(R.string.group_leave_partial))
-                    FlowRow {
-                        TextButton(onClick = { rejected = !controller.retry(owner, work.id) }, enabled = controller.canRetry(owner, work.id)) { Text(stringResource(R.string.lifecycle_retry)) }
-                        TextButton(onClick = { controller.dismiss(owner, work.id) }) { Text(stringResource(R.string.lifecycle_dismiss)) }
+        Column(Modifier.padding(horizontal = WhiteNoiseSpacing.SettingsSectionInset),
+            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+            if (chat.groupLifecycle != GroupLifecycle.Active) {
+                Text(stringResource(lifecycleNotice(chat.groupLifecycle)), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            }
+            if (work != null && (work.stage != GroupLifecycleStage.Complete || work.failure != null)) {
+                Column(Modifier.testTag("group.lifecycle.status").semantics { liveRegion = LiveRegionMode.Polite }) {
+                    Text(stringResource(when {
+                        work.failure == GroupLifecycleFailure.SourceChanged -> R.string.group_action_changed
+                        work.failure != null && work.steppedDown -> R.string.group_leave_partial
+                        work.failure != null && work.granted -> R.string.group_transfer_partial
+                        work.failure != null -> R.string.group_action_failed
+                        work.stage == GroupLifecycleStage.Grant -> R.string.group_transferring
+                        work.stage == GroupLifecycleStage.StepDown -> R.string.group_stepping_down
+                        work.stage == GroupLifecycleStage.Leave -> R.string.group_leaving
+                        work.stage == GroupLifecycleStage.Converge || work.stage == GroupLifecycleStage.AcceptDisband -> R.string.group_disband_pending
+                        work.stage == GroupLifecycleStage.Recover -> R.string.group_repairing
+                        else -> R.string.group_updating
+                    }))
+                    if (work.running) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    else {
+                        if (work.failure == GroupLifecycleFailure.SourceChanged && work.granted) Text(stringResource(R.string.group_transfer_partial))
+                        if (work.failure == GroupLifecycleFailure.SourceChanged && work.steppedDown) Text(stringResource(R.string.group_leave_partial))
+                        FlowRow {
+                            TextButton(onClick = { rejected = !controller.retry(owner, work.id) }, enabled = controller.canRetry(owner, work.id)) { Text(stringResource(R.string.lifecycle_retry)) }
+                            TextButton(onClick = { controller.dismiss(owner, work.id) }) { Text(stringResource(R.string.lifecycle_dismiss)) }
+                        }
                     }
                 }
+            } else if (work?.stage == GroupLifecycleStage.Complete && !capability.requestFailed) {
+                Text(stringResource(when (work.action) {
+                    GroupLifecycleAction.Transfer -> R.string.group_transfer_complete
+                    GroupLifecycleAction.StepDown -> R.string.group_step_down_complete
+                    GroupLifecycleAction.EnableDisband -> R.string.group_disband_enabled
+                    else -> R.string.group_action_complete
+                }), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
-        } else if (work?.stage == GroupLifecycleStage.Complete && !capability.requestFailed) {
-            Text(stringResource(when (work.action) {
-                GroupLifecycleAction.Transfer -> R.string.group_transfer_complete
-                GroupLifecycleAction.StepDown -> R.string.group_step_down_complete
-                GroupLifecycleAction.EnableDisband -> R.string.group_disband_enabled
-                else -> R.string.group_action_complete
-            }), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-        }
-        if (rejected) Text(stringResource(R.string.group_action_changed), color = MaterialTheme.colorScheme.error)
-        if (capability.requestFailed) {
-            Text(stringResource(R.string.group_disband_failed), color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { rejected = !controller.begin(owner, GroupLifecycleAction.Acknowledge) }, enabled = !busy && chat.hasVerifiedSelf(profile.id)) {
-                Text(stringResource(R.string.lifecycle_dismiss))
+            if (rejected) Text(stringResource(R.string.group_action_changed), color = MaterialTheme.colorScheme.error)
+            if (capability.requestFailed) {
+                Text(stringResource(R.string.group_disband_failed), color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { rejected = !controller.begin(owner, GroupLifecycleAction.Acknowledge) }, enabled = !busy && chat.hasVerifiedSelf(profile.id)) {
+                    Text(stringResource(R.string.lifecycle_dismiss))
+                }
             }
+            if (admin) capability.blockers.forEach { blocker -> Text(stringResource(when (blocker) {
+                DisbandBlocker.UnsupportedMembers -> R.string.group_disband_unsupported
+                DisbandBlocker.PendingInvitations -> R.string.group_disband_invitations
+                DisbandBlocker.UpdateInProgress -> R.string.group_disband_update
+            })) }
         }
-        if (admin) capability.blockers.forEach { blocker -> Text(stringResource(when (blocker) {
-            DisbandBlocker.UnsupportedMembers -> R.string.group_disband_unsupported
-            DisbandBlocker.PendingInvitations -> R.string.group_disband_invitations
-            DisbandBlocker.UpdateInProgress -> R.string.group_disband_update
-        })) }
         SettingsGroup {
             if (admin) {
-                item {
+                row {
                     LifecycleRow(stringResource(R.string.group_transfer_admin), !busy && chat.members.any { it.personId != profile.id && it.role == GroupRole.Member }) {
                         thenLeave = false; pick = true
                     }
                 }
-                item {
+                row {
                     LifecycleRow(stringResource(R.string.group_step_down), !busy && chat.members.any { it.personId != profile.id }) {
                         if (chat.isSoleAdmin(profile.id)) { thenLeave = false; pick = true } else confirm = GroupLifecycleAction.StepDown.name
                     }
                 }
                 if (capability.canEnable && !capability.enabled) {
-                    item {
+                    row {
                         LifecycleRow(stringResource(R.string.group_enable_disband), !busy && capability.blockers.isEmpty() && !capability.requestFailed) {
                             confirm = GroupLifecycleAction.EnableDisband.name
                         }
                     }
                 }
                 if (capability.enabled && capability.canDisband) {
-                    item {
+                    row {
                         LifecycleRow(stringResource(R.string.group_disband_action), !busy && capability.blockers.isEmpty() && !capability.requestFailed, true) {
                             confirm = GroupLifecycleAction.Disband.name
                         }
                     }
                 }
             }
-            item {
-                if (chat.membership == ChatMembership.Active && chat.groupLifecycle == GroupLifecycle.Active) LifecycleRow(
-                    stringResource(if (chat.isSoleMember(profile.id)) R.string.group_delete_solo else R.string.leave_group),
-                    !busy && chat.hasVerifiedSelf(profile.id), true) {
-                    if (chat.isSoleAdmin(profile.id) && !chat.isSoleMember(profile.id)) { thenLeave = true; pick = true }
-                    else confirm = (if (chat.isSoleMember(profile.id)) GroupLifecycleAction.Delete else GroupLifecycleAction.Leave).name
+            if (chat.membership == ChatMembership.Active && chat.groupLifecycle == GroupLifecycle.Active) {
+                row {
+                    LifecycleRow(
+                        stringResource(if (chat.isSoleMember(profile.id)) R.string.group_delete_solo else R.string.leave_group),
+                        !busy && chat.hasVerifiedSelf(profile.id), true,
+                        icon = if (chat.isSoleMember(profile.id)) R.drawable.ic_delete else R.drawable.ic_logout) {
+                        if (chat.isSoleAdmin(profile.id) && !chat.isSoleMember(profile.id)) { thenLeave = true; pick = true }
+                        else confirm = (if (chat.isSoleMember(profile.id)) GroupLifecycleAction.Delete else GroupLifecycleAction.Leave).name
+                    }
                 }
             }
             if (chat.hasEndedMembership || chat.groupLifecycle == GroupLifecycle.Disbanded) {
-                item {
+                row {
                     LifecycleRow(stringResource(R.string.group_delete_local), !busy, true) {
                         confirm = GroupLifecycleAction.Delete.name
                     }
                 }
             }
             if (chat.groupLifecycle == GroupLifecycle.Unrecoverable) {
-                item {
+                row {
                     LifecycleRow(stringResource(R.string.group_repair), !busy && chat.hasVerifiedSelf(profile.id)) {
                         rejected = !controller.begin(owner, GroupLifecycleAction.Recover)
                     }
@@ -196,12 +204,16 @@ internal fun GroupLifecyclePanel(profile: Profile, chat: Chat, onLeft: () -> Uni
 }
 
 @Composable
-private fun LifecycleRow(label: String, enabled: Boolean, destructive: Boolean = false, onClick: () -> Unit) {
-    ListItem(
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-    ) { Text(label, color = if (!enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        else if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) }
+private fun LifecycleRow(label: String, enabled: Boolean, destructive: Boolean = false,
+    @androidx.annotation.DrawableRes icon: Int? = null, onClick: () -> Unit) {
+    dev.ipf.whitenoise.ui.settings.SettingsAction(
+        title = label, enabled = enabled, destructive = destructive, onClick = onClick,
+        leading = icon?.let { resource -> {
+            Icon(painterResource(resource), null, Modifier.size(24.dp),
+                tint = (if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                    .copy(alpha = if (enabled) 1f else .38f))
+        } },
+    )
 }
 
 internal fun lifecycleNotice(state: GroupLifecycle): Int = when (state) {

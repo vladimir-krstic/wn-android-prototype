@@ -7,6 +7,15 @@ object ProfileFixtures {
     private val relayUrls = listOf(ChatFixtures.DEFAULT_CHAT_RELAY)
     private val profileRelayUrls = ProfileRelayFixtures.chatMessageUrls(ProfileRelayFixtures.defaults)
 
+    private val exampleFolders = listOf(
+        ChatFolder("friends", "Friends", description = "Chats with Maya and Nora.",
+            rule = ChatFolderRule(personIds = setOf("maya-chen", "nora-bennett"), includeMuted = true)),
+        ChatFolder("work", "Work", description = "Product conversations, including muted chats.",
+            rule = ChatFolderRule(keyword = "product", groupsOnly = true, includeMuted = true)),
+        ChatFolder("weekend", "Weekend", description = "Weekend plans and group conversations.",
+            rule = ChatFolderRule(keyword = "weekend", groupsOnly = true, includeMuted = true)),
+    )
+
     val marmota = Profile(
         id = MARMOTA_ID,
         name = "Marmota",
@@ -17,6 +26,7 @@ object ProfileFixtures {
         avatar = ProfileAvatar.Asset(AvatarAsset.Marmota),
         people = directory,
         chats = ChatFixtures.populatedChats(MARMOTA_ID, relayUrls),
+        chatFolders = ChatFolders.defaults.take(1) + exampleFolders + ChatFolders.defaults.drop(1),
         chatRelayUrls = profileRelayUrls,
     )
 

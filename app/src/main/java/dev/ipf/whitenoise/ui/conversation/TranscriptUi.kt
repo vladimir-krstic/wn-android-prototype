@@ -8,6 +8,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.testTag
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -15,6 +18,9 @@ import androidx.compose.ui.semantics.*
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.state.TranscriptController
+import dev.ipf.whitenoise.ui.settings.SettingsGroup
+import dev.ipf.whitenoise.ui.settings.SettingsAction
+import androidx.compose.ui.res.painterResource
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.*
 
@@ -77,33 +83,87 @@ internal fun TranscriptHost(controller: TranscriptController) {
 internal fun TranscriptPanel(profile: Profile, chat: Chat) {
     val controller = LocalTranscript.current ?: return
     val work = controller.work?.takeIf { it.source.profileId == profile.id && it.source.chatId == chat.id }
-    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-        TextButton(onClick = { controller.begin(GroupOwner(profile.id, chat.id)) }, enabled = controller.work?.busy != true) { Text(stringResource(R.string.transcript_export)) }
-        if (work != null) {
-            Text(stringResource(when (work.phase) {
-                TranscriptPhase.Reading, TranscriptPhase.Encoding -> R.string.transcript_preparing
-                TranscriptPhase.Ready -> R.string.transcript_ready
-                TranscriptPhase.ChoosingDestination -> R.string.transcript_destination
-                TranscriptPhase.Writing -> R.string.transcript_writing
-                TranscriptPhase.Saved -> R.string.transcript_saved
-                TranscriptPhase.Cancelled -> R.string.transcript_cancelled
-                TranscriptPhase.Failed -> when (work.failure) {
-                    TranscriptFailure.SourceUnavailable -> R.string.transcript_unavailable
-                    TranscriptFailure.Destination -> R.string.transcript_destination_failed
-                    TranscriptFailure.Write -> R.string.transcript_write_failed
-                    else -> R.string.transcript_prepare_failed
-                }
-            }), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            if (work.phase == TranscriptPhase.Reading || work.phase == TranscriptPhase.Encoding) {
-                Text(pluralStringResource(R.plurals.transcript_event_count, work.readCount, work.readCount))
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-            FlowRow {
-                if (work.phase == TranscriptPhase.Ready) TextButton(onClick = { controller.save(work.id) }) { Text(stringResource(R.string.transcript_save)) }
-                if (work.phase == TranscriptPhase.Failed) TextButton(onClick = { controller.retry(work.id) }) { Text(stringResource(R.string.lifecycle_retry)) }
-                if (work.phase in setOf(TranscriptPhase.Reading, TranscriptPhase.Encoding, TranscriptPhase.Ready)) TextButton(onClick = { controller.cancel(work.id) }) { Text(stringResource(R.string.cancel)) }
-                if (work.phase in setOf(TranscriptPhase.Saved, TranscriptPhase.Cancelled, TranscriptPhase.Failed)) TextButton(onClick = { controller.dismiss(work.id) }) { Text(stringResource(R.string.lifecycle_dismiss)) }
-            }
+    SettingsGroup(Modifier.padding(vertical = WhiteNoiseSpacing.Related)) {
+        row {
+            SettingsAction(
+                title = stringResource(R.string.transcript_export),
+                onClick = { controller.begin(GroupOwner(profile.id, chat.id)) },
+                enabled = controller.work?.busy != true,
+                leading = { Icon(painterResource(R.drawable.ic_download), contentDescription = null) },
+            )
         }
     }
+    if (work == null) return
+    val preparing = work.phase in setOf(TranscriptPhase.Reading, TranscriptPhase.Encoding)
+    val cancellable = preparing || work.phase in setOf(TranscriptPhase.Ready, TranscriptPhase.ChoosingDestination)
+    val dismiss = {
+        // An accepted stream write finishes before dismissal; closing preparation never launches Files.
+        if (work.phase != TranscriptPhase.Writing) {
+            if (cancellable) controller.cancel(work.id)
+            controller.dismiss(work.id)
+        }
+    }
+    val statusResource = when (work.phase) {
+        TranscriptPhase.Reading, TranscriptPhase.Encoding -> R.string.transcript_preparing
+        TranscriptPhase.Ready -> R.string.transcript_ready
+        TranscriptPhase.ChoosingDestination -> R.string.transcript_destination
+        TranscriptPhase.Writing -> R.string.transcript_writing
+        TranscriptPhase.Saved -> R.string.transcript_saved
+        TranscriptPhase.Cancelled -> R.string.transcript_cancelled
+        TranscriptPhase.Failed -> when (work.failure) {
+            TranscriptFailure.SourceUnavailable -> R.string.transcript_unavailable
+            TranscriptFailure.Destination -> R.string.transcript_destination_failed
+            TranscriptFailure.Write -> R.string.transcript_write_failed
+            else -> R.string.transcript_prepare_failed
+        }
+    }
+    AlertDialog(
+        modifier = Modifier.testTag("transcript.dialog"),
+        onDismissRequest = dismiss,
+        icon = { Icon(painterResource(R.drawable.ic_download), contentDescription = null) },
+        title = { Text(stringResource(R.string.transcript_export)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+                // Measure every localized status at the actual width/font scale so state
+                // changes do not resize the dialog. Only the current status is exposed.
+                Box {
+                    listOf(
+                        R.string.transcript_preparing, R.string.transcript_ready,
+                        R.string.transcript_destination, R.string.transcript_writing,
+                        R.string.transcript_saved, R.string.transcript_cancelled,
+                        R.string.transcript_unavailable, R.string.transcript_destination_failed,
+                        R.string.transcript_write_failed, R.string.transcript_prepare_failed,
+                    ).forEach { resource ->
+                        Text(stringResource(resource), Modifier.alpha(0f).clearAndSetSemantics {})
+                    }
+                    Text(stringResource(statusResource), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                }
+                Text(pluralStringResource(R.plurals.transcript_event_count, work.readCount, work.readCount))
+                if (preparing || work.phase == TranscriptPhase.Writing) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                } else {
+                    LinearProgressIndicator(
+                        progress = { if (work.phase in setOf(TranscriptPhase.Ready, TranscriptPhase.ChoosingDestination, TranscriptPhase.Saved)) 1f else 0f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = work.phase in setOf(TranscriptPhase.Ready, TranscriptPhase.Failed),
+                onClick = {
+                    if (work.phase == TranscriptPhase.Failed) controller.retry(work.id)
+                    else controller.save(work.id)
+                },
+            ) {
+                Text(stringResource(if (work.phase == TranscriptPhase.Failed) R.string.lifecycle_retry else R.string.transcript_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = dismiss, enabled = work.phase != TranscriptPhase.Writing) {
+                Text(stringResource(if (cancellable) R.string.cancel else R.string.lifecycle_dismiss))
+            }
+        },
+    )
 }

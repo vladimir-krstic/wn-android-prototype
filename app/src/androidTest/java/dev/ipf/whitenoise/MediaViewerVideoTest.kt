@@ -27,6 +27,7 @@ import dev.ipf.whitenoise.model.ConversationMediaProjection
 import dev.ipf.whitenoise.model.ConversationMediaSelection
 import dev.ipf.whitenoise.model.MessageAttachmentKind
 import dev.ipf.whitenoise.model.ProfileFixtures
+import dev.ipf.whitenoise.ui.conversation.DraftMediaViewer
 import dev.ipf.whitenoise.ui.conversation.ReadOnlyMediaViewer
 import dev.ipf.whitenoise.ui.conversation.rememberForegroundVideoPlayer
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
@@ -91,6 +92,42 @@ class MediaViewerVideoTest {
 
         composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
         composeRule.onNodeWithTag("conversation.media.viewer.pager").assertDoesNotExist()
+    }
+
+    @Test
+    fun draftVideoUsesTheSamePlayerAndPreservesInclusionActions() {
+        val visible = mutableStateOf(true)
+        var excluded: Set<String>? = null
+        composeRule.setContent {
+            WhiteNoiseTheme {
+                if (visible.value) DraftMediaViewer(
+                    attachments = listOf(video.attachment),
+                    initialAttachmentId = video.attachment.id,
+                    onEdit = { _, _ -> },
+                    onDismiss = { visible.value = false },
+                    onApplyExcluded = { excluded = it; visible.value = false },
+                )
+            }
+        }
+        composeRule.waitUntil(10_000) {
+            !composeRule.onNodeWithTag("conversation.media.viewer.video.seek")
+                .fetchSemanticsNode().config.contains(SemanticsProperties.Disabled)
+        }
+        composeRule.onNodeWithContentDescription("Play").performClick()
+        composeRule.onNodeWithContentDescription("Pause").assertIsDisplayed().performClick()
+        val seek = composeRule.onNodeWithTag("conversation.media.viewer.video.seek")
+        seek.performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(0.5f)) }
+        composeRule.waitUntil(5_000) {
+            seek.fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current in 0.45f..0.55f
+        }
+        composeRule.onNodeWithContentDescription("Playback Speed").assertIsDisplayed()
+        val controls = composeRule.onNodeWithTag("conversation.media.viewer.video.controls").fetchSemanticsNode().boundsInRoot
+        val inclusion = composeRule.onNodeWithTag("conversation.media.inclusion.target").assertIsDisplayed()
+        assertTrue(controls.bottom <= inclusion.fetchSemanticsNode().boundsInRoot.top)
+        inclusion.performClick()
+        composeRule.onNodeWithText("Done").performClick()
+        composeRule.runOnIdle { assertEquals(setOf(video.attachment.id), excluded) }
+        composeRule.onNodeWithTag("conversation.media.preview.pager").assertDoesNotExist()
     }
 
     @Test

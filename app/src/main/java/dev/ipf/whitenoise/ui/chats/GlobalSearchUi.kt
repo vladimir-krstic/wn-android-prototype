@@ -169,10 +169,10 @@ internal fun GlobalSearchFilterPicker(profile: Profile, category: String, filter
 
 @Composable
 private fun SearchCheckRow(label: String, checked: Boolean, tag: String, onToggle: () -> Unit) {
-    Row(Modifier.fillMaxWidth().testTag(tag).toggleable(checked, role = Role.Checkbox, onValueChange = { onToggle() }), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked, null)
-        Text(label, Modifier.weight(1f))
-    }
+    dev.ipf.whitenoise.ui.components.WhiteNoiseDialogCheckRow(
+        title = label, checked = checked, onCheckedChange = { onToggle() },
+        modifier = Modifier.testTag(tag).padding(vertical = WhiteNoiseSpacing.Related / 2),
+    )
 }
 
 @Composable

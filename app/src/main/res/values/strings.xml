@@ -144,7 +144,7 @@
     <string name="search_chats">Search Chats</string>
     <string name="close_search">Close search</string>
     <string name="clear_search">Clear search</string>
-    <string name="open_settings_for">Open Settings for %1$s</string>
+    <string name="switch_profile_for">Switch profile, %1$s</string>
     <string name="open_share_connect_for">Open Share &amp; Connect for %1$s</string>
     <string name="actions_for">Actions for %1$s</string>
     <string name="new_message">New Message</string>
@@ -355,6 +355,7 @@
     </plurals>
     <string name="delete_selected_messages">Delete Selected Messages</string>
     <string name="forward_selected_messages">Forward Selected Messages</string>
+    <string name="manage_folders">Manage folders</string>
     <string name="select_chats">Select chats</string>
     <string name="select_messages">Select messages</string>
     <string name="close_selection">Close Selection</string>
@@ -433,6 +434,7 @@
     <string name="more_options">More options</string>
     <string name="go_to_message">Go to Message</string>
     <string name="add_a_message">Add a message</string>
+    <string name="profile_download_image">Download</string>
     <string name="zoom_in">Zoom In</string>
     <string name="zoom_out">Zoom Out</string>
     <string name="reset_zoom">Reset Zoom</string>
@@ -650,10 +652,7 @@
     <string name="history_target_failed">Couldn’t load this message.</string>
     <string name="history_searching">Searching all chat history…</string>
     <string name="history_search_failed">Couldn’t search all history. Matches in loaded messages are shown.</string>
-    <string name="history_unread_boundary">Unread messages</string>
-    <string name="history_jump_unread">Jump to unread messages</string>
     <string name="history_jump_latest">Jump to latest messages</string>
-    <string name="history_jump_mention">Next unread mention</string>
     <string name="message_status">Status</string>
     <string name="message_created_at">Created</string>
     <string name="message_sent_at">Sent</string>
@@ -734,8 +733,6 @@
     <string name="photo_quality_high">High</string>
     <string name="photo_quality_original">Original</string>
     <string name="photo_quality_explanation">Photo location and identifying metadata are removed. Original keeps supported image data; other formats are safely re-encoded. Videos and files keep their original data.</string>
-    <string name="photo_quality_fallback">This format was re-encoded at up to 4096 px to remove identifying metadata.</string>
-    <string name="photo_prepared_size">Prepared: %1$s</string>
     <string name="attachment_queued">Queued</string>
     <string name="attachment_uploading">Uploading…</string>
     <string name="attachment_downloading">Downloading…</string>
@@ -760,10 +757,9 @@
     <string name="attachment_gif_unavailable">Animation unavailable</string>
     <string name="attachment_gif_static">Static image</string>
     <string name="attachment_gif_description">Animated image</string>
-    <string name="photo">Photo</string>
     <string name="attachment_add">Add</string>
     <string name="attachment_retry">Retry</string>
-    <string name="white_noise_person">White Noise person</string>
+    <string name="attachment_contact">Contact</string>
     <string name="recent_add_marmot">Add marmot photo</string>
     <string name="recent_add_fox">Add fox photo</string>
     <string name="recent_add_badger">Add badger photo</string>
@@ -827,7 +823,6 @@
     <string name="photo_editor_undo_done">Change undone</string>
     <string name="photo_editor_redo_done">Change redone</string>
     <string name="photo_editor_original_edited">Edited photos use High quality. The original image is kept for further editing.</string>
-    <string name="photo_quality_mixed">Mixed</string>
     <string name="photo_editor_frame">Photo %1$d</string>
     <string name="photo_editor_coordinate_value">%1$s: %2$d%%</string>
     <string name="attachment_reader_title">File</string>
@@ -956,19 +951,7 @@
     <string name="speech_use_engine">Use engine</string>
     <string name="speech_dismiss">Dismiss</string>
     <string name="dictation_title">Dictation</string>
-    <string name="dictation_finish">Finish dictation</string>
-    <string name="dictation_manual">When I tap Done</string>
-    <plurals name="dictation_silence">
-        <item quantity="one">After %1$d second of silence</item>
-        <item quantity="other">After %1$d seconds of silence</item>
-    </plurals>
-    <string name="dictation_result">When finished</string>
-    <string name="dictation_paste">Paste into draft</string>
-    <string name="dictation_send">Send message</string>
-    <string name="dictation_paste_detail">Review or edit the text before sending</string>
-    <string name="dictation_send_detail">Send when dictation finishes if this chat and draft are unchanged.</string>
-    <string name="dictation_send_safety">If the draft, membership or session changes, keep the text for review.</string>
-    <string name="dictation_settings_detail">Choose when dictation finishes and what happens to its text.</string>
+    <string name="dictation_settings_detail">Speech appears directly in your message. Pause to edit, then tap the microphone to continue at the cursor. Send when ready.</string>
     <string name="dictation_disclosure_title">External speech recognition</string>
     <string name="dictation_disclosure_detail">Your speech service may send dictated audio to its provider. Dictated text is pasted into your draft unless you enable Send message in Dictation settings.</string>
     <string name="dictation_start">Start dictation</string>
@@ -991,11 +974,6 @@
     <string name="dictation_failed">Couldn’t transcribe speech.</string>
     <string name="dictation_retry">Retry</string>
     <string name="dictation_copied">Copied</string>
-    <string name="voice_capture_locked">Recording locked</string>
-    <string name="voice_capture_lock">Lock recording</string>
-    <string name="voice_capture_cancel">Release to cancel</string>
-    <string name="voice_capture_release">Release to review</string>
-    <string name="voice_capture_drag">Slide to cancel or slide up to lock</string>
     <string name="voice_capture_short">Hold longer to record.</string>
     <string name="voice_capture_failed">Couldn’t record this voice message.</string>
     <string name="group_solo_create">Create without other members</string>
@@ -1091,8 +1069,7 @@
         <item quantity="other">%1$d history entries prepared</item>
     </plurals>
     <string name="retention_off">Off</string>
-    <string name="retention_explainer">New messages you receive start their countdown when you read them. Messages you send start theirs when sent.</string>
-    <string name="retention_existing_deadlines">Changing the timer doesn’t change countdowns that have already started. Removed messages won’t return.</string>
+    <string name="retention_explainer">Timers start when you read or send a message.</string>
     <string name="retention_readonly">Only admins can change this</string>
     <string name="retention_custom">Custom time</string>
     <string name="retention_custom_value">Custom time: %1$s</string>
@@ -1877,4 +1854,7 @@
     <string name="sign_out_wipe_detail">This profile and all local data will be permanently removed. Previous chats won’t return.</string>
     <string name="support_chat_relay_required">Choose a connected Chat Messages relay before starting a support chat.</string>
     <string name="unread">Unread</string>
+    <string name="group_see_all_members">See all</string>
+    <string name="contact_add_to_group">Add to a group</string>
+    <string name="dictation_resume">Resume dictation</string>
 </resources>

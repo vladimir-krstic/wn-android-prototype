@@ -3,9 +3,6 @@ package dev.ipf.whitenoise.ui.conversation
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import dev.ipf.whitenoise.model.effectivePhotoQuality
 import dev.ipf.whitenoise.model.SentMediaQuality
-import dev.ipf.whitenoise.model.PhotoQuality
-import dev.ipf.whitenoise.model.PhotoMetadataPolicy
-import dev.ipf.whitenoise.model.SharedDeviceContact
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -21,6 +18,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
@@ -97,6 +100,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
@@ -129,6 +133,10 @@ import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -268,53 +276,60 @@ internal fun mentionRanges(text: String, mentionNames: List<String>): List<IntRa
     return regex.findAll(text).map(MatchResult::range).toList()
 }
 
+@Composable
 private fun Modifier.composerExpansionGesture(
     enabled: Boolean,
-    onStart: () -> Float,
+    onStart: (Float) -> Float,
     onDrag: (startProgress: Float, translationY: Float) -> Unit,
     onEnd: (velocityY: Float) -> Unit,
     onCancel: () -> Unit,
-): Modifier = if (!enabled) {
-    this
-} else {
-    pointerInput(enabled) {
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false)
-            val pointerId: PointerId = down.id
-            val origin = down.position
-            val velocityTracker = VelocityTracker().apply { addPosition(down.uptimeMillis, origin) }
-            var verticalGesture = false
-            var horizontalGesture = false
-            var startProgress = 0f
-            var completed = false
-            while (!completed) {
-                val change = awaitPointerEvent().changes.firstOrNull { it.id == pointerId }
-                if (change == null) {
-                    if (verticalGesture) onCancel()
-                    completed = true
-                    continue
-                }
-                velocityTracker.addPosition(change.uptimeMillis, change.position)
-                val translation = change.position - origin
-                if (!verticalGesture && !horizontalGesture && translation.getDistance() >= viewConfiguration.touchSlop) {
-                    if (abs(translation.y) > abs(translation.x)) {
-                        verticalGesture = true
-                        startProgress = onStart()
-                    } else {
-                        horizontalGesture = true
+): Modifier {
+    val currentOnStart by rememberUpdatedState(onStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnEnd by rememberUpdatedState(onEnd)
+    val currentOnCancel by rememberUpdatedState(onCancel)
+    return if (!enabled) {
+        this
+    } else {
+        pointerInput(enabled) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val pointerId: PointerId = down.id
+                val origin = down.position
+                val velocityTracker = VelocityTracker().apply { addPosition(down.uptimeMillis, origin) }
+                var verticalGesture = false
+                var horizontalGesture = false
+                var startProgress = 0f
+                var completed = false
+                while (!completed) {
+                    val change = awaitPointerEvent().changes.firstOrNull { it.id == pointerId }
+                    if (change == null) {
+                        if (verticalGesture) currentOnCancel()
+                        completed = true
+                        continue
                     }
-                }
-                if (verticalGesture) {
-                    change.consume()
-                    onDrag(startProgress, translation.y)
-                }
-                if (!change.pressed) {
-                    if (verticalGesture) onEnd(velocityTracker.calculateVelocity().y)
-                    completed = true
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                    val translation = change.position - origin
+                    if (!verticalGesture && !horizontalGesture && translation.getDistance() >= viewConfiguration.touchSlop) {
+                        if (abs(translation.y) > abs(translation.x)) {
+                            verticalGesture = true
+                            startProgress = currentOnStart(translation.y)
+                        } else {
+                            horizontalGesture = true
+                        }
+                    }
+                    if (verticalGesture) {
+                        change.consume()
+                        currentOnDrag(startProgress, translation.y)
+                    }
+                    if (!change.pressed) {
+                        if (verticalGesture) currentOnEnd(velocityTracker.calculateVelocity().y)
+                        completed = true
+                    }
                 }
             }
         }
-    }
+}
 }
 
 /** Keeps the app-shell outside-tap observer from clearing a focus acquired by this editor tap. */
@@ -334,8 +349,11 @@ private fun ComposerLeadingAction(
     enabled: Boolean,
     menuItems: List<WhiteNoiseMenuItem>,
     onCancelVoice: () -> Unit,
+    integratedProgress: Float = 0f,
+    onCancelDictation: (() -> Unit)? = null,
 ) {
-    val isAddAction = voiceState == ComposerVoiceState.Idle
+    val showsCancel = voiceState is ComposerVoiceState.Review || onCancelDictation != null
+    val isAddAction = voiceState == ComposerVoiceState.Idle && !showsCancel
     val containerColor = when {
         !isAddAction -> MaterialTheme.colorScheme.surfaceContainerHigh
         enabled -> MaterialTheme.colorScheme.primary
@@ -346,16 +364,20 @@ private fun ComposerLeadingAction(
         enabled -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
     }
+    val presentedContainer = androidx.compose.ui.graphics.lerp(containerColor, Color.Transparent, integratedProgress)
+    val presentedContent = androidx.compose.ui.graphics.lerp(contentColor, MaterialTheme.colorScheme.onSurfaceVariant, integratedProgress)
     Box(Modifier.size(48.dp).testTag("conversation.attachment.add")) {
         Surface(
             modifier = Modifier.fillMaxSize().testTag("conversation.attachment.add.surface"),
             shape = CircleShape,
-            color = containerColor,
-            contentColor = contentColor,
+            color = presentedContainer,
+            contentColor = presentedContent,
         ) {
             IconButton(
                 onClick = {
-                    if (voiceState is ComposerVoiceState.Review) {
+                    if (onCancelDictation != null) {
+                        onCancelDictation()
+                    } else if (voiceState is ComposerVoiceState.Review) {
                         onCancelVoice()
                     } else {
                         onMenuExpandedChange(true)
@@ -365,18 +387,19 @@ private fun ComposerLeadingAction(
             ) {
                 Icon(
                     painter = painterResource(
-                        if (voiceState is ComposerVoiceState.Review) R.drawable.ic_close else R.drawable.ic_add,
+                        if (showsCancel) R.drawable.ic_close else R.drawable.ic_add,
                     ),
-                    contentDescription = if (voiceState is ComposerVoiceState.Review) {
+                    contentDescription = if (showsCancel) {
                         stringResource(R.string.cancel)
                     } else {
                         addAttachmentDescription
                     },
-                    tint = contentColor,
+                    tint = presentedContent,
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
-        if (voiceState == ComposerVoiceState.Idle) {
+        if (isAddAction) {
             WhiteNoiseDropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { onMenuExpandedChange(false) },
@@ -462,6 +485,7 @@ fun FullConversationComposer(
     val recordVoiceDescription = stringResource(R.string.record_voice_message)
     val capture = LocalComposerCapture.current
     val captureOwner = remember(profile.id, chat.id) { dev.ipf.whitenoise.model.ComposerCaptureOwner(profile.id, chat.id) }
+    val inlineDictation = capture?.inlineDictation?.takeIf { it.owner == captureOwner }
     var composerValue by rememberSaveable(profile.id, chat.id, stateSaver = androidx.compose.ui.text.input.TextFieldValue.Saver) {
         mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(chat.draftText, androidx.compose.ui.text.TextRange(chat.draftText.length)))
     }
@@ -488,16 +512,14 @@ fun FullConversationComposer(
     var contactPickerOpen by remember { mutableStateOf(false) }
     val attachmentEnvironment = LocalAttachmentEnvironment.current
     val photoQuality = chat.effectivePhotoQuality(profile.settings)
-    val photoLabel = stringResource(R.string.photo)
-    var recentMediaOpen by remember { mutableStateOf(false) }
-    var qualityOpen by remember { mutableStateOf(false) }
-    var deviceContact by rememberSaveable(profile.id, chat.id, stateSaver = androidx.compose.runtime.saveable.listSaver<SharedDeviceContact?, String>(
-        save = { if (it == null) emptyList() else listOf(it.name.orEmpty(), it.phone.orEmpty(), it.email.orEmpty()) },
-        restore = { if (it.size != 3) null else SharedDeviceContact(it[0].ifBlank { null }, it[1].ifBlank { null }, it[2].ifBlank { null }) },
-    )) { mutableStateOf<SharedDeviceContact?>(null) }
     var mediaViewerAttachmentId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var isExpanded by rememberSaveable(chat.id) { mutableStateOf(false) }
-    val expansionProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f) }
+    val expansionProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f).apply { updateBounds(0f, 1f) } }
+    val toolbarProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f).apply { updateBounds(0f, 1f) } }
+    val widthProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f).apply { updateBounds(0f, 1f) } }
+    val textMeasurer = rememberTextMeasurer()
+    var requestedDragProgress by remember { mutableStateOf(0f) }
+    var expansionJob by remember { mutableStateOf<Job?>(null) }
     var isDraggingExpansion by remember { mutableStateOf(false) }
     var isSettlingExpansion by remember { mutableStateOf(false) }
     var compactHeightPx by remember(chat.id) { mutableIntStateOf(0) }
@@ -562,8 +584,8 @@ fun FullConversationComposer(
     }
 
     androidx.compose.runtime.SideEffect {
-        onOverlayPresentationChanged(attachmentMenuOpen || contactPickerOpen || recentMediaOpen || qualityOpen ||
-            deviceContact != null || showCameraPermissionRecovery || mediaViewerAttachmentId != null || attachmentEnvironment.editorSession != null || attachmentEnvironment.locationSession != null)
+        onOverlayPresentationChanged(attachmentMenuOpen || contactPickerOpen ||
+            showCameraPermissionRecovery || mediaViewerAttachmentId != null || attachmentEnvironment.editorSession != null || attachmentEnvironment.locationSession != null)
     }
 
     fun nextId(prefix: String): String {
@@ -622,46 +644,6 @@ fun FullConversationComposer(
             } finally {
                 if (generation == preparationGeneration) isPreparing = false
             }
-        }
-    }
-
-    fun prepareDraftPhotos(quality: PhotoQuality) {
-        val expected = chat.draftAttachments
-        val generation = ++preparationGeneration
-        preparationJob?.cancel()
-        preparationJob = coroutineScope.launch {
-            isPreparing = true
-            attachmentError = false
-            try {
-                val photos = expected.filter { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }
-                val prepared = photos.map { DraftPhotoProcessor.prepare(context, it, quality) }
-                if (generation == preparationGeneration) {
-                    attachmentError = prepared.any { it == null } || !attachmentEnvironment.replacePhotos(expected, quality, prepared.filterNotNull())
-                }
-            } finally { if (generation == preparationGeneration) isPreparing = false }
-        }
-    }
-    fun addRecentPhoto(image: ProfileAvatar) {
-        recentMediaOpen = false
-        val generation = ++preparationGeneration
-        preparationJob?.cancel()
-        preparationJob = coroutineScope.launch {
-            isPreparing = true
-            try {
-                val prepared = DraftPhotoProcessor.prepare(context, MessageAttachment(nextId("photo"), MessageAttachmentKind.Photo,
-                    photoLabel, images = listOf(image)), photoQuality)
-                if (generation == preparationGeneration) {
-                    attachmentError = prepared == null
-                    prepared?.let { onAddAttachments(listOf(it)) }
-                }
-            } finally { if (generation == preparationGeneration) isPreparing = false }
-        }
-    }
-    val deviceContactPicker = rememberLauncherForActivityResult(PickDeviceContactPhone()) { uri ->
-        if (uri != null) coroutineScope.launch {
-            val selected = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { readDeviceContact(context, uri) }
-            deviceContact = selected
-            attachmentError = selected == null
         }
     }
 
@@ -815,6 +797,11 @@ fun FullConversationComposer(
         val memberIds = chat.members.mapTo(mutableSetOf()) { it.personId }
         profile.people.filter { it.id in memberIds }.map(Person::displayName)
     }
+    fun beginDictation() {
+        attachmentMenuOpen = false
+        if (inlineDictation?.capturing == true) capture?.pauseInline(captureOwner)
+        else capture?.beginInline(captureOwner, editorValue.text, editorValue.selection.start, editorValue.selection.end)
+    }
     val sendable = chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty() || linkPreview != null
     val isExpansionEnabled = when (val state = voiceState) {
         ComposerVoiceState.Idle -> true
@@ -823,6 +810,30 @@ fun FullConversationComposer(
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        // Measure against the compact editor even while wide, so reflow cannot flip the mode.
+        val compactEditorWidth = (constraints.maxWidth - with(density) {
+            (WhiteNoiseSpacing.CompactScreenMargin * 2 + 48.dp + WhiteNoiseSpacing.Related +
+                96.dp + 14.dp).roundToPx()
+        }).coerceAtLeast(1)
+        val compactTextLayout = textMeasurer.measure(
+            text = editorValue.text.ifEmpty { " " },
+            style = MaterialTheme.typography.bodyLarge,
+            constraints = Constraints(maxWidth = compactEditorWidth),
+        )
+        val automaticallyWide = voiceState == ComposerVoiceState.Idle &&
+            ComposerExpansionPolicy.usesFullWidth(compactTextLayout.lineCount)
+        val referenceEditorHeight = with(density) { 24.dp.roundToPx() } +
+            compactTextLayout.getLineBottom((compactTextLayout.lineCount - 1)
+                .coerceAtMost(ComposerExpansionPolicy.compactLineLimit(chat.draftAttachments.isNotEmpty()) - 1)).roundToInt()
+        var retainedEditorHeight by remember(chat.id) { mutableIntStateOf(referenceEditorHeight) }
+        val compactToolbar = widthProgress.value == 0f && toolbarProgress.value == 0f
+        LaunchedEffect(referenceEditorHeight, automaticallyWide, compactToolbar) {
+            if (automaticallyWide || compactToolbar) retainedEditorHeight = referenceEditorHeight
+        }
+        val presentedEditorHeight = if (!automaticallyWide && !compactToolbar) retainedEditorHeight else referenceEditorHeight
+        val presentedWidthProgress = if (voiceState == ComposerVoiceState.Idle) widthProgress.value else 0f
+        val latestAutomaticallyWide by rememberUpdatedState(automaticallyWide)
+        val morphSpec = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
         val expandedTopGapPx = with(density) { ComposerExpansionPolicy.ExpandedTopGapDp.dp.roundToPx() }
         val expandedHeightPx = (constraints.maxHeight - expandedTopGapPx).coerceAtLeast(compactHeightPx)
         val travelPx = (expandedHeightPx - compactHeightPx).coerceAtLeast(1)
@@ -835,21 +846,51 @@ fun FullConversationComposer(
         }
 
         suspend fun settle(expanded: Boolean, initialVelocity: Float = 0f) {
-            if (isExpanded != expanded) isExpanded = expanded
+            isExpanded = expanded
             isSettlingExpansion = true
-            expansionProgress.animateTo(
-                targetValue = if (expanded) 1f else 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
-                initialVelocity = initialVelocity,
-            )
-            isSettlingExpansion = false
+            try {
+                if (!expanded) {
+                    widthProgress.animateTo(0f, morphSpec)
+                    if (expansionProgress.value > 0f) toolbarProgress.snapTo(0f)
+                    else toolbarProgress.animateTo(0f, morphSpec)
+                }
+                expansionProgress.animateTo(
+                    targetValue = if (expanded) 1f else 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                    initialVelocity = initialVelocity,
+                )
+                if (expanded || latestAutomaticallyWide) {
+                    if (expanded) toolbarProgress.snapTo(1f)
+                    else toolbarProgress.animateTo(1f, morphSpec)
+                    widthProgress.animateTo(1f, morphSpec)
+                }
+            } finally {
+                isSettlingExpansion = false
+            }
+        }
+
+        fun requestSettle(expanded: Boolean, initialVelocity: Float = 0f) {
+            expansionJob?.cancel()
+            expansionJob = coroutineScope.launch { settle(expanded, initialVelocity) }
+        }
+
+        LaunchedEffect(automaticallyWide, isExpanded, isDraggingExpansion, isExpansionEnabled) {
+            if (!isExpanded && !isDraggingExpansion && !isSettlingExpansion) {
+                if (automaticallyWide && isExpansionEnabled) {
+                    toolbarProgress.animateTo(1f, morphSpec)
+                    widthProgress.animateTo(1f, morphSpec)
+                } else {
+                    widthProgress.animateTo(0f, morphSpec)
+                    toolbarProgress.animateTo(0f, morphSpec)
+                }
+            }
         }
 
         LaunchedEffect(isExpansionEnabled) {
-            if (!isExpansionEnabled && (isExpanded || expansionProgress.value > 0f)) settle(false)
+            if (!isExpansionEnabled && (isExpanded || expansionProgress.value > 0f)) requestSettle(false)
         }
         LaunchedEffect(expansionProgress, travelPx, isDraggingExpansion, isSettlingExpansion) {
             snapshotFlow {
@@ -861,37 +902,45 @@ fun FullConversationComposer(
                 )
             }
         }
-        BackHandler(enabled = isExpanded && !attachmentMenuOpen && voiceState !is ComposerVoiceState.Recording && capture?.attempts?.get(captureOwner)?.capturing != true) {
-            coroutineScope.launch { settle(false) }
+        BackHandler(enabled = isExpanded && !attachmentMenuOpen && voiceState !is ComposerVoiceState.Recording && inlineDictation?.capturing != true && capture?.attempts?.get(captureOwner)?.capturing != true) {
+            requestSettle(false)
         }
 
         val expansionModifier = Modifier.composerExpansionGesture(
             enabled = isExpansionEnabled && compactHeightPx > 0 && travelPx > 1,
-            onStart = {
+            onStart = { translationY ->
                 isDraggingExpansion = true
                 isSettlingExpansion = false
-                coroutineScope.launch { expansionProgress.stop() }
+                requestedDragProgress = expansionProgress.value
+                expansionJob?.cancel()
+                expansionJob = coroutineScope.launch {
+                    expansionProgress.stop()
+                    if (translationY > 0f) {
+                        widthProgress.animateTo(0f, morphSpec)
+                        toolbarProgress.snapTo(0f)
+                    }
+                    expansionProgress.snapTo(requestedDragProgress)
+                }
                 expansionProgress.value
             },
             onDrag = { startProgress, translationY ->
-                coroutineScope.launch {
-                    expansionProgress.snapTo(
-                        ComposerExpansionPolicy.clampProgress(startProgress - (translationY / travelPx)),
-                    )
+                requestedDragProgress = ComposerExpansionPolicy.clampProgress(startProgress - (translationY / travelPx))
+                if (translationY < 0f || (widthProgress.value == 0f && toolbarProgress.value == 0f)) {
+                    coroutineScope.launch { expansionProgress.snapTo(requestedDragProgress) }
                 }
             },
             onEnd = { velocityY ->
                 isDraggingExpansion = false
                 val projectedTravelDp = with(density) { (velocityY * 0.5f).toDp().value }
                 val destination = ComposerExpansionPolicy.destinationExpanded(
-                    expansionProgress.value,
+                    requestedDragProgress,
                     projectedTravelDp,
                 )
-                coroutineScope.launch { settle(destination, initialVelocity = -velocityY / travelPx) }
+                requestSettle(destination, initialVelocity = -velocityY / travelPx)
             },
             onCancel = {
                 isDraggingExpansion = false
-                coroutineScope.launch { settle(isExpanded) }
+                requestSettle(isExpanded)
             },
         )
 
@@ -925,80 +974,17 @@ fun FullConversationComposer(
                     },
                 )
             }
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (usesFlexibleLayout) Modifier.weight(1f) else Modifier)
                     .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                verticalAlignment = Alignment.Bottom,
             ) {
-                if (voiceState !is ComposerVoiceState.Recording) {
-                    ComposerLeadingAction(
-                        voiceState = voiceState,
-                        menuExpanded = attachmentMenuOpen,
-                        onMenuExpandedChange = { attachmentMenuOpen = it },
-                        addAttachmentDescription = addAttachmentDescription,
-                        enabled = !isPreparing,
-                        menuItems = listOfNotNull(
-                        WhiteNoiseMenuItem(
-                            label = stringResource(R.string.camera),
-                            icon = R.drawable.ic_camera,
-                            onClick = ::requestCameraCapture,
-                        ),
-                        WhiteNoiseMenuItem(
-                            label = stringResource(R.string.photos_and_videos),
-                            icon = R.drawable.ic_image,
-                            onClick = {
-                                attachmentError = false
-                                attachmentError = runCatching {
-                                    visualPicker.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageAndVideo,
-                                        ),
-                                    )
-                                }.isFailure
-                            },
-                        ),
-                        WhiteNoiseMenuItem(
-                            label = stringResource(R.string.files),
-                            icon = R.drawable.ic_description,
-                            onClick = {
-                                attachmentError = false
-                                attachmentError = runCatching {
-                                    documentPicker.launch(arrayOf("*/*"))
-                                }.isFailure
-                            },
-                        ),
-                        WhiteNoiseMenuItem(stringResource(R.string.location_title), icon = R.drawable.ic_location_on, onClick = { attachmentError = !attachmentEnvironment.openLocation() }),
-                        WhiteNoiseMenuItem(
-                            label = stringResource(R.string.white_noise_person),
-                            icon = R.drawable.ic_person,
-                            onClick = { contactPickerOpen = true },
-                        ),
-                        WhiteNoiseMenuItem(stringResource(R.string.device_contact), icon = R.drawable.ic_person, onClick = {
-                            attachmentError = runCatching { deviceContactPicker.launch(Unit) }.isFailure
-                        }),
-                        WhiteNoiseMenuItem(stringResource(R.string.recent_media), icon = R.drawable.ic_image, onClick = { recentMediaOpen = true }),
-                        WhiteNoiseMenuItem(stringResource(R.string.photo_quality), icon = R.drawable.ic_image, onClick = { qualityOpen = true }),
-                        if (capture != null) WhiteNoiseMenuItem(
-                            label = stringResource(if (capture.attempts[captureOwner]?.phase == dev.ipf.whitenoise.model.DictationPhase.Review) R.string.dictation_review else R.string.dictation_title),
-                            icon = R.drawable.ic_mic, onClick = {
-                                attachmentMenuOpen = false
-                                if (capture.attempts[captureOwner]?.phase == dev.ipf.whitenoise.model.DictationPhase.Review) capture.present(captureOwner)
-                                else capture.begin(captureOwner, editorValue.text, editorValue.selection.start, editorValue.selection.end)
-                            },
-                        ) else null,
-                        ),
-                        onCancelVoice = {
-                            voiceState = ComposerVoiceState.Idle
-                            coroutineScope.launch { settle(false) }
-                        },
-                    )
-                }
                 Surface(
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(start = if (voiceState is ComposerVoiceState.Recording) 0.dp else
+                            (48.dp + WhiteNoiseSpacing.Related) * (1f - presentedWidthProgress))
                         .heightIn(min = 48.dp)
                         .then(if (usesFlexibleLayout) Modifier.fillMaxHeight() else Modifier)
                         .then(expansionModifier)
@@ -1009,7 +995,7 @@ fun FullConversationComposer(
                                         CustomAccessibilityAction(
                                             if (isExpanded) collapseMessageLabel else expandMessageLabel,
                                         ) {
-                                            coroutineScope.launch { settle(!isExpanded) }
+                                            requestSettle(!isExpanded)
                                             true
                                         },
                                     )
@@ -1036,21 +1022,6 @@ fun FullConversationComposer(
                                 onPreview = { mediaViewerAttachmentId = it },
                                 onRemove = onRemoveAttachment,
                             )
-                            if (chat.draftAttachments.any { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }) {
-                                TextButton({ qualityOpen = true }, enabled = !isPreparing, modifier = Modifier.testTag("composer.photo.quality")) {
-                                    val qualities = chat.draftAttachments.filter { it.kind in setOf(MessageAttachmentKind.Photo, MessageAttachmentKind.Photos) }.flatMap { attachment ->
-                                        attachment.images.indices.map { index -> dev.ipf.whitenoise.model.PhotoEditing.effectiveQuality(
-                                            attachment.photoFrameQualities[index] ?: attachment.photoQuality ?: photoQuality,
-                                            attachment.photoEdits[index] ?: dev.ipf.whitenoise.model.PhotoEditRecipe()) }
-                                    }.distinct()
-                                    Text(stringResource(R.string.photo_quality) + ": " + if (qualities.size > 1) stringResource(R.string.photo_quality_mixed) else photoQualityLabel(qualities.firstOrNull() ?: photoQuality))
-                                }
-                                val bytes = chat.draftAttachments.mapNotNull { it.fileSizeBytes }.sumOf { it.toLong() }
-                                if (bytes > 0) Text(stringResource(R.string.photo_prepared_size, android.text.format.Formatter.formatShortFileSize(context, bytes)),
-                                    Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
-                                if (chat.draftAttachments.any { it.metadataPolicy == PhotoMetadataPolicy.SafeFallback }) Text(stringResource(R.string.photo_quality_fallback),
-                                    Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
-                            }
                             if (chat.draftAttachments.any(MessageAttachment::isVisual)) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -1080,27 +1051,37 @@ fun FullConversationComposer(
                                 onCancel = onCancelReply,
                             )
                         }
-                        DictationActiveControls(captureOwner)
+                        InlineDictationError(captureOwner)
                         when (val state = voiceState) {
                             ComposerVoiceState.Idle, is ComposerVoiceState.Recording -> ComposerTextInput(
                                 enterKeyBehavior = profile.settings.enterKeyBehavior,
                                 value = editorValue,
-                                onValueChanged = { value -> composerValue = value; if (value.text != chat.draftText) onDraftTextChanged(value.text) },
+                                onValueChanged = { value ->
+                                    if (value != editorValue && inlineDictation?.capturing == true) capture?.pauseInline(captureOwner)
+                                    composerValue = value
+                                    if (value.text != chat.draftText) onDraftTextChanged(value.text)
+                                },
                                 onSend = {
-                                    if (onSendDraft()) coroutineScope.launch { settle(false) }
+                                    if (onSendDraft()) {
+                                        capture?.endInline(captureOwner)
+                                        requestSettle(false)
+                                    }
                                 },
                                 recording = state as? ComposerVoiceState.Recording,
                                 onRecordTap = {
                                     if (state is ComposerVoiceState.Recording) finishVoice(state.requestId)
-                                    else startVoice(true)?.let { coroutineScope.launch { settle(false) } }
+                                    else startVoice(true)?.let { requestSettle(false) }
                                 },
-                                onRecordHold = { startVoice(false)?.also { coroutineScope.launch { settle(false) } } },
+                                onRecordHold = { startVoice(false)?.also { requestSettle(false) } },
                                 onRecordDrag = { id, horizontal, vertical -> voiceState = dev.ipf.whitenoise.model.VoiceCapture.drag(voiceState, id, horizontal, vertical) },
                                 onRecordRelease = { finishVoice(it, release = true) },
-                                onRecordCancel = ::cancelVoice,
                                 onRecordGestureCancel = { id -> if ((voiceState as? ComposerVoiceState.Recording)?.locked != true) cancelVoice(id) },
-                                onRecordLock = { id -> voiceState = dev.ipf.whitenoise.model.VoiceCapture.lock(voiceState, id) },
                                 recordEnabled = capture?.lease?.mode != dev.ipf.whitenoise.model.ComposerCaptureMode.Dictation,
+                                onDictation = ::beginDictation,
+                                dictationEnabled = capture != null && (capture.lease == null || inlineDictation?.capturing == true),
+                                dictationSession = inlineDictation,
+                                toolbarProgress = toolbarProgress.value,
+                                referenceEditorHeight = presentedEditorHeight,
                                 recordGestureKey = captureOwner,
                                 sendable = sendable,
                                 enabled = !isPreparing,
@@ -1117,7 +1098,7 @@ fun FullConversationComposer(
                                 onStateChanged = { selected ->
                                     voiceState = selected
                                     if (selected.format == VoiceMessageFormat.Voice && isExpanded) {
-                                        coroutineScope.launch { settle(false) }
+                                        requestSettle(false)
                                     }
                                 },
                                 onSend = {
@@ -1129,7 +1110,7 @@ fun FullConversationComposer(
                                     )
                                     if (onSendVoice(submission)) {
                                         voiceState = ComposerVoiceState.Idle
-                                        coroutineScope.launch { settle(false) }
+                                        requestSettle(false)
                                     }
                                 },
                                 modifier = if (usesFlexibleLayout) Modifier.weight(1f) else Modifier,
@@ -1160,6 +1141,60 @@ fun FullConversationComposer(
                         }
                     }
                 }
+                if (voiceState !is ComposerVoiceState.Recording) {
+                    Box(Modifier.align(Alignment.BottomStart)) {
+                        ComposerLeadingAction(
+                            integratedProgress = presentedWidthProgress,
+                            onCancelDictation = if (inlineDictation != null) ({ capture?.endInline(captureOwner) }) else null,
+                            voiceState = voiceState,
+                            menuExpanded = attachmentMenuOpen,
+                            onMenuExpandedChange = { attachmentMenuOpen = it },
+                            addAttachmentDescription = addAttachmentDescription,
+                            enabled = !isPreparing,
+                            menuItems = listOf(
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.camera),
+                                icon = R.drawable.ic_camera,
+                                onClick = ::requestCameraCapture,
+                            ),
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.photos_and_videos),
+                                icon = R.drawable.ic_image,
+                                onClick = {
+                                    attachmentError = false
+                                    attachmentError = runCatching {
+                                        visualPicker.launch(
+                                            PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageAndVideo,
+                                            ),
+                                        )
+                                    }.isFailure
+                                },
+                            ),
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.files),
+                                icon = R.drawable.ic_description,
+                                onClick = {
+                                    attachmentError = false
+                                    attachmentError = runCatching {
+                                        documentPicker.launch(arrayOf("*/*"))
+                                    }.isFailure
+                                },
+                            ),
+                            WhiteNoiseMenuItem(stringResource(R.string.location_title), icon = R.drawable.ic_location_on, onClick = { attachmentError = !attachmentEnvironment.openLocation() }),
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.attachment_contact),
+                                icon = R.drawable.ic_person,
+                                onClick = { contactPickerOpen = true },
+                            ),
+                            ),
+                            onCancelVoice = {
+                                voiceState = ComposerVoiceState.Idle
+                                requestSettle(false)
+                            },
+                        )
+                    }
+                }
             }
         }
     }
@@ -1167,19 +1202,8 @@ fun FullConversationComposer(
     attachmentEnvironment.locationSession?.let { session ->
         LocationPickerDialog(session) { event -> attachmentEnvironment.locationEvent(session.id, event)?.let(onLocationSent) }
     }
-    if (recentMediaOpen) RecentMediaSheet(attachmentEnvironment.recentAccess, { recentMediaOpen = false }, onGallery = {
-        recentMediaOpen = false
-        attachmentError = runCatching { visualPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }.isFailure
-    }, onAdd = ::addRecentPhoto)
-    if (qualityOpen) PhotoQualityDialog(photoQuality, { qualityOpen = false }) { quality ->
-        qualityOpen = false; prepareDraftPhotos(quality)
-    }
     voiceFailure?.let { failure -> VoiceCaptureFailureDialog(failure,
         onDismiss = { voiceFailure = null }, onRetry = { voiceFailure = null; startVoice(true) }) }
-    deviceContact?.let { contact -> DeviceContactPreview(contact, { deviceContact = null }) { selected ->
-        selected.attachment(nextId("device-contact"))?.let { onAddAttachments(listOf(it)) }
-        deviceContact = null
-    } }
     if (contactPickerOpen) {
         ContactPickerSheet(
             people = profile.people,
@@ -1289,11 +1313,14 @@ private fun ComposerTextInput(
     onRecordHold: () -> Long?,
     onRecordDrag: (Long, Float, Float) -> Unit,
     onRecordRelease: (Long) -> Unit,
-    onRecordCancel: (Long) -> Unit,
     onRecordGestureCancel: (Long) -> Unit,
-    onRecordLock: (Long) -> Unit,
     recordEnabled: Boolean,
     recordGestureKey: Any,
+    onDictation: () -> Unit,
+    dictationEnabled: Boolean,
+    dictationSession: dev.ipf.whitenoise.model.InlineDictationSession?,
+    toolbarProgress: Float,
+    referenceEditorHeight: Int,
     sendable: Boolean,
     enabled: Boolean,
     expanded: Boolean,
@@ -1312,31 +1339,20 @@ private fun ComposerTextInput(
         MentionVisualTransformation(highlightedMentions, mentionContent)
     }
     var mentionLayout by remember { mutableStateOf<Pair<String, TextLayoutResult>?>(null) }
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
+    ComposerEditorLayout(
+        modifier = modifier.fillMaxWidth().heightIn(min = 48.dp)
             .then(if (expanded) Modifier.fillMaxHeight() else Modifier),
-        verticalAlignment = Alignment.Bottom,
+        expanded = expanded,
+        toolbarProgress = if (recording != null) 0f else toolbarProgress,
+        referenceEditorHeight = if (recording != null) 0 else referenceEditorHeight,
     ) {
-        if (recording != null) Column(Modifier.weight(1f)) {
+        if (recording != null) {
             RecordingComposer(recording.elapsedTenths)
-            Text(stringResource(when {
-                recording.locked -> R.string.voice_capture_locked
-                recording.willCancel -> R.string.voice_capture_cancel
-                else -> R.string.voice_capture_release
-            }), Modifier.padding(start = WhiteNoiseSpacing.Related), style = MaterialTheme.typography.labelMedium)
-            if (!recording.locked) Text(stringResource(R.string.voice_capture_drag), Modifier.padding(start = WhiteNoiseSpacing.Related), style = MaterialTheme.typography.bodySmall)
-            Row {
-                TextButton(onClick = { onRecordCancel(recording.requestId) }) { Text(stringResource(R.string.cancel)) }
-                if (!recording.locked) TextButton(onClick = { onRecordLock(recording.requestId) }) { Text(stringResource(R.string.voice_capture_lock)) }
-            }
         } else BasicTextField(
             value = value,
             onValueChange = onValueChanged,
             enabled = enabled,
             modifier = Modifier
-                .weight(1f)
                 .consumeEditorTapAtFinalPass()
                 .focusRequester(focusRequester)
                 .heightIn(min = 48.dp)
@@ -1372,10 +1388,10 @@ private fun ComposerTextInput(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
-                        .padding(start = 14.dp, top = 12.dp, bottom = 12.dp),
+                        .padding(start = 14.dp, end = 14.dp * toolbarProgress, top = 12.dp, bottom = 12.dp),
                     contentAlignment = if (expanded) Alignment.TopStart else Alignment.CenterStart,
                 ) {
-                    if (text.isEmpty()) {
+                    if (text.isEmpty() && dictationSession == null) {
                         Text(
                             stringResource(R.string.message),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1402,21 +1418,74 @@ private fun ComposerTextInput(
                 }
             },
         )
-        if (sendable && recording == null) {
-            ComposerSendButton(
-                onClick = onSend,
-                enabled = enabled,
-                description = stringResource(R.string.send),
-            )
-        } else {
-            VoiceCaptureControl(enabled && recordEnabled, recording != null, recordGestureKey,
-                if (recording != null) stringResource(R.string.stop_recording) else recordVoiceDescription,
-                onTap = onRecordTap, onHold = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onRecordHold() },
-                onDrag = onRecordDrag, onRelease = onRecordRelease, onCancel = onRecordGestureCancel) {
-                if (recording == null) MiniWaveformGlyph(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.testTag("conversation.voice.icon"))
-                else Icon(painterResource(R.drawable.ic_stop), contentDescription = null, tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp).testTag("conversation.voice.stop.icon"))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (dictationSession?.capturing == true) {
+                val pulse = rememberInfiniteTransition(label = "dictation microphone")
+                val alpha by pulse.animateFloat(1f, 0.45f,
+                    animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "listening pulse")
+                Box(Modifier.size(48.dp).testTag("dictation.listening"), contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.dictation_listening),
+                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp).alpha(alpha))
+                }
+                IconButton(onClick = onDictation, modifier = Modifier.size(48.dp).testTag("dictation.pause")) {
+                    Icon(painterResource(R.drawable.ic_pause), stringResource(R.string.pause),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                }
+            } else if (recording == null) {
+                IconButton(
+                    onClick = onDictation,
+                    enabled = enabled && dictationEnabled,
+                    modifier = Modifier.size(48.dp).testTag("conversation.dictation.start"),
+                ) {
+                    Icon(painterResource(R.drawable.ic_mic), stringResource(if (dictationSession != null) R.string.dictation_resume else R.string.dictation_start),
+                        modifier = Modifier.size(24.dp), tint = if (enabled && dictationEnabled)
+                            MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                }
             }
+            if (sendable && recording == null && dictationSession?.capturing != true) {
+                ComposerSendButton(
+                    onClick = onSend,
+                    enabled = enabled,
+                    description = stringResource(R.string.send),
+                )
+            } else if (dictationSession == null) {
+                VoiceCaptureControl(enabled && recordEnabled, recording != null, recordGestureKey,
+                    if (recording != null) stringResource(R.string.stop_recording) else recordVoiceDescription,
+                    onTap = onRecordTap, onHold = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onRecordHold() },
+                    onDrag = onRecordDrag, onRelease = onRecordRelease, onCancel = onRecordGestureCancel) {
+                    if (recording == null) MiniWaveformGlyph(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.testTag("conversation.voice.icon"))
+                    else Icon(painterResource(R.drawable.ic_stop), contentDescription = null, tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp).testTag("conversation.voice.stop.icon"))
+                }
+            }
+        }
+    }
+}
+
+/** One editor node throughout both stages: grow a bottom action row, then widen its surface. */
+@Composable
+private fun ComposerEditorLayout(
+    modifier: Modifier,
+    expanded: Boolean,
+    toolbarProgress: Float,
+    referenceEditorHeight: Int,
+    content: @Composable () -> Unit,
+) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val controls = measurables[1].measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val textWidth = (constraints.maxWidth - controls.width * (1f - toolbarProgress)).roundToInt().coerceAtLeast(1)
+        val reservedHeight = (controls.height * toolbarProgress).roundToInt()
+        val editor = measurables[0].measure(Constraints(
+            minWidth = textWidth, maxWidth = textWidth,
+            minHeight = if (expanded) (constraints.maxHeight - reservedHeight).coerceAtLeast(0) else 0,
+            maxHeight = (constraints.maxHeight - reservedHeight).coerceAtLeast(0),
+        ))
+        // Use compact-width text height through the width stage; reflow never shrinks it mid-morph.
+        val editorHeight = maxOf(editor.height, referenceEditorHeight.coerceAtMost(constraints.maxHeight - reservedHeight))
+        val height = constraints.constrainHeight(maxOf(controls.height, editorHeight + reservedHeight))
+        layout(constraints.maxWidth, height) {
+            editor.placeRelative(0, 0)
+            controls.placeRelative(constraints.maxWidth - controls.width, height - controls.height)
         }
     }
 }
@@ -1747,23 +1816,17 @@ private fun DraftReplyQuote(author: String, text: String, onCancel: () -> Unit) 
 
 @Composable
 private fun RecordingComposer(elapsedTenths: Int) {
-    Row(
+    Box(
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        contentAlignment = Alignment.CenterStart,
     ) {
         VoiceWaveform(
             modifier = Modifier
-                .weight(1f)
+                .fillMaxWidth()
                 .testTag("conversation.voice.recording.waveform"),
             color = MaterialTheme.colorScheme.error,
             liveTick = ComposerWaveformPolicy.visualTick(elapsedTenths),
             attenuateQuietSamples = true,
-        )
-        Text(
-            formatDuration(elapsedTenths / 10),
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.labelLarge.copy(fontFamily = FontFamily.Monospace),
         )
     }
 }
@@ -2073,7 +2136,7 @@ private fun ContactPickerSheet(
         sheetState = sheetState,
     ) {
         Column(Modifier.fillMaxSize().testTag("conversation.contact.sheet")) {
-            WhiteNoiseSheetHeader(stringResource(R.string.white_noise_person), onClose = onDismiss)
+            WhiteNoiseSheetHeader(stringResource(R.string.attachment_contact), onClose = onDismiss)
             TextField(
                 value = query,
                 onValueChange = { query = it },
@@ -2183,8 +2246,13 @@ internal fun DraftMediaViewer(
     onApplyExcluded: (Set<String>) -> Unit,
 ) {
     if (attachments.isEmpty()) return
+    val context = LocalContext.current
+    val touchExplorationEnabled = remember(context) {
+        context.getSystemService(android.view.accessibility.AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
+    }
     val frames = attachments.flatMap { attachment ->
-        (0 until attachment.images.size.coerceAtLeast(1)).map { index -> attachment to index }
+        val frameCount = if (attachment.kind == MessageAttachmentKind.Video) 1 else attachment.images.size.coerceAtLeast(1)
+        (0 until frameCount).map { index -> attachment to index }
     }
     var excludedIds by rememberSaveable(initialAttachmentId) { mutableStateOf(emptyList<String>()) }
     val initialPage = frames.indexOfFirst { it.first.id == initialAttachmentId }.coerceAtLeast(0)
@@ -2257,7 +2325,26 @@ internal fun DraftMediaViewer(
                             .background(MaterialTheme.colorScheme.background),
                         contentAlignment = Alignment.Center,
                     ) {
-                        attachment.images.getOrNull(imageIndex)?.let { image ->
+                        if (attachment.kind == MessageAttachmentKind.Video) {
+                            var controlsVisible by rememberSaveable(attachment.id) { mutableStateOf(true) }
+                            MediaViewerVideo(
+                                attachment = attachment,
+                                image = attachment.images.firstOrNull(),
+                                playbackKey = "draft:${attachment.id}",
+                                active = pagerState.settledPage == page && !pagerState.isScrollInProgress && !dismissState.isInProgress,
+                                controlsVisible = controlsVisible,
+                                bottomControlsInset = 48.dp,
+                                onToggleControls = { if (!touchExplorationEnabled) controlsVisible = !controlsVisible },
+                                onShowControls = { controlsVisible = true },
+                                modifier = Modifier.fillMaxSize().testTag("conversation.media.preview.video.$page"),
+                            )
+                            DraftMediaInclusionButton(
+                                included = included,
+                                attachmentLabel = attachment.label,
+                                onIncludedChange = onIncludedChange,
+                                modifier = Modifier.align(Alignment.BottomEnd),
+                            )
+                        } else attachment.images.getOrNull(imageIndex)?.let { image ->
                             DraftMediaPreviewImage(
                                 image = image,
                                 page = page,

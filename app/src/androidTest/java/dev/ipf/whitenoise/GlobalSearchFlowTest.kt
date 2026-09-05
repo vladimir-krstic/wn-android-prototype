@@ -152,17 +152,35 @@ class GlobalSearchFlowTest {
         rule.onNodeWithText("Unknown profile").performClick()
         rule.runOnIdle { assertEquals("Unknown profile", opened!!.name); assertEquals(key, opened.publicKey) }
     }
+    @Test fun searchFieldSwapsMicrophoneForClearAndKeepsFilterBesideIt() {
+        rule.setContent { WhiteNoiseTheme { SearchScreen() } }
+        search("")
+        rule.onNodeWithContentDescription("Voice Search")
+            .assert(hasAnyAncestor(hasTestTag("chats.searchField")))
+        rule.onNodeWithContentDescription("Clear search").assertDoesNotExist()
+        rule.onNodeWithTag("global.filterButton").assertIsDisplayed()
+        rule.onNodeWithTag("chats.searchField").performTextInput("query")
+        rule.onNodeWithContentDescription("Voice Search").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Clear search")
+            .assert(hasAnyAncestor(hasTestTag("chats.searchField"))).performClick()
+        rule.onNodeWithContentDescription("Voice Search").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Clear search").assertDoesNotExist()
+        rule.onNodeWithTag("global.filterButton").performClick()
+        rule.onNodeWithTag("global.filterMenu").assertIsDisplayed()
+    }
     @Test fun voiceFailureRetryAndCancellationPreserveOrReplaceOnlyExpectedQuery() {
         var next = GlobalVoiceScenario.Unavailable
         rule.setContent { WhiteNoiseTheme { SearchScreen(voice = { next.also { next = GlobalVoiceScenario.Success } }) } }
-        search("Existing query"); rule.onNodeWithContentDescription("Voice Search").performClick()
-        rule.onNodeWithText("Cancel").performClick(); rule.onNodeWithTag("chats.searchField").assertTextContains("Existing query")
+        search(""); rule.onNodeWithContentDescription("Voice Search").performClick()
+        rule.onNodeWithText("Cancel").performClick(); rule.onNodeWithContentDescription("Clear search").assertDoesNotExist()
         rule.runOnIdle { next = GlobalVoiceScenario.Unavailable }
         rule.onNodeWithContentDescription("Voice Search").performClick(); rule.onNodeWithText("Try Again").performClick()
         rule.waitUntil(3_000) { rule.onAllNodes(hasTestTag("chats.searchField") and hasText("trailhead")).fetchSemanticsNodes().isNotEmpty() }
         rule.runOnIdle { next = GlobalVoiceScenario.Cancelled }
+        rule.onNodeWithContentDescription("Clear search").performClick()
         rule.onNodeWithContentDescription("Voice Search").performClick()
         rule.waitUntil(3_000) { rule.onAllNodesWithText("Getting your search…").fetchSemanticsNodes().isEmpty() }
-        rule.onNodeWithTag("chats.searchField").assertTextContains("trailhead")
+        rule.onNodeWithContentDescription("Clear search").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Voice Search").assertIsEnabled()
     }
 }

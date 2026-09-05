@@ -126,3 +126,17 @@ object DictationExamples {
         else -> listOf(selectedService)
     }
 }
+
+/** One platform recognition utterance, anchored to the editor selection at Start/Resume. */
+enum class InlineDictationPhase { Preparing, Listening, Paused }
+data class InlineDictationSession(
+    val id: Long,
+    val owner: ComposerCaptureOwner,
+    val base: DictationDraft,
+    val text: String = base.text,
+    val cursor: Int = base.selectionEnd,
+    val phase: InlineDictationPhase = InlineDictationPhase.Preparing,
+    val failure: DictationFailure? = null,
+) {
+    val capturing: Boolean get() = phase != InlineDictationPhase.Paused
+}

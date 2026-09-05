@@ -144,7 +144,7 @@
     <string name="search_chats">Sohbetlerde Ara</string>
     <string name="close_search">Aramayı kapat</string>
     <string name="clear_search">Aramayı temizle</string>
-    <string name="open_settings_for">%1$s için Ayarları Aç</string>
+    <string name="switch_profile_for">Profili değiştir, %1$s</string>
     <string name="open_share_connect_for">%1$s için Paylaş ve Bağlan\'ı açın</string>
     <string name="actions_for">%1$s için eylemler</string>
     <string name="new_message">Yeni Mesaj</string>
@@ -355,6 +355,7 @@
     </plurals>
     <string name="delete_selected_messages">Seçilen Mesajları Sil</string>
     <string name="forward_selected_messages">Seçilen Mesajları İlet</string>
+    <string name="manage_folders">Klasörleri yönet</string>
     <string name="select_chats">Sohbetleri seç</string>
     <string name="select_messages">Mesajları seç</string>
     <string name="close_selection">Seçimi Kapat</string>
@@ -650,10 +651,7 @@
     <string name="history_target_failed">Bu mesaj yüklenemedi.</string>
     <string name="history_searching">Tüm sohbet geçmişi aranıyor…</string>
     <string name="history_search_failed">Tüm geçmiş aranamadı. Yüklenen mesajlardaki eşleşmeler gösterilir.</string>
-    <string name="history_unread_boundary">Okunmamış mesajlar</string>
-    <string name="history_jump_unread">Okunmamış iletilere atla</string>
     <string name="history_jump_latest">En son mesajlara atla</string>
-    <string name="history_jump_mention">Sonraki okunmamış söz</string>
     <string name="message_status">Durum</string>
     <string name="message_created_at">Oluşturuldu</string>
     <string name="message_sent_at">Gönderildi</string>
@@ -734,8 +732,6 @@
     <string name="photo_quality_high">Yüksek</string>
     <string name="photo_quality_original">Özgün</string>
     <string name="photo_quality_explanation">Fotoğraf konumu ve tanımlayıcı meta veriler kaldırılır. Orijinal, desteklenen görüntü verilerini tutar; diğer formatlar güvenli bir şekilde yeniden kodlanır. Videolar ve dosyalar orijinal verilerini korur.</string>
-    <string name="photo_quality_fallback">Bu format, tanımlayıcı meta verileri kaldırmak için 4096 piksele kadar yeniden kodlandı.</string>
-    <string name="photo_prepared_size">Hazırlanan: %1$s</string>
     <string name="attachment_queued">Sıraya alındı</string>
     <string name="attachment_uploading">Yükleniyor…</string>
     <string name="attachment_downloading">İndiriliyor…</string>
@@ -760,10 +756,9 @@
     <string name="attachment_gif_unavailable">Animasyon kullanılamıyor</string>
     <string name="attachment_gif_static">Statik resim</string>
     <string name="attachment_gif_description">Animasyonlu resim</string>
-    <string name="photo">Fotoğraf</string>
     <string name="attachment_add">Ekle</string>
     <string name="attachment_retry">Yeniden dene</string>
-    <string name="white_noise_person">White Noise kişi</string>
+    <string name="attachment_contact">Kişi</string>
     <string name="recent_add_marmot">marmot fotoğrafı ekle</string>
     <string name="recent_add_fox">Tilki fotoğrafı ekle</string>
     <string name="recent_add_badger">Porsuk fotoğrafı ekle</string>
@@ -827,7 +822,6 @@
     <string name="photo_editor_undo_done">Değişiklik geri alındı</string>
     <string name="photo_editor_redo_done">Değişiklik yeniden yapıldı</string>
     <string name="photo_editor_original_edited">Düzenlenen fotoğraflar Yüksek kalite kullanır. Orijinal görüntü daha fazla düzenleme için saklanır.</string>
-    <string name="photo_quality_mixed">Karışık</string>
     <string name="photo_editor_frame">Fotoğraf %1$d</string>
     <string name="photo_editor_coordinate_value">%1$s: %2$d%%</string>
     <string name="attachment_reader_title">Dosya</string>
@@ -956,19 +950,7 @@
     <string name="speech_use_engine">Motoru kullan</string>
     <string name="speech_dismiss">Kapat</string>
     <string name="dictation_title">Dikte</string>
-    <string name="dictation_finish">Dikteyi bitir</string>
-    <string name="dictation_manual">Bitti\'ye dokunduğumda</string>
-    <plurals name="dictation_silence">
-        <item quantity="one">%1$d saniyelik sessizliğin ardından</item>
-        <item quantity="other">%1$d saniyelik sessizlikten sonra</item>
-    </plurals>
-    <string name="dictation_result">Bittiğinde</string>
-    <string name="dictation_paste">Taslağa yapıştır</string>
-    <string name="dictation_send">Mesaj gönder</string>
-    <string name="dictation_paste_detail">Göndermeden önce metni inceleyin veya düzenleyin</string>
-    <string name="dictation_send_detail">Bu sohbet ve taslak değişmezse dikte tamamlandığında gönder.</string>
-    <string name="dictation_send_safety">Taslakta, üyelikte veya oturumda değişiklik olması durumunda metni gözden geçirilmek üzere saklayın.</string>
-    <string name="dictation_settings_detail">Diktenin ne zaman biteceğini ve metnine ne olacağını seçin.</string>
+    <string name="dictation_settings_detail">Konuşmanız doğrudan mesaja yazılır. Düzenlemek için duraklatın, imleçten devam etmek için mikrofona dokunun. Hazır olduğunuzda gönderin.</string>
     <string name="dictation_disclosure_title">Harici konuşma tanıma</string>
     <string name="dictation_disclosure_detail">Konuşma hizmetiniz dikte edilmiş sesi sağlayıcısına gönderebilir. Dikte ayarlarında Mesaj gönder seçeneğini etkinleştirmediğiniz sürece, dikte edilen metin taslağınıza yapıştırılır.</string>
     <string name="dictation_start">Dikteyi başlat</string>
@@ -991,11 +973,6 @@
     <string name="dictation_failed">Konuşma metne dönüştürülemedi.</string>
     <string name="dictation_retry">Yeniden dene</string>
     <string name="dictation_copied">Kopyalandı</string>
-    <string name="voice_capture_locked">Kayıt kilitlendi</string>
-    <string name="voice_capture_lock">Kaydı kilitle</string>
-    <string name="voice_capture_cancel">İptal etmek için bırakın</string>
-    <string name="voice_capture_release">İncelemek için yayınlayın</string>
-    <string name="voice_capture_drag">İptal etmek için kaydırın veya kilitlemek için yukarı kaydırın</string>
     <string name="voice_capture_short">Kaydetmek için daha uzun süre basılı tutun.</string>
     <string name="voice_capture_failed">Bu sesli mesaj kaydedilemedi.</string>
     <string name="group_solo_create">Diğer üyeler olmadan oluşturun</string>
@@ -1091,8 +1068,7 @@
         <item quantity="other">%1$d geçmiş girişleri hazırlandı</item>
     </plurals>
     <string name="retention_off">Kapalı</string>
-    <string name="retention_explainer">Aldığınız yeni mesajlar, onları okuduğunuzda geri sayıma başlar. Gönderdiğiniz mesajlar gönderildiğinde kendi mesajları başlar.</string>
-    <string name="retention_existing_deadlines">timer\'nin değiştirilmesi halihazırda başlamış olan geri sayımı değiştirmez. Kaldırılan mesajlar geri dönmeyecek.</string>
+    <string name="retention_explainer">Süre, mesajı okuduğunuzda veya gönderdiğinizde başlar.</string>
     <string name="retention_readonly">Bunu yalnızca yöneticiler değiştirebilir</string>
     <string name="retention_custom">Özel süre</string>
     <string name="retention_custom_value">Özel time: %1$s</string>
@@ -1873,4 +1849,8 @@
     <string name="sign_out_wipe_detail">Bu profil ve tüm yerel veriler kalıcı olarak kaldırılacak. Önceki sohbetler geri dönmeyecek.</string>
     <string name="support_chat_relay_required">Destek sohbetine başlamadan önce bağlı bir Sohbet Mesajları aktarımı seçin.</string>
     <string name="unread">Okunmamış</string>
+    <string name="profile_download_image">İndir</string>
+    <string name="group_see_all_members">Tümünü gör</string>
+    <string name="contact_add_to_group">Bir gruba ekle</string>
+    <string name="dictation_resume">Dikteye devam et</string>
 </resources>

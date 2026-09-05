@@ -68,12 +68,16 @@ import androidx.media3.ui.compose.material3.buttons.SeekForwardButton
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickCount
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.ConversationMediaItem
+import dev.ipf.whitenoise.model.MessageAttachment
+import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 /** One foreground video at a time; offscreen pager pages only display their poster. */
 @Composable
 internal fun MediaViewerVideo(
-    item: ConversationMediaItem,
+    attachment: MessageAttachment,
+    image: ProfileAvatar?,
+    playbackKey: String,
     active: Boolean,
     controlsVisible: Boolean,
     bottomControlsInset: Dp,
@@ -81,7 +85,7 @@ internal fun MediaViewerVideo(
     onShowControls: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val player = rememberForegroundVideoPlayer(item, active)
+    val player = rememberForegroundVideoPlayer(playbackKey, attachment.externalUri, active)
     val positionLabel = stringResource(R.string.video_playback_position)
     val speedLabel = stringResource(R.string.video_playback_speed)
     val showControls by rememberUpdatedState(onShowControls)
@@ -116,7 +120,7 @@ internal fun MediaViewerVideo(
 
     BoxWithConstraints(modifier) {
         if (player == null) {
-            item.image?.let {
+            image?.let {
                 ComposerImage(it, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             }
             return@BoxWithConstraints
@@ -136,7 +140,7 @@ internal fun MediaViewerVideo(
                 SURFACE_TYPE_SURFACE_VIEW
             },
             shutter = {
-                item.image?.let {
+                image?.let {
                     ComposerImage(it, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                 }
             },
@@ -234,15 +238,17 @@ private fun VideoPlaybackSlider(player: Player?, modifier: Modifier = Modifier) 
 }
 
 @Composable
-internal fun rememberForegroundVideoPlayer(item: ConversationMediaItem, active: Boolean): ExoPlayer? {
+internal fun rememberForegroundVideoPlayer(item: ConversationMediaItem, active: Boolean): ExoPlayer? =
+    rememberForegroundVideoPlayer(item.key.stableId, item.attachment.externalUri, active)
+
+@Composable
+private fun rememberForegroundVideoPlayer(key: String, externalUri: String?, active: Boolean): ExoPlayer? {
     val context = LocalContext.current.applicationContext
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val key = item.key.stableId
     var position by rememberSaveable(key) { mutableLongStateOf(0L) }
     var volume by rememberSaveable(key) { mutableFloatStateOf(1f) }
     var speed by rememberSaveable(key) { mutableFloatStateOf(1f) }
     var player by remember(key) { mutableStateOf<ExoPlayer?>(null) }
-    val externalUri = item.attachment.externalUri
 
     DisposableEffect(context, lifecycle, key, externalUri, active) {
         fun release() {

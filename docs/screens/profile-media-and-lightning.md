@@ -15,9 +15,10 @@ preserves the previous image, Retry repeats the selection, and Remove changes
 only the draft. Back cancels uncommitted image work and restores saved data.
 
 Tapping an available own/other-profile avatar or banner opens a full-screen
-Material dialog with fit-to-window image, native transformable zoom/pan, visible
-zoom/reset controls, Back reset/close and Save using the established system
-document destination. Own media also exposes Edit profile. Monograms have no
+Material dialog with fit-to-window image, native transformable zoom/pan, accessibility zoom/reset actions, Back reset/close
+and Download in the header overflow menu using the established system document
+destination. Own media also exposes Edit profile in that menu. The viewer has
+no bottom text action row. Monograms have no
 image-viewer action. Person Profile and direct Chat Info share the image-entry
 behavior. Existing conversation media behavior stays intact.
 
@@ -79,8 +80,8 @@ and [document creation](https://developer.android.com/training/data-storage/shar
 - `ProfileMediaUi.kt` reuses native image/document contracts and the bounded
   web-image URL catalog. Picker results and image preparation remain owned by
   the initiating editor. Failed selection retains the old image; retry consumes
-  a one-shot failure. Full-screen images expose fit/zoom/pan/reset/save with
-  visible accessible controls. Viewing while editing does not reset the draft.
+  a one-shot failure. Full-screen images expose fit/zoom/pan/reset through gestures and accessibility
+  actions, with Download in the overflow menu. Viewing while editing does not reset the draft.
 - `ProfileEditorModelsTest` adds five validation/suggestion/geometry cases;
   `ProfileEditorStateTest` adds eight atomic-save/failure/owner/image-draft
   cases. `ProfileEditorFlowTest` adds seven compiled interaction/restoration
@@ -91,3 +92,13 @@ and [document creation](https://developer.android.com/training/data-storage/shar
   visual acceptance is claimed.
 
 Commit title: `B04: Add profile media and Lightning address editing`.
+
+## 2026-09-05 — avatar viewer controls
+
+The header now uses the shared three-dot dropdown with an icon-led Download
+command; it is disabled until the image loads. Own-profile Edit profile moves
+into the same menu. Zoom In, Zoom Out and Reset Zoom no longer occupy a footer.
+Pinch/pan and bounded zoom remain, with equivalent custom accessibility actions
+on the image and its announced zoom level. Back dismisses the open menu before
+the viewer. The shared viewer applies this to avatars and banners from all entry
+points. `ProfileEditorFlowTest` checks overflow visibility and dismissal.

@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -361,7 +361,9 @@ private fun NostrLocalVideoViewer(card: NostrEventCard, onDismiss: () -> Unit) {
     ) {
         Box(Modifier.fillMaxSize().testTag("nostr_event.video_viewer")) {
             MediaViewerVideo(
-                item = item,
+                attachment = item.attachment,
+                image = item.image,
+                playbackKey = item.key.stableId,
                 active = true,
                 controlsVisible = controlsVisible,
                 bottomControlsInset = 0.dp,

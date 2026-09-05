@@ -6,29 +6,6 @@ import org.junit.Test
 class ConversationHistoryTest {
     private fun message(i: Int, author: String = "friend", text: String = "Message $i") = ChatMessage("m$i", author, 3, "Today", i, "$i", text)
     private fun chat(count: Int = 60) = Chat("chat", 0, ChatKind.Group, "Plans", timeline = (0 until count).map { ChatTimelineEntry.Message(message(it)) })
-    @Test fun latestJumpWaitsForTwoViewportHeightsAndHidesAgainNearTheTail() {
-        assertFalse(ConversationReading.showTailJump(3000, 1201, 600, 30))
-        assertTrue(ConversationReading.showTailJump(3000, 1200, 600, 30))
-        assertTrue(ConversationReading.showTailJump(3000, 0, 600, 30))
-        assertFalse(ConversationReading.showTailJump(3000, 2400, 600, 30))
-        assertFalse(ConversationReading.showTailJump(500, 0, 600, 3))
-        // A larger window needs proportionally more scroll distance.
-        assertFalse(ConversationReading.showTailJump(3000, 1200, 900, 30))
-    }
-    @Test fun latestJumpIncludesNewerHistoryOutsideTheLoadedWindow() {
-        assertFalse(ConversationReading.showTailJump(1800, 1200, 600, 18, 11))
-        assertTrue(ConversationReading.showTailJump(1800, 1200, 600, 18, 12))
-        assertTrue(ConversationReading.showTailJump(1800, 1200, 600, 18, 100))
-    }
-    @Test fun latestJumpRejectsUnmeasuredLayoutsWithoutOverflow() {
-        assertFalse(ConversationReading.showTailJump(Int.MAX_VALUE, 0, 600, 18))
-        assertFalse(ConversationReading.showTailJump(3000, Int.MAX_VALUE, 600, 18))
-        assertFalse(ConversationReading.showTailJump(3000, 0, Int.MAX_VALUE, 18))
-        assertFalse(ConversationReading.showTailJump(3000, 0, 0, 18))
-        assertFalse(ConversationReading.showTailJump(3000, 0, 600, 0))
-        assertTrue(ConversationReading.showTailJump(Int.MAX_VALUE - 1, 0, 600, 1, Int.MAX_VALUE))
-    }
-
     @Test fun adjacentPagesAreBoundedOrderedDeduplicatedAndExhaustible() {
         val chat = chat(); var ids = ConversationHistory.initial(chat)
         assertEquals((42..59).map { "m$it" }, ConversationHistory.loaded(chat, ids).map { it.id })
@@ -93,23 +70,6 @@ class ConversationHistoryTest {
         assertEquals(setOf("m2"), reconciled.unreadIds)
         assertEquals(reconciled, ConversationReading.reconcile(reconciled, next, "me"))
         assertTrue(ConversationReading.reconcile(reconciled, base, "me").unreadIds.isEmpty())
-    }
-    @Test fun offTailUnreadStackFreezesFirstArrivalAndCannotRetargetUntilCleared() {
-        val chat = chat(4)
-        var jump = ConversationReading.jump(ConversationUnreadJump(), ConversationReadState(emptySet(), emptySet()), chat, false)
-        jump = ConversationReading.jump(jump, ConversationReadState(setOf("m1"), emptySet()), chat, false)
-        assertEquals("m1", jump.pendingId)
-        assertEquals(jump, ConversationReading.jump(jump, ConversationReadState(setOf("m1", "m3"), emptySet()), chat, false))
-        val consumed = ConversationReading.jump(jump, ConversationReadState(setOf("m3"), emptySet()), chat, false)
-        assertNull(consumed.pendingId); assertTrue(consumed.stackActive)
-        assertNull(ConversationReading.jump(consumed, ConversationReadState(setOf("m3"), emptySet()), chat, false).pendingId)
-        val cleared = ConversationReading.jump(consumed, ConversationReadState(emptySet(), emptySet()), chat, false)
-        assertEquals("m3", ConversationReading.jump(cleared, ConversationReadState(setOf("m3"), emptySet()), chat, false).pendingId)
-    }
-    @Test fun entryUnreadAndNearTailArrivalsDoNotCreateOffTailJump() {
-        val chat = chat(2); val read = ConversationReadState(setOf("m1"), emptySet())
-        assertNull(ConversationReading.jump(ConversationUnreadJump(), read, chat, false).pendingId)
-        assertNull(ConversationReading.jump(ConversationUnreadJump(initialized = true), read, chat, true).pendingId)
     }
     @Test fun mentionJumpUsesCompleteNamesAndOnlyUnreadReceivedMessages() {
         val profile = Profile("me", "Maya Chen", "npub-key")

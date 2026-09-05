@@ -85,7 +85,6 @@ internal fun RetentionPicker(current: DisappearingDuration, editable: Boolean = 
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.disappearing_messages_title)) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
             Text(stringResource(R.string.retention_explainer))
-            Text(stringResource(R.string.retention_existing_deadlines))
             if (!editable) Text(stringResource(R.string.retention_readonly))
             error?.let { Text(it, Modifier.semantics { liveRegion = LiveRegionMode.Polite }, color = MaterialTheme.colorScheme.error) }
             Column(Modifier.selectableGroup()) {
@@ -148,7 +147,7 @@ internal fun RetentionWorkPanel(profile: Profile, chat: Chat) {
     val controller = LocalRetention.current ?: return
     val owner = GroupOwner(profile.id, chat.id)
     val work = controller.work[owner]?.takeUnless { it.phase == RetentionPhase.Confirm } ?: return
-    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
         Text(stringResource(when (work.phase) {
             RetentionPhase.Applying -> R.string.retention_applying
             RetentionPhase.Refreshing -> R.string.retention_refreshing

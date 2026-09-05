@@ -16,6 +16,94 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-09-05 shared-groups entry and bottom invite action
+
+Person Profile shows Groups in Common only when groups are shared; otherwise
+that slot contains Add to a group. The shared-groups page pins the standard
+icon-led Add to Another Group button below its scrollable list, opening the
+existing eligible-group picker and confirmation flow. `ChatsScreenTest` covers
+both profile branches and bottom-action access. Host validation passes: 901 unit
+tests, zero lint errors (18 existing warnings, two hints), and both APKs. UI tests
+were compiled only; device/visual acceptance remains pending. See
+[the people brief](../screens/people-discovery-and-private-details.md).
+
+## 2026-09-05 scrolled Chat Info identity
+
+Direct and group Chat Info reveal the same avatar/name in the app bar after the
+main name scrolls above the header boundary. Measured coordinates and lazy-list
+position account for banners, long names, larger text and list virtualization;
+scrolling back hides the compact identity. The shared top bar accepts optional
+title content while retaining native colors and Back. `ChatInfoScreenTest`
+covers the threshold in both chat types, farther scrolling, recreation and
+returning to the top. Host validation passes: 901 unit tests, zero lint errors
+(18 existing warnings, two hints), and both APKs. UI tests were compiled only;
+device/visual acceptance remains pending. See [the Group Info brief](../screens/chat-and-group-information.md).
+
+## 2026-09-05 member preview and full roster
+
+Group Info limits its preview to five members and offers See all for larger
+groups. The new profile-owned Members route renders the complete live roster,
+reuses avatars, roles and member-profile navigation, and handles roster status
+and pending operations. Back restores Group Info; stale owners/groups exit.
+The route inherits chat-window privacy protection. `GroupMembersFlowTest`
+covers preview limits, full-list access, Back and owner changes;
+`WindowPrivacyPolicyTest` includes the destination. Host validation passes:
+901 unit tests, zero lint errors (18 existing warnings, two hints), and both
+app/test APKs. UI tests were compiled only; device/visual acceptance is pending. See
+[the Group Info brief](../screens/chat-and-group-information.md).
+
+## 2026-09-05 Leave Group placement and icon
+
+Group Info places lifecycle controls after Add to Folder and Archive, leaving
+Leave Group last for active groups. Its shared SettingsAction row matches the
+other actions and now includes a destructive logout icon; sole-member Delete
+uses a trash icon. Existing eligibility and confirmation handling are unchanged.
+Host build and lint pass. Device visuals were not inspected. See
+[the Group Info brief](../screens/chat-and-group-information.md).
+
+## 2026-09-05 concise disappearing-message help
+
+`RetentionPicker` replaces two long paragraphs with “Timers start when you read
+or send a message.” The four translated resource sets match, and the unused
+second paragraph is removed. Timer options, staging, custom duration and save
+behavior are unchanged. Host build and lint pass; device visuals were not
+inspected. See [the timer brief](../screens/disappearing-timers-and-expiry.md).
+
+## 2026-09-05 avatar viewer overflow controls
+
+`ProfileImageViewer` removes the bottom zoom text controls and places Download
+(with its icon) in the shared three-dot dropdown. Own-profile Edit profile also
+moves into that menu. Pinch/pan, accessibility zoom/reset actions, image-loading
+eligibility and the existing document-save contract remain. This shared change
+covers avatar and banner entries. `ProfileEditorFlowTest` checks menu visibility,
+footer removal and Back dismissal. Host evidence: 901 unit tests pass; lint has
+zero errors, 18 existing warnings and two hints; both APKs assemble. UI tests
+were compiled only; visual acceptance remains pending. See
+[the profile media brief](../screens/profile-media-and-lightning.md).
+
+## 2026-09-05 folder picker alignment and checkbox rows
+
+Add to Folder now has leading folder icons, aligned wrapping labels, trailing
+checkboxes and explicit Add confirmation for the chosen destination. Cancel
+leaves membership unchanged; New Folder retains name/Save. The shared row also
+fixes spacing and alignment in search content filters and contact-sharing fields.
+`ChatFolderFlowTest` covers pending choice, cancellation and assignment;
+`ChatOrganizationFlowTest` retains scrollable new-folder coverage. Host validation:
+901 unit tests pass, lint has zero errors (18 existing warnings, two hints), and
+app/test APKs assemble. UI tests were compiled, not run; visual acceptance remains
+pending. See [the folder brief](../screens/chat-folders.md).
+
+## 2026-09-05 folder strip scroll surface and examples
+
+The Chats pill strip follows the header's gray scrolled surface and adjusts the
+selected capsule to a contrasting semantic color. Settings no longer lists
+Folders; Manage folders remains a separate action after the filter pills.
+Marmota includes live Friends, Work and Weekend rule folders. Model coverage
+verifies their membership and restoration; compiled UI coverage checks direct
+filtering and the relocated management entry. 899 unit tests pass, lint has
+zero errors and both APKs assemble. See
+[the folder brief](../screens/chat-folders.md). Device acceptance remains pending.
+
 ## 2026-09-05 chat selection layout
 
 Selectable chat rows retain avatars/pin badges and have 8 dp between rounded
@@ -264,6 +352,79 @@ selection regressions; the folder integration test asserts the sheet boundary.
 The host gate passes: 892 unit tests, zero lint errors (15 warnings, two hints),
 debug APK assembly and instrumentation-test APK compilation. No device run or
 visual acceptance is claimed. [Evidence](../screens/shared-settings-polish.md).
+
+## 2026-09-05 — search-field microphone and clear action
+
+C022 global search now places the microphone inside the empty field, swaps it
+for Clear search whenever text is present, and restores it on clear. Filters
+remains beside the field with its existing menu. Voice request ownership,
+pending disabling, retry and cancellation are unchanged. Other compact search
+fields retain their existing empty state.
+[Evidence](../screens/global-search.md#2026-09-05--microphone-inside-the-search-field).
+
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 901 unit tests, zero failures/errors/skips, zero lint errors (18 existing
+warnings and two hints), and both debug APKs. Updated registry-driven voice
+interaction tests and the new mic/clear placement case compile only. No device,
+visual or microphone verification was performed.
+
+## 2026-09-05 — Chat Info and related action spacing
+
+Chat Info combines adjacent chat controls into one segmented group and presents
+Export transcript as a separate white action row with 8 dp surrounding gaps.
+The related group administration flow removes doubled horizontal margins, uses
+native SettingsAction rows, and excludes hidden leave rows from shape assignment.
+Roster/member/retention status panels now have vertical clearance when visible.
+[Evidence](../screens/chat-and-group-information.md#2026-09-05--action-group-spacing-audit).
+
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 901 unit tests with zero failures/errors/skips, zero lint errors (18
+existing warnings and two hints), and both debug APKs. Interaction tests compile
+only; no device, visual or Files handoff inspection was performed.
+
+## 2026-09-05 — ordinary-dialog contrast audit
+
+C014 Nickname & notes now uses the shared neutral dialog canvas and white input
+containers, matching the existing form-dialog pattern. The remaining ordinary
+alerts in PeopleFlowUi, DeveloperParityUi, MessageDocumentUi and NostrEventUi
+all resolve to WhiteNoiseAlertDialog; no ordinary default Material alerts remain
+outside that wrapper. Existing dialog actions and editor behavior are preserved.
+[Evidence](../screens/people-discovery-and-private-details.md#2026-09-05--nickname-dialog-field-contrast-and-app-wide-audit).
+
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 901 unit tests, zero failures/errors/skips, zero lint errors (18 existing
+warnings and two hints), and both debug APKs. UI cases compile only. No device
+or visual verification was performed.
+
+## 2026-09-05 — group-picker spacing and avatars
+
+C019/C021 share corrected Add to groups / Make admin in groups sheets: search
+stays above the scrolling list with a 24 dp gap, consistent 16 dp horizontal
+margins and list-to-action clearance. Every group has its existing 48 dp photo
+or initials avatar beside its name, with a trailing whole-row-owned checkbox.
+Search, eligibility, confirmation, partial results and retry are unchanged.
+[Evidence](../screens/people-discovery-and-private-details.md#2026-09-05--group-picker-spacing-and-identity).
+
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 901 unit tests with zero failures/errors/skips, zero lint errors (18
+existing warnings and two hints), and both debug APKs. Existing UI interaction
+cases compile only. No device or visual verification was performed.
+
+## 2026-09-05 — update availability and User Profile icons
+
+C120/C121 now use a shared teal Material scalloped download emblem in Chats
+and the white Settings update row. Successful simulated installation marks the
+session current and removes the Chats indicator; rechecks remain current,
+cancel/failure preserve availability, and a fresh launch restores the fixture.
+C014/C019/C021 User Profile actions all have aligned 24 dp leading icons, with
+correct person removal/admin/block symbols and existing destructive colors.
+See [updates](../screens/distribution-gated-app-updates.md#2026-09-05--temporary-update-emblem-and-session-completion)
+and [profile actions](../screens/people-discovery-and-private-details.md#2026-09-05--user-profile-action-icons).
+
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes: 901 unit tests, zero failures/errors/skips, zero lint errors (18 existing
+warnings, two hints), debug and instrumentation-test APKs. UI interaction cases
+compile only; no device or visual verification was performed.
 
 ## 2026-09-04 production B32
 
@@ -940,6 +1101,165 @@ Unless later user direction expands scope, parity does not mean adding:
 - real authentication or account recovery;
 - durable database or preference storage;
 - remote avatar fetching or arbitrary web content;
-- microphone speech recognition when deterministic local fixtures provide the
-  accepted prototype behavior;
+- microphone speech recognition outside the explicitly approved global-search
+  and live-composer dictation flows;
 - payments, push registration, or telemetry upload.
+
+2026-09-05 attachment menu follow-up: explicit user direction replaces White
+Noise person / Device contact with one Contact entry into the existing in-app
+picker and removes Recent media and Photo quality from the attachment menu.
+`ConversationComposer` removes their unused menu wiring; draft-photo quality
+remains contextual. Menu/picker assertions updated in `ConversationScreenTest`.
+Host gate passed: 901 unit tests, zero lint errors, and both APKs assembled.
+Updated UI cases compiled only; device and visual acceptance remain pending.
+
+2026-09-05 compact media previews: `ConversationComposer` removes the inline
+quality/preparation summary and unreachable whole-draft quality dialog. Chat
+bubbles and media viewers already omit quality labels. Explicit editor/settings
+quality controls and import processing remain intact. Existing photo-composer
+UI assertions updated and compiled. Host gate passed with 901 unit tests,
+zero lint errors, and both APKs assembled; visual acceptance pending.
+
+2026-09-05 tail-jump follow-up: `ConversationTailJump` replaces changing lazy-list
+average-height estimates with cached measured row geometry. Threshold is one
+usable viewport. `ConversationScreen` uses a compact circular native FAB with
+shadow and retained minimum touch target. Seven host regressions cover gallery
+transitions, boundary/return, paging, transient layout, resize, unloaded history
+and overflow. Host gate passed: 905 unit tests, zero lint errors and both APKs
+assembled. Device visual acceptance remains pending.
+
+2026-09-05 unread separator: explicit user direction replaces unread/mention jump
+and bulk-read actions with a noninteractive count/divider at the first unread
+message. `ConversationUnreadDivider` retains the visit boundary through visible
+acknowledgements/recreation, extends it for incoming messages and clears on reply.
+`ConversationScreen` lands above the divider; the existing down arrow targets only
+the latest message. Host gate passed: 909 unit tests, zero lint errors, both APKs
+assembled, and updated Compose regressions compiled.
+No device execution or visual acceptance claimed.
+
+2026-09-05 quick profile switcher and current-update visibility: Chats now opens
+`ProfileSwitcherSheet` from the avatar/chevron, with existing signed-in profile
+rows, unread badges and active checks. Add Profile and Settings footer actions
+use the existing routes. Profile switching closes the sheet onto the selected
+profile’s Chats. Current update state omits both the Settings card and its gap;
+future update checks remain enabled. `AppUpdatesTest` covers the visibility/check
+regression; `ChatsProfileSwitcherFlowTest`, `ChatsScreenTest` and
+`AppUpdateInteractionTest` cover the interaction contract (compiled only).
+Host gate passed: 910 unit tests, zero failures/errors/skips, zero lint errors,
+and debug app plus instrumentation APKs assembled. No device execution or visual
+acceptance claimed.
+
+2026-09-05 transcript export modal: `TranscriptPanel` now opens the shared native
+alert dialog for preparation, ready Save/Cancel, and result/retry states. It no
+longer inserts status/actions into Chat Info. Save alone enters the existing
+Files flow; cancelling preparation/ready clears its document and closes the
+modal. Direct and group chats share the flow. Host gate passed: 910 unit tests,
+zero failures/errors/skips, zero lint errors (18 warnings, two hints), debug app
+and instrumentation APK assembly. `GroupLifecycleInteractionTest` modal entry,
+Save, Cancel and retry regressions compile; no device/system-picker execution or
+visual acceptance is claimed.
+
+2026-09-05 folder-management icon: the final Chats pill-row action is now a native
+FilledTonalIconButton with the existing edit icon, neutral secondary container,
+localized accessible Manage folders label and unchanged destination. Host gate
+passed: 910 unit tests, zero failures/errors/skips, zero lint errors and both APKs
+assembled. Existing folder-management interaction coverage compiles only;
+visual/device acceptance remains pending.
+
+2026-09-05 tail-arrow spacing/shadow: the existing compact latest-message FAB now
+sits 16 dp closer to the composer, removing duplicated Scaffold bottom clearance.
+Native resting/pressed/focused elevation is 3 dp and hovered is 4 dp, half the
+previous defaults. Threshold, stable visibility, 48 dp touch target and IME/safe
+insets remain intact. Host gate passed: 910 unit tests, zero failures/errors/skips,
+zero lint errors, debug app and instrumentation APKs assembled. No device visual
+inspection or acceptance claimed.
+
+2026-09-05 profile/folder refinement: folder management is a 32 dp tonal circle
+with an 18 dp edit icon and 48 dp native interaction target. The main profile
+avatar loses its chevron; Settings removes duplicate profile management and its
+switcher sheet. Sign-out with remaining profiles routes to Chats and opens the
+main switcher once. Settings interaction coverage now asserts absent switching;
+ChatsProfileSwitcherFlowTest adds post-sign-out routing/dismissal coverage.
+Host gate passed: 909 unit tests (obsolete Settings switcher-route flag test
+removed), zero failures/errors/skips, zero lint errors (18 warnings/two hints),
+and both APKs assembled. Final additional UI regression compiles. No device
+execution or visual acceptance claimed.
+
+2026-09-05 translucent tail arrow: the latest-message control now matches pinned
+date pills exactly (surfaceDim with PinnedDayHeaderSurfaceAlpha, onSurface icon),
+restores a 40 dp circle/24 dp icon and removes elevation in every interaction
+state. The closer composer position and native 48 dp touch target are retained.
+Host gate passed: 909 unit tests, zero failures/errors/skips, zero lint errors,
+and both APKs assembled. No device execution or visual acceptance claimed.
+
+2026-09-05 stable transcript modal: loading and ready use the same dialog with
+persistent Save/Cancel action slots, disabled Save until Ready, reserved adaptive
+status space and persistent count/progress area. Loading completion updates
+content and enabled state. Existing interaction coverage now checks the same
+dialog node and unchanged dialog/button bounds through Ready (compiled only).
+Host gate passed: 909 unit tests, zero failures/errors/skips, zero lint errors,
+and both APKs assembled. No device or system-picker execution claimed.
+
+2026-09-05 composer video gallery: draft video pages now share the sent-message
+Media3 player for playback, seeking, mute and speed, with foreground lifecycle
+release and retained inclusion/Done/Cancel actions. The shared component accepts
+attachment/poster/key directly; no new dependency, service or network source.
+Draft playback, control/inclusion separation and exclusion interaction coverage
+compiles. Host gate passed: 909 unit tests, zero failures/errors/skips, zero lint
+errors (18 warnings/two hints), and both APKs assembled. Device playback and
+visual acceptance remain pending.
+
+2026-09-05 folder-strip action: the compact pencil/tonal circle is replaced by
+Google's Material Symbols Rounded bookmark_manager in a transparent standard
+IconButton. The accessible label, native touch target and management route remain.
+`lintDebug assembleDebug` passed; device visual acceptance remains pending.
+
+2026-09-05 composer dictation/multiline refinement: direct microphone precedes
+record/Send and uses the existing dictation controller. Four compact-width visual
+lines integrate Add into a full-width capsule with a bottom control row. Manual
+expansion grows height before width and collapse reverses the sequence; the
+Foundation editor and menu owners remain mounted. Wrapped-line eligibility does
+not depend on wide reflow. Added compiled layout/motion/selection/menu coverage
+and direct-dictation entry coverage, with unit three/four-line boundary checks.
+Final host gate passed: 909 unit tests, zero failures/errors/skips, zero lint
+errors (18 warnings/three hints), and both APKs assembled. Device motion and
+visual acceptance remain pending.
+
+2026-09-05 latest-message highlight removal: explicit user direction disables
+the temporary last-bubble tint when pressing the scroll-to-end chevron.
+`ConversationScreen` requests the latest target with `highlight = false`;
+exact-message navigation retains its existing highlight. Host gate passed:
+`testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`.
+Device visual acceptance remains pending.
+
+2026-09-05 dictation menu cleanup: Add attachment no longer offers Dictation or
+pending review. The composer microphone handles both. Updated existing dictation
+interaction coverage for the single entry, absent menu item and retained-review
+reopening. Debug app and instrumentation APKs assemble; device tests were not run.
+
+2026-09-05 live-recording row restoration: active recording contains only the
+live waveform and Stop in one 48 dp row, with no lock/Cancel copy or extra
+action row. The X remains in stopped review. Existing recording regression now
+checks row height, waveform/Stop alignment, absent extra actions and review.
+Both debug APKs assemble; interaction coverage compiled only, device acceptance
+remains pending.
+
+2026-09-05 live composer dictation correction: the microphone now starts Android
+SpeechRecognizer without an app pre-start modal. RECORD_AUDIO uses the native
+runtime prompt. Owned partial/final callbacks update the existing editor;
+Pause/edit/caret movement stop capture, and Resume uses the new selection.
+The pulsing red microphone, Pause and voice-review-style X replace separate
+transcript/Cancel/Done UI; the Message placeholder and voice-note record control
+are hidden in dictation mode. X preserves the draft and Send remains explicit.
+Settings no longer offers obsolete completion/auto-send preferences. Provider
+errors retain text inline, with permission recovery and owned lifecycle teardown.
+ComposerCaptureControllerTest adds eight state regressions; DictationCaptureTest
+covers the updated interaction with injected callbacks instead of a live mic.
+See the latest composer brief for platform sources and the superseded B17 scope.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 917 unit tests, no failures/errors/skips, zero lint errors
+(18 warnings and three hints), and both APKs assembled. The final Back-priority
+change additionally passed `./gradlew lintDebug assembleDebug assembleDebugAndroidTest`.
+Interaction tests compile only. No device recognition, installation or visual
+inspection was performed.

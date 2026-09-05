@@ -62,7 +62,7 @@ internal fun GroupRosterPanel(profile: Profile, chat: Chat) {
     LaunchedEffect(owner, controller.rosterScenario) { controller.openRoster(owner) }
     val status = chat.groupRoster.status
     if (status == GroupRosterStatus.Ready) return
-    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
+    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related)
         .semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
         Text(stringResource(when (status) {
             GroupRosterStatus.Unknown -> R.string.group_roster_unknown
@@ -81,7 +81,7 @@ internal fun GroupMemberWorkPanel(profile: Profile, chat: Chat) {
     val owner = GroupOwner(profile.id, chat.id)
     val work = controller.memberWork[owner] ?: return
     if (work.phase == GroupWorkPhase.Complete) return
-    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+    Column(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related),
         verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
         work.personIds.forEach { id ->
             val name = profile.people.firstOrNull { it.id == id }?.displayName ?: stringResource(R.string.members)

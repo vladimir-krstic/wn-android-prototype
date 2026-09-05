@@ -54,7 +54,6 @@ class VoiceSearchFlowTest {
         }
         if (restore == null) rule.setContent(screen) else restore.setContent(screen)
         rule.onNodeWithContentDescription("Search Chats").performClick()
-        rule.onNodeWithTag("chats.searchField").performTextInput("existing search")
     }
     private fun speak() = rule.onNodeWithContentDescription("Voice Search").performClick()
     private fun result(code: Int = Activity.RESULT_OK, vararg phrases: String) = rule.runOnIdle {
@@ -72,16 +71,18 @@ class VoiceSearchFlowTest {
         rule.onNodeWithText("Getting your search…").assertDoesNotExist()
         result(phrases = arrayOf("  tomorrow at noon  ", "unused alternative"))
         rule.onNodeWithTag("chats.searchField").assertTextContains("tomorrow at noon")
+        rule.onNodeWithContentDescription("Voice Search").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Clear search").performClick()
         rule.onNodeWithContentDescription("Voice Search").assertIsEnabled()
     }
 
-    @Test fun cancellationAndEmptyResultsNeverEraseTheExistingSearch() {
+    @Test fun cancellationAndEmptyResultsKeepVoiceAvailableForEmptySearch() {
         content(); speak(); result(Activity.RESULT_CANCELED)
-        rule.onNodeWithTag("chats.searchField").assertTextContains("existing search")
+        rule.onNodeWithContentDescription("Clear search").assertDoesNotExist()
         speak(); result(phrases = arrayOf(" "))
         rule.onNodeWithText("Voice search is unavailable. Try again or type your search.").assertIsDisplayed()
         rule.onNodeWithText("Cancel").performClick()
-        rule.onNodeWithTag("chats.searchField").assertTextContains("existing search")
+        rule.onNodeWithContentDescription("Clear search").assertDoesNotExist()
     }
 
     @Test fun missingRecognizerOffersRetryAndSuccessfulRetryUsesTheResult() {
@@ -100,6 +101,7 @@ class VoiceSearchFlowTest {
         rule.onNodeWithTag("chats.searchField").performTextReplacement("newer search")
         result(phrases = arrayOf("old voice result"))
         rule.onNodeWithTag("chats.searchField").assertTextContains("newer search")
+        rule.onNodeWithContentDescription("Clear search").performClick()
         speak()
         rule.runOnIdle { profile = profile.copy(id = "other-profile") }
         result(phrases = arrayOf("previous profile result"))
@@ -111,10 +113,12 @@ class VoiceSearchFlowTest {
         content(); speak()
         rule.onNodeWithContentDescription("Close search").performClick()
         rule.onNodeWithContentDescription("Search Chats").performClick()
-        rule.onNodeWithTag("chats.searchField").performTextInput("new search session")
         rule.onNodeWithContentDescription("Voice Search").assertIsNotEnabled()
+        rule.onNodeWithTag("chats.searchField").performTextInput("new search session")
         result(phrases = arrayOf("previous search session result"))
         rule.onNodeWithTag("chats.searchField").assertTextContains("new search session")
+        rule.onNodeWithContentDescription("Voice Search").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Clear search").performClick()
         rule.onNodeWithContentDescription("Voice Search").assertIsEnabled()
     }
 

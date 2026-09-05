@@ -26,8 +26,9 @@ Repeated actions cannot create another chat. Closing returns to Chats and discar
 elsewhere also clears it. The chat remains available. Profile/route ownership
 rejects late completion.
 
-Person Profile offers **Nickname & notes**, **Start group**, **Add to groups**
-and **Make admin in groups**. Start group preselects this person in New Group.
+Person Profile offers **Nickname & notes**, **Start group**, and **Make admin
+in groups**. Its group entry is **Groups in Common** when shared groups exist,
+or **Add to a group** when there are none. Start group preselects this person in New Group.
 Group selection includes only active groups where the viewer is an authoritative
 admin, with the target absent for invites or a member for promotion. Loading,
 partial/unavailable roster and retry never assume eligibility. Confirm selected
@@ -105,3 +106,70 @@ New Message also offers Connect with QR and Invite a friend before the people
 list, without requiring an empty search. These reuse the existing Share &
 Connect scanner/display destination and the public-profile invitation Sharesheet.
 See `chats-and-chat-creation.md` for the 2026-09-05 entry-point follow-up.
+
+## 2026-09-05 — User Profile action icons
+
+Every action row has a decorative leading icon using the shared ProfileActionIcon
+size/tint and grouped-row alignment: edit for Nickname & notes, group creation,
+groups for Add to groups, admin shield for promotion, person add/remove for the
+contact toggle and blocked/check for Block/Unblock. Contextual group actions use
+admin/member and person removal symbols. Destructive actions retain semantic
+error color. Labels remain the accessible action names; no duplicate icon labels.
+
+The additional 24 dp rounded Material Symbols (person_remove,
+admin_panel_settings, block) are Google's Apache-2.0 Android vectors from the
+[official icon repository](https://github.com/google/material-design-icons/tree/master/symbols/android).
+No behavior, navigation or dependencies change. Host compilation/lint is recorded
+in the parity ledger; device and visual acceptance remain pending.
+
+## 2026-09-05 — group-picker spacing and identity
+
+The shared Add to groups / Make admin in groups sheet keeps search outside the
+scrolling group list. A 24 dp field-to-list relationship (16 dp field bottom plus
+8 dp list inset) separates the white search field from the first white row.
+Search, list and pinned action share the 16 dp horizontal margin; list bottom
+inset and pinned-action padding keep the last row clear of the button. Loading
+feedback has an 8 dp progress-to-text gap. Material still owns sheet insets,
+handle/header, row shapes, typography, touch targets and checkbox semantics.
+
+Each group row now shows its existing 48 dp circular photo or initials avatar
+on the leading side and the checkbox on the trailing side, matching other entity
+pickers. Both invitation and promotion use this shared implementation. Group
+identity, eligibility, search, whole-row selection, retry, confirmation and action
+callbacks are unchanged. Decorative avatars do not repeat the group name to
+accessibility services. Existing Groups in common and shared chat/entity pickers
+already show group avatars and remain consistent.
+
+Validation uses the host gate recorded in the latest parity ledger entry;
+existing group-action interaction tests compile only. Device/visual acceptance
+remains pending.
+
+## 2026-09-05 — nickname dialog field contrast and app-wide audit
+
+Nickname & notes now uses WhiteNoiseAlertDialog, the established ordinary-dialog
+wrapper. Its neutral surfaceContainerLow canvas provides surfaceContainerLowest
+to nested WhiteNoiseTextField controls, so empty nickname/notes inputs retain the
+same visible white containers used in other dialogs, with semantic dark-theme
+equivalents. Native labels, supporting text, focus/error rings, scroll behavior,
+Cancel/Save, and private-detail validation remain unchanged.
+
+The app-wide source audit also migrated the remaining default Material alerts
+in DeveloperParityUi (package deletion), MessageDocumentUi (link review/failure)
+and NostrEventUi (unavailable profile/event details). All ordinary AlertDialog
+calls now resolve to the shared wrapper. Full-screen editors, media viewers,
+and system-owned surfaces retain their separate presentation; inspected editing
+surfaces already distinguish fields from their canvas. No dependencies or new
+UI patterns were introduced. Validation is recorded in the parity ledger;
+existing interaction tests compile only and device/visual acceptance is pending.
+
+## 2026-09-05 — shared groups and invite entry
+
+The profile shows exactly one group entry: Groups in Common with the existing
+avatar stack when shared groups exist, otherwise Add to a group with its icon.
+The shared-groups page pins the standard Add to Another Group primary button
+(with group-add icon) below the list, outside its scrolling content. It opens
+the existing eligible-group picker and confirmation flow. If shared groups
+become empty while the page is open, the button reads Add to a group. Membership
+changes recompute the entry from current profile chats; the sheet state is keyed
+to profile and person. Existing retry, partial-success and permission guards
+remain. `ChatsScreenTest` covers both profile branches and the bottom action.

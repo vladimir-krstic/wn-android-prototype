@@ -151,3 +151,71 @@ pending. The earlier Chat Info/Search device evidence predates this redesign.
   exact initial selection, album order, metadata, and filtering. Compiled
   Shared Content coverage opens an exact frame and exercises Go to Message;
   the updated grid/viewer states have not yet received a device visual pass.
+
+## 2026-09-05 — action-group spacing audit
+
+Chat Info's collapse/read-aloud/notification/bubble-color controls form one
+segmented group, instead of two groups whose rounded ends touch. Existing
+notification callback gating is preserved. Export transcript uses a native
+SettingsAction with a download icon in a separate white group and 8 dp spacing
+above/below. Its progress/status/actions align to the standard content inset.
+Technical actions follow with a clear gap. Native segmented-gap tokens replace
+the duplicated 2 dp values in action and member rows.
+
+The related group-flow audit found a second 16 dp inset around SettingsGroup in
+GroupLifecyclePanel; it is removed so administration rows share the surrounding
+16 dp group margin. Lifecycle actions now use native SettingsAction rows instead
+of a nested list item in a surface. Inactive leave actions are omitted before
+shape assignment. Roster/member/retention status panels gain 8 dp vertical
+clearance only when visible. The shared SettingsList already spaces peer groups;
+its screens retain that established policy. No global padding is injected into
+all groups, which would separate rows that intentionally belong together.
+
+Existing action gating, confirmations, selection, transcript preparation and
+Files handoff remain unchanged. Host validation is recorded in the parity ledger;
+UI tests compile only, with device and visual acceptance pending.
+
+## 2026-09-05 — Leave Group placement
+
+Group lifecycle controls follow Add to Folder and Archive at the end of Group
+Info. Leave Group uses the standard full-width SettingsAction row, with the same
+screen inset and native single-line height as other actions, plus a 24 dp logout
+icon in the destructive color. Sole-member Delete uses its matching trash icon.
+Native sizing remains adaptive to larger text. Existing leave/transfer/delete
+eligibility and confirmation flows are preserved.
+
+## 2026-09-05 — member preview and full roster
+
+Group Info shows the first five members in existing roster order. Groups with
+more than five get an icon-led See all action opening a separate Members route.
+The full page reuses the avatar/name/role rows and opens the same member profiles,
+including admin actions available through those profiles. Roster loading/retry
+and pending member changes use the existing controller panels. All members are
+rendered through a lazy list; no roster data is truncated. Groups of five or fewer
+have no redundant See all action.
+
+The route stores profile and chat IDs, resolves current state, and exits if the
+owner changes or the group is removed. Back returns to the Group Info scroll
+position. Shared adaptive scaffolding, insets, row semantics and secure-chat
+window policy apply. `GroupMembersFlowTest` covers the preview boundary, full
+roster, Back and profile switch; `WindowPrivacyPolicyTest` includes the new route.
+Official [Android navigation guidance](https://developer.android.com/guide/navigation)
+was checked on 2026-09-05; existing Navigation Compose patterns are reused.
+
+## 2026-09-05 — identity in the scrolled header
+
+Both direct and group Chat Info reveal a compact avatar and name in the native
+app bar once the bottom of the main name passes behind it. The threshold uses
+measured window coordinates, not a fixed scroll distance or the end of the whole
+identity block (which may include a bio and identifiers). Once the identity lazy
+item is off-screen, list position keeps the header visible. Returning to the top
+hides it. Restored scroll position is handled by the same lazy-list state.
+
+The header uses the same name/avatar as the large identity, a 32 dp decorative
+avatar, shared 8 dp spacing, and single-line ellipsized title typography. Back
+and existing header colors remain native. The shared top bar adds an optional
+title-content slot; other screens retain their existing titles.
+`ChatInfoScreenTest` covers both chat types at the name boundary, farther down,
+after recreation, and returning to the top. Official
+[Compose layout-coordinate guidance](https://developer.android.com/reference/kotlin/androidx/compose/ui/layout/OnGloballyPositionedModifier)
+was checked on 2026-09-05.

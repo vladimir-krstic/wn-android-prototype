@@ -13,6 +13,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.unit.dp
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogCheckRow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -114,23 +116,39 @@ internal fun ChatDeleteConfirmation(chats: List<Chat>, onDismiss: () -> Unit, on
 
 @Composable
 internal fun ChatFolderPicker(profile: Profile, onDismiss: () -> Unit, onCreate: (String) -> String?, onSelect: (String) -> Unit, errorMessage: String? = null) {
-    val name = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
-    var creating by rememberSaveable { mutableStateOf(profile.chatFolders.isEmpty()) }
+    val name = rememberSaveable(profile.id, saver = TextFieldState.Saver) { TextFieldState() }
+    var creating by rememberSaveable(profile.id) { mutableStateOf(profile.chatFolders.isEmpty()) }
+    var selectedId by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
     AlertDialog(onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.chat_add_folder)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                 if (errorMessage != null) Text(errorMessage, color = MaterialTheme.colorScheme.error)
                 profile.chatFolders.forEach { folder ->
-                    TextButton(onClick = { onSelect(folder.id) }, modifier = Modifier.fillMaxWidth()) { Text(folder.name) }
+                    WhiteNoiseDialogCheckRow(
+                        title = folder.name, checked = !creating && selectedId == folder.id,
+                        onCheckedChange = { checked -> selectedId = folder.id.takeIf { checked }; creating = false },
+                        modifier = Modifier.testTag("chat.folderChoice.${folder.id}"),
+                        leadingIcon = { Icon(painterResource(R.drawable.ic_folder), null, Modifier.size(24.dp)) },
+                    )
                 }
                 if (creating) WhiteNoiseTextField(name, Modifier.fillMaxWidth().testTag("chat.folderName"),
                     label = { Text(stringResource(R.string.chat_folder_name)) }, lineLimits = TextFieldLineLimits.SingleLine)
-                else TextButton(onClick = { creating = true }) { Text(stringResource(R.string.chat_new_folder)) }
+                else TextButton(onClick = { selectedId = null; creating = true }, modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(WhiteNoiseSpacing.Related)) {
+                    Icon(painterResource(R.drawable.ic_add), null, Modifier.size(24.dp))
+                    Spacer(Modifier.width(WhiteNoiseSpacing.FormField))
+                    Text(stringResource(R.string.chat_new_folder), Modifier.weight(1f))
+                }
             }
         },
         confirmButton = {
             if (creating) TextButton(enabled = name.text.isNotBlank(), onClick = { onCreate(name.text.toString())?.let(onSelect) }) { Text(stringResource(R.string.save)) }
+            else TextButton(
+                enabled = profile.chatFolders.any { it.id == selectedId },
+                onClick = { selectedId?.takeIf { id -> profile.chatFolders.any { it.id == id } }?.let(onSelect) },
+                modifier = Modifier.testTag("chat.folderAdd"),
+            ) { Text(stringResource(R.string.attachment_add)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )

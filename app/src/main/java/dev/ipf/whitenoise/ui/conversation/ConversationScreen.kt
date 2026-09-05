@@ -11,7 +11,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -320,7 +323,6 @@ fun ConversationScreen(
     searchRequestId: Long = 0,
     onHistoryScenario: (HistoryOperation) -> HistoryScenario = { HistoryScenario.Success },
     onMessagesVisible: (Set<String>) -> Unit = {},
-    onReadThroughMention: (String) -> Unit = {},
     onEditMessage: (String, String, Int) -> Boolean = { _, _, _ -> false },
     onAdvanceMessageEdit: (String, Long) -> Unit = { _, _ -> },
     onRetryMessageEdit: (String) -> Unit = {},
@@ -614,11 +616,13 @@ fun ConversationScreen(
             }
         } ?: -1
         if (targetIndex >= 0) {
-            listState.scrollToItem(targetIndex)
+            val dividerIndex = items.indexOfFirst { it.id == "history.unread" }
+            val landingIndex = if (initialMessageId == null && target == history.boundaryId && dividerIndex >= 0) dividerIndex else targetIndex
+            listState.scrollToItem(landingIndex)
             pendingInitialMessageId = null
             initialViewportSettled = true
         } else if (target != null) {
-            if (history.request == null && history.readyTarget == null) history.target(chat, target, onHistoryScenario(HistoryOperation.Target))
+            if (history.request == null && history.readyTarget == null) history.target(chat, target, onHistoryScenario(HistoryOperation.Target), highlight = initialMessageId != null)
         } else if (items.isEmpty()) {
             initialViewportSettled = true
         } else if (showsAvailableComposer && compactComposerHeightPx == 0) {
@@ -657,18 +661,19 @@ fun ConversationScreen(
         val target = readyTarget ?: return@LaunchedEffect
         val index = items.indexOfFirst { it is ConversationItem.MessageItem && it.id == target.targetId && !it.message.isDeleted }
         if (index < 0) return@LaunchedEffect
-        listState.scrollToItem(index, target.scrollOffset)
+        val dividerIndex = items.indexOfFirst { it.id == "history.unread" }
+        val landingAtDivider = !initialViewportSettled && initialMessageId == null &&
+            pendingInitialMessageId == history.boundaryId && target.targetId == history.boundaryId && dividerIndex >= 0
+        listState.scrollToItem(if (landingAtDivider) dividerIndex else index, target.scrollOffset)
         repeat(2) { withFrameNanos { } }
         if (history.readyTarget?.id != target.id) return@LaunchedEffect
-        if (listState.layoutInfo.visibleItemsInfo.none { it.key == target.targetId }) {
+        if (listState.layoutInfo.visibleItemsInfo.none { it.key == target.targetId || (landingAtDivider && it.key == "history.unread") }) {
             history.request = target.copy(phase = HistoryPhase.Failed)
             history.readyTarget = null
             return@LaunchedEffect
         }
         pendingInitialMessageId = null
         initialViewportSettled = true
-        if (history.jump.pendingId == target.targetId) history.jump = history.jump.copy(pendingId = null, stackActive = true)
-        if (target.markThrough) onReadThroughMention(target.targetId!!)
         if (target.highlight) {
             highlightedMessageId = target.targetId
             delay(1_400)
@@ -677,20 +682,27 @@ fun ConversationScreen(
         if (history.readyTarget?.id == target.id) history.readyTarget = null
     }
     val tailWasLoaded = ConversationProjection.orderedEntries(chat).lastOrNull { it.id in history.observedIds }?.id in history.windowIds
-    val newerEntryCount = remember(chat.timeline, history.windowIds) {
-        val entries = ConversationProjection.orderedEntries(chat)
-        val lastLoaded = entries.indexOfLast { it.id in history.windowIds }
-        if (lastLoaded < 0) 0 else entries.lastIndex - lastLoaded
+    val hasNewerHistory = ConversationHistory.hasNewer(chat, history.windowIds)
+    val tailJump = remember(profile.id, chat.id, density.density, density.fontScale) {
+        dev.ipf.whitenoise.model.ConversationTailJump()
     }
-    val farFromTail by remember(listState, newerEntryCount) {
-        derivedStateOf {
-            val scroll = listState.scrollIndicatorState
-            scroll != null && ConversationReading.showTailJump(
-                contentPx = scroll.contentSize,
-                offsetPx = scroll.scrollOffset,
-                viewportPx = scroll.viewportSize,
-                loadedItems = listState.layoutInfo.totalItemsCount,
-                newerItems = newerEntryCount,
+    var farFromTail by remember(profile.id, chat.id) { mutableStateOf(false) }
+    LaunchedEffect(listState, items, hasNewerHistory, tailJump) {
+        val keys = items.map { it.id }
+        val related = with(density) { WhiteNoiseSpacing.Related.roundToPx() }
+        snapshotFlow { listState.layoutInfo }.collect { layout ->
+            farFromTail = tailJump.update(
+                keys = keys,
+                rows = layout.visibleItemsInfo.map {
+                    dev.ipf.whitenoise.model.ConversationTailJump.Row(it.key as String, it.offset, it.size)
+                },
+                viewportPx = layout.viewportEndOffset - layout.viewportStartOffset -
+                    (layout.afterContentPadding - related).coerceAtLeast(0),
+                viewportEndPx = layout.viewportEndOffset,
+                afterPaddingPx = layout.afterContentPadding,
+                spacingPx = layout.mainAxisItemSpacing,
+                widthPx = layout.viewportSize.width,
+                hasNewer = hasNewerHistory,
             )
         }
     }
@@ -701,7 +713,6 @@ fun ConversationScreen(
         history.reconcileArrivals(chat, profile.id, follow)
         if (hadArrival && follow) pendingEndSettlement = true
     }
-    LaunchedEffect(readState, nearTail) { history.jump = ConversationReading.jump(history.jump, readState, chat, nearTail) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, profile.id, chat.id) {
         val observer = LifecycleEventObserver { _, event ->
@@ -857,23 +868,33 @@ fun ConversationScreen(
         },
         floatingActionButton = {
             if (!isSearching && !isSelecting && focusedMessageId == null && !composerPresentationActive) {
-                val mentions = ConversationReading.mentions(readState, chat, profile)
-                Column(Modifier.imePadding().padding(bottom = with(density) { compactComposerHeightPx.toDp() }),
+                // Scaffold already supplies 16 dp below its FAB slot; avoid adding that gap
+                // again above the measured composer. Preserve the native 48 dp touch target.
+                val composerClearance = (with(density) { compactComposerHeightPx.toDp() } -
+                    WhiteNoiseSpacing.CompactScreenMargin).coerceAtLeast(0.dp)
+                Column(Modifier.imePadding().padding(bottom = composerClearance),
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-                    if (mentions.isNotEmpty()) FilledTonalButton(onClick = {
-                        history.target(chat, mentions.first(), onHistoryScenario(HistoryOperation.Target), markThrough = true)
-                    }, modifier = Modifier.testTag("history.jumpMention")) { Text(stringResource(R.string.history_jump_mention)) }
-                    if (!nearTail && initialViewportSettled && farFromTail) FilledTonalIconButton(onClick = {
-                        val unread = history.jump.pendingId
-                        val target = unread ?: ConversationProjection.orderedEntries(chat).filterIsInstance<ChatTimelineEntry.Message>().lastOrNull { !it.message.isDeleted }?.id
+                    if (!nearTail && initialViewportSettled && farFromTail) SmallFloatingActionButton(onClick = {
+                        val target = ConversationProjection.orderedEntries(chat).filterIsInstance<ChatTimelineEntry.Message>().lastOrNull { !it.message.isDeleted }?.id
                         if (target != null) {
-                            history.target(chat, target, onHistoryScenario(HistoryOperation.Target))
+                            history.target(chat, target, onHistoryScenario(HistoryOperation.Target), highlight = false)
                         }
-                    }, modifier = Modifier.testTag("history.jumpUnread")) {
+                    }, modifier = Modifier.minimumInteractiveComponentSize().size(40.dp).testTag("history.jumpLatest"),
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp,
+                        ),
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.surfaceDim.copy(alpha = PinnedDayHeaderSurfaceAlpha),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ) {
                         Icon(
                             painterResource(R.drawable.ic_arrow_down),
-                            contentDescription = stringResource(if (history.jump.pendingId != null) R.string.history_jump_unread else R.string.history_jump_latest),
+                            contentDescription = stringResource(R.string.history_jump_latest),
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }
@@ -958,7 +979,7 @@ fun ConversationScreen(
                                             history.page(operation, onHistoryScenario(operation))
                                         }, history::retry)
                                     }
-                                    "history.unread" -> TimelineInformation(stringResource(R.string.history_unread_boundary))
+                                    "history.unread" -> UnreadMessagesDivider(history.unreadDivider?.messageIds?.size ?: 0)
                                     else -> TimelineInformation(item.entry.text, isNotice = true)
                                 }
                             }
@@ -1866,6 +1887,25 @@ private fun PinnedDayHeader(
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
+    }
+}
+
+@Composable
+private fun UnreadMessagesDivider(count: Int) {
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag("history.unread")
+            .padding(top = WhiteNoiseSpacing.Section, bottom = WhiteNoiseSpacing.FormField)
+            .semantics(mergeDescendants = true) {},
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+    ) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        Text(
+            text = pluralStringResource(R.plurals.unread_count, count, count),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

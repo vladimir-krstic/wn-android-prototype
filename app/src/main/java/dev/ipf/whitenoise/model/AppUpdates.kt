@@ -78,6 +78,9 @@ object AppUpdates {
     fun showsSettings(state: AppUpdateState): Boolean =
         state.distribution == AppUpdateDistribution.SelfManaged
 
+    fun showsSettingsCard(state: AppUpdateState): Boolean =
+        showsSettings(state) && state.check.phase != AppUpdateCheckPhase.Current
+
     fun isAvailable(state: AppUpdateState): Boolean =
         state.check.phase == AppUpdateCheckPhase.Available &&
             state.check.latestVersion?.let { compareVersions(it, state.installedVersion) > 0 } == true
@@ -206,7 +209,14 @@ object AppUpdates {
         return if (state.selfUpdateScenario == AppSelfUpdateScenario.InstallFailure) {
             state.copy(selfUpdate = flow.failed(AppSelfUpdateFailure.Install))
         } else {
-            state.copy(selfUpdate = AppSelfUpdateState(generation = flow.generation + 1))
+            val version = flow.version ?: return state
+            // Simulated installation lasts for this app session; a fresh launch seeds the fixture again.
+            state.copy(
+                installedVersion = version,
+                check = AppUpdateCheckState(AppUpdateCheckPhase.Current, state.check.generation + 1, version, 0),
+                dismissedVersion = null,
+                selfUpdate = AppSelfUpdateState(generation = flow.generation + 1),
+            )
         }
     }
 
@@ -237,6 +247,12 @@ object AppUpdates {
             AppUpdateCheckScenario.Available -> AppUpdateCheckState(AppUpdateCheckPhase.Available, generation, "0.2", 1)
             AppUpdateCheckScenario.ImportantAvailable -> AppUpdateCheckState(AppUpdateCheckPhase.Available, generation, "0.4", 3)
             AppUpdateCheckScenario.Failure -> AppUpdateCheckState(AppUpdateCheckPhase.Failed, generation)
+        }.let { check ->
+            if (check.phase == AppUpdateCheckPhase.Available &&
+                check.latestVersion?.let { compareVersions(it, installedVersion) <= 0 } == true
+            ) {
+                AppUpdateCheckState(AppUpdateCheckPhase.Current, generation, installedVersion, 0)
+            } else check
         }
 
     private fun AppSelfUpdateState.failed(failure: AppSelfUpdateFailure): AppSelfUpdateState = copy(

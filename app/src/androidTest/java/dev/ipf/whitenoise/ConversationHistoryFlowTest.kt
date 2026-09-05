@@ -34,9 +34,9 @@ class ConversationHistoryFlowTest {
             when (i) { 0 -> "The earlier needle is here."; 30 -> "Please check this, @Me."; else -> "Update $i" })) })
     @Composable private fun Screen(chat: Chat = chat(), search: Boolean = false, target: String? = null,
         scenario: (HistoryOperation) -> HistoryScenario = { HistoryScenario.Success },
-        onVisible: (Set<String>) -> Unit = {}, onMention: (String) -> Unit = {}) {
+        onVisible: (Set<String>) -> Unit = {}) {
         ConversationScreen(profile, chat, {}, { true }, {}, {}, {}, initialSearch = search, initialMessageId = target,
-            onHistoryScenario = scenario, onMessagesVisible = onVisible, onReadThroughMention = onMention)
+            onHistoryScenario = scenario, onMessagesVisible = onVisible)
     }
     private fun scrollTo(tag: String) { rule.onNodeWithTag("conversation.timeline").performScrollToNode(hasTestTag(tag)) }
     private fun waitForNoTarget() { rule.waitUntil(4_000) { rule.onAllNodesWithTag("history.target").fetchSemanticsNodes().isEmpty() } }
@@ -47,7 +47,7 @@ class ConversationHistoryFlowTest {
     @Test fun latestJumpIsIconOnlyAndReturnsFromOlderHistory() {
         rule.setContent { WhiteNoiseTheme { Screen() } }
         waitForMessage("h59")
-        rule.onNodeWithTag("history.jumpUnread").assertDoesNotExist()
+        rule.onNodeWithTag("history.jumpLatest").assertDoesNotExist()
         scrollTo("history.Older")
         rule.onNodeWithText("Load older messages").performClick()
         rule.waitUntil(3_000) { rule.onAllNodesWithText("Loading messages…").fetchSemanticsNodes().isEmpty() }
@@ -56,7 +56,7 @@ class ConversationHistoryFlowTest {
         rule.onNodeWithContentDescription("Jump to latest messages").assertIsDisplayed().performClick()
         waitForMessage("h59")
         rule.onNodeWithTag("conversation.message.h59").assertIsDisplayed()
-        rule.onNodeWithTag("history.jumpUnread").assertDoesNotExist()
+        rule.onNodeWithTag("history.jumpLatest").assertDoesNotExist()
     }
 
     @Test fun olderFailureKeepsLoadedRowsAndRetryPrependsHistory() {
@@ -140,19 +140,37 @@ class ConversationHistoryFlowTest {
         rule.waitUntil(4_000) { seen.isNotEmpty() }
         rule.runOnIdle { assertTrue("h30" in seen); assertFalse("h59" in seen); assertTrue(seen.size < 30) }
     }
-    @Test fun mentionFailureDoesNotAdvanceReadUntilRetryRevealsExactTarget() {
-        var first = true; val readThrough = mutableListOf<String>()
-        rule.setContent { WhiteNoiseTheme { Screen(chat(30), target = "h58", scenario = { op ->
-            if (op == HistoryOperation.Target && first) { first = false; HistoryScenario.TargetFails } else HistoryScenario.Success
-        }, onMention = { readThrough += it }) } }
-        rule.onNodeWithTag("history.jumpMention").performClick()
-        rule.waitUntil(3_000) { rule.onAllNodesWithText("Couldn’t load this message.").fetchSemanticsNodes().isNotEmpty() }
-        rule.runOnIdle { assertTrue(readThrough.isEmpty()) }
-        rule.onNodeWithText("Retry").performClick()
-        rule.waitUntil(4_000) { readThrough.isNotEmpty() }
-        rule.runOnIdle { assertEquals(listOf("h30"), readThrough) }
-        rule.onNodeWithTag("conversation.message.h30").assertExists()
+    @Test fun unreadDividerIsVisibleOnEntryWithoutUnreadActionButtons() {
+        rule.setContent { WhiteNoiseTheme { Screen(chat(30)) } }
+        waitForMessage("h30")
+        rule.onNodeWithTag("history.unread").assertIsDisplayed()
+        rule.onNodeWithText("30 unread messages").assertIsDisplayed()
+        rule.onNodeWithTag("history.jumpMention").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Jump to unread messages").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Jump to latest messages").assertIsDisplayed().performClick()
+        waitForMessage("h59")
+        rule.onNodeWithTag("conversation.message.h59").assertIsDisplayed()
     }
+    @Test fun dividerSurvivesReadingAndRecreationUntilReply() {
+        val restoration = StateRestorationTester(rule)
+        var current by mutableStateOf(chat(30))
+        restoration.setContent { WhiteNoiseTheme { Screen(current) } }
+        waitForMessage("h30")
+        rule.onNodeWithText("30 unread messages").assertIsDisplayed()
+        rule.runOnIdle {
+            current = current.copy(unreadCount = 0,
+                readState = ConversationReading.initial(current, profile.id).copy(unreadIds = emptySet()))
+        }
+        rule.onNodeWithText("30 unread messages").assertIsDisplayed()
+        restoration.emulateSavedInstanceStateRestore()
+        rule.onNodeWithText("30 unread messages").assertIsDisplayed()
+        rule.runOnIdle {
+            current = current.copy(timeline = current.timeline + ChatTimelineEntry.Message(
+                ChatMessage("reply", profile.id, 3, "Today", 400, "10:40", "Thanks")))
+        }
+        rule.onNodeWithTag("history.unread").assertDoesNotExist()
+    }
+
     @Test fun changingQueryCancelsOldTargetAndSearchDoesNotMarkRowsRead() {
         val seen = mutableSetOf<String>()
         rule.setContent { WhiteNoiseTheme { Screen(search = true, onVisible = { seen += it }) } }

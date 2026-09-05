@@ -2,6 +2,7 @@ package dev.ipf.whitenoise
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.*
@@ -28,79 +29,107 @@ class DictationCaptureTest {
             { _, text -> changeDraft(text); true }, { _, _, text -> sent += text; changeDraft(""); true },
             { _, reduce -> profile = profile.copy(settings = profile.settings.copy(dictation = reduce(profile.settings.dictation))) })
         val speech = ReadAloudController().apply { attachTestOutput({ _, _ -> true }) }
-        rule.setContent { WhiteNoiseTheme { CompositionLocalProvider(LocalReadAloudController provides speech) {
+        rule.setContent { WhiteNoiseTheme { CompositionLocalProvider(LocalReadAloudController provides speech, LocalPlatformDictationEnabled provides false) {
             ComposerCaptureHost(capture) {
                 if (settings) DictationSettingsScreen(profile, {})
                 else ConversationScreen(profile, profile.chats.single(), {}, { false }, {}, {}, {}, onDraftTextChanged = ::changeDraft)
             }
         } } }
     }
-    private fun startThroughMenu() {
-        rule.onNodeWithContentDescription("Add Attachment").performClick()
-        rule.onNodeWithText("Dictation", substring = false).performScrollTo().performClick()
+    private fun startThroughComposer() {
+        rule.onNodeWithTag("conversation.dictation.start").performClick()
     }
-    private fun recognize() {
+    private fun recognize(text: String = "Hello world") {
         rule.runOnIdle {
-            val a = capture.attempts.getValue(owner)
-            if (a.phase == DictationPhase.Disclosure) capture.acceptDisclosure(owner, a.id)
-            val prepared = capture.attempts.getValue(owner)
-            if (prepared.phase == DictationPhase.Preparing) capture.advance(owner, prepared.id, prepared.revision)
-            repeat(15) { capture.attempts.getValue(owner).let { capture.advance(owner, it.id, it.revision) } }
+            val id = capture.inlineDictation!!.id
+            capture.inlineReady(owner, id)
+            capture.inlineResult(owner, id, text, final = false)
         }
     }
-    @Test fun composerEntryDisclosesProcessingAndCancelDoesNotChangeDraft() {
-        show(); startThroughMenu()
-        rule.onNodeWithText("External speech recognition").assertIsDisplayed()
-        rule.onNodeWithText("Cancel", substring = false).performClick()
-        rule.runOnIdle { assertFalse(profile.settings.dictation.disclosureAccepted); assertNull(capture.lease); assertEquals("", profile.chats.single().draftText) }
-    }
-    @Test fun listeningKeepsEditorAvailableAndEditedDraftRequiresReview() {
-        show(); startThroughMenu(); recognize()
-        rule.onNodeWithTag("dictation.controls").assertExists()
-        rule.onNodeWithTag("conversation.composer.editor").performTextInput("My draft")
-        rule.onNodeWithText("Done", substring = false).performClick()
-        rule.runOnIdle { capture.attempts.getValue(owner).let { capture.advance(owner, it.id, it.revision) } }
-        rule.onNodeWithText("Review dictated text").assertIsDisplayed()
-        rule.onNodeWithText("Insert at end").performClick()
-        rule.runOnIdle { assertTrue(profile.chats.single().draftText.startsWith("My draft ")); assertTrue(sent.isEmpty()) }
-    }
-    @Test fun reviewBackKeepsTextAndComposerMenuReopensIt() {
-        show(); startThroughMenu(); recognize()
-        rule.runOnIdle { capture.background() }
-        rule.onNodeWithText("Review dictated text").assertExists()
-        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+    @Test fun startsInlineWithoutDisclosurePreviewOrVoiceRecordButton() {
+        show()
         rule.onNodeWithContentDescription("Add Attachment").performClick()
-        rule.onNodeWithText("Review dictated text").performScrollTo().performClick()
-        rule.onNodeWithTag("dictation.transcript").assertExists()
-        rule.onNodeWithText("Discard", substring = false).performClick()
-        rule.runOnIdle { assertEquals("", capture.attempts.getValue(owner).retainedText) }
+        rule.onNodeWithText("Dictation", substring = false).assertDoesNotExist()
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        startThroughComposer()
+        rule.onNodeWithText("External speech recognition").assertDoesNotExist()
+        rule.onNodeWithText("Message", substring = false).assertDoesNotExist()
+        rule.onNodeWithText("Cancel", substring = false).assertDoesNotExist()
+        rule.onNodeWithText("Done", substring = false).assertDoesNotExist()
+        rule.onNodeWithTag("conversation.voice").assertDoesNotExist()
+        rule.onNodeWithTag("dictation.listening").assertExists()
+        rule.onNodeWithTag("dictation.pause").assertExists()
+        rule.onNodeWithContentDescription("Cancel").performClick()
+        rule.runOnIdle { assertNull(capture.inlineDictation); assertNull(capture.lease) }
+        rule.onNodeWithTag("conversation.voice").assertExists()
     }
-    @Test fun permanentDenialShowsAndroidSettingsRecovery() {
-        show(); rule.runOnIdle { capture.chooseScenario(DictationScenario.PermissionPermanentlyDenied) }
-        startThroughMenu(); recognize()
+    @Test fun pauseEditSelectionAndResumeInsertDirectlyInTheSameEditor() {
+        show(); startThroughComposer(); recognize()
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.assertTextEquals("Hello world")
+        rule.onNodeWithTag("dictation.pause").performClick()
+        editor.performTextReplacement("Hello dear world")
+        editor.performTextInputSelection(TextRange(6, 10))
+        startThroughComposer(); recognize("bright")
+        editor.assertTextEquals("Hello bright world")
+        rule.onNodeWithContentDescription("Cancel").performClick()
+        editor.assertTextEquals("Hello bright world")
+        rule.runOnIdle { assertTrue(sent.isEmpty()); assertNull(capture.lease) }
+    }
+    @Test fun movingTheCursorPausesRecognitionAndLateResultsCannotOverwriteEdits() {
+        show(); startThroughComposer(); recognize()
+        var id = 0L
+        rule.runOnIdle { id = capture.inlineDictation!!.id }
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performTextInputSelection(TextRange(0))
+        rule.onNodeWithTag("dictation.pause").assertDoesNotExist()
+        rule.runOnIdle { capture.inlineResult(owner, id, "late speech", true); assertNull(capture.lease) }
+        editor.assertTextEquals("Hello world")
+    }
+    @Test fun backgroundKeepsTextAndRequiresExplicitResume() {
+        show(); startThroughComposer(); recognize()
+        rule.runOnIdle { capture.background() }
+        rule.onNodeWithTag("conversation.composer.editor").assertTextEquals("Hello world")
+        rule.onNodeWithTag("dictation.pause").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.dictation.start").assertIsEnabled()
+        rule.onNodeWithTag("conversation.voice").assertDoesNotExist()
+        rule.runOnIdle { assertNull(capture.lease); assertTrue(sent.isEmpty()) }
+    }
+    @Test fun backPausesDictationAndKeepsTheEditableDraft() {
+        show(); startThroughComposer(); recognize()
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithTag("conversation.composer.editor").assertTextEquals("Hello world")
+        rule.onNodeWithContentDescription("Resume dictation").assertIsEnabled()
+        rule.runOnIdle { assertNull(capture.lease); assertFalse(capture.inlineDictation!!.capturing) }
+    }
+    @Test fun permanentDenialShowsInlineAndroidSettingsRecovery() {
+        show(); startThroughComposer()
+        rule.runOnIdle { capture.inlineFailure(owner, capture.inlineDictation!!.id, DictationFailure.PermissionPermanentlyDenied) }
         rule.onNodeWithText("Allow microphone access in Android Settings.").assertExists()
-        rule.onNodeWithText("Open Android Settings").assertExists()
+        rule.onNodeWithContentDescription("Open Android Settings").assertExists()
+        rule.onNodeWithTag("conversation.dictation.start").assertIsEnabled()
         rule.runOnIdle { assertNull(capture.lease) }
     }
-    @Test fun settingsSilenceAndSendAreExplicitChoices() {
+    @Test fun settingsDescribeInlineEditingWithoutAutoSendOrFinishOptions() {
         show(settings = true)
-        rule.onNodeWithText("Finish dictation").performClick()
-        rule.onNodeWithText("After 5 seconds of silence").performClick()
-        rule.onNodeWithText("When finished").performClick()
-        rule.onNodeWithText("Send message", substring = false).performClick()
-        rule.onNodeWithText("If the draft, membership or session changes, keep the text for review.").assertExists()
-        rule.runOnIdle { assertEquals(5_000L, profile.settings.dictation.finishAfterSilenceMillis); assertEquals(DictationDeliveryMode.Send, profile.settings.dictation.delivery) }
+        rule.onNodeWithText("Finish dictation").assertDoesNotExist()
+        rule.onNodeWithText("When finished").assertDoesNotExist()
+        rule.onNodeWithText("Speech appears directly in your message.", substring = true).assertExists()
+        rule.onNodeWithText("Open Android Settings").assertExists()
     }
-    @Test fun membershipLossKeepsCopyableReviewAndDisablesInsertion() {
-        show(); startThroughMenu(); recognize()
-        rule.runOnIdle { profile = profile.copy(chats = listOf(profile.chats.single().copy(membership = ChatMembership.Left))); capture.reconcile() }
-        rule.onNodeWithText("Review dictated text").assertExists()
-        rule.onNodeWithText("Insert at end").assertIsNotEnabled()
-        rule.onNodeWithText("Copy", substring = false).assertIsEnabled()
+    @Test fun membershipLossRetainsTextAndStopsRecognition() {
+        show(); startThroughComposer(); recognize()
+        rule.runOnIdle {
+            profile = profile.copy(chats = listOf(profile.chats.single().copy(membership = ChatMembership.Left)))
+            capture.reconcile()
+            assertFalse(capture.inlineDictation!!.capturing)
+            assertNull(capture.lease)
+            assertEquals("Hello world", profile.chats.single().draftText)
+        }
     }
     @Test fun physicalVoiceTapLocksAndExplicitStopMovesToReview() {
         show(); rule.onNodeWithTag("conversation.voice").performTouchInput { click() }
-        rule.onNodeWithText("Recording locked").assertExists()
+        rule.onNodeWithText("Recording locked").assertDoesNotExist()
         rule.runOnIdle { assertEquals(ComposerCaptureMode.Voice, capture.lease!!.mode) }
         rule.onNodeWithContentDescription("Stop Recording").performClick()
         rule.onNodeWithText("Transcribe", substring = false).assertExists()

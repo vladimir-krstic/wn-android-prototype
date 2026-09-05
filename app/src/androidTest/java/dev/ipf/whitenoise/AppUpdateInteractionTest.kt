@@ -80,12 +80,13 @@ class AppUpdateInteractionTest {
     }
 
     @Test
-    fun settingsRowShowsCurrentFailureAndAvailableCopy() {
+    fun settingsCardHidesWhenCurrentAndKeepsFailureRetry() {
         val controller = AppUpdateController("0.1")
         compose.setContent { WhiteNoiseTheme { AppUpdateSettingsGroup(controller.state, {}) } }
         compose.onNodeWithText("Version 0.2 is available on Zapstore.").assertIsDisplayed()
         compose.runOnIdle { controller.previewCheck(AppUpdateCheckScenario.Current) }
-        compose.onNodeWithText("Up to date").assertIsDisplayed()
+        compose.onNodeWithText("Up to date").assertDoesNotExist()
+        compose.onNodeWithTag("appUpdate.settings").assertDoesNotExist()
         compose.runOnIdle { controller.previewCheck(AppUpdateCheckScenario.Failure) }
         compose.onNodeWithText("Couldn’t check for updates. Tap to retry.").assertIsDisplayed()
     }
@@ -111,10 +112,21 @@ class AppUpdateInteractionTest {
     fun verifiedUpdateOffersInstallAndCancel() {
         compose.mainClock.autoAdvance = false
         val controller = readyController(AppSelfUpdateScenario.Success)
-        compose.setContent { WhiteNoiseTheme { AppUpdateHost(controller) } }
+        compose.setContent {
+            WhiteNoiseTheme {
+                androidx.compose.foundation.layout.Column {
+                    AppUpdateIconButton(controller.state, {})
+                    AppUpdateSettingsGroup(controller.state, controller::beginCheck)
+                }
+                AppUpdateHost(controller)
+            }
+        }
         compose.onNodeWithText("Ready to install").assertIsDisplayed()
         compose.onNodeWithText("Install").assertHasClickAction().performClick()
         compose.runOnIdle { assertEquals(AppSelfUpdatePhase.Idle, controller.state.selfUpdate.phase) }
+        compose.onNodeWithTag("appUpdate.openSettings").assertDoesNotExist()
+        compose.onNodeWithText("Up to date").assertDoesNotExist()
+        compose.onNodeWithTag("appUpdate.settings").assertDoesNotExist()
     }
 
     @Test

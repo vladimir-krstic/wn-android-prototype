@@ -140,8 +140,6 @@ class AdaptiveLayoutTest {
                     SettingsScreen(
                         uiState = AppUiState(listOf(profile), profile.id, setOf(profile.id)),
                         onBack = {},
-                        onSelectProfile = {},
-                        onAddProfile = {},
                         onShareConnect = {},
                         onEditProfile = {},
                         onProfileKeys = {},

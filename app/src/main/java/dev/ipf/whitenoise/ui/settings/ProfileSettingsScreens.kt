@@ -18,14 +18,12 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,7 +40,6 @@ import dev.ipf.whitenoise.ui.components.whiteNoiseVerticalScroll
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -64,12 +61,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -100,7 +95,6 @@ import dev.ipf.whitenoise.model.ProfileKeyExportKind
 import dev.ipf.whitenoise.model.ProfileKeyExportRequest
 import dev.ipf.whitenoise.model.ProfileSettingsPolicy
 import dev.ipf.whitenoise.state.AppUiState
-import dev.ipf.whitenoise.ui.chats.ProfileSwitcherSheet
 import dev.ipf.whitenoise.ui.components.AvatarPhotoButton
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
@@ -121,8 +115,6 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     uiState: AppUiState,
     onBack: () -> Unit,
-    onSelectProfile: (String) -> Unit,
-    onAddProfile: () -> Unit,
     onShareConnect: () -> Unit,
     onEditProfile: () -> Unit,
     onProfileKeys: () -> Unit,
@@ -135,13 +127,11 @@ fun SettingsScreen(
     onDonate: () -> Unit,
     onDeveloperTools: () -> Unit,
     onSignOut: (dev.ipf.whitenoise.model.SignOutOptions) -> Unit,
-    onFolders: () -> Unit = {},
     onReadAloud: () -> Unit = {},
     onDictation: () -> Unit = {},
     onAiAgents: () -> Unit = {},
     onHelp: () -> Unit = {},
     appUpdates: AppUpdateController? = null,
-    initiallyShowSwitcher: Boolean = false,
     exitAttempt: dev.ipf.whitenoise.model.ProfileExitAttempt? = null,
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
     onRetryExit: (Long) -> Unit = {},
@@ -149,22 +139,7 @@ fun SettingsScreen(
 ) {
     val profile = uiState.activeProfile ?: return
     val canEditProfile = ProfileSettingsPolicy.canPublishProfile(profile.settings)
-    val management = profileManagementPresentation(
-        profiles = uiState.signedInProfiles,
-        activeProfileId = uiState.activeProfileId,
-    )
-    val alternateProfiles = profileSwitcherPresentation(
-        profiles = uiState.signedInProfiles,
-        activeProfileId = uiState.activeProfileId,
-    ).filterNot { it.isActive }
-    var profileCardExpanded by rememberSaveable(profile.id) { mutableStateOf(false) }
-    var switcherOpen by remember(initiallyShowSwitcher) { mutableStateOf(initiallyShowSwitcher) }
     var signOutOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
-    BackHandler(
-        enabled = profileCardExpanded && management != ProfileManagementPresentation.Add,
-    ) {
-        profileCardExpanded = false
-    }
     SettingsScaffold(
         title = stringResource(R.string.ui_settings),
         onBack = onBack,
@@ -177,29 +152,11 @@ fun SettingsScreen(
             item {
                 SettingsProfileHeader(
                     profile = profile,
-                    management = management,
-                    alternateProfiles = alternateProfiles,
-                    expanded = profileCardExpanded && management != ProfileManagementPresentation.Add,
                     onShareConnect = onShareConnect,
-                    onProfileManagement = {
-                        if (management == ProfileManagementPresentation.Add) {
-                            onAddProfile()
-                        } else {
-                            profileCardExpanded = !profileCardExpanded
-                        }
-                    },
-                    onSelectProfile = {
-                        profileCardExpanded = false
-                        onSelectProfile(it)
-                    },
-                    onAddProfile = {
-                        profileCardExpanded = false
-                        onAddProfile()
-                    },
                 )
             }
             appUpdates?.state?.let { update ->
-                if (dev.ipf.whitenoise.model.AppUpdates.showsSettings(update)) {
+                if (dev.ipf.whitenoise.model.AppUpdates.showsSettingsCard(update)) {
                     item {
                         AppUpdateSettingsGroup(
                             state = update,
@@ -245,9 +202,6 @@ fun SettingsScreen(
                             iconTag = "ai_agents",
                             onClick = onAiAgents,
                         )
-                    }
-                    row {
-                        SettingsHubLink(title = stringResource(R.string.chat_folders), icon = R.drawable.ic_folder, iconTag = "folders", onClick = onFolders)
                     }
                     row {
                         SettingsHubLink(
@@ -361,21 +315,6 @@ fun SettingsScreen(
             item { SettingsVersionFooter(BuildConfig.VERSION_NAME) }
         }
     }
-    if (switcherOpen) {
-        ProfileSwitcherSheet(
-            profiles = uiState.signedInProfiles,
-            activeProfileId = uiState.activeProfileId,
-            onDismiss = { switcherOpen = false },
-            onSelectProfile = {
-                onSelectProfile(it)
-                switcherOpen = false
-            },
-            onAddProfile = {
-                switcherOpen = false
-                onAddProfile()
-            },
-        )
-    }
     if (signOutOpen) {
         SignOutSheet(
             profile = profile,
@@ -427,13 +366,7 @@ private fun SettingsHubLink(
 @Composable
 private fun SettingsProfileHeader(
     profile: Profile,
-    management: ProfileManagementPresentation,
-    alternateProfiles: List<ProfileSwitcherPresentation>,
-    expanded: Boolean,
     onShareConnect: () -> Unit,
-    onProfileManagement: () -> Unit,
-    onSelectProfile: (String) -> Unit,
-    onAddProfile: () -> Unit,
 ) {
     val shareDescription = stringResource(R.string.open_share_connect_for, profile.name)
     Column(
@@ -495,218 +428,6 @@ private fun SettingsProfileHeader(
                             role = Role.Button
                         },
                 )
-            }
-            item {
-                ProfileManagementRow(
-                    presentation = management,
-                    expanded = expanded,
-                    onClick = onProfileManagement,
-                )
-            }
-            if (expanded && management != ProfileManagementPresentation.Add) {
-                alternateProfiles.forEach { alternate ->
-                    item {
-                        InlineAlternateProfileRow(
-                            presentation = alternate,
-                            onClick = { onSelectProfile(alternate.profile.id) },
-                        )
-                    }
-                }
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.add_profile)) },
-                        leadingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_settings_person_add),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onAddProfile)
-                            .testTag("settings.profile.add_profile")
-                            .semantics { role = Role.Button },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileManagementRow(
-    presentation: ProfileManagementPresentation,
-    expanded: Boolean,
-    onClick: () -> Unit,
-) {
-    val isAdd = presentation == ProfileManagementPresentation.Add
-    ListItem(
-        headlineContent = {
-            Text(
-                text = if (isAdd) {
-                    stringResource(R.string.add_profile)
-                } else {
-                    stringResource(R.string.switch_profile)
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        leadingContent = {
-            if (isAdd) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_settings_person_add),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                )
-            } else {
-                when (presentation) {
-                    ProfileManagementPresentation.Add -> Unit
-                    is ProfileManagementPresentation.SingleAlternate -> ProfileAvatar(
-                        name = presentation.profile.name,
-                        avatar = presentation.profile.avatar,
-                        modifier = Modifier.size(32.dp),
-                        contentDescription = null,
-                    )
-                    is ProfileManagementPresentation.MultipleAlternates -> ProfilePreviewStack(
-                        profiles = presentation.previewProfiles,
-                        remainingCount = presentation.remainingCount,
-                    )
-                }
-            }
-        },
-        trailingContent = if (isAdd) {
-            null
-        } else {
-            {
-                Icon(
-                    painter = painterResource(R.drawable.ic_expand_more),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .rotate(if (expanded) 180f else 0f),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .testTag("settings.profile_management")
-            .semantics { role = Role.Button },
-    )
-}
-
-@Composable
-private fun InlineAlternateProfileRow(
-    presentation: ProfileSwitcherPresentation,
-    onClick: () -> Unit,
-) {
-    val profile = presentation.profile
-    val unreadDescription = if (presentation.unreadCount > 99) {
-        stringResource(R.string.unread_count_capped)
-    } else {
-        pluralStringResource(
-            R.plurals.unread_count,
-            presentation.unreadCount,
-            presentation.unreadCount,
-        )
-    }
-    ListItem(
-        headlineContent = {
-            Text(
-                text = profile.name,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleMedium,
-            )
-        },
-        supportingContent = {
-            Text(
-                text = profile.shortPublicKey,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        leadingContent = {
-            ProfileAvatar(
-                name = profile.name,
-                avatar = profile.avatar,
-                modifier = Modifier.size(48.dp),
-                contentDescription = null,
-            )
-        },
-        trailingContent = {
-            if (presentation.unreadCount > 0) {
-                Badge(
-                    modifier = Modifier.semantics {
-                        contentDescription = unreadDescription
-                    },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ) {
-                    Text(if (presentation.unreadCount > 99) "99+" else presentation.unreadCount.toString())
-                }
-            }
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .testTag("settings.profile.alternate.${profile.id}")
-            .semantics { role = Role.Button },
-    )
-}
-
-@Composable
-private fun ProfilePreviewStack(
-    profiles: List<Profile>,
-    remainingCount: Int,
-) {
-    val avatarSpacing = 22.dp
-    val visibleSlotCount = profiles.size + if (remainingCount > 0) 1 else 0
-    Box(
-        modifier = Modifier
-            .width(32.dp + avatarSpacing * (visibleSlotCount - 1).coerceAtLeast(0))
-            .height(32.dp),
-    ) {
-        profiles.forEachIndexed { index, alternate ->
-            Surface(
-                modifier = Modifier.offset(x = avatarSpacing * index),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-            ) {
-                ProfileAvatar(
-                    name = alternate.name,
-                    avatar = alternate.avatar,
-                    modifier = Modifier.size(32.dp),
-                    contentDescription = null,
-                )
-            }
-        }
-        if (remainingCount > 0) {
-            Surface(
-                modifier = Modifier
-                    .offset(x = avatarSpacing * profiles.size)
-                    .size(32.dp)
-                    .testTag("settings.profile.preview_remaining"),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "+$remainingCount",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
             }
         }
     }

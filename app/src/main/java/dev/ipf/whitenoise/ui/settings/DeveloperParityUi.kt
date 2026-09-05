@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
