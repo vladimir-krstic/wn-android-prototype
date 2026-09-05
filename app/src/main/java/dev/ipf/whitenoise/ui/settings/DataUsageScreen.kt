@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import dev.ipf.whitenoise.ui.components.whiteNoiseDialogSelection
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
@@ -35,28 +36,35 @@ fun DataUsageScreen(profile: Profile, onBack: () -> Unit, onChange: (ProfileSett
         SettingsList {
             item { SettingsSection(stringResource(R.string.download_automatic)) }
             item { SettingsGroup(Modifier.testTag("data_usage.downloads.group")) {
-                DownloadMediaType.entries.forEach { type ->
+                DownloadMediaType.entries.forEach {type ->
                     val allowed = DownloadNetwork.entries.filter { settings.downloadMatrix.allows(type, it) }
                     val summary = allowed.map { stringResource(it.labelRes) }.joinToString().ifEmpty { stringResource(R.string.download_never) }
-                    SettingsLink(stringResource(type.labelRes), summary, { picker = type })
-                    SettingsDivider(Modifier.testTag("data_usage.downloads.divider.${type.name.lowercase()}"))
+                    row {
+                        SettingsLink(stringResource(type.labelRes), summary, { picker = type })
+                    }
                 }
-                SettingsAction(stringResource(R.string.download_reset),
-                    onClick = { onChange(settings.copy(downloadMatrix = MediaDownloadMatrix())) },
-                    subtitle = stringResource(R.string.download_reset_help),
-                    enabled = settings.downloadMatrix != MediaDownloadMatrix())
+                row {
+                    SettingsAction(stringResource(R.string.download_reset),
+                        onClick = { onChange(settings.copy(downloadMatrix = MediaDownloadMatrix())) },
+                        subtitle = stringResource(R.string.download_reset_help),
+                        enabled = settings.downloadMatrix != MediaDownloadMatrix())
+                }
             } }
             item { SettingsExplainer(stringResource(R.string.download_rules_help)) }
             item { SettingsSection(stringResource(R.string.download_queue)) }
             item { SettingsGroup(Modifier.testTag("data_usage.queue")) {
-                SettingsAction(stringResource(if (settings.automaticDownloadsPaused) R.string.download_restart else R.string.download_stop),
-                    subtitle = stringResource(if (settings.automaticDownloadsPaused) R.string.download_paused else R.string.download_enabled),
-                    onClick = { if (settings.automaticDownloadsPaused) onPauseAutomatic(false) else stopConfirmation = true })
+                row {
+                    SettingsAction(stringResource(if (settings.automaticDownloadsPaused) R.string.download_restart else R.string.download_stop),
+                        subtitle = stringResource(if (settings.automaticDownloadsPaused) R.string.download_paused else R.string.download_enabled),
+                        onClick = { if (settings.automaticDownloadsPaused) onPauseAutomatic(false) else stopConfirmation = true })
+                }
             } }
             item { SettingsExplainer(stringResource(R.string.download_queue_counts, counts.automatic, counts.manual, counts.active, counts.failed)) }
             item { SettingsSection(stringResource(R.string.download_sent_media)) }
             item { SettingsGroup(Modifier.testTag("data_usage.sent_media.group")) {
-                SettingsLink(stringResource(R.string.download_quality), qualityLabels.getValue(settings.sentMediaQuality), { qualityPicker = true })
+                row {
+                    SettingsLink(stringResource(R.string.download_quality), qualityLabels.getValue(settings.sentMediaQuality), { qualityPicker = true })
+                }
             } }
             item { SettingsExplainer(stringResource(R.string.download_quality_help)) }
         }
@@ -66,7 +74,7 @@ fun DataUsageScreen(profile: Profile, onBack: () -> Unit, onChange: (ProfileSett
         text = { Column(Modifier.verticalScroll(rememberScrollState()).testTag("download.network.options")) {
             DownloadNetwork.entries.forEach { network ->
                 val enabled = settings.downloadMatrix.allows(type, network)
-                Row(Modifier.fillMaxWidth().toggleable(enabled, role = Role.Switch,
+                Row(Modifier.fillMaxWidth().whiteNoiseDialogSelection(enabled).toggleable(enabled, role = Role.Switch,
                     onValueChange = { onChange(settings.copy(downloadMatrix = settings.downloadMatrix.change(type, network, it))) })
                     .testTag("download.network.${network.name}"),
                     verticalAlignment = Alignment.CenterVertically,
@@ -79,7 +87,7 @@ fun DataUsageScreen(profile: Profile, onBack: () -> Unit, onChange: (ProfileSett
         } }, confirmButton = { TextButton({ picker = null }) { Text(stringResource(R.string.download_done)) } }) }
     if (qualityPicker) ChoiceDialog(title = stringResource(R.string.download_quality), values = SentMediaQuality.entries,
         selected = settings.sentMediaQuality, label = { qualityLabels.getValue(it) },
-        supportingText = stringResource(R.string.download_quality_detail), onDismiss = { qualityPicker = false },
+        onDismiss = { qualityPicker = false },
         onSelect = { onChange(settings.copy(sentMediaQuality = it)); qualityPicker = false })
     if (stopConfirmation) AlertDialog(onDismissRequest = { stopConfirmation = false },
         title = { Text(stringResource(R.string.download_stop)) },
@@ -90,13 +98,19 @@ fun DataUsageScreen(profile: Profile, onBack: () -> Unit, onChange: (ProfileSett
 }
 
 @Composable
-internal fun DownloadExampleControls(example: DownloadNetworkExample, held: Boolean,
+internal fun SettingsGroupScope.DownloadExampleControls(example: DownloadNetworkExample, held: Boolean,
     onNetwork: (DownloadNetworkExample) -> Unit, onSeed: () -> Unit, onHold: (Boolean) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    SettingsLink(stringResource(R.string.ui_download_network_example), example.developerLabel, { open = true })
-    SettingsAction(stringResource(R.string.ui_load_automatic_download_queue), onSeed,
-        subtitle = stringResource(R.string.ui_uses_existing_local_attachments_and_holds_transfer_pro))
-    SettingsSwitch(stringResource(R.string.ui_hold_transfer_example), held, onHold)
+    row {
+        SettingsLink(stringResource(R.string.ui_download_network_example), example.developerLabel, { open = true })
+    }
+    row {
+        SettingsAction(stringResource(R.string.ui_load_automatic_download_queue), onSeed,
+            subtitle = stringResource(R.string.ui_uses_existing_local_attachments_and_holds_transfer_pro))
+    }
+    row {
+        SettingsSwitch(stringResource(R.string.ui_hold_transfer_example), held, onHold)
+    }
     if (open) ChoiceDialog(stringResource(R.string.ui_download_network_example), DownloadNetworkExample.entries, example,
         { it.developerLabel }, onDismiss = { open = false }, onSelect = { onNetwork(it); open = false })
 }

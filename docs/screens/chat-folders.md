@@ -21,13 +21,15 @@ rules include muted chats to preserve existing Unread/Archived behavior.
 
 ## Entry, Back and composition
 
-Folders opens from Settings and Chats Filter. Use the existing Settings detail
+Folders opens from Settings and the end of the horizontal Chats pill row. Use the existing Settings detail
 canvas, adaptive measure, native ListItem rows, shared tonal fields, switches,
 menus and task controls. New/Edit is a typed profile/folder-owned destination.
 Name and description precede Included Chats, automatic People/Keyword/constraint
 controls and a live preview count. Included Chats and People use searchable
-multiple-choice dialogs with checkbox row semantics. Preview lists the derived
-chats separately from manual selection. Removing a manual ID may leave the chat
+multiple-choice Material bottom sheets with checkbox row semantics, a fixed
+search field and Done action, and lazy white segmented rows. Preview uses the
+same sheet with read-only rows and lists the derived chats separately from
+manual selection. Removing a manual ID may leave the chat
 included by a rule; explain this relationship.
 
 Save applies all folder values atomically. Back from a picker closes it; Back
@@ -109,3 +111,47 @@ preview, deletion consequences, reorder and contextual assignment.
   emulator or visual acceptance is claimed.
 
 Commit title: `B06: Add folder management and automatic rules`.
+
+
+## Folder icon polish — 2026-09-05
+
+The Settings Folders entry uses the native folder symbol in place of Filter.
+Every folder row on the management page uses the same 24 dp leading folder
+symbol, including built-in and custom folders. Semantic onSurfaceVariant tint
+matches adjacent Settings icons. The icon is decorative so TalkBack announces
+the folder name/count once. Row actions and labels are unchanged. The official
+asset and hash are recorded in `../references/material-symbols.md`.
+
+Host validation: debug APK assembly and whitespace checks pass. No behavior
+tests were added for the decorative icon change; device inspection is pending.
+
+## 2026-09-05 horizontal filter and folder pills
+
+Latest user direction replaces the regular Chats header filter icon/menu with
+Signal-style horizontally scrollable pills beneath the app bar. Chats appears
+first, followed by saved folders in management order, Left, and the Folders
+management action with a folder icon. A selected pill has a neutral gray fill;
+unselected pills are transparent, without outlines or checkmarks. All pills
+retain the same capsule shape when selected. The app bar has no duplicate scope
+title. Search and selection hide this row; advanced search retains its anchored
+filter menu.
+
+Native Material FilterChip owns input, selected semantics, typography, ripple
+and touch targets inside a LazyRow. Shared 16 dp side margins and 8 dp gaps
+keep the row aligned with the chat pane. This follows the current official
+[Compose chip guidance](https://developer.android.com/develop/ui/compose/components/chip)
+(reviewed 2026-09-05), with the user-requested capsule/tonal treatment.
+
+Filtering still uses ChatProjection/ChatFolders; tapping the active pill keeps
+it selected. Selection survives recreation and folder reorder, with an offscreen
+selected pill scrolled into view. Deleting it falls back to Chats; switching
+profiles resets selection. Selecting a pill closes any open row menu. Existing
+folder creation, assignment and management destinations remain connected.
+
+Validation covers the existing folder/filter interaction tests migrated to pills
+and a new distant-folder scroll, restore, reorder, search-return and profile-reset
+regression. Current-build device inspection and visual acceptance remain pending.
+
+Host gate: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 895 unit tests and zero lint errors. Both APKs assemble; Compose
+interaction tests compile only. `git diff --check` passes.

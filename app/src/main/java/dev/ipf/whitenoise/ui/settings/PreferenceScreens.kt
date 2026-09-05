@@ -73,24 +73,26 @@ fun NotificationsScreen(
                     SettingsGroup(
                         modifier = Modifier.testTag("notifications.permission.group"),
                     ) {
-                        when (permissionStatus) {
-                            NotificationPermissionStatus.NotRequested -> SettingsAction(
-                                title = stringResource(R.string.ui_allow_notifications),
-                                subtitle = stringResource(R.string.ui_get_notified_about_new_messages_and_use_these_options),
-                                onClick = permissionAccess.requestPermission,
-                                leading = {
-                                    NotificationPermissionIcon(R.drawable.ic_settings_notifications)
-                                },
-                            )
-                            NotificationPermissionStatus.Blocked -> SettingsLink(
-                                title = stringResource(R.string.ui_notifications_are_off),
-                                subtitle = stringResource(R.string.ui_turn_them_on_in_android_settings_to_use_these_options),
-                                onClick = permissionAccess.openSettings,
-                                leading = {
-                                    NotificationPermissionIcon(R.drawable.ic_notifications_off)
-                                },
-                            )
-                            NotificationPermissionStatus.Allowed -> Unit
+                        item {
+                            when (permissionStatus) {
+                                NotificationPermissionStatus.NotRequested -> SettingsAction(
+                                    title = stringResource(R.string.ui_allow_notifications),
+                                    subtitle = stringResource(R.string.ui_get_notified_about_new_messages_and_use_these_options),
+                                    onClick = permissionAccess.requestPermission,
+                                    leading = {
+                                        NotificationPermissionIcon(R.drawable.ic_settings_notifications)
+                                    },
+                                )
+                                NotificationPermissionStatus.Blocked -> SettingsLink(
+                                    title = stringResource(R.string.ui_notifications_are_off),
+                                    subtitle = stringResource(R.string.ui_turn_them_on_in_android_settings_to_use_these_options),
+                                    onClick = permissionAccess.openSettings,
+                                    leading = {
+                                        NotificationPermissionIcon(R.drawable.ic_notifications_off)
+                                    },
+                                )
+                                NotificationPermissionStatus.Allowed -> Unit
+                            }
                         }
                     }
                 }
@@ -98,43 +100,48 @@ fun NotificationsScreen(
             item { SettingsSection(stringResource(R.string.ui_delivery)) }
             item {
                 SettingsGroup {
-                    SettingsSwitch(
-                        title = stringResource(R.string.ui_local_notifications),
-                        checked = localNotificationsEnabled,
-                        enabled = notificationsAllowed,
-                        onCheckedChange = {
-                            if (controller != null) controller.request(NotificationChange.Delivery(NotificationDelivery.Local,it),expectedProfileId = profile.id)
-                            else onChange(settings.copy(localNotifications = it,
-                                nativePushNotifications = settings.nativePushNotifications && it))
-                        },
-                        subtitle = stringResource(R.string.ui_create_message_notifications_on_this_device_without_na),
-                    )
-                    SettingsDivider(Modifier.testTag("notifications.delivery.divider"))
-                    SettingsSwitch(
-                        title = stringResource(R.string.ui_native_push),
-                        checked = NotificationControls.pushEnabled(settings,notificationsAllowed,environment.push),
-                        enabled = localNotificationsEnabled && environment.push == PushAvailability.Available,
-                        onCheckedChange = {
-                            if (controller != null) controller.request(NotificationChange.Delivery(NotificationDelivery.Push,it),expectedProfileId = profile.id)
-                            else onChange(settings.copy(nativePushNotifications = it))
-                        },
-                        subtitle = when {
-                            !notificationsAllowed -> stringResource(R.string.notification_allow_first)
-                            !settings.localNotifications -> stringResource(R.string.notification_local_first)
-                            environment.push == PushAvailability.BuildNotConfigured -> stringResource(R.string.notification_push_build)
-                            environment.push == PushAvailability.PlayServicesMissing -> stringResource(R.string.notification_push_services)
-                            environment.push == PushAvailability.ProviderNotInitialized -> stringResource(R.string.notification_push_provider)
-                            else -> stringResource(R.string.notification_push_detail)
-                        },
-                    )
+                    row {
+                        SettingsSwitch(
+                            title = stringResource(R.string.ui_local_notifications),
+                            checked = localNotificationsEnabled,
+                            enabled = notificationsAllowed,
+                            onCheckedChange = {
+                                if (controller != null) controller.request(NotificationChange.Delivery(NotificationDelivery.Local,it),expectedProfileId = profile.id)
+                                else onChange(settings.copy(localNotifications = it,
+                                    nativePushNotifications = settings.nativePushNotifications && it))
+                            },
+                            subtitle = stringResource(R.string.ui_create_message_notifications_on_this_device_without_na),
+                        )
+                    }
+                    row {
+                        SettingsSwitch(
+                            title = stringResource(R.string.ui_native_push),
+                            checked = NotificationControls.pushEnabled(settings,notificationsAllowed,environment.push),
+                            enabled = localNotificationsEnabled && environment.push == PushAvailability.Available,
+                            onCheckedChange = {
+                                if (controller != null) controller.request(NotificationChange.Delivery(NotificationDelivery.Push,it),expectedProfileId = profile.id)
+                                else onChange(settings.copy(nativePushNotifications = it))
+                            },
+                            subtitle = when {
+                                !notificationsAllowed -> stringResource(R.string.notification_allow_first)
+                                !settings.localNotifications -> stringResource(R.string.notification_local_first)
+                                environment.push == PushAvailability.BuildNotConfigured -> stringResource(R.string.notification_push_build)
+                                environment.push == PushAvailability.PlayServicesMissing -> stringResource(R.string.notification_push_services)
+                                environment.push == PushAvailability.ProviderNotInitialized -> stringResource(R.string.notification_push_provider)
+                                else -> stringResource(R.string.notification_push_detail)
+                            },
+                        )
+                    }
                 }
             }
             if (controller != null) {
                 item { SettingsGroup {
-                    SettingsSwitch(stringResource(R.string.notification_background),
-                        NotificationControls.backgroundEnabled(controller.backgroundConnection,notificationsAllowed), {
-                            controller.request(NotificationChange.Delivery(NotificationDelivery.Background,it),expectedProfileId = profile.id)
-                        },enabled = notificationsAllowed,subtitle = stringResource(R.string.notification_background_detail))
+                    row {
+                        SettingsSwitch(stringResource(R.string.notification_background),
+                            NotificationControls.backgroundEnabled(controller.backgroundConnection,notificationsAllowed), {
+                                controller.request(NotificationChange.Delivery(NotificationDelivery.Background,it),expectedProfileId = profile.id)
+                            },enabled = notificationsAllowed,subtitle = stringResource(R.string.notification_background_detail))
+                    }
                 } }
                 item { SettingsExplainer(stringResource(if (NotificationControls.backgroundEnabled(controller.backgroundConnection,notificationsAllowed))
                     R.string.notification_background_on else R.string.notification_background_off)) }
@@ -142,17 +149,10 @@ fun NotificationsScreen(
             item { SettingsSection(stringResource(R.string.preview)) }
             item {
                 SettingsGroup(
-                    modifier = Modifier.testTag("notifications.preview.group"),
+                    modifier = Modifier.selectableGroup().testTag("notifications.preview.group"),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectableGroup(),
-                    ) {
-                        NotificationPreviewMode.entries.forEachIndexed { index, mode ->
-                            if (index > 0) {
-                                SettingsDivider()
-                            }
+                    NotificationPreviewMode.entries.forEach { mode ->
+                        row {
                             SettingsChoice(
                                 title = notificationPreviewLabel(mode),
                                 selected = settings.notificationPreviewMode == mode,
@@ -164,11 +164,12 @@ fun NotificationsScreen(
                             )
                         }
                     }
-                    SettingsDivider()
-                    NotificationPreviewExample(
-                        example = notificationPreviewExample(settings.notificationPreviewMode),
-                        enabled = localNotificationsEnabled,
-                    )
+                    item {
+                        NotificationPreviewExample(
+                            example = notificationPreviewExample(settings.notificationPreviewMode),
+                            enabled = localNotificationsEnabled,
+                        )
+                    }
                 }
             }
             item {
@@ -181,14 +182,16 @@ fun NotificationsScreen(
                 )
             }
             item { SettingsSection(stringResource(R.string.notification_categories)) }
-            item { SettingsExplainer(stringResource(R.string.notification_categories_detail)) }
+
             item { SettingsGroup {
-                NotificationCategory.global(environment.updatesAvailable).forEachIndexed { index, category ->
-                    if (index > 0) SettingsDivider()
-                    SettingsLink(stringResource(notificationCategoryResource(category)),
-                        onClick = { settingsResult = onOpenCategory?.invoke(category) ?: openNotificationCategory(context,category) })
+                NotificationCategory.global(environment.updatesAvailable).forEach { category ->
+                    row {
+                        SettingsLink(stringResource(notificationCategoryResource(category)),
+                            onClick = { settingsResult = onOpenCategory?.invoke(category) ?: openNotificationCategory(context,category) })
+                    }
                 }
             } }
+            item { SettingsExplainer(stringResource(R.string.notification_categories_detail)) }
         }
     }
     NotificationSettingsFeedback(settingsResult) { settingsResult = null }
@@ -257,17 +260,10 @@ fun AppearanceScreen(
             item { SettingsSection(stringResource(R.string.appearance_theme)) }
             item {
                 SettingsGroup(
-                    modifier = Modifier.testTag("appearance.theme.group"),
+                    modifier = Modifier.selectableGroup().testTag("appearance.theme.group"),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectableGroup(),
-                    ) {
-                        AppearancePreference.entries.forEachIndexed { index, preference ->
-                            if (index > 0) {
-                                SettingsDivider()
-                            }
+                    AppearancePreference.entries.forEach { preference ->
+                        row {
                             SettingsChoice(
                                 title = stringResource(preference.labelResource()),
                                 selected = settings.appearance == preference,
@@ -285,35 +281,44 @@ fun AppearanceScreen(
             }
             item {
                 SettingsGroup {
-                    SettingsLink(
-                        title = stringResource(R.string.action_color),
-                        onClick = onActionColor,
-                    )
-                    SettingsDivider()
-                    SettingsLink(
-                        title = stringResource(R.string.chat_bubble_colors),
-                        onClick = onBubbleColors,
-                    )
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.action_color),
+                            onClick = onActionColor,
+                        )
+                    }
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.chat_bubble_colors),
+                            onClick = onBubbleColors,
+                        )
+                    }
                 }
             }
             item {
                 SettingsGroup {
-                    SettingsLink(stringResource(R.string.appearance_font_family), value = familyLabels.getValue(settings.fontFamily), onClick = { fontFamilyOpen = true })
-                    SettingsDivider()
-                    SettingsLink(stringResource(R.string.appearance_font_size), value = fontLabels.getValue(settings.fontSize), onClick = { fontSizeOpen = true })
-                    SettingsDivider()
-                    SettingsLink(stringResource(R.string.appearance_enter_behavior), value = enterLabels.getValue(settings.enterKeyBehavior), onClick = { enterOpen = true })
+                    row {
+                        SettingsLink(stringResource(R.string.appearance_font_family), value = familyLabels.getValue(settings.fontFamily), onClick = { fontFamilyOpen = true })
+                    }
+                    row {
+                        SettingsLink(stringResource(R.string.appearance_font_size), value = fontLabels.getValue(settings.fontSize), onClick = { fontSizeOpen = true })
+                    }
+                    row {
+                        SettingsLink(stringResource(R.string.appearance_enter_behavior), value = enterLabels.getValue(settings.enterKeyBehavior), onClick = { enterOpen = true })
+                    }
                 }
             }
             item {
                 SettingsGroup(
                     modifier = Modifier.testTag("appearance.language.group"),
                 ) {
-                    SettingsLink(
-                        title = stringResource(R.string.language_title),
-                        value = stringResource(settings.language.labelResource()),
-                        onClick = onLanguage,
-                    )
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.language_title),
+                            value = stringResource(settings.language.labelResource()),
+                            onClick = onLanguage,
+                        )
+                    }
                 }
             }
         }
@@ -331,19 +336,12 @@ fun LanguageScreen(
         SettingsList {
             item {
                 SettingsGroup(
-                    modifier = Modifier
+                    modifier = Modifier.selectableGroup()
                         .padding(top = WhiteNoiseSpacing.Section)
                         .testTag("language.choices.group"),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectableGroup(),
-                    ) {
-                        LanguagePreference.entries.forEachIndexed { index, preference ->
-                            if (index > 0) {
-                                SettingsDivider()
-                            }
+                    LanguagePreference.entries.forEach { preference ->
+                        row {
                             SettingsChoice(
                                 title = stringResource(preference.labelResource()),
                                 selected = settings.language == preference,
@@ -408,53 +406,60 @@ fun PrivacySecurityScreen(
                 SettingsGroup(
                     modifier = Modifier.testTag("privacy.device_protection.group"),
                 ) {
-                    SettingsSwitch(
-                        title = stringResource(R.string.ui_hide_screen_in_recents),
-                        checked = settings.hideScreenInRecents,
-                        onCheckedChange = { onChange(settings.copy(hideScreenInRecents = it)) },
-                        subtitle = stringResource(R.string.ui_hide_conversations_and_profile_details_in_the_recents_),
-                    )
-                    SettingsDivider(Modifier.testTag("privacy.device_protection.divider.recents"))
-                    SettingsSwitch(
-                        title = stringResource(R.string.block_screenshots_in_chats),
-                        checked = settings.blockScreenshotsInChats,
-                        onCheckedChange = { onChange(settings.copy(blockScreenshotsInChats = it)) },
-                        subtitle = stringResource(R.string.block_screenshots_in_chats_detail),
-                    )
-                    SettingsDivider(Modifier.testTag("privacy.device_protection.divider.screenshots"))
-                    SettingsSwitch(
-                        title = stringResource(R.string.incognito_keyboard),
-                        checked = settings.incognitoKeyboard,
-                        enabled = android.os.Build.VERSION.SDK_INT >= 26,
-                        onCheckedChange = { onChange(settings.copy(incognitoKeyboard = it)) },
-                        subtitle = stringResource(if (android.os.Build.VERSION.SDK_INT >= 26) R.string.incognito_keyboard_detail else R.string.incognito_keyboard_unavailable),
-                    )
-                    SettingsDivider()
-                    SettingsSwitch(
-                        title = stringResource(R.string.ui_require_device_authentication),
-                        checked = authenticationEnabled,
-                        enabled = secure,
-                        onCheckedChange = { onChange(settings.copy(requireDeviceAuthentication = it)) },
-                        subtitle = if (secure) {
-                            stringResource(R.string.app_lock_enabled_detail)
-                        } else {
-                            stringResource(R.string.app_lock_setup_detail)
-                        },
-                    )
-                    if (!secure) {
-                        SettingsDivider(Modifier.testTag("privacy.device_protection.divider.security_settings"))
-                        SettingsAction(
-                            title = stringResource(R.string.ui_open_android_security_settings),
-                            onClick = { context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
+                    row {
+                        SettingsSwitch(
+                            title = stringResource(R.string.ui_hide_screen_in_recents),
+                            checked = settings.hideScreenInRecents,
+                            onCheckedChange = { onChange(settings.copy(hideScreenInRecents = it)) },
+                            subtitle = stringResource(R.string.ui_hide_conversations_and_profile_details_in_the_recents_),
                         )
                     }
-                    if (authenticationEnabled) {
-                        SettingsDivider(Modifier.testTag("privacy.device_protection.divider.auto_lock"))
-                        SettingsLink(
-                            title = stringResource(R.string.ui_auto_lock),
-                            value = autoLockLabel(settings.autoLockDuration),
-                            onClick = { autoLockPicker = true },
+                    row {
+                        SettingsSwitch(
+                            title = stringResource(R.string.block_screenshots_in_chats),
+                            checked = settings.blockScreenshotsInChats,
+                            onCheckedChange = { onChange(settings.copy(blockScreenshotsInChats = it)) },
+                            subtitle = stringResource(R.string.block_screenshots_in_chats_detail),
                         )
+                    }
+                    row {
+                        SettingsSwitch(
+                            title = stringResource(R.string.incognito_keyboard),
+                            checked = settings.incognitoKeyboard,
+                            enabled = android.os.Build.VERSION.SDK_INT >= 26,
+                            onCheckedChange = { onChange(settings.copy(incognitoKeyboard = it)) },
+                            subtitle = stringResource(if (android.os.Build.VERSION.SDK_INT >= 26) R.string.incognito_keyboard_detail else R.string.incognito_keyboard_unavailable),
+                        )
+                    }
+                    row {
+                        SettingsSwitch(
+                            title = stringResource(R.string.ui_require_device_authentication),
+                            checked = authenticationEnabled,
+                            enabled = secure,
+                            onCheckedChange = { onChange(settings.copy(requireDeviceAuthentication = it)) },
+                            subtitle = if (secure) {
+                                stringResource(R.string.app_lock_enabled_detail)
+                            } else {
+                                stringResource(R.string.app_lock_setup_detail)
+                            },
+                        )
+                    }
+                    if (!secure) {
+                        row {
+                            SettingsAction(
+                                title = stringResource(R.string.ui_open_android_security_settings),
+                                onClick = { context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
+                            )
+                        }
+                    }
+                    if (authenticationEnabled) {
+                        row {
+                            SettingsLink(
+                                title = stringResource(R.string.ui_auto_lock),
+                                value = autoLockLabel(settings.autoLockDuration),
+                                onClick = { autoLockPicker = true },
+                            )
+                        }
                     }
                 }
             }
@@ -463,11 +468,13 @@ fun PrivacySecurityScreen(
                 SettingsGroup(
                     modifier = Modifier.testTag("privacy.diagnostics.group"),
                 ) {
-                    SettingsLink(
-                        title = stringResource(R.string.diagnostics_improvements),
-                        value = profile.diagnostics.summary,
-                        onClick = onDiagnosticsImprovements,
-                    )
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.diagnostics_improvements),
+                            value = profile.diagnostics.summary,
+                            onClick = onDiagnosticsImprovements,
+                        )
+                    }
                 }
             }
             item {
@@ -478,11 +485,13 @@ fun PrivacySecurityScreen(
                 SettingsGroup(
                     modifier = Modifier.testTag("privacy.erase.group"),
                 ) {
-                    SettingsAction(
-                        title = stringResource(R.string.ui_erase_app_data),
-                        onClick = { eraseOpen = true },
-                        destructive = true,
-                    )
+                    row {
+                        SettingsAction(
+                            title = stringResource(R.string.ui_erase_app_data),
+                            onClick = { eraseOpen = true },
+                            destructive = true,
+                        )
+                    }
                 }
             }
             item {

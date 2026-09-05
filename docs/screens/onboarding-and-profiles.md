@@ -384,3 +384,72 @@ Dismiss before opening Photos, Files or Web Image; preserve removal,
 preparation cancellation and the existing draft/error lifecycle. No picker
 appearance or onboarding behavior changes. See `app-menus.md` for the current
 pin and verification (including its understood dependency-update warning).
+
+
+## Sign-in action grouping — 2026-09-05
+
+User-requested polish: “Sign in with Amber” sits directly above “Sign In” in
+one bottom action group, matching Welcome's outlined/filled button stack and
+8 dp related spacing. Both buttons share the 520 dp maximum width, full-width
+layout and existing pinned-action/navigation-bar/IME insets. Private-key entry
+and access feedback remain in the scrolling form. Existing Amber availability,
+private-key validation, progress and callbacks are unchanged.
+
+Host validation: 892 unit tests pass, lint reports zero errors, and the debug
+APK builds. No device or emulator inspection was performed for this placement
+change; visual acceptance remains pending.
+
+
+## Progress feedback cleanup — 2026-09-05
+
+User-requested polish: `AccessFeedback` emits no standalone Cancel action while
+an access attempt is busy. Sign In, Amber, Sign Up, retained-profile access and
+recovery progress continue to use the primary action's loading treatment.
+Existing app-bar Back cancels the attempt and leaves the form; navigation away
+also invalidates the request. Failure/retry feedback and the separate recovery
+consent dialog retain their explicit actions. The existing partial-recovery
+retry case now asserts that the inline Cancel disappears when progress resumes.
+
+Host validation passes: 892 unit tests, lint with zero errors, debug APK and
+instrumentation-test APK assembly. The updated UI assertion compiles only;
+no device or emulator was used.
+
+
+## Amber account parity — 2026-09-05
+
+The user's latest direction makes Amber resolve the same canonical account as
+regular sign-in: Marmota for Initial and Open Circuit for Add Profile. It no
+longer creates the separate empty Amber identity. A successful identity/proof
+sequence changes signing custody to Amber. Reentering the same public identity
+preserves stored name, biography, chats, drafts, settings and profile ID, without
+duplicating the account. Regular key sign-in restores local signing custody on
+that same account; retained reentry uses the stored custody. A stored public-key
+mismatch remains rejected, and cancelled/rejected Amber attempts never commit.
+The existing Sign Up customization and account mappings remain authoritative.
+
+No real Amber/network/key integration is introduced. `AccessStateTest` compares
+regular/Amber results for both origins and checks that sign-up customization,
+chat state and draft content survive local → Amber → local reentry.
+
+Host validation for the combined 2026-09-05 follow-up passes: 894 unit tests,
+lint with zero errors, debug APK and instrumentation-test APK assembly. UI
+cases compile only; no device/emulator use or visual verification is claimed.
+
+## 2026-09-05 — remove the normal-launch loading flash
+
+The user reported a brief “Starting White Noise…” screen after launch.
+`AppViewModel` previously started in Loading unconditionally, so `WhiteNoiseApp`
+held a spinner/text screen for an artificial 300 ms before showing navigation.
+Initial app state is already constructed synchronously. Normal construction now
+starts Ready and renders the navigation root immediately after the existing
+Android splash. No splash replacement, extra timing, or platform dependency is
+needed. Explicit startup-failure previews retain their staged Loading/Failed,
+retry, generation guards, and retained-profile recovery behavior.
+
+`AccessStateTest` adds a regression requiring ordinary construction to be Ready
+without a callback and ensuring a late startup callback changes no app state.
+Existing startup failure/retry/recovery tests remain. The complete host gate
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 895 unit tests with zero failures/errors/skips, zero lint errors (16
+existing warnings and two hints), and both debug APKs. No device startup timing
+or visual inspection was requested.

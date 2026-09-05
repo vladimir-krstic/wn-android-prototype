@@ -84,21 +84,29 @@ internal fun AuditLogsScreen(controller: AuditLogController, onBack: () -> Unit)
     val busy = work?.busy == true
     SettingsScaffold(title = stringResource(R.string.audit_logs_title),onBack = onBack) {
         SettingsList {
-            item { SettingsExplainer(stringResource(R.string.audit_logs_detail)) }
             item { SettingsGroup {
-                SettingsSwitch(stringResource(R.string.audit_logs_record),state.enabled,{ controller.begin(if (it) AuditLogAction.Enable else AuditLogAction.Disable) },enabled = !busy,
-                    subtitle = stringResource(R.string.audit_logs_record_detail))
+                row {
+                    SettingsSwitch(stringResource(R.string.audit_logs_record),state.enabled,{ controller.begin(if (it) AuditLogAction.Enable else AuditLogAction.Disable) },enabled = !busy,
+                        subtitle = stringResource(R.string.audit_logs_record_detail))
+                }
             } }
+            item { SettingsExplainer(stringResource(R.string.audit_logs_detail)) }
             item { SettingsSection(stringResource(R.string.audit_logs_files)) }
             if (state.files.isEmpty()) item { SettingsExplainer(stringResource(R.string.audit_logs_empty)) }
-            else item { SettingsGroup { state.files.forEachIndexed { index,file ->
-                if (index > 0) SettingsDivider()
-                SettingsExplainer("${file.name} · ${Formatter.formatShortFileSize(context,file.bytes.toLong())}")
-            } } }
+            else item { SettingsGroup {
+                state.files.forEach { file ->
+                    item {
+                        SettingsValue(file.name, Formatter.formatShortFileSize(context, file.bytes.toLong()))
+                    }
+                }
+            } }
             item { SettingsGroup {
-                SettingsAction(stringResource(R.string.audit_logs_export),onClick = { controller.begin(AuditLogAction.Export) },enabled = !busy)
-                SettingsDivider()
-                SettingsAction(stringResource(R.string.audit_logs_delete),onClick = { controller.begin(AuditLogAction.Delete) },enabled = !busy,destructive = true)
+                row {
+                    SettingsAction(stringResource(R.string.audit_logs_export),onClick = { controller.begin(AuditLogAction.Export) },enabled = !busy)
+                }
+                row {
+                    SettingsAction(stringResource(R.string.audit_logs_delete),onClick = { controller.begin(AuditLogAction.Delete) },enabled = !busy,destructive = true)
+                }
             } }
             if (work != null && work.phase != AuditLogPhase.Consent) item {
                 Column(Modifier.testTag("audit.status"),verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {

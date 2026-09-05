@@ -32,58 +32,65 @@ internal fun RelayPublicationHost(profileId: String, surface: String, controller
 }
 
 @Composable
-internal fun RelayPublicationRows(profile: Profile, controller: RelayPublicationController) {
+internal fun SettingsGroupScope.RelayPublicationRows(profile: Profile, controller: RelayPublicationController) {
     val projection = controller.projection(profile)
     val work = controller.work?.takeIf { it.profileId == profile.id }
     PublishedRelayList.entries.forEach { kind ->
-        ListItem(
-            headlineContent = { Text(if (kind == PublishedRelayList.Posting) stringResource(R.string.relay_list_posting) else stringResource(R.string.relay_list_receiving)) },
-            trailingContent = {
-                Text(when (projection.status(kind)) {
-                    RelayProjectionPhase.Published -> stringResource(R.string.relay_list_published)
-                    RelayProjectionPhase.Missing -> stringResource(R.string.relay_list_missing)
-                    RelayProjectionPhase.Unavailable -> stringResource(R.string.relay_list_status_unavailable)
-                })
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.testTag("relay.publication.${kind.name}"),
-        )
-        SettingsDivider()
+        row {
+            SettingsValue(
+                title = stringResource(if (kind == PublishedRelayList.Posting) R.string.relay_list_posting else R.string.relay_list_receiving),
+                value = stringResource(when (projection.status(kind)) {
+                    RelayProjectionPhase.Published -> R.string.relay_list_published
+                    RelayProjectionPhase.Missing -> R.string.relay_list_missing
+                    RelayProjectionPhase.Unavailable -> R.string.relay_list_status_unavailable
+                }),
+                modifier = Modifier.testTag("relay.publication.${kind.name}"),
+            )
+        }
     }
     when (work?.phase) {
-        RelayPublicationWorkPhase.Running -> SettingsAction(
-            title = if (work.operation == RelayPublicationOperation.Refresh) stringResource(R.string.relay_list_refreshing) else stringResource(R.string.relay_list_publishing),
-            enabled = false,
-            leading = { CircularProgressIndicator(Modifier.size(20.dp).clearAndSetSemantics { }, strokeWidth = 2.dp) },
-            onClick = {},
-        )
-        RelayPublicationWorkPhase.Failed, RelayPublicationWorkPhase.Unavailable -> SettingsAction(
-            title = stringResource(R.string.relay_list_retry),
-            subtitle = if (work.operation == RelayPublicationOperation.Refresh)
-                stringResource(R.string.relay_list_refresh_failed)
-            else stringResource(R.string.relay_list_publish_failed),
-            onClick = { controller.retry(work.id) },
-            modifier = Modifier.testTag("relay.publication.retry"),
-        )
+        RelayPublicationWorkPhase.Running -> row {
+            SettingsAction(
+                title = stringResource(if (work.operation == RelayPublicationOperation.Refresh) R.string.relay_list_refreshing else R.string.relay_list_publishing),
+                enabled = false,
+                leading = { CircularProgressIndicator(Modifier.size(20.dp).clearAndSetSemantics { }, strokeWidth = 2.dp) },
+                onClick = {},
+            )
+        }
+        RelayPublicationWorkPhase.Failed, RelayPublicationWorkPhase.Unavailable -> row {
+            SettingsAction(
+                title = stringResource(R.string.relay_list_retry),
+                subtitle = stringResource(if (work.operation == RelayPublicationOperation.Refresh) R.string.relay_list_refresh_failed else R.string.relay_list_publish_failed),
+                onClick = { controller.retry(work.id) },
+                modifier = Modifier.testTag("relay.publication.retry"),
+            )
+        }
         else -> {
-            SettingsAction(stringResource(R.string.relay_list_refresh), { controller.begin(RelayPublicationOperation.Refresh) },
-                modifier = Modifier.testTag("relay.publication.refresh"))
+            row {
+                SettingsAction(stringResource(R.string.relay_list_refresh), { controller.begin(RelayPublicationOperation.Refresh) },
+                    modifier = Modifier.testTag("relay.publication.refresh"))
+            }
             if (projection.missing.isNotEmpty()) {
-                SettingsDivider()
-                SettingsAction(stringResource(R.string.relay_list_publish), { controller.begin(RelayPublicationOperation.PublishMissing) },
-                    subtitle = stringResource(R.string.relay_list_publish_help),
-                    modifier = Modifier.testTag("relay.publication.publish"))
+                row {
+                    SettingsAction(stringResource(R.string.relay_list_publish), { controller.begin(RelayPublicationOperation.PublishMissing) },
+                        subtitle = stringResource(R.string.relay_list_publish_help),
+                        modifier = Modifier.testTag("relay.publication.publish"))
+                }
             }
         }
     }
 }
 
 @Composable
-internal fun RelayPublicationDeveloperControls(controller: RelayPublicationController, onImport: () -> Unit = {}) {
+internal fun SettingsGroupScope.RelayPublicationDeveloperControls(controller: RelayPublicationController, onImport: () -> Unit = {}) {
     var open by remember { mutableStateOf(false) }
-    SettingsLink(stringResource(R.string.ui_relay_publication_outcome), controller.scenario.developerLabel, { open = true })
-    SettingsAction(stringResource(R.string.ui_load_imported_relay_issue), onImport,
-        subtitle = stringResource(R.string.ui_adds_one_invalid_imported_address_without_removing_its))
+    row {
+        SettingsLink(stringResource(R.string.ui_relay_publication_outcome), controller.scenario.developerLabel, { open = true })
+    }
+    row {
+        SettingsAction(stringResource(R.string.ui_load_imported_relay_issue), onImport,
+            subtitle = stringResource(R.string.ui_adds_one_invalid_imported_address_without_removing_its))
+    }
     if (open) ChoiceDialog("Relay publication outcome", RelayPublicationScenario.entries,
         controller.scenario, RelayPublicationScenario::developerLabel,
         onDismiss = { open = false }, onSelect = { controller.chooseScenario(it); open = false })

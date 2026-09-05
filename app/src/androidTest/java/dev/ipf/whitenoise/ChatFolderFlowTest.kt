@@ -31,8 +31,8 @@ class ChatFolderFlowTest {
         val vm = model(); lateinit var nav: NavHostController
         rule.setContent { nav = rememberNavController(); WhiteNoiseTheme { WhiteNoiseNavHost(nav, vm) } }
         rule.runOnIdle { nav.navigate(AppRoute.SignedIn) }
-        rule.onNodeWithContentDescription("Filter Chats").performClick()
-        rule.onNodeWithText("Folders").performClick()
+        rule.onNodeWithTag("chats.folders").performScrollToNode(hasTestTag("chats.manageFolders"))
+        rule.onNodeWithTag("chats.manageFolders").performClick()
         rule.onNodeWithContentDescription("New Folder").performClick()
         rule.onNodeWithTag("folder.name").performTextInput("Owner draft")
         rule.runOnIdle { vm.completeSignIn(OnboardingOrigin.AddProfile); vm.dismissDiagnosticsPrompt(vm.uiState.activeProfileId!!) }
@@ -104,6 +104,8 @@ class ChatFolderFlowTest {
         rule.onNodeWithTag("folder.name").performTextInput("People")
         rule.onNodeWithTag("folder.editorList").performScrollToNode(hasText("People"))
         rule.onAllNodesWithText("People").filter(hasClickAction()).onFirst().performClick()
+        rule.onNodeWithTag("sheet.surface").assertExists()
+        rule.onNodeWithTag("sheet.dragHandle").assertExists()
         rule.onNodeWithTag("folder.pickerSearch").performTextInput(person.displayName)
         rule.onNodeWithTag("folder.choice.${person.id}").performClick().assertIsOn()
         rule.onNodeWithText("Done").performClick()
@@ -114,11 +116,39 @@ class ChatFolderFlowTest {
     @Test fun deletingSelectedFolderFallsBackToChats() {
         val vm = model(); val owner = vm.uiState.activeProfileId!!
         rule.setContent { WhiteNoiseTheme { ChatsScreen(vm.uiState, {}, {}, vm::markChatUnread, vm::toggleChatPin, vm::setChatMute, vm::setChatArchived, vm::leaveChat, {}) } }
-        rule.onNodeWithContentDescription("Filter Chats").performClick(); rule.onNodeWithText("Archived").performClick()
+        rule.onNodeWithTag("chats.folders").performScrollToNode(hasTestTag("chats.folder.system:archived"))
+        rule.onNodeWithTag("chats.folder.system:archived").performClick()
         rule.runOnIdle { vm.deleteChatFolder(owner, "system:archived") }
-        rule.onNodeWithContentDescription("Filter Chats").assertIsNotSelected()
+        rule.onNodeWithTag("chats.scope.chats").assertIsSelected()
         rule.onNodeWithText("Archived").assertDoesNotExist()
     }
+    @Test fun distantFolderPillKeepsSelectionThroughRestoreAndReorderThenResetsForAnotherProfile() {
+        val vm = model()
+        val owner = vm.uiState.activeProfileId!!
+        val chat = vm.uiState.activeProfile!!.chats.first()
+        val folders = (1..12).map { vm.createChatFolder(owner, "Folder $it")!! }
+        val selected = folders.last()
+        vm.assignChatFolder(owner, chat.id, selected)
+        val restore = StateRestorationTester(rule)
+        restore.setContent { WhiteNoiseTheme { ChatsScreen(vm.uiState, {}, {}, vm::markChatUnread,
+            vm::toggleChatPin, vm::setChatMute, vm::setChatArchived, vm::leaveChat, {}) } }
+        val tag = "chats.folder.$selected"
+        rule.onNodeWithContentDescription("Filter Chats").assertDoesNotExist()
+        rule.onNodeWithTag("chats.folders").performScrollToNode(hasTestTag(tag))
+        rule.onNodeWithTag(tag).performClick().assertIsSelected()
+        rule.onNodeWithTag("chat.row.${chat.id}").assertIsDisplayed()
+        restore.emulateSavedInstanceStateRestore()
+        rule.onNodeWithTag(tag).assertIsDisplayed().assertIsSelected().performClick().assertIsSelected()
+        rule.runOnIdle { vm.moveChatFolder(owner, selected, -1) }
+        rule.onNodeWithTag(tag).assertIsDisplayed().assertIsSelected()
+        rule.onNodeWithContentDescription("Search Chats").performClick()
+        rule.onNodeWithTag("chats.folders").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Close search").performClick()
+        rule.onNodeWithTag(tag).assertIsSelected()
+        rule.runOnIdle { vm.completeSignIn(OnboardingOrigin.AddProfile) }
+        rule.onNodeWithTag("chats.scope.chats").assertIsDisplayed().assertIsSelected()
+    }
+
     @Test fun chatInfoAssignmentUsesSameFolderPicker() {
         val vm = model(); val owner = vm.uiState.activeProfileId!!; val chat = vm.uiState.activeProfile!!.chats.first()
         val folder = vm.createChatFolder(owner, "From Info")!!

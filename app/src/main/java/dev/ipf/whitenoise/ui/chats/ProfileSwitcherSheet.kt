@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise.ui.chats
 
-import androidx.compose.foundation.clickable
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -23,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -55,8 +55,11 @@ fun ProfileSwitcherSheet(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             WhiteNoiseSheetHeader(stringResource(R.string.switch_profile), onClose = onDismiss)
-            LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 520.dp)) {
-                items(presentedProfiles, key = { it.profile.id }) { item ->
+            LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 520.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
+                itemsIndexed(presentedProfiles, key = { _, item -> item.profile.id }) { index, item ->
                     val profile = item.profile
                     val unreadDescription = if (item.unreadCount > 99) {
                         stringResource(R.string.unread_count_capped)
@@ -68,7 +71,9 @@ fun ProfileSwitcherSheet(
                         )
                     }
                     ListItem(
-                        headlineContent = {
+                        onClick = { onSelectProfile(profile.id) },
+                        shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, presentedProfiles.size),
+                        content = {
                             Text(
                                 text = profile.name,
                                 style = MaterialTheme.typography.titleMedium,
@@ -114,11 +119,10 @@ fun ProfileSwitcherSheet(
                             containerColor = if (item.isActive) {
                                 MaterialTheme.colorScheme.surfaceContainerHigh
                             } else {
-                                Color.Transparent
+                                MaterialTheme.colorScheme.surfaceContainerLowest
                             },
                         ),
                         modifier = Modifier
-                            .clickable { onSelectProfile(profile.id) }
                             .testTag("profile_switcher.profile.${profile.id}")
                             .semantics(mergeDescendants = true) {
                                 selected = item.isActive

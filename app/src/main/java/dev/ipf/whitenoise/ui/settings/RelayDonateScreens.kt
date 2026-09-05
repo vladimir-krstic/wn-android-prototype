@@ -113,6 +113,7 @@ fun ProfileRelaysScreen(
             if (importedIssues.isNotEmpty()) {
                 item { SettingsCallout(
                     title = stringResource(R.string.relay_imported_issue_title),
+                    icon = R.drawable.ic_warning,
                     text = stringResource(R.string.relay_imported_issue_detail),
                     modifier = Modifier.padding(top = WhiteNoiseSpacing.Section).testTag("relays.imported.issue"),
                 ) }
@@ -122,6 +123,7 @@ fun ProfileRelaysScreen(
                 item {
                     SettingsCallout(
                         title = stringResource(R.string.ui_profile_relays_need_attention),
+                        icon = R.drawable.ic_warning,
                         text = recovery,
                         modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     )
@@ -141,25 +143,26 @@ fun ProfileRelaysScreen(
             item { SettingsSection(stringResource(R.string.ui_profile_relays)) }
             item {
                 SettingsGroup(modifier = Modifier.testTag("relays.group")) {
-                    profile.settings.relays.forEachIndexed { index, relay ->
-                        RelayListRow(
-                            relay = relay,
-                            onClick = { onRelay(relay.id) },
-                        )
-                        SettingsDivider(
-                            Modifier.testTag("relays.divider.$index"),
+                    profile.settings.relays.forEach { relay ->
+                        item {
+                            RelayListRow(
+                                relay = relay,
+                                onClick = { onRelay(relay.id) },
+                            )
+                        }
+                    }
+                    row {
+                        SettingsAction(
+                            title = stringResource(R.string.add_relay),
+                            leading = {
+                                Icon(
+                                    painterResource(R.drawable.ic_add),
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = { addSheet = true },
                         )
                     }
-                    SettingsAction(
-                        title = stringResource(R.string.add_relay),
-                        leading = {
-                            Icon(
-                                painterResource(R.drawable.ic_add),
-                                contentDescription = null,
-                            )
-                        },
-                        onClick = { addSheet = true },
-                    )
                 }
             }
             item {
@@ -238,38 +241,39 @@ fun ProfileRelayDetailsScreen(
                         .padding(top = WhiteNoiseSpacing.Section)
                         .testTag("relay.details.metadata"),
                 ) {
-                    RelayMetadataRow(stringResource(R.string.name), relay.name)
-                    SettingsDivider()
-                    RelayMetadataRow(
-                        title = stringResource(R.string.url),
-                        value = relay.url,
-                    )
-                    SettingsDivider()
-                    RelayMetadataRow(
-                        title = stringResource(R.string.message_status),
-                        value = relayStatusLabel(relay.status),
-                        status = relay.status,
-                    )
+                    item {
+                        RelayMetadataRow(stringResource(R.string.name), relay.name)
+                    }
+                    item {
+                        RelayMetadataRow(
+                            title = stringResource(R.string.url),
+                            value = relay.url,
+                        )
+                    }
+                    item {
+                        RelayMetadataRow(
+                            title = stringResource(R.string.message_status),
+                            value = relayStatusLabel(relay.status),
+                            status = relay.status,
+                        )
+                    }
                 }
             }
             item { SettingsSection(stringResource(R.string.ui_use_for)) }
             item {
                 SettingsGroup(modifier = Modifier.testTag("relay.details.roles")) {
-                    RelayRole.entries.forEachIndexed { index, role ->
-                        SettingsSwitch(
-                            title = relayRoleLabel(role),
-                            checked = role in relay.roles,
-                            enabled = !relay.isReadOnly,
-                            onCheckedChange = { onSetRole(role, it) },
-                            subtitle = when (role) {
-                                RelayRole.Profile -> stringResource(R.string.relay_role_profile_help)
-                                RelayRole.Inbox -> stringResource(R.string.relay_role_inbox_help)
-                                RelayRole.ChatMessages -> stringResource(R.string.relay_role_chat_messages_help)
-                            },
-                        )
-                        if (index != RelayRole.entries.lastIndex) {
-                            SettingsDivider(
-                                Modifier.testTag("relay.details.role.divider.$index"),
+                    RelayRole.entries.forEach { role ->
+                        row {
+                            SettingsSwitch(
+                                title = relayRoleLabel(role),
+                                checked = role in relay.roles,
+                                enabled = !relay.isReadOnly,
+                                onCheckedChange = { onSetRole(role, it) },
+                                subtitle = when (role) {
+                                    RelayRole.Profile -> stringResource(R.string.relay_role_profile_help)
+                                    RelayRole.Inbox -> stringResource(R.string.relay_role_inbox_help)
+                                    RelayRole.ChatMessages -> stringResource(R.string.relay_role_chat_messages_help)
+                                },
                             )
                         }
                     }
@@ -283,11 +287,13 @@ fun ProfileRelayDetailsScreen(
             if (!relay.isReadOnly) {
                 item {
                     SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                        SettingsAction(
-                            title = stringResource(R.string.remove_relay),
-                            onClick = { removeDialog = true },
-                            destructive = true,
-                        )
+                        row {
+                            SettingsAction(
+                                title = stringResource(R.string.remove_relay),
+                                onClick = { removeDialog = true },
+                                destructive = true,
+                            )
+                        }
                     }
                 }
             }
@@ -489,21 +495,22 @@ private fun AddRelaySheet(
                 )
                 SettingsSection(stringResource(R.string.ui_use_for))
                 SettingsGroup(modifier = Modifier.testTag("relay.add.roles")) {
-                    RelayRole.entries.forEachIndexed { index, role ->
-                        SettingsSwitch(
-                            title = relayRoleLabel(role),
-                            checked = role in roles,
-                            onCheckedChange = { selected ->
-                                roles = if (selected) roles + role else roles - role
-                                rejectedValue = null
-                            },
-                            subtitle = when (role) {
-                                RelayRole.Profile -> stringResource(R.string.relay_role_profile_help)
-                                RelayRole.Inbox -> stringResource(R.string.relay_role_inbox_help)
-                                RelayRole.ChatMessages -> stringResource(R.string.relay_role_chat_messages_help)
-                            },
-                        )
-                        if (index != RelayRole.entries.lastIndex) SettingsDivider()
+                    RelayRole.entries.forEach { role ->
+                        row {
+                            SettingsSwitch(
+                                title = relayRoleLabel(role),
+                                checked = role in roles,
+                                onCheckedChange = { selected ->
+                                    roles = if (selected) roles + role else roles - role
+                                    rejectedValue = null
+                                },
+                                subtitle = when (role) {
+                                    RelayRole.Profile -> stringResource(R.string.relay_role_profile_help)
+                                    RelayRole.Inbox -> stringResource(R.string.relay_role_inbox_help)
+                                    RelayRole.ChatMessages -> stringResource(R.string.relay_role_chat_messages_help)
+                                },
+                            )
+                        }
                     }
                 }
                 if (roles.isEmpty()) {

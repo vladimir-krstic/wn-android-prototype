@@ -47,11 +47,13 @@ The pinned production baseline is
 - A self-managed fixture exposes **App updates** in Settings. Unknown, checking,
   failed and current states tap to check/retry. Available state starts the
   update review.
-- Chats shows an update banner only for a newer release. One- and two-release
-  warnings can be dismissed for the current latest version. A warning at three
-  or more releases behind has no Dismiss action.
+- Chats shows a compact update icon immediately before Filters only for a newer
+  release on a self-managed distribution. It opens Settings without beginning
+  update resolution. Search and selection mode omit the icon. Ordinary Chats
+  has no update banner or dismiss action; previous banner dismissal does not
+  suppress the compact availability icon.
 - Discovering a different newer version clears the prior per-version dismissal.
-- A store-managed fixture has no Settings update section, Chats banner or
+- A store-managed fixture has no Settings update section, Chats update icon or
   self-update transition.
 - Update review moves through Resolving → Confirming → Downloading → Verifying
   → Ready. Download completion never implies verification.
@@ -66,9 +68,11 @@ The pinned production baseline is
 
 ## Entry, navigation, Back, and exit
 
-Self-managed Settings includes **App updates** between preferences and Help.
+Self-managed Settings places a gray **App updates** row immediately below the
+profile/account switcher and before preferences.
 Chats shows the warning as the first content card above connection state. Both
-**Update now** and an available Settings row open the same app-owned modal flow.
+The Chats update icon opens Settings, where an available update row starts the
+app-owned modal flow.
 
 Dialog Back, outside dismissal and Cancel stop the owned generation and return
 to the same Chats or Settings destination. Navigation between those destinations
@@ -76,10 +80,9 @@ keeps the app-wide flow visible. Store-managed mode exposes no entry.
 
 ## Exact product copy
 
-Ordinary resource-backed copy includes **App updates**, **Zapstore release**,
+Ordinary resource-backed copy includes **App updates**, **Check for updates**,
 **Checking for updates…**, **Up to date**, **Update available**, **Important
-update available**, **Version %1$s is available on Zapstore.**, **%1$d releases
-behind**, **Update now**, **Dismiss update**, **Checking release**, **Download
+update available**, **Version %1$s is available on Zapstore.**, **Update now**, **Dismiss update**, **Checking release**, **Download
 update?**, **Download**, **Downloading update**, **Cancel download**, **Verifying
 update**, **Ready to install**, **Install**, **Allow installs from this app**,
 **Open settings**, **Update failed**, **Retry** and **Cancel**.
@@ -95,8 +98,10 @@ content order. It uses visible status text, one primary **Update now** action
 and an icon-only close action with the explicit **Dismiss update** name only
 when the release can be dismissed.
 
-Settings uses the established section/group/link hierarchy and package-owned
-installed version. Modal Material alerts own confirmation, cancellation and
+Settings uses the established grouped link with a neutral gray container. It
+shows only the available target version, or a concise check/current/failure
+status; installed version and release-gap counts are omitted from ordinary
+update surfaces. Modal Material alerts own confirmation, cancellation and
 errors. Resolving and verifying use indeterminate progress; download uses a
 determinate Material progress indicator. The UI uses the existing monochrome
 semantic roles and shared 4/8 dp rhythm.
@@ -163,7 +168,8 @@ the Q06 boundary already authorized for deterministic implementations.
 
 ## Observable acceptance criteria
 
-- Self-managed Settings renders installed/current/check/available/failure facts.
+- Self-managed Settings renders target-version/current/check/available/failure
+  facts without installed-version or release-count text.
 - Store-managed mode renders no update row or banner and starts no flow.
 - Normal banner dismissal applies only to the displayed latest version.
 - An important three-release warning has no dismiss action.
@@ -190,3 +196,47 @@ compiles all eight new Compose cases, reports zero lint errors with 15 retained
 warnings and two hints, and builds the debug app and instrumentation APKs.
 Device execution, screenshots, external platform surfaces and visual acceptance
 were not requested and are not claimed.
+
+## 2026-09-05 — update row placement and concise summary
+
+The user requested App updates immediately below the account switcher, gray
+styling, and only the version being offered. `SettingsScreen` now places the
+update row after `SettingsProfileHeader`, ahead of preference groups.
+`AppUpdateSettingsGroup` uses `surfaceContainer`, the shared segmented row shape,
+and the title App updates. Available copy reads “Version [target] is available
+on Zapstore.” Other states use concise status text without the installed version.
+The separate section heading is removed.
+
+The Chats callout also omits release-gap counts. Internal version comparison,
+important-update classification, dismissal rules, developer diagnostics, and
+update actions are unchanged. Search continues to suppress the update callout.
+Obsolete version-comparison strings/plurals are removed from all five locales;
+short check/current status is localized. Existing update interaction cases now
+expect the concise copy and absence of the count. The host gate
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 895 unit tests with zero failures/errors/skips, zero lint errors (16
+existing warnings and two hints), and both debug APKs. Interaction cases compile
+only; no device or visual inspection was requested.
+
+## 2026-09-05 — compact Chats update entry
+
+The user replaced the large Chats update callout with an icon immediately before
+Filters, opening Settings to the gray update card below the account switcher.
+`AppUpdateIconButton` now uses the native 48 dp icon-button target and download
+symbol, with App updates as its accessible name and normal/important availability
+as its state description. The regular `ChatsTopBar` owns this action; Search and
+selection bars omit it. The large banner composable and list item are removed.
+
+Visibility follows self-managed distribution and an available newer version.
+Legacy banner dismissal does not hide this compact entry. Pressing it calls the
+existing Settings navigation callback and leaves the self-update flow Idle.
+The Settings row retains its update-review action and target-version-only copy.
+No update execution or external system capability is added.
+
+`AppUpdateInteractionTest` replaces banner cases with the actual Chats → Settings
+path, Search suppression, important-update navigation, store-managed absence,
+and large-type action reachability. Existing update-flow checks remain.
+The host gate `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 895 unit tests with zero failures/errors/skips, zero lint errors (18
+warnings, including two unused legacy banner labels, and two hints), and both debug APKs. Updated interaction cases
+compile only; no device/visual inspection was requested.

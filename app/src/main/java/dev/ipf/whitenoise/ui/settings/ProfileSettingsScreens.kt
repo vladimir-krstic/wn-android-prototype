@@ -16,7 +16,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -199,87 +198,12 @@ fun SettingsScreen(
                     },
                 )
             }
-            item {
-                SettingsGroup(
-                    modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField),
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                ) {
-                    SettingsHubLink(
-                        title = stringResource(R.string.ui_profile),
-                        icon = R.drawable.ic_settings_account_circle,
-                        iconTag = "profile",
-                        onClick = onEditProfile,
-                        subtitle = if (canEditProfile) null else stringResource(R.string.profile_relay_required_to_edit),
-                        enabled = canEditProfile,
-                    )
-                    SettingsDivider(Modifier.testTag("settings.destinations.divider.0"))
-                    SettingsHubLink(
-                        title = stringResource(R.string.ui_profile_keys),
-                        icon = R.drawable.ic_settings_key,
-                        iconTag = "profile_keys",
-                        onClick = onProfileKeys,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.ai_agents_title),
-                        icon = R.drawable.ic_settings_person_add,
-                        iconTag = "ai_agents",
-                        onClick = onAiAgents,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(title = stringResource(R.string.chat_folders), icon = R.drawable.ic_filter_list, iconTag = "folders", onClick = onFolders)
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.notification_controls_title),
-                        icon = R.drawable.ic_settings_notifications,
-                        iconTag = "notifications",
-                        onClick = onNotifications,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.read_aloud), icon = R.drawable.ic_volume_up,
-                        iconTag = "read_aloud", onClick = onReadAloud,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.dictation_title), icon = R.drawable.ic_mic,
-                        iconTag = "dictation", onClick = onDictation,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.appearance_title),
-                        icon = R.drawable.ic_settings_contrast,
-                        iconTag = "appearance",
-                        onClick = onAppearance,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.ui_privacy_security),
-                        icon = R.drawable.ic_settings_front_hand,
-                        iconTag = "privacy_security",
-                        onClick = onPrivacy,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.data_usage_title),
-                        icon = R.drawable.ic_settings_hard_drive,
-                        iconTag = "data_usage",
-                        onClick = onDataUsage,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.relays),
-                        icon = R.drawable.ic_settings_cell_tower,
-                        iconTag = "relays",
-                        onClick = onRelays,
-                    )
-                }
-            }
             appUpdates?.state?.let { update ->
                 if (dev.ipf.whitenoise.model.AppUpdates.showsSettings(update)) {
                     item {
                         AppUpdateSettingsGroup(
                             state = update,
+                            modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField),
                             onAction = {
                                 if (dev.ipf.whitenoise.model.AppUpdates.isAvailable(appUpdates.state)) {
                                     appUpdates.beginSelfUpdate()
@@ -293,36 +217,90 @@ fun SettingsScreen(
             }
             item {
                 SettingsGroup(
-                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.FormField),
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
-                    SettingsHubLink(
-                        title = stringResource(R.string.help_title),
-                        icon = R.drawable.ic_info,
-                        iconTag = "help",
-                        onClick = onHelp,
-                    )
-                    SettingsDivider(Modifier.testTag("settings.help.divider.help"))
-                    SettingsHubLink(
-                        title = stringResource(R.string.ui_chat_with_support),
-                        icon = R.drawable.ic_settings_chat_bubble_outline,
-                        iconTag = "support",
-                        onClick = onSupport,
-                    )
-                    SettingsDivider(Modifier.testTag("settings.help.divider.0"))
-                    SettingsHubLink(
-                        title = stringResource(R.string.ui_donate),
-                        icon = R.drawable.ic_settings_favorite_border,
-                        iconTag = "donate",
-                        onClick = onDonate,
-                    )
-                    SettingsDivider()
-                    SettingsHubLink(
-                        title = stringResource(R.string.developer_tools),
-                        icon = R.drawable.ic_settings_handyman,
-                        iconTag = "developer_tools",
-                        onClick = onDeveloperTools,
-                    )
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.ui_profile),
+                            icon = R.drawable.ic_settings_account_circle,
+                            iconTag = "profile",
+                            onClick = onEditProfile,
+                            subtitle = if (canEditProfile) null else stringResource(R.string.profile_relay_required_to_edit),
+                            enabled = canEditProfile,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.ui_profile_keys),
+                            icon = R.drawable.ic_settings_key,
+                            iconTag = "profile_keys",
+                            onClick = onProfileKeys,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.ai_agents_title),
+                            icon = R.drawable.ic_settings_person_add,
+                            iconTag = "ai_agents",
+                            onClick = onAiAgents,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(title = stringResource(R.string.chat_folders), icon = R.drawable.ic_folder, iconTag = "folders", onClick = onFolders)
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.notification_controls_title),
+                            icon = R.drawable.ic_settings_notifications,
+                            iconTag = "notifications",
+                            onClick = onNotifications,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.read_aloud), icon = R.drawable.ic_volume_up,
+                            iconTag = "read_aloud", onClick = onReadAloud,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.dictation_title), icon = R.drawable.ic_mic,
+                            iconTag = "dictation", onClick = onDictation,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.appearance_title),
+                            icon = R.drawable.ic_settings_contrast,
+                            iconTag = "appearance",
+                            onClick = onAppearance,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.ui_privacy_security),
+                            icon = R.drawable.ic_settings_front_hand,
+                            iconTag = "privacy_security",
+                            onClick = onPrivacy,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.data_usage_title),
+                            icon = R.drawable.ic_settings_hard_drive,
+                            iconTag = "data_usage",
+                            onClick = onDataUsage,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.relays),
+                            icon = R.drawable.ic_settings_cell_tower,
+                            iconTag = "relays",
+                            onClick = onRelays,
+                        )
+                    }
                 }
             }
             item {
@@ -330,13 +308,54 @@ fun SettingsScreen(
                     modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
-                    SettingsHubLink(
-                        title = stringResource(R.string.ui_sign_out),
-                        icon = R.drawable.ic_settings_logout,
-                        iconTag = "sign_out",
-                        onClick = { signOutOpen = true },
-                        destructive = true,
-                    )
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.help_title),
+                            icon = R.drawable.ic_info,
+                            iconTag = "help",
+                            onClick = onHelp,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.ui_chat_with_support),
+                            icon = R.drawable.ic_settings_chat_bubble_outline,
+                            iconTag = "support",
+                            onClick = onSupport,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.ui_donate),
+                            icon = R.drawable.ic_settings_favorite_border,
+                            iconTag = "donate",
+                            onClick = onDonate,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.developer_tools),
+                            icon = R.drawable.ic_settings_handyman,
+                            iconTag = "developer_tools",
+                            onClick = onDeveloperTools,
+                        )
+                    }
+                }
+            }
+            item {
+                SettingsGroup(
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ) {
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.ui_sign_out),
+                            icon = R.drawable.ic_settings_logout,
+                            iconTag = "sign_out",
+                            onClick = { signOutOpen = true },
+                            destructive = true,
+                        )
+                    }
                 }
             }
             item { SettingsVersionFooter(BuildConfig.VERSION_NAME) }
@@ -423,79 +442,77 @@ private fun SettingsProfileHeader(
             .testTag("settings.profile_group"),
     ) {
         SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
-            ListItem(
-                headlineContent = {
-                    Text(
-                        text = profile.name,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        text = profile.shortPublicKey,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                leadingContent = {
-                    ProfileAvatar(
-                        name = profile.name,
-                        avatar = profile.avatar,
-                        modifier = Modifier.size(56.dp),
-                        contentDescription = null,
-                    )
-                },
-                trailingContent = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_settings_qr_code_2),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
+            item {
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = profile.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium,
                         )
-                        Icon(
-                            painter = painterResource(R.drawable.ic_chevron_right),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onShareConnect)
-                    .testTag("settings.active_profile")
-                    .semantics(mergeDescendants = true) {
-                        contentDescription = shareDescription
-                        role = Role.Button
                     },
-            )
-            SettingsDivider(Modifier.testTag("settings.profile.divider"))
-            ProfileManagementRow(
-                presentation = management,
-                expanded = expanded,
-                onClick = onProfileManagement,
-            )
-            AnimatedVisibility(
-                visible = expanded && management != ProfileManagementPresentation.Add,
-            ) {
-                Column {
-                    SettingsDivider()
-                    alternateProfiles.forEachIndexed { index, alternate ->
+                    supportingContent = {
+                        Text(
+                            text = profile.shortPublicKey,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    leadingContent = {
+                        ProfileAvatar(
+                            name = profile.name,
+                            avatar = profile.avatar,
+                            modifier = Modifier.size(56.dp),
+                            contentDescription = null,
+                        )
+                    },
+                    trailingContent = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings_qr_code_2),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Icon(
+                                painter = painterResource(R.drawable.ic_chevron_right),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onShareConnect)
+                        .testTag("settings.active_profile")
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = shareDescription
+                            role = Role.Button
+                        },
+                )
+            }
+            item {
+                ProfileManagementRow(
+                    presentation = management,
+                    expanded = expanded,
+                    onClick = onProfileManagement,
+                )
+            }
+            if (expanded && management != ProfileManagementPresentation.Add) {
+                alternateProfiles.forEach { alternate ->
+                    item {
                         InlineAlternateProfileRow(
                             presentation = alternate,
                             onClick = { onSelectProfile(alternate.profile.id) },
                         )
-                        if (index < alternateProfiles.lastIndex) {
-                            SettingsDivider()
-                        }
                     }
-                    SettingsDivider()
+                }
+                item {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.add_profile)) },
                         leadingContent = {
@@ -917,102 +934,110 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
             item { SettingsSection(stringResource(R.string.ui_public_key)) }
             item {
                 SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
-                    ProfileKeyValueRow(
-                        value = profile.publicKey,
-                        valueModifier = Modifier.testTag("profile_keys.public_key_value"),
-                        trailingAction = {
-                            IconButton(
-                                onClick = {
-                                    copyToClipboard(context, publicKeyLabel, profile.publicKey)
-                                    copiedKey = CopiedProfileKey.Public
-                                },
-                            ) {
-                                val copied = copiedKey == CopiedProfileKey.Public
-                                Icon(
-                                    painter = painterResource(
-                                        if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
-                                    ),
-                                    contentDescription = if (copied) publicKeyCopied else copyPublicKey,
-                                )
-                            }
-                        },
-                    )
+                    item {
+                        ProfileKeyValueRow(
+                            value = profile.publicKey,
+                            valueModifier = Modifier.testTag("profile_keys.public_key_value"),
+                            trailingAction = {
+                                IconButton(
+                                    onClick = {
+                                        copyToClipboard(context, publicKeyLabel, profile.publicKey)
+                                        copiedKey = CopiedProfileKey.Public
+                                    },
+                                ) {
+                                    val copied = copiedKey == CopiedProfileKey.Public
+                                    Icon(
+                                        painter = painterResource(
+                                            if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
+                                        ),
+                                        contentDescription = if (copied) publicKeyCopied else copyPublicKey,
+                                    )
+                                }
+                            },
+                        )
+                    }
                 }
             }
             item {
                 ProfileKeySupportingText(stringResource(R.string.profile_public_key_help))
             }
             if (!hasLocalKey) {
-                item { SettingsSection(stringResource(R.string.access_signing)) }
-                item { SettingsExplainer(stringResource(R.string.access_amber_owns_key)) }
+                item { SettingsCallout(
+                    title = stringResource(R.string.access_amber_signed_in),
+                    text = stringResource(R.string.access_amber_owns_key),
+                    modifier = Modifier.testTag("profile_keys.amber_info"),
+                ) }
             } else if (!canReadKey) {
-                item { SettingsExplainer(stringResource(R.string.key_access_unavailable)) }
+                item { SettingsCallout(stringResource(R.string.key_access_unavailable), icon = R.drawable.ic_warning) }
                 item { SettingsAction(stringResource(R.string.try_again), onClick = onRetryKey) }
             } else {
                 item { SettingsSection(stringResource(R.string.ui_private_key)) }
                 item {
                     SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
-                        ProfileKeyValueRow(
-                            value = if (showPrivate) {
-                                ProfileKeyFixtures.PRIVATE_KEY
-                            } else {
-                                "••••••••••••••••••••••••••••••••"
-                            },
-                            overflow = if (showPrivate) {
-                                TextOverflow.MiddleEllipsis
-                            } else {
-                                TextOverflow.Clip
-                            },
-                            valueModifier = Modifier
-                                .testTag("profile_keys.private_key_value")
-                                .clearAndSetSemantics {
-                                    contentDescription = if (showPrivate) {
-                                        privateKeyRevealed
-                                    } else {
-                                        privateKeyHidden
+                        item {
+                            ProfileKeyValueRow(
+                                value = if (showPrivate) {
+                                    ProfileKeyFixtures.PRIVATE_KEY
+                                } else {
+                                    "••••••••••••••••••••••••••••••••"
+                                },
+                                overflow = if (showPrivate) {
+                                    TextOverflow.MiddleEllipsis
+                                } else {
+                                    TextOverflow.Clip
+                                },
+                                valueModifier = Modifier
+                                    .testTag("profile_keys.private_key_value")
+                                    .clearAndSetSemantics {
+                                        contentDescription = if (showPrivate) {
+                                            privateKeyRevealed
+                                        } else {
+                                            privateKeyHidden
+                                        }
+                                    },
+                                trailingAction = {
+                                    IconButton(onClick = { showPrivate = !showPrivate }) {
+                                        Icon(
+                                            painter = painterResource(
+                                                if (showPrivate) {
+                                                    R.drawable.ic_visibility_off
+                                                } else {
+                                                    R.drawable.ic_visibility
+                                                },
+                                            ),
+                                            contentDescription = if (showPrivate) {
+                                                hidePrivateKey
+                                            } else {
+                                                showPrivateKey
+                                            },
+                                        )
                                     }
                                 },
-                            trailingAction = {
-                                IconButton(onClick = { showPrivate = !showPrivate }) {
+                            )
+                        }
+                        row {
+                            SettingsAction(
+                                title = stringResource(R.string.ui_copy_private_key),
+                                onClick = {
+                                    copyToClipboard(
+                                        context = context,
+                                        label = privateKeyLabel,
+                                        text = ProfileKeyFixtures.PRIVATE_KEY,
+                                        isSensitive = true,
+                                    )
+                                    copiedKey = CopiedProfileKey.Private
+                                },
+                                leading = {
+                                    val copied = copiedKey == CopiedProfileKey.Private
                                     Icon(
                                         painter = painterResource(
-                                            if (showPrivate) {
-                                                R.drawable.ic_visibility_off
-                                            } else {
-                                                R.drawable.ic_visibility
-                                            },
+                                            if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
                                         ),
-                                        contentDescription = if (showPrivate) {
-                                            hidePrivateKey
-                                        } else {
-                                            showPrivateKey
-                                        },
+                                        contentDescription = null,
                                     )
-                                }
-                            },
-                        )
-                        SettingsDivider()
-                        SettingsAction(
-                            title = stringResource(R.string.ui_copy_private_key),
-                            onClick = {
-                                copyToClipboard(
-                                    context = context,
-                                    label = privateKeyLabel,
-                                    text = ProfileKeyFixtures.PRIVATE_KEY,
-                                    isSensitive = true,
-                                )
-                                copiedKey = CopiedProfileKey.Private
-                            },
-                            leading = {
-                                val copied = copiedKey == CopiedProfileKey.Private
-                                Icon(
-                                    painter = painterResource(
-                                        if (copied) R.drawable.ic_check else R.drawable.ic_content_copy,
-                                    ),
-                                    contentDescription = null,
-                                )
-                            },
-                        )
+                                },
+                            )
+                        }
                     }
                 }
                 item {
@@ -1023,30 +1048,33 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
                 item { SettingsSection(stringResource(R.string.ui_export)) }
                 item {
                     SettingsGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
-                        SettingsAction(
-                            title = stringResource(R.string.ui_export_encrypted_private_key),
-                            enabled = pendingExport == null,
-                            onClick = { passwordDialog = true },
-                            leading = {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_lock),
-                                    contentDescription = null,
-                                )
-                            },
-                        )
-                        SettingsDivider()
-                        SettingsAction(
-                            title = stringResource(R.string.ui_export_private_key),
-                            enabled = pendingExport == null,
-                            onClick = { rawExportDialog = true },
-                            modifier = Modifier.testTag("profile_keys.export_raw"),
-                            leading = {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_download),
-                                    contentDescription = null,
-                                )
-                            },
-                        )
+                        row {
+                            SettingsAction(
+                                title = stringResource(R.string.ui_export_encrypted_private_key),
+                                enabled = pendingExport == null,
+                                onClick = { passwordDialog = true },
+                                leading = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_lock),
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                        }
+                        row {
+                            SettingsAction(
+                                title = stringResource(R.string.ui_export_private_key),
+                                enabled = pendingExport == null,
+                                onClick = { rawExportDialog = true },
+                                modifier = Modifier.testTag("profile_keys.export_raw"),
+                                leading = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_download),
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }

@@ -39,35 +39,37 @@ fun SupportScreen(
         SettingsList {
             item {
                 SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                stringResource(R.string.ui_white_noise_support),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        },
-                        supportingContent = {
-                            Text(
-                                stringResource(R.string.ui_questions_problems_and_suggestions),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        },
-                        leadingContent = {
-                            Surface(
-                                modifier = Modifier.size(48.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                contentColor = MaterialTheme.colorScheme.onSurface,
-                                shape = CircleShape,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_settings_chat_bubble_outline),
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(12.dp),
+                    item {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.ui_white_noise_support),
+                                    style = MaterialTheme.typography.titleMedium,
                                 )
-                            }
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                            },
+                            supportingContent = {
+                                Text(
+                                    stringResource(R.string.ui_questions_problems_and_suggestions),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            leadingContent = {
+                                Surface(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    shape = CircleShape,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_settings_chat_bubble_outline),
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(12.dp),
+                                    )
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                    }
                 }
                 SettingsExplainer(
                     stringResource(R.string.ui_ask_how_something_works_report_a_problem_or_share_a_su),
@@ -77,17 +79,20 @@ fun SupportScreen(
                 item {
                     SettingsCallout(
                         title = stringResource(R.string.ui_profile_relays_need_attention),
+                        icon = R.drawable.ic_warning,
                         text = stringResource(R.string.support_chat_relay_required),
                         modifier = Modifier.padding(top = WhiteNoiseSpacing.Section),
                     )
                 }
                 item {
                     SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Related)) {
-                        SettingsLink(
-                            title = stringResource(R.string.ui_open_relays),
-                            subtitle = stringResource(R.string.ui_review_connection_status_and_chat_messages_roles),
-                            onClick = onRelays,
-                        )
+                        row {
+                            SettingsLink(
+                                title = stringResource(R.string.ui_open_relays),
+                                subtitle = stringResource(R.string.ui_review_connection_status_and_chat_messages_roles),
+                                onClick = onRelays,
+                            )
+                        }
                     }
                 }
             }

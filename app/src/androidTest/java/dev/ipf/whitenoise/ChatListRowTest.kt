@@ -176,8 +176,8 @@ class ChatListRowTest {
             // Side gutters and rounded corners expose the screen; the top-center is highlighted.
             assertColor(surface, pixels[2, middleY])
             assertColor(surface, pixels[pixels.width - 3, middleY])
-            assertColor(surface, pixels[9, top + 1])
-            assertColor(surface, pixels[pixels.width - 10, top + 1])
+            assertColor(surface, pixels[8, top])
+            assertColor(surface, pixels[pixels.width - 9, top])
             assertColor(highlight, pixels[pixels.width / 2, top + 1])
             pressBack()
             row.assertIsNotSelected()

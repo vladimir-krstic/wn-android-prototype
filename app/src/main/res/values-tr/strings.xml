@@ -58,6 +58,7 @@
     <string name="signing_in">Oturum Açılıyor…</string>
     <string name="sign_in_with_amber">Amber ile giriş yap</string>
     <string name="access_signing">İmzalama</string>
+    <string name="access_amber_signed_in">Amber ile giriş yapıldı</string>
     <string name="access_amber_owns_key">Amber bu profilin Özel Anahtarını tutar. Yedeklemeleri Amber\'de yönetin.</string>
     <string name="private_key_public_error">Bu bir Genel Anahtardır. Oturum açmak için Özel Anahtarınızı girin.</string>
     <string name="private_key_encrypted_error">Bu anahtar şifrelenmiştir. Önce yedeklemenizin kilidini açın, ardından Özel Anahtarını girin.</string>
@@ -143,8 +144,6 @@
     <string name="search_chats">Sohbetlerde Ara</string>
     <string name="close_search">Aramayı kapat</string>
     <string name="clear_search">Aramayı temizle</string>
-    <string name="filter_chats">Sohbetleri Filtrele</string>
-    <string name="selected_chat_scope">Seçilen: %1$s</string>
     <string name="open_settings_for">%1$s için Ayarları Aç</string>
     <string name="open_share_connect_for">%1$s için Paylaş ve Bağlan\'ı açın</string>
     <string name="actions_for">%1$s için eylemler</string>
@@ -356,6 +355,8 @@
     </plurals>
     <string name="delete_selected_messages">Seçilen Mesajları Sil</string>
     <string name="forward_selected_messages">Seçilen Mesajları İlet</string>
+    <string name="select_chats">Sohbetleri seç</string>
+    <string name="select_messages">Mesajları seç</string>
     <string name="close_selection">Seçimi Kapat</string>
     <string name="search_messages">Mesajlarda Ara</string>
     <string name="conversation_debug">Konuşma Hata Ayıklama</string>
@@ -447,6 +448,8 @@
     <string name="people_partial">Bazı sonuçlar kullanılamıyor. Gösterilen kişileri kullanabilir veya tekrar deneyebilirsiniz.</string>
     <string name="people_unavailable">Arama kullanılamıyor. Zaten bu cihazda bulunan kişiler hâlâ gösteriliyor.</string>
     <string name="people_retry">Tekrar Deneyin</string>
+    <string name="connect_with_qr">QR koduyla bağlan</string>
+    <string name="invite_friend">Bir arkadaşını davet et</string>
     <string name="people_invite">Daveti paylaş</string>
     <string name="people_invite_text">White Noise:\n%2$s üzerinde %1$s ile bağlantı kurun</string>
     <string name="people_share_unavailable">Paylaşım kullanılamıyor. Tekrar deneyin.</string>
@@ -1319,7 +1322,6 @@
     <string name="download_sent_media">Gönderilen medya</string>
     <string name="download_quality">Medya kalitesi</string>
     <string name="download_quality_help">Yeni fotoğraflar ve sesli mesajlar için geçerlidir. Videolar ve ses dosyaları olduğu gibi gönderilir.</string>
-    <string name="download_quality_detail">Düşük, daha az veri kullanır. Standart, kalite ve boyutu dengeler. Yüksek, daha fazla ayrıntıyı korur. Orijinal mümkün olduğunda fotoğraf kalitesini korur; bazı formatların dönüştürülmesi gerekir. Konum ve cihaz meta verileri her modda fotoğraflardan kaldırılır. Ses kalitesi Düşükten Yükseğe doğru artar; Orijinal, Yüksek ses kalitesini kullanır.</string>
     <string name="download_done">Bitti</string>
     <string name="download_stop_confirmation">Bu profil için bekleyen otomatik indirmeler temizlensin mi? Aktif indirmeler ve kendi başlattığınız indirmeler devam edecektir.</string>
     <string name="download_waiting">İndirmeyi bekliyorum</string>
@@ -1345,18 +1347,17 @@
     <string name="relay_imported_issue_detail">İçe aktarılan geçiş, güvenli bir wss:// adresi kullanmaz. Kaldırın veya güvenli bir yedek ekleyin. Rol atamaları korundu.</string>
     <string name="relay_needs_attention">Dikkat edilmesi gerekiyor</string>
     <string name="ai_agents_title">Yapay Zeka Aracıları</string>
-    <string name="ai_agents_about_section">Yapay zeka ajanları hakkında</string>
-    <string name="ai_agents_about_body">Bir AI aracısı, kendi makinenizde veya sunucunuzda ayrı olarak çalışır. Kurulumdan sonra temsilcinin genel anahtarını ekleyin ve onunla diğer kişiler gibi sohbet edin.</string>
-    <string name="ai_agents_connectors_section">Bağlayıcılar</string>
-    <string name="ai_agents_connectors_body">Temsilcinizi seçin, kurulum istemini gözden geçirin ve ardından istemi o temsilciye kopyalayın. İstem, özel anahtarınızı değil, genel anahtarınızı içerir ve kurulumdan önce onayınızı ister.</string>
+    <string name="ai_agents_about_section">Yapay zekâ ajanınızla sohbet edin</string>
+    <string name="ai_agents_about_body">Kendi bilgisayarınızda veya sunucunuzda çalışan bir ajanı bağlayın.</string>
+    <string name="ai_agents_connectors_section">Bir ajan seçin</string>
+    <string name="ai_agents_connectors_body">Kurulum istemini incelemek ve kopyalamak için bir ajan seçin.</string>
+    <string name="ai_agents_setup_title">%1$s kurulumu</string>
+    <string name="ai_agents_setup_instruction">Bu istemi %1$s içine yapıştırın. Açık anahtarınızı içerir ve kurulumdan önce onay ister.</string>
     <string name="ai_agents_manual_section">Manuel kurulum</string>
-    <string name="ai_agents_manual_body">Temsilci size genel anahtarını verdiğinde yeni bir mesaj başlatın, bu anahtarı arayın ve temsilciyi kişi olarak ekleyin.</string>
-    <string name="ai_agents_public_key_label">Genel anahtarınız</string>
+    <string name="ai_agents_manual_body">Kurulumdan sonra sohbete başlamak için Yeni Mesaj bölümüne ajanın açık anahtarını girin.</string>
     <string name="ai_agents_public_key_unavailable">Genel anahtarınız kullanılamıyor. Ayarlar\'a dönün ve başka bir profil deneyin.</string>
     <string name="ai_agents_copy_public_key">Genel anahtarı kopyala</string>
     <string name="ai_agents_public_key_copied">Genel anahtar kopyalandı.</string>
-    <string name="ai_agents_show_prompt">Kurulum istemini göster</string>
-    <string name="ai_agents_hide_prompt">Kurulum istemini gizle</string>
     <string name="ai_agents_copy_prompt">İstemi kopyala</string>
     <string name="ai_agents_prompt_copied">Kurulum istemi kopyalandı.</string>
     <string name="ai_agents_docs_title">Ajan bağlayıcı belgeleri</string>
@@ -1447,23 +1448,13 @@
     <string name="external_open_failed_detail">Bu hedef şu anda kullanılamıyor. Tekrar deneyin veya Hakkında ve lisanslar\'a dönün.</string>
     <string name="help_retry">Yeniden dene</string>
     <string name="app_updates_title">Uygulama güncellemeleri</string>
-    <string name="app_update_settings_title">Zapstore sürümü</string>
-    <string name="app_update_settings_unknown">Yüklendi: %1$s · Kontrol etmek için dokunun</string>
+    <string name="app_update_settings_unknown">Güncellemeleri kontrol et</string>
     <string name="app_update_settings_checking">Güncellemeler kontrol ediliyor…</string>
-    <string name="app_update_settings_current">Yüklendi: %1$s · Güncel</string>
-    <string name="app_update_settings_available">Yüklendi: %1$s · En son: %2$s · Güncelleme mevcut</string>
-    <plurals name="app_update_settings_available_count">
-        <item quantity="one">Kurulu: %1$s · En son: %2$s · %3$d sürümü geride</item>
-        <item quantity="other">Kurulu: %1$s · En son: %2$s · %3$d geride kaldı</item>
-    </plurals>
+    <string name="app_update_settings_current">Güncel</string>
     <string name="app_update_settings_failed">Güncellemeler kontrol edilemedi. Yeniden denemek için dokunun.</string>
     <string name="app_update_available_title">Güncelleme mevcut</string>
     <string name="app_update_important_title">Önemli güncelleme mevcut</string>
     <string name="app_update_available_detail">%1$s sürümü Zapstore\'da mevcut.</string>
-    <plurals name="app_update_releases_behind">
-        <item quantity="one">%1$d sürüm geride</item>
-        <item quantity="other">%1$d sürüm geride</item>
-    </plurals>
     <string name="app_update_now">Şimdi güncelle</string>
     <string name="app_update_dismiss">Güncellemeyi reddet</string>
     <string name="app_update_resolving_title">Sürüm kontrol ediliyor</string>

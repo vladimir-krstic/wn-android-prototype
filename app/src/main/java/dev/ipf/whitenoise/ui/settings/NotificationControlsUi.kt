@@ -124,33 +124,40 @@ internal fun ConversationNotificationScreen(profile: Profile, chat: Chat, contro
         SettingsList {
             item { SettingsSection(stringResource(R.string.notification_controls_title)) }
             item { SettingsGroup {
-                SettingsSwitch(stringResource(R.string.mute),chat.muteDuration != null, {
-                    if (it) muteOpen = true else controller.request(NotificationChange.Mute(null),chat.id,profile.id)
-                }, subtitle = chat.mutedUntilMillis?.let { stringResource(R.string.notification_muted_until,formatMuteTime(it)) }
-                    ?: stringResource(if (chat.muteDuration != null) R.string.notification_notify_nothing else R.string.notification_mute_detail))
-                SettingsDivider()
-                SettingsLink(stringResource(R.string.notification_notify_for),onClick = { modeOpen = true },
-                    value = stringResource(if (chat.notifyFor == NotifyFor.AllMessages) R.string.notification_notify_all else R.string.notification_notify_mentions))
-                SettingsDivider()
-                SettingsLink(stringResource(R.string.notification_vibration),onClick = { vibrationOpen = true },value = vibrationLabel)
+                row {
+                    SettingsSwitch(stringResource(R.string.mute),chat.muteDuration != null, {
+                        if (it) muteOpen = true else controller.request(NotificationChange.Mute(null),chat.id,profile.id)
+                    }, subtitle = chat.mutedUntilMillis?.let { stringResource(R.string.notification_muted_until,formatMuteTime(it)) }
+                        ?: stringResource(if (chat.muteDuration != null) R.string.notification_notify_nothing else R.string.notification_mute_detail))
+                }
+                row {
+                    SettingsLink(stringResource(R.string.notification_notify_for),onClick = { modeOpen = true },
+                        value = stringResource(if (chat.notifyFor == NotifyFor.AllMessages) R.string.notification_notify_all else R.string.notification_notify_mentions))
+                }
+                row {
+                    SettingsLink(stringResource(R.string.notification_vibration),onClick = { vibrationOpen = true },value = vibrationLabel)
+                }
             } }
             item { SettingsExplainer(stringResource(R.string.notification_notify_restore)) }
             item { SettingsSection(stringResource(R.string.notification_categories)) }
-            item { SettingsExplainer(stringResource(R.string.notification_chat_categories_detail)) }
             NotificationCategory.forChat(chat).forEach { category -> item(key = category.name) {
                 val custom = NotificationControls.usesCustom(chat,category)
                 SettingsGroup(modifier = Modifier.testTag("notification.category.${category.name}")) {
-                    SettingsLink(stringResource(notificationCategoryResource(category)),
-                        subtitle = stringResource(if (custom) R.string.notification_scope_custom else R.string.notification_scope_global),
-                        onClick = { settingsResult = onOpenCategory?.invoke(category,custom) ?: openNotificationCategory(context,category,custom) })
+                    row {
+                        SettingsLink(stringResource(notificationCategoryResource(category)),
+                            subtitle = stringResource(if (custom) R.string.notification_scope_custom else R.string.notification_scope_global),
+                            onClick = { settingsResult = onOpenCategory?.invoke(category,custom) ?: openNotificationCategory(context,category,custom) })
+                    }
                     if (category.overridable) {
-                        SettingsDivider()
-                        SettingsSwitch(stringResource(R.string.notification_scope_custom),custom,{
-                            controller.request(NotificationChange.Scope(category,it),chat.id,profile.id)
-                        },subtitle = stringResource(R.string.notification_scope_switch_detail))
+                        row {
+                            SettingsSwitch(stringResource(R.string.notification_scope_custom),custom,{
+                                controller.request(NotificationChange.Scope(category,it),chat.id,profile.id)
+                            },subtitle = stringResource(R.string.notification_scope_switch_detail))
+                        }
                     }
                 }
             } }
+            item { SettingsExplainer(stringResource(R.string.notification_chat_categories_detail)) }
         }
     }
     if (muteOpen) MuteDurationDialog(onDismiss = { muteOpen = false },selectedDuration = chat.muteDuration,

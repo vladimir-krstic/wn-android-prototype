@@ -54,6 +54,16 @@ data class ConversationReadState(val unreadIds: Set<String>, val observedIds: Se
 data class ConversationUnreadJump(val pendingId: String? = null, val stackActive: Boolean = false, val initialized: Boolean = false)
 
 object ConversationReading {
+    /** Compose supplies pixel estimates for lazy content; include newer, unloaded history. */
+    fun showTailJump(contentPx: Int, offsetPx: Int, viewportPx: Int, loadedItems: Int, newerItems: Int = 0): Boolean {
+        if (contentPx <= 0 || offsetPx < 0 || viewportPx <= 0 || loadedItems <= 0 ||
+            contentPx == Int.MAX_VALUE || offsetPx == Int.MAX_VALUE || viewportPx == Int.MAX_VALUE
+        ) return false
+        val loadedDistance = (contentPx.toLong() - offsetPx - viewportPx).coerceAtLeast(0)
+        val newerDistance = contentPx.toLong() * newerItems.coerceAtLeast(0) / loadedItems
+        return loadedDistance + newerDistance >= viewportPx.toLong() * 2
+    }
+
     fun actuallyVisible(itemStart: Int, itemSize: Int, viewportStart: Int, viewportEnd: Int): Boolean {
         if (itemSize <= 0 || viewportEnd <= viewportStart) return false
         val overlap = minOf(itemStart + itemSize, viewportEnd) - maxOf(itemStart, viewportStart)

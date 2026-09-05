@@ -125,6 +125,46 @@ class AccessStateTest {
     }
 
     @Test
+    fun amberUsesTheRegularAccountForEachSignInOrigin() {
+        OnboardingOrigin.entries.forEach { origin ->
+            val regular = AppViewModel()
+            val amber = AppViewModel()
+            if (origin == OnboardingOrigin.AddProfile) {
+                regular.completeSignIn(OnboardingOrigin.Initial)
+                amber.completeSignIn(OnboardingOrigin.Initial)
+            }
+            assertTrue(regular.beginPrivateKeySignIn(origin, LoginPrototypeData.privateKey))
+            assertTrue(advance(regular))
+            assertTrue(amber.beginAmberSignIn(origin))
+            assertFalse(advance(amber))
+            assertTrue(advance(amber))
+            assertEquals(regular.uiState.activeProfile!!.copy(signingMode = ProfileSigningMode.Amber), amber.uiState.activeProfile)
+            assertEquals(regular.uiState.profiles.map { it.id }, amber.uiState.profiles.map { it.id })
+        }
+    }
+
+    @Test
+    fun switchingSignInMethodPreservesExistingAccountDataWithoutDuplicatingIt() {
+        val vm = AppViewModel()
+        assertTrue(vm.beginProfileCreation(OnboardingOrigin.Initial, "My name", "My bio", null))
+        assertTrue(advance(vm))
+        vm.updateDraftText("catalog-direct-text", "Keep this draft")
+        vm.markChatUnread("catalog-direct-text", true)
+        val expected = vm.uiState.activeProfile!!
+        vm.signOutActiveProfile(wipeData = false)
+        assertTrue(vm.beginAmberSignIn(OnboardingOrigin.Initial))
+        assertFalse(advance(vm))
+        assertTrue(advance(vm))
+        assertEquals(expected.copy(signingMode = ProfileSigningMode.Amber), vm.uiState.activeProfile)
+        assertEquals(1, vm.uiState.profiles.size)
+        vm.signOutActiveProfile(wipeData = false)
+        assertTrue(vm.beginPrivateKeySignIn(OnboardingOrigin.Initial, LoginPrototypeData.privateKey))
+        assertTrue(advance(vm))
+        assertEquals(expected, vm.uiState.activeProfile)
+        assertEquals(1, vm.uiState.profiles.size)
+    }
+
+    @Test
     fun amberCancellationRejectionUnavailabilityAndMismatchNeverCreateAProfile() {
         val cases = mapOf(
             AccessScenario.AmberUnavailable to AccessFailure.AmberUnavailable,
@@ -202,6 +242,16 @@ class AccessStateTest {
         assertTrue(advance(vm))
         assertEquals("Saved name", vm.uiState.activeProfile!!.name)
         assertEquals("Saved about", vm.uiState.activeProfile!!.about)
+    }
+
+    @Test
+    fun ordinaryLaunchIsReadyWithoutWaitingForAStartupCallback() {
+        val vm = AppViewModel()
+        assertEquals(StartupPhase.Ready, vm.startupState.phase)
+        val initialState = vm.uiState
+        vm.advanceStartup(vm.startupState.generation)
+        assertEquals(StartupPhase.Ready, vm.startupState.phase)
+        assertEquals(initialState, vm.uiState)
     }
 
     @Test

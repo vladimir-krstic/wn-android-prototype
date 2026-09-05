@@ -19,8 +19,9 @@ Keep the established plain-text **Copy** and add **Copy Markdown** when formatti
 is present, preserving the complete authored source including link destinations.
 Attachments and the original send time remain unchanged.
 
-**Open message** opens a full reader for authored text, including long messages,
-captions and structured Markdown. **Collapse long messages** is a profile/chat-
+The full reader supports authored text, including long messages, captions and
+structured Markdown. The 2026-09-05 menu polish removes **Open message** from
+bubble actions; **Select text** and **Read more** retain reader access. **Collapse long messages** is a profile/chat-
 owned preference in Chat/Group Info, initially on. Long collapsed bubbles have
 an explicit **Read more** affordance; the reader shows the complete document.
 Its menu reuses eligible reply, reaction, copy, edit, history, selection, speech,

@@ -20,14 +20,20 @@ internal fun DictationSettingsScreen(profile: Profile, onBack: () -> Unit) {
     val send = stringResource(R.string.dictation_send)
     SettingsScaffold(stringResource(R.string.dictation_title), onBack) {
         SettingsList {
-            item { SettingsExplainer(stringResource(R.string.dictation_settings_detail)) }
             item { SettingsGroup {
-                SettingsLink(stringResource(R.string.dictation_finish), value = preferences.finishAfterSilenceMillis?.let { pluralStringResource(R.plurals.dictation_silence, (it / 1_000).toInt(), it / 1_000) } ?: manual,
-                    onClick = { finishOpen = true })
-                SettingsDivider()
-                SettingsLink(stringResource(R.string.dictation_result), value = if (preferences.delivery == DictationDeliveryMode.Paste) paste else send,
-                    onClick = { resultOpen = true })
+                row {
+                    SettingsLink(stringResource(R.string.dictation_finish),
+                        value = preferences.finishAfterSilenceMillis?.let {
+                            pluralStringResource(R.plurals.dictation_silence, (it / 1_000).toInt(), it / 1_000)
+                        } ?: manual,
+                        onClick = { finishOpen = true })
+                }
+                row {
+                    SettingsLink(stringResource(R.string.dictation_result), value = if (preferences.delivery == DictationDeliveryMode.Paste) paste else send,
+                        onClick = { resultOpen = true })
+                }
             } }
+            item { SettingsExplainer(stringResource(R.string.dictation_settings_detail)) }
             if (preferences.delivery == DictationDeliveryMode.Send) item { SettingsExplainer(stringResource(R.string.dictation_send_safety)) }
         }
     }

@@ -10,8 +10,9 @@ C026 and C030. Implemented and host-verified; device/visual acceptance not claim
 
 Preserve the accepted Chats row, header, search, filters, FAB and anchored menus.
 Add Select to the row menu and accessibility actions. Selection shows native
-checkboxes and a contextual app bar with count, close, select-all-visible and
-bulk read/unread, archive/unarchive, folder assignment and Delete. Mixed archive
+checkboxes alongside full avatars and a contextual app bar titled “Select chats”
+with Close. A transparent bottom row holds bulk read/unread, archive/unarchive,
+folder assignment and Delete in its menu, a centered count, and Select All. Mixed archive
 selection offers Archive; all archived offers Unarchive. Back exits selection
 before search. Selection is profile-owned, saved across recreation, reconciled
 to visible rows and cleared after successful operations; failed targets remain.
@@ -97,3 +98,26 @@ B06 still owns management/editor, description, rules and included-person/chat
 pickers, defaults/restore, folder ordering and the Chat Info entry point.
 
 Commit title: `B05: Add chat organization and connection recovery`.
+
+
+## 2026-09-05 chat selection layout
+
+User-requested polish adds an 8 dp gap between selectable chat row surfaces
+(4 dp outside each row vertically) while preserving the rounded selected tint.
+Checkboxes sit beside the existing 52 dp avatar and pin badge; title, preview,
+timestamp and status remain visible within the adaptive row. Ordinary chat rows
+keep their current spacing.
+
+The header uses “Select chats” and Close. A pinned bottom row has no backing
+Surface: native tonal More actions and Select All buttons flank a centered tonal
+count capsule. Paired secondaryContainer/onSecondaryContainer colors retain
+contrast in both themes. Shared margins and system/keyboard insets keep controls
+clear; Scaffold bottom padding keeps the final chat reachable above them. Text
+can wrap with font scaling. The count is a polite live region. Existing current-
+filter Select All, bulk operations, Back, restoration and profile ownership stay
+intact. Interaction coverage checks avatars, row separation, one centered count
+and the bottom Select All route; it is compiled only. Device acceptance pending.
+
+Chat-selection host gate: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 898 unit tests, zero lint errors and both APKs assembled. The new
+Compose interaction coverage compiles only. `git diff --check` passes.

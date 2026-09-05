@@ -2,18 +2,15 @@
 
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -22,6 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEntityPickerSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoisePickerItem
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
@@ -30,7 +29,6 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
-import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 @Composable
@@ -50,8 +48,12 @@ fun ChatFoldersScreen(profile: Profile, onBack: () -> Unit, onCreate: () -> Unit
                     onEdit = { onEdit(folder.id) }, onMove = { onMove(folder.id, it) }, onDelete = { deleteId = folder.id })
             }
             item {
-                SettingsGroup { SettingsAction(stringResource(R.string.folder_restore), onClick = onRestore,
-                    enabled = ChatFolders.defaults.any { default -> profile.chatFolders.none { it.id == default.id } }) }
+                SettingsGroup {
+                    row {
+                        SettingsAction(stringResource(R.string.folder_restore), onClick = onRestore,
+                                           enabled = ChatFolders.defaults.any { default -> profile.chatFolders.none { it.id == default.id } })
+                    }
+                }
                 SettingsExplainer(stringResource(R.string.folder_restore_hint))
             }
         }
@@ -75,19 +77,25 @@ private fun FolderManageRow(folder: ChatFolder, count: Int, canMoveUp: Boolean, 
         add(WhiteNoiseMenuItem(stringResource(R.string.delete), onClick = onDelete, destructive = true))
     }
     SettingsGroup {
-        ListItem(onClick = onEdit, onLongClick = { menu = true },
-            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-            modifier = Modifier.testTag("folder.row.${folder.id}").semantics {
-                customActions = choices.map { choice -> CustomAccessibilityAction(choice.label) { choice.onClick(); true } }
-            },
-            supportingContent = { Text(pluralStringResource(R.plurals.folder_chat_count, count, count) + folder.description.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()) },
-            trailingContent = {
-                Box {
-                    IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.actions_for, folder.name)) }
-                    WhiteNoiseDropdownMenu(menu, { menu = false }, items = choices.map { choice -> choice.copy(onClick = { menu = false; choice.onClick() }) })
-                }
-            },
-        ) { Text(folder.name, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+        item {
+            ListItem(shapes = WhiteNoiseListItemDefaults.shapes(), onClick = onEdit, onLongClick = { menu = true },
+                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                modifier = Modifier.testTag("folder.row.${folder.id}").semantics {
+                    customActions = choices.map { choice -> CustomAccessibilityAction(choice.label) { choice.onClick(); true } }
+                },
+                leadingContent = {
+                    Icon(painterResource(R.drawable.ic_folder), contentDescription = null,
+                        modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                },
+                supportingContent = { Text(pluralStringResource(R.plurals.folder_chat_count, count, count) + folder.description.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()) },
+                trailingContent = {
+                    Box {
+                        IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.actions_for, folder.name)) }
+                        WhiteNoiseDropdownMenu(menu, { menu = false }, items = choices.map { choice -> choice.copy(onClick = { menu = false; choice.onClick() }) })
+                    }
+                },
+            ) { Text(folder.name, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+        }
     }
 }
 
@@ -125,10 +133,18 @@ fun ChatFolderEditScreen(profile: Profile, folderId: String?, onBack: () -> Unit
                 }
             }
             item {
-                SettingsGroup { SettingsLink(stringResource(R.string.folder_included_chats), value = chatIds.size.toString(), onClick = { picker = "chats" }) }
+                SettingsGroup {
+                    row {
+                        SettingsLink(stringResource(R.string.folder_included_chats), value = chatIds.size.toString(), onClick = { picker = "chats" })
+                    }
+                }
                 SettingsExplainer(stringResource(R.string.folder_manual_hint))
                 SettingsSection(stringResource(R.string.folder_rules))
-                SettingsGroup { SettingsLink(stringResource(R.string.folder_people), value = peopleIds.size.toString(), onClick = { picker = "people" }) }
+                SettingsGroup {
+                    row {
+                        SettingsLink(stringResource(R.string.folder_people), value = peopleIds.size.toString(), onClick = { picker = "people" })
+                    }
+                }
             }
             item {
                 Column(Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin)) {
@@ -138,14 +154,26 @@ fun ChatFolderEditScreen(profile: Profile, folderId: String?, onBack: () -> Unit
             }
             item {
                 SettingsGroup {
-                    SettingsSwitch(stringResource(R.string.folder_unread), unread, { unread = it }); SettingsDivider()
-                    SettingsSwitch(stringResource(R.string.folder_groups), groups, { groups = it }); SettingsDivider()
-                    SettingsSwitch(stringResource(R.string.folder_archived), archived, { archived = it }); SettingsDivider()
-                    SettingsSwitch(stringResource(R.string.folder_muted), muted, { muted = it })
+                    row {
+                        SettingsSwitch(stringResource(R.string.folder_unread), unread, { unread = it })
+                    }
+                    row {
+                        SettingsSwitch(stringResource(R.string.folder_groups), groups, { groups = it })
+                    }
+                    row {
+                        SettingsSwitch(stringResource(R.string.folder_archived), archived, { archived = it })
+                    }
+                    row {
+                        SettingsSwitch(stringResource(R.string.folder_muted), muted, { muted = it })
+                    }
                 }
                 SettingsExplainer(stringResource(R.string.folder_rule_hint))
                 SettingsSection(stringResource(R.string.folder_preview))
-                SettingsGroup { SettingsLink(stringResource(R.string.folder_preview), subtitle = pluralStringResource(R.plurals.folder_chat_count, preview.size, preview.size), onClick = { picker = "preview" }) }
+                SettingsGroup {
+                    row {
+                        SettingsLink(stringResource(R.string.folder_preview), subtitle = pluralStringResource(R.plurals.folder_chat_count, preview.size, preview.size), onClick = { picker = "preview" })
+                    }
+                }
             }
         }
     }
@@ -155,43 +183,19 @@ fun ChatFolderEditScreen(profile: Profile, folderId: String?, onBack: () -> Unit
         dismissButton = { TextButton(onClick = { discard = false }) { Text(stringResource(R.string.folder_keep_editing)) } })
     picker?.let { mode ->
         val choices = when (mode) {
-            "people" -> profile.people.map { FolderChoice(it.id, it.displayName, it.avatar) }
-            "preview" -> preview.map { FolderChoice(it.id, it.title, it.avatar) }
-            else -> profile.chats.sortedWith(ChatOrganization.order).map { FolderChoice(it.id, it.title, it.avatar) }
+            "people" -> profile.people.map { WhiteNoisePickerItem(it.id, it.displayName, it.avatar) }
+            "preview" -> preview.map { WhiteNoisePickerItem(it.id, it.title, it.avatar) }
+            else -> profile.chats.sortedWith(ChatOrganization.order).map { WhiteNoisePickerItem(it.id, it.title, it.avatar) }
         }
-        FolderChoiceDialog(
+        WhiteNoiseEntityPickerSheet(
             title = stringResource(when (mode) { "people" -> R.string.folder_people; "preview" -> R.string.folder_preview; else -> R.string.folder_included_chats }),
-            choices = choices, selected = if (mode == "people") peopleIds else chatIds, preview = mode == "preview",
-            onToggle = { id ->
+            items = choices, selectedIds = (if (mode == "people") peopleIds else chatIds).toSet(), multiple = true,
+            searchTag = "folder.pickerSearch", rowTagPrefix = "folder.choice",
+            onDone = { picker = null },
+            onSelect = if (mode == "preview") null else { id ->
                 if (mode == "people") peopleIds = if (id in peopleIds) peopleIds - id else peopleIds + id
                 else chatIds = if (id in chatIds) chatIds - id else chatIds + id
             }, onDismiss = { picker = null },
         )
     }
-}
-
-private data class FolderChoice(val id: String, val title: String, val avatar: ProfileAvatar)
-
-@Composable
-private fun FolderChoiceDialog(title: String, choices: List<FolderChoice>, selected: List<String>, preview: Boolean,
-    onToggle: (String) -> Unit, onDismiss: () -> Unit) {
-    val query = rememberSaveable(title, saver = TextFieldState.Saver) { TextFieldState() }
-    val visible = choices.filter { it.title.contains(query.text.toString().trim(), ignoreCase = true) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(title) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                WhiteNoiseTextField(query, Modifier.fillMaxWidth().testTag("folder.pickerSearch"), label = { Text(stringResource(R.string.folder_search)) }, lineLimits = TextFieldLineLimits.SingleLine)
-                if (visible.isEmpty()) Text(stringResource(R.string.no_results), Modifier.padding(vertical = WhiteNoiseSpacing.FormField))
-                visible.forEach { choice ->
-                    Row(Modifier.fillMaxWidth().then(if (preview) Modifier else Modifier.toggleable(choice.id in selected, role = Role.Checkbox, onValueChange = { onToggle(choice.id) }))
-                        .testTag("folder.choice.${choice.id}").padding(vertical = WhiteNoiseSpacing.Related), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-                        if (!preview) Checkbox(choice.id in selected, null)
-                        ProfileAvatar(choice.title, choice.avatar, Modifier.size(40.dp), contentDescription = null)
-                        Text(choice.title, Modifier.weight(1f))
-                    }
-                }
-            }
-        }, confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
-    )
 }

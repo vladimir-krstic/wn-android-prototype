@@ -10,8 +10,14 @@ import dev.ipf.whitenoise.model.AppUpdateCheckScenario
 import dev.ipf.whitenoise.model.AppUpdateDistribution
 import dev.ipf.whitenoise.model.AppUpdates
 import dev.ipf.whitenoise.state.AppUpdateController
+import dev.ipf.whitenoise.state.AppViewModel
+import dev.ipf.whitenoise.navigation.AppRoute
+import dev.ipf.whitenoise.navigation.OnboardingOrigin
+import dev.ipf.whitenoise.navigation.WhiteNoiseNavHost
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
-import dev.ipf.whitenoise.ui.updates.AppUpdateBanner
+import dev.ipf.whitenoise.ui.updates.AppUpdateIconButton
 import dev.ipf.whitenoise.ui.updates.AppUpdateHost
 import dev.ipf.whitenoise.ui.updates.AppUpdateSettingsGroup
 import org.junit.Assert.assertEquals
@@ -23,58 +29,63 @@ class AppUpdateInteractionTest {
     val compose = createComposeRule()
 
     @Test
-    fun normalChatsBannerUpdatesOrDismissesForTheVersion() {
-        val controller = AppUpdateController("0.1")
-        compose.setContent {
-            WhiteNoiseTheme {
-                AppUpdateBanner(controller.state, controller::beginSelfUpdate, controller::dismissBanner)
-            }
+    fun chatsUpdateIconOpensSettingsCardAndIsHiddenDuringSearch() {
+        val vm = AppViewModel().apply {
+            completeSignIn(OnboardingOrigin.Initial)
+            dismissDiagnosticsPrompt(uiState.activeProfileId!!)
         }
-        compose.onNodeWithText("Update available").assertIsDisplayed()
-        compose.onNodeWithText("Update now").performClick()
-        compose.runOnIdle { assertEquals(AppSelfUpdatePhase.Resolving, controller.state.selfUpdate.phase) }
-        compose.runOnIdle { controller.cancel() }
-        compose.onNodeWithContentDescription("Dismiss update").performClick()
+        lateinit var nav: NavHostController
+        compose.setContent {
+            nav = rememberNavController()
+            WhiteNoiseTheme { WhiteNoiseNavHost(nav, vm) }
+        }
+        compose.runOnIdle { nav.navigate(AppRoute.SignedIn) }
+        compose.onNodeWithTag("appUpdate.openSettings").assertIsDisplayed()
         compose.onNodeWithTag("appUpdate.banner").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Search Chats").performClick()
+        compose.onNodeWithTag("appUpdate.openSettings").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Close search").performClick()
+        compose.onNodeWithTag("appUpdate.openSettings").performClick()
+        compose.onNodeWithTag("appUpdate.settings").assertIsDisplayed()
+        compose.onNodeWithText("Version 0.2 is available on Zapstore.").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(AppSelfUpdatePhase.Idle, vm.appUpdates.state.selfUpdate.phase) }
     }
 
     @Test
-    fun importantBannerHasNoDismissAction() {
+    fun importantUpdateUsesTheSameCompactSettingsAction() {
         val controller = AppUpdateController("0.1").apply {
             previewCheck(AppUpdateCheckScenario.ImportantAvailable)
         }
-        compose.setContent {
-            WhiteNoiseTheme {
-                AppUpdateBanner(controller.state, {}, {})
-            }
-        }
-        compose.onNodeWithText("Important update available").assertIsDisplayed()
-        compose.onNodeWithText("3 releases behind").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Dismiss update").assertDoesNotExist()
+        var opened = false
+        compose.setContent { WhiteNoiseTheme { AppUpdateIconButton(controller.state, { opened = true }) } }
+        compose.onNodeWithTag("appUpdate.openSettings")
+            .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "Important update available"))
+            .performClick()
+        compose.runOnIdle { assertEquals(true, opened); assertEquals(AppSelfUpdatePhase.Idle, controller.state.selfUpdate.phase) }
     }
 
     @Test
-    fun storeManagedBuildHasNoSettingsRowOrChatsBanner() {
+    fun storeManagedBuildHasNoSettingsRowOrUpdateIcon() {
         val controller = AppUpdateController("0.1").apply {
             selectDistribution(AppUpdateDistribution.StoreManaged)
         }
         compose.setContent {
             WhiteNoiseTheme {
                 AppUpdateSettingsGroup(controller.state, {})
-                AppUpdateBanner(controller.state, {}, {})
+                AppUpdateIconButton(controller.state, {})
             }
         }
         compose.onNodeWithText("App updates").assertDoesNotExist()
-        compose.onNodeWithTag("appUpdate.banner").assertDoesNotExist()
+        compose.onNodeWithTag("appUpdate.openSettings").assertDoesNotExist()
     }
 
     @Test
     fun settingsRowShowsCurrentFailureAndAvailableCopy() {
         val controller = AppUpdateController("0.1")
         compose.setContent { WhiteNoiseTheme { AppUpdateSettingsGroup(controller.state, {}) } }
-        compose.onNodeWithText("Installed: 0.1 · Latest: 0.2 · 1 release behind").assertIsDisplayed()
+        compose.onNodeWithText("Version 0.2 is available on Zapstore.").assertIsDisplayed()
         compose.runOnIdle { controller.previewCheck(AppUpdateCheckScenario.Current) }
-        compose.onNodeWithText("Installed: 0.1 · Up to date").assertIsDisplayed()
+        compose.onNodeWithText("Up to date").assertIsDisplayed()
         compose.runOnIdle { controller.previewCheck(AppUpdateCheckScenario.Failure) }
         compose.onNodeWithText("Couldn’t check for updates. Tap to retry.").assertIsDisplayed()
     }
@@ -124,10 +135,10 @@ class AppUpdateInteractionTest {
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides androidx.compose.ui.unit.Density(density.density, 2f)) {
-                WhiteNoiseTheme { AppUpdateBanner(controller.state, {}, {}) }
+                WhiteNoiseTheme { AppUpdateIconButton(controller.state, {}) }
             }
         }
-        compose.onNodeWithText("Update now").assertIsDisplayed().assertHasClickAction()
+        compose.onNodeWithContentDescription("App updates").assertIsDisplayed().assertHasClickAction()
     }
 
     private fun readyController(scenario: AppSelfUpdateScenario): AppUpdateController =

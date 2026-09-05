@@ -188,10 +188,8 @@ class DiagnosticsPromptTest {
         }
         rule.onNodeWithText("Share Anonymous Analytics").performScrollTo().assertIsOff()
         rule.onNodeWithText("Share Diagnostic Logs").performScrollTo().assertIsOff()
-        rule.onNodeWithTag("diagnostics.choices.divider").assertIsDisplayed()
         rule.onNodeWithTag("settings.list")
             .performScrollToNode(hasText("Clear Diagnostic Logs"))
-        rule.onNodeWithTag("diagnostics.stored.divider").assertIsDisplayed()
         rule.onNodeWithText("Clear Diagnostic Logs").performScrollTo().performClick()
         rule.onNodeWithText("Clear diagnostic logs?").assertIsDisplayed()
         rule.onNodeWithText("Cancel").performClick()

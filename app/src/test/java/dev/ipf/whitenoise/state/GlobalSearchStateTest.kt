@@ -38,10 +38,13 @@ class GlobalSearchStateTest {
     @Test fun voiceScenarioRequiresDeveloperToolsAndStaleOwnerDoesNotConsumeIt() {
         val vm = model(); val owner = vm.uiState.activeProfileId!!
         vm.selectGlobalVoiceScenario(GlobalVoiceScenario.Unavailable)
-        assertEquals(GlobalVoiceScenario.Success, vm.nextGlobalVoiceScenario)
+        assertEquals(GlobalVoiceScenario.Device, vm.nextGlobalVoiceScenario)
         vm.setDeveloperToolsEnabled(true); vm.selectGlobalVoiceScenario(GlobalVoiceScenario.Cancelled)
         assertEquals(GlobalVoiceScenario.Unavailable, vm.consumeGlobalVoiceScenario("wrong"))
         assertEquals(GlobalVoiceScenario.Cancelled, vm.consumeGlobalVoiceScenario(owner))
-        assertEquals(GlobalVoiceScenario.Success, vm.consumeGlobalVoiceScenario(owner))
+        assertEquals(GlobalVoiceScenario.Device, vm.consumeGlobalVoiceScenario(owner))
+        vm.selectGlobalVoiceScenario(GlobalVoiceScenario.Success)
+        vm.setDeveloperToolsEnabled(false)
+        assertEquals(GlobalVoiceScenario.Device, vm.consumeGlobalVoiceScenario(owner))
     }
 }

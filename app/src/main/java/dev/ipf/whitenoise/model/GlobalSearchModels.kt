@@ -69,7 +69,7 @@ object GlobalSearchClock {
 
 data class GlobalMessageResult(val chatId: String, val chatTitle: String, val message: ChatMessage, val sender: String, val snippet: String)
 data class GlobalSearchResults(val chats: List<Chat>, val messages: List<GlobalMessageResult>)
-enum class GlobalVoiceScenario(val developerLabel: String) { Success("Recognized phrase"), Cancelled("Cancelled"), Unavailable("Voice search unavailable") }
+enum class GlobalVoiceScenario(val developerLabel: String) { Device("Device speech recognition"), Success("Recognized phrase"), Cancelled("Cancelled"), Unavailable("Voice search unavailable") }
 data class GlobalVoiceRequest(val id: Long, val profileId: String, val originalQuery: String, val scenario: GlobalVoiceScenario)
 
 object GlobalSearch {
@@ -145,6 +145,9 @@ object GlobalSearch {
         }.sortedWith(compareByDescending<GlobalMessageResult> { GlobalSearchClock.timestamp(it.message) }.thenBy { it.chatId }.thenBy { it.message.id })
         return GlobalSearchResults(chats, messages)
     }
-    fun voiceResult(request: GlobalVoiceRequest, owner: String?, currentQuery: String, isSearching: Boolean): String? =
-        voicePhrase.takeIf { request.profileId == owner && request.originalQuery == currentQuery && isSearching && request.scenario == GlobalVoiceScenario.Success }
+    fun voiceResult(request: GlobalVoiceRequest, owner: String?, currentQuery: String, isSearching: Boolean, recognizedText: String?): String? =
+        recognizedText?.trim()?.takeIf {
+            it.isNotBlank() && request.profileId == owner && request.originalQuery == currentQuery && isSearching &&
+                request.scenario in setOf(GlobalVoiceScenario.Device, GlobalVoiceScenario.Success)
+        }
 }

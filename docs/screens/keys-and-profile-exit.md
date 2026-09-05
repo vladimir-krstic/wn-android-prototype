@@ -84,3 +84,15 @@ Official sources checked 2026-09-04: [Compose state ownership](https://developer
 and [system document creation](https://developer.android.com/training/data-storage/shared/documents-files).
 The app owns process-local requests and task outcomes; Material owns modal
 interaction and Android owns the document destination surface.
+
+
+## Amber ownership callout — 2026-09-05
+
+The user-approved shared callout replaces the plain Signing section for Amber.
+It reads “Signed in with Amber” and “Amber holds this profile’s Private Key.
+Manage backups in Amber.” The gray Material surface uses an info icon. Public
+key copy remains available; no local secret, reveal, copy or export is rendered.
+Temporary local-key unavailability uses the same callout with a warning icon
+and keeps Retry. `AccessFlowTest` asserts the Amber callout and absence of local
+secret/export controls. Signing custody now follows the chosen successful access
+method on the same canonical account; see `onboarding-and-profiles.md`.

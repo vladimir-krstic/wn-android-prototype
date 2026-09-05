@@ -58,6 +58,7 @@
     <string name="signing_in">Вход в систему…</string>
     <string name="sign_in_with_amber">Войти через Amber</string>
     <string name="access_signing">Подписание</string>
+    <string name="access_amber_signed_in">Вход выполнен через Amber</string>
     <string name="access_amber_owns_key">Amber содержит закрытый ключ этого профиля. Управляйте резервными копиями в Amber.</string>
     <string name="private_key_public_error">Это открытый ключ. Введите свой закрытый ключ для входа.</string>
     <string name="private_key_encrypted_error">Этот ключ зашифрован. Сначала разблокируйте резервную копию, затем введите ее закрытый ключ.</string>
@@ -143,8 +144,6 @@
     <string name="search_chats">Поиск чатов</string>
     <string name="close_search">Закрыть поиск</string>
     <string name="clear_search">Очистить поиск</string>
-    <string name="filter_chats">Фильтровать чаты</string>
-    <string name="selected_chat_scope">Выбрано: %1$s</string>
     <string name="open_settings_for">Откройте настройки для %1$s.</string>
     <string name="open_share_connect_for">Откройте «Поделиться и подключиться» для %1$s</string>
     <string name="actions_for">Действия для %1$s</string>
@@ -378,6 +377,8 @@
     </plurals>
     <string name="delete_selected_messages">Удалить выбранные сообщения</string>
     <string name="forward_selected_messages">Переслать выбранные сообщения</string>
+    <string name="select_chats">Выберите чаты</string>
+    <string name="select_messages">Выберите сообщения</string>
     <string name="close_selection">Закрыть выбор</string>
     <string name="search_messages">Поиск сообщений</string>
     <string name="conversation_debug">Отладка разговора</string>
@@ -475,6 +476,8 @@
     <string name="people_partial">Некоторые результаты недоступны. Вы можете использовать показанных людей или попробовать еще раз.</string>
     <string name="people_unavailable">Поиск недоступен. Люди, уже использующие это устройство, по-прежнему отображаются.</string>
     <string name="people_retry">Попробуйте еще раз</string>
+    <string name="connect_with_qr">Подключиться по QR-коду</string>
+    <string name="invite_friend">Пригласить друга</string>
     <string name="people_invite">Поделиться приглашением</string>
     <string name="people_invite_text">Подключитесь к %1$s на White Noise: \n%2$s</string>
     <string name="people_share_unavailable">Совместное использование недоступно. Попробуйте еще раз.</string>
@@ -1393,7 +1396,6 @@
     <string name="download_sent_media">Отправленные медиа</string>
     <string name="download_quality">Качество медиа</string>
     <string name="download_quality_help">Применяется к новым фотографиям и голосовым сообщениям. Видео и аудио файлы отправляются «как есть».</string>
-    <string name="download_quality_detail">Низкий использует меньше данных. Стандартный баланс качества и размера. Высокий сохраняет больше деталей. В оригинале по возможности сохраняется качество фотографий; некоторые форматы требуют конвертации. Метаданные местоположения и устройства удаляются из фотографий во всех режимах. Качество голоса увеличивается с низкого до высокого; В оригинале используется высокое качество передачи голоса.</string>
     <string name="download_done">Готово</string>
     <string name="download_stop_confirmation">Очистить ожидание автоматической загрузки для этого профиля? Активные загрузки и загрузки, которые вы начали самостоятельно, будут продолжаться.</string>
     <string name="download_waiting">Ожидание загрузки</string>
@@ -1419,18 +1421,17 @@
     <string name="relay_imported_issue_detail">Импортированное реле не использует безопасный адрес wss://. Удалите его или добавьте безопасную замену. Его ролевые назначения были сохранены.</string>
     <string name="relay_needs_attention">Требует внимания</string>
     <string name="ai_agents_title">ИИ-агенты</string>
-    <string name="ai_agents_about_section">Об ИИ-агентах</string>
-    <string name="ai_agents_about_body">Агент ИИ запускается отдельно на вашем компьютере или сервере. После настройки добавьте открытый ключ агента и общайтесь с ним, как с любым другим контактом.</string>
-    <string name="ai_agents_connectors_section">Коннекторы</string>
-    <string name="ai_agents_connectors_body">Выберите своего агента, просмотрите его приглашение на установку, а затем скопируйте его в этот агент. В приглашении указывается ваш открытый ключ, а не закрытый ключ, и перед установкой запрашивается ваше одобрение.</string>
+    <string name="ai_agents_about_section">Общайтесь со своим ИИ-агентом</string>
+    <string name="ai_agents_about_body">Подключите агента, работающего на вашем компьютере или сервере.</string>
+    <string name="ai_agents_connectors_section">Выберите агента</string>
+    <string name="ai_agents_connectors_body">Выберите агента, чтобы просмотреть и скопировать запрос для настройки.</string>
+    <string name="ai_agents_setup_title">Настройка %1$s</string>
+    <string name="ai_agents_setup_instruction">Вставьте этот запрос в %1$s. Он содержит ваш публичный ключ и требует согласия перед установкой.</string>
     <string name="ai_agents_manual_section">Ручная настройка</string>
-    <string name="ai_agents_manual_body">Когда агент предоставит вам свой открытый ключ, начните новое сообщение, найдите этот ключ и добавьте агента в качестве контакта.</string>
-    <string name="ai_agents_public_key_label">Ваш открытый ключ</string>
+    <string name="ai_agents_manual_body">После настройки добавьте публичный ключ агента в разделе «Новое сообщение», чтобы начать общение.</string>
     <string name="ai_agents_public_key_unavailable">Ваш открытый ключ недоступен. Вернитесь в настройки и попробуйте другой профиль.</string>
     <string name="ai_agents_copy_public_key">Скопировать открытый ключ</string>
     <string name="ai_agents_public_key_copied">Открытый ключ скопирован.</string>
-    <string name="ai_agents_show_prompt">Показать подсказку по настройке</string>
-    <string name="ai_agents_hide_prompt">Скрыть подсказку настройки</string>
     <string name="ai_agents_copy_prompt">Копировать приглашение</string>
     <string name="ai_agents_prompt_copied">Запрос на установку скопирован.</string>
     <string name="ai_agents_docs_title">Документация коннектора агентов</string>
@@ -1523,27 +1524,13 @@
     <string name="external_open_failed_detail">Это направление сейчас недоступно. Попробуйте еще раз или вернитесь в раздел «О программе и лицензиях».</string>
     <string name="help_retry">Повторить</string>
     <string name="app_updates_title">Обновления приложения</string>
-    <string name="app_update_settings_title">Версия Zapstore</string>
-    <string name="app_update_settings_unknown">Установлено: %1$s · Нажмите, чтобы проверить.</string>
+    <string name="app_update_settings_unknown">Проверить обновления</string>
     <string name="app_update_settings_checking">Проверка обновлений…</string>
-    <string name="app_update_settings_current">Установлено: %1$s · Актуально.</string>
-    <string name="app_update_settings_available">Установлено: %1$s · Последняя версия: %2$s · Доступно обновление.</string>
-    <plurals name="app_update_settings_available_count">
-        <item quantity="one">Установлено: %1$s · Последняя версия: %2$s · Выпуск %3$d позади</item>
-        <item quantity="other">Установлено: %1$s · Последняя версия: %2$s · Релизы %3$d позади</item>
-        <item quantity="few">Установлено: %1$s · Последняя версия: %2$s · Выпуск %3$d позади</item>
-        <item quantity="many">Установлено: %1$s · Последняя версия: %2$s · Выпуск %3$d позади</item>
-    </plurals>
+    <string name="app_update_settings_current">Установлена последняя версия</string>
     <string name="app_update_settings_failed">Не удалось проверить наличие обновлений. Нажмите, чтобы повторить попытку.</string>
     <string name="app_update_available_title">Доступно обновление</string>
     <string name="app_update_important_title">Доступно важное обновление</string>
     <string name="app_update_available_detail">Версия %1$s доступна в Zapstore.</string>
-    <plurals name="app_update_releases_behind">
-        <item quantity="one">отстаёт на %1$d версию</item>
-        <item quantity="other">отстаёт на %1$d версии</item>
-        <item quantity="few">отстаёт на %1$d версию</item>
-        <item quantity="many">отстаёт на %1$d версию</item>
-    </plurals>
     <string name="app_update_now">Обновить</string>
     <string name="app_update_dismiss">Закрыть обновление</string>
     <string name="app_update_resolving_title">Проверка версии</string>

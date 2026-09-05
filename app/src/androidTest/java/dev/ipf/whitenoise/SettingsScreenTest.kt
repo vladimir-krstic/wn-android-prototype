@@ -104,7 +104,6 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
         composeRule.onNodeWithTag("settings.active_profile").performClick()
         composeRule.runOnIdle { check(openedShareConnect) }
-        composeRule.onNodeWithTag("settings.profile.divider").assertIsDisplayed()
         composeRule.onNodeWithText("Add Profile").assertIsDisplayed()
         composeRule.onNodeWithTag("settings.profile_management").performClick()
         composeRule.runOnIdle { check(openedAddProfile) }
@@ -137,9 +136,8 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Manage Profiles").assertDoesNotExist()
         composeRule.onNodeWithText("System default").assertDoesNotExist()
         composeRule.onNodeWithTag("settings.list").performScrollToNode(
-            hasTestTag("settings.destinations.divider.0"),
+            hasText("Appearance"),
         )
-        composeRule.onNodeWithTag("settings.destinations.divider.0").assertIsDisplayed()
         composeRule.onNodeWithTag("settings.list").performScrollToNode(
             hasTestTag("settings.version_footer"),
         )
@@ -459,7 +457,6 @@ class SettingsScreenTest {
             DataUsageScreen(profile, {}, { profile = profile.copy(settings = it) })
         } }
         composeRule.onNodeWithTag("data_usage.downloads.group").assertIsDisplayed()
-        composeRule.onNodeWithTag("data_usage.downloads.divider.photos").assertIsDisplayed()
         composeRule.onNodeWithText("Reset download settings").assertIsNotEnabled()
         composeRule.onNodeWithText("Photos").performClick()
         composeRule.onNodeWithTag("download.network.Wifi").assertIsOn()
@@ -542,7 +539,6 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("notifications.delivery.divider").assertIsDisplayed()
         composeRule.onNodeWithTag("settings.list").performScrollToNode(hasTestTag("notifications.preview.group"))
         composeRule.onNodeWithText("Sender and message").assertIsDisplayed()
         composeRule.onNodeWithText("Sender only").assertIsDisplayed()
@@ -609,7 +605,6 @@ class SettingsScreenTest {
         }
 
         composeRule.onNodeWithTag("privacy.device_protection.group").assertIsDisplayed()
-        composeRule.onNodeWithTag("privacy.device_protection.divider.recents").assertIsDisplayed()
         composeRule.onNodeWithText("Auto-lock").assertDoesNotExist()
         composeRule.onNodeWithText("Require device authentication").performClick()
         composeRule.onNodeWithText("Auto-lock").assertIsDisplayed().performClick()
@@ -672,7 +667,6 @@ class SettingsScreenTest {
         ).fetchSemanticsNodes().first().boundsInRoot.width
         check(kotlin.math.abs(statusWidth - 20f * density) < 1f)
         composeRule.onNodeWithTag("relays.restore").assertIsNotEnabled()
-        composeRule.onNodeWithTag("relays.divider.0").assertIsDisplayed()
         val sectionLeft = composeRule.onNodeWithText(
             "Profile relays",
             useUnmergedTree = true,
@@ -699,7 +693,6 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Status").assertIsDisplayed()
         composeRule.onNodeWithText("Use for messages in chats you create.", substring = true)
             .assertIsDisplayed()
-        composeRule.onNodeWithTag("relay.details.role.divider.0").assertIsDisplayed()
         composeRule.onNodeWithText("Remove Relay").performClick()
         composeRule.onNodeWithText("Remove Primal?").assertIsDisplayed()
     }

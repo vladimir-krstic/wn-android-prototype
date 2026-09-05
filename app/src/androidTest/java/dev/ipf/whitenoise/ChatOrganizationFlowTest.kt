@@ -51,6 +51,31 @@ class ChatOrganizationFlowTest {
         pressBack()
         rule.onNodeWithTag("chats.newMessage").assertIsDisplayed()
     }
+    @Test fun selectionPreservesAvatarsSeparatesRowsAndCentersTheOnlyCountBelow() {
+        val vm = model()
+        val second = "catalog-direct-dates"
+        rule.setContent { WhiteNoiseTheme { Chats(vm) } }
+        action(first, "Select")
+        rule.onNodeWithTag("chat.row.$second").performClick().assertIsOn()
+        rule.onNodeWithText("Select chats").assertIsDisplayed()
+        rule.onAllNodesWithText("2 Selected").assertCountEquals(1)
+        listOf(first, second).forEach { id ->
+            rule.onNodeWithTag("chat.avatar.$id", useUnmergedTree = true).assertIsDisplayed()
+            rule.onNodeWithTag("chat.preview.$id", useUnmergedTree = true).assertIsDisplayed()
+        }
+        val firstBounds = rule.onNodeWithTag("chat.row.$first").fetchSemanticsNode().boundsInRoot
+        val secondBounds = rule.onNodeWithTag("chat.row.$second").fetchSemanticsNode().boundsInRoot
+        assertTrue(secondBounds.top > firstBounds.bottom)
+        val controls = rule.onNodeWithTag("chats.selectionControls").fetchSemanticsNode().boundsInRoot
+        val count = rule.onNodeWithTag("chats.selectionCount").fetchSemanticsNode().boundsInRoot
+        val selectAll = rule.onNodeWithText("Select All").fetchSemanticsNode().boundsInRoot
+        assertEquals(controls.center.x, count.center.x, 1f)
+        assertTrue(selectAll.top >= controls.top && selectAll.bottom <= controls.bottom)
+        rule.onNodeWithText("Select All").performClick()
+        rule.onNodeWithTag("chat.row.$first").assertIsOn()
+        rule.onNodeWithTag("chat.row.$second").assertIsOn()
+    }
+
     @Test fun selectionSurvivesRestorationAndResetsOnProfileChange() {
         val vm = model(); val restore = StateRestorationTester(rule)
         restore.setContent { WhiteNoiseTheme { Chats(vm) } }
@@ -63,8 +88,7 @@ class ChatOrganizationFlowTest {
     @Test fun selectAllUsesCurrentFilterAndArchiveRemovesOnlyThoseRows() {
         val vm = model(); val unread = ChatProjection.rows(vm.uiState.activeProfile!!.chats, ChatScope.Unread).map { it.id }
         rule.setContent { WhiteNoiseTheme { Chats(vm) } }
-        rule.onNodeWithContentDescription("Filter Chats").performClick()
-        rule.onNodeWithText("Unread").performClick()
+        rule.onNodeWithTag("chats.folder.system:unread").performClick()
         action(unread.first(), "Select")
         rule.onNodeWithText("Select All").performClick()
         rule.onNodeWithContentDescription("More options").performClick()
@@ -106,7 +130,7 @@ class ChatOrganizationFlowTest {
         rule.onNodeWithTag("chat.folderName").performTextInput("Friends")
         rule.onNodeWithText("Save").performClick()
         rule.onNodeWithText("Done").performClick()
-        rule.onNodeWithContentDescription("Filter Chats").performClick()
+        rule.onNodeWithTag("chats.folders").performScrollToNode(hasText("Friends"))
         rule.onNodeWithText("Friends").performClick()
         rule.onNodeWithTag("chat.row.$first").assertIsDisplayed()
         rule.runOnIdle { assertEquals(setOf(first), vm.uiState.activeProfile!!.chatFolders.single { it.name == "Friends" }.chatIds) }

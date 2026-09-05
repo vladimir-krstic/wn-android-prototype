@@ -11,9 +11,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.ui.Alignment
 import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -33,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import kotlinx.coroutines.delay
@@ -152,10 +151,12 @@ internal fun PhotoQualityDialog(current: PhotoQuality, onDismiss: () -> Unit, on
         text = { Column(Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
             Text(stringResource(R.string.photo_quality_explanation))
             PhotoQuality.entries.forEach { value ->
-                Row(Modifier.fillMaxWidth().testTag("photo.quality.${value.name}")
-                    .selectable(value == current, role = Role.RadioButton, onClick = { onSelect(value) }), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(value == current, null); Text(photoQualityLabel(value), Modifier.weight(1f).padding(start = 8.dp))
-                }
+                WhiteNoiseDialogChoiceRow(
+                    title = photoQualityLabel(value),
+                    selected = value == current,
+                    onClick = { onSelect(value) },
+                    modifier = Modifier.testTag("photo.quality.${value.name}"),
+                )
             }
         } }, confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } })
 }

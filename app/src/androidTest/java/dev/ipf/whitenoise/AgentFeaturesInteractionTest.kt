@@ -39,7 +39,7 @@ class AgentFeaturesInteractionTest {
         compose.runOnIdle { navigate(AppRoute.Settings()) }
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("AI Agents"))
         compose.onNodeWithText("AI Agents").performClick()
-        compose.onNodeWithText("Connectors").assertIsDisplayed()
+        compose.onNodeWithText("Choose an agent").assertIsDisplayed()
         compose.onNodeWithText("Manual setup").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("AI Agents").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").performClick()
@@ -59,17 +59,36 @@ class AgentFeaturesInteractionTest {
                 )
             }
         }
-        listOf("Hermes", "OpenClaw", "OpenCode", "Codex").forEach {
-            compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()
+        listOf("Hermes", "OpenClaw", "OpenCode", "Codex").forEachIndexed { index, name ->
+            val id = name.lowercase()
+            compose.onNodeWithText(name).performScrollTo().performClick()
+            compose.onNodeWithText("Set up $name").assertIsDisplayed()
+            compose.onNodeWithTag("ai_agents.prompt.$id").assertIsDisplayed()
+            compose.onNodeWithTag("ai_agents.copy.$id").assertIsDisplayed().performClick()
+            compose.onNodeWithTag("ai_agents.copy_feedback").assertIsDisplayed()
+            compose.runOnIdle {
+                assertEquals(index + 1, copied.size)
+                assertTrue(copied.last().contains(ProfileFixtures.marmota.publicKey))
+                assertTrue(copied.last().contains("approval"))
+                assertTrue(copied.last().contains(name))
+            }
+            compose.onNodeWithContentDescription("Close").performClick()
+            compose.onNodeWithTag("sheet.surface").assertDoesNotExist()
         }
-        compose.onNodeWithTag("ai_agents.toggle.hermes").performScrollTo().performClick()
-        compose.onNodeWithTag("ai_agents.prompt.hermes").assertIsDisplayed()
-        compose.onNodeWithTag("ai_agents.copy.hermes").performClick()
-        compose.runOnIdle {
-            assertEquals(1, copied.size)
-            assertTrue(copied.single().contains(ProfileFixtures.marmota.publicKey))
-            assertTrue(copied.single().contains("approval"))
+    }
+
+    @Test
+    fun closingSetupWithoutCopyingPerformsNoAction() {
+        var copies = 0
+        compose.setContent {
+            WhiteNoiseTheme {
+                AiAgentsScreen(ProfileFixtures.marmota, onBack = {}, copyOverride = { _, _ -> copies++ })
+            }
         }
+        compose.onNodeWithText("Hermes").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithTag("sheet.surface").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(0, copies) }
     }
 
     @Test
@@ -100,9 +119,11 @@ class AgentFeaturesInteractionTest {
         }
         compose.onNodeWithText("Your public key is unavailable. Return to Settings and try another profile.")
             .performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("ai_agents.toggle.hermes").assertIsNotEnabled()
-        compose.onNodeWithTag("ai_agents.copy.hermes").assertIsNotEnabled()
-        compose.onNodeWithTag("ai_agents.prompt.hermes").assertDoesNotExist()
+        listOf("Hermes", "OpenClaw", "OpenCode", "Codex").forEach { name ->
+            compose.onNodeWithText(name).performScrollTo().assertIsNotEnabled()
+        }
+        compose.onNodeWithTag("ai_agents.copy_public_key").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("sheet.surface").assertDoesNotExist()
     }
 
     @Test
@@ -163,6 +184,14 @@ class AgentFeaturesInteractionTest {
         }
         compose.onNodeWithText("Manual setup").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Agent connector documentation").performScrollTo().assertIsDisplayed()
-        compose.onNode(hasClickAction().and(hasText("Copy public key"))).assertIsDisplayed()
+        compose.onNodeWithTag("ai_agents.copy_public_key").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Hermes").performScrollTo().performClick()
+        compose.onNodeWithTag("ai_agents.copy.hermes").assertIsDisplayed()
+        compose.onNodeWithTag("ai_agents.setup_content").performScrollToNode(
+            hasText("After setup, add the agent’s public key in New Message to start chatting."),
+        )
+        compose.onNodeWithTag("ai_agents.copy.hermes").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithTag("sheet.surface").assertDoesNotExist()
     }
 }

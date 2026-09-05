@@ -1,6 +1,9 @@
 package dev.ipf.whitenoise.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -73,6 +76,7 @@ fun WhiteNoiseDialogChoiceRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    subtitle: String? = null,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -82,7 +86,7 @@ fun WhiteNoiseDialogChoiceRow(
                 .requiredWidth(maxWidth + (WhiteNoiseSpacing.FormField * 2))
                 .then(modifier)
                 .heightIn(min = 56.dp)
-                .clip(MaterialTheme.shapes.large)
+                .whiteNoiseDialogSelection(selected)
                 .selectable(
                     selected = selected,
                     enabled = enabled,
@@ -101,16 +105,30 @@ fun WhiteNoiseDialogChoiceRow(
                     .testTag("dialog.choice.radio")
                     .clearAndSetSemantics { },
             )
-            Text(
-                text = title,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = WhiteNoiseSpacing.FormField),
-                color = MaterialTheme.colorScheme.onSurface.copy(
-                    alpha = if (enabled) 1f else 0.38f,
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            Column(
+                modifier = Modifier.weight(1f)
+                    .padding(start = WhiteNoiseSpacing.FormField)
+                    .padding(vertical = WhiteNoiseSpacing.Related),
+            ) {
+                Text(
+                    text = title,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
         }
     }
 }
+
+/** Shared boundary for selected fill and native input feedback in modal option rows. */
+@Composable
+fun Modifier.whiteNoiseDialogSelection(selected: Boolean): Modifier =
+    clip(MaterialTheme.shapes.large)
+        .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent)

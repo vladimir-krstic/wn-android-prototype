@@ -147,40 +147,44 @@ fun SignOutSheet(
                     SettingsGroup(
                         modifier = Modifier.testTag("sign_out.profile_group"),
                     ) {
-                        ListItem(
-                            modifier = Modifier.testTag("sign_out.profile"),
-                            leadingContent = {
-                                ProfileAvatar(
-                                    profile.name,
-                                    profile.avatar,
-                                    Modifier.size(48.dp).testTag("sign_out.profile.avatar"),
-                                    contentDescription = null,
-                                )
-                            },
-                            supportingContent = { Text(profile.shortPublicKey) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        ) {
-                            Text(profile.name, modifier = Modifier.testTag("sign_out.profile.name"))
+                        item {
+                            ListItem(
+                                modifier = Modifier.testTag("sign_out.profile"),
+                                leadingContent = {
+                                    ProfileAvatar(
+                                        profile.name,
+                                        profile.avatar,
+                                        Modifier.size(48.dp).testTag("sign_out.profile.avatar"),
+                                        contentDescription = null,
+                                    )
+                                },
+                                supportingContent = { Text(profile.shortPublicKey) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            ) {
+                                Text(profile.name, modifier = Modifier.testTag("sign_out.profile.name"))
+                            }
                         }
-                        SettingsDivider(Modifier.testTag("sign_out.profile.divider"))
-                        SettingsSwitch(
-                            title = stringResource(R.string.ui_wipe_data_from_this_device),
-                            checked = wipeData,
-                            onCheckedChange = {
-                                wipeData = it
-                                if (!it) {
-                                    confirmation.edit { replace(0, length, "") }
-                                    focusManager.clearFocus()
-                                }
-                            },
-                        )
-                        if (!wipeData) {
-                            SettingsDivider()
+                        row {
                             SettingsSwitch(
-                                title = stringResource(R.string.exit_remove_connection_info),
-                                checked = deleteConnectionInformation,
-                                onCheckedChange = { deleteConnectionInformation = it },
+                                title = stringResource(R.string.ui_wipe_data_from_this_device),
+                                checked = wipeData,
+                                onCheckedChange = {
+                                    wipeData = it
+                                    if (!it) {
+                                        confirmation.edit { replace(0, length, "") }
+                                        focusManager.clearFocus()
+                                    }
+                                },
                             )
+                        }
+                        if (!wipeData) {
+                            row {
+                                SettingsSwitch(
+                                    title = stringResource(R.string.exit_remove_connection_info),
+                                    checked = deleteConnectionInformation,
+                                    onCheckedChange = { deleteConnectionInformation = it },
+                                )
+                            }
                         }
                     }
                     SettingsExplainer(wipeExplanation)
@@ -285,15 +289,17 @@ fun EraseAppDataSheet(
                     SettingsGroup(
                         modifier = Modifier.testTag("erase.phrase"),
                     ) {
-                        SelectionContainer {
-                            Text(
-                                text = phrase,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(WhiteNoiseSpacing.FormField),
-                                fontFamily = FontFamily.Monospace,
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
+                        item {
+                            SelectionContainer {
+                                Text(
+                                    text = phrase,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(WhiteNoiseSpacing.FormField),
+                                    fontFamily = FontFamily.Monospace,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                            }
                         }
                     }
                     WhiteNoiseTextField(
@@ -349,25 +355,27 @@ fun ManageProfilesScreen(
                 item { SettingsSection(stringResource(R.string.ui_stored_profiles)) }
                 item {
                     SettingsGroup {
-                        removable.forEach { profile ->
-                            ListItem(
-                                headlineContent = { Text(profile.name) },
-                                supportingContent = { Text(profile.shortPublicKey) },
-                                leadingContent = {
-                                    ProfileAvatar(
-                                        profile.name,
-                                        profile.avatar,
-                                        Modifier.size(48.dp),
-                                        contentDescription = null,
-                                    )
-                                },
-                                trailingContent = {
-                                    TextButton(onClick = { target = profile }) {
-                                        Text(stringResource(R.string.ui_remove), color = MaterialTheme.colorScheme.error)
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            )
+                        removable.forEach {profile ->
+                            item {
+                                ListItem(
+                                    headlineContent = { Text(profile.name) },
+                                    supportingContent = { Text(profile.shortPublicKey) },
+                                    leadingContent = {
+                                        ProfileAvatar(
+                                            profile.name,
+                                            profile.avatar,
+                                            Modifier.size(48.dp),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    trailingContent = {
+                                        TextButton(onClick = { target = profile }) {
+                                            Text(stringResource(R.string.ui_remove), color = MaterialTheme.colorScheme.error)
+                                        }
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                )
+                            }
                         }
                     }
                 }

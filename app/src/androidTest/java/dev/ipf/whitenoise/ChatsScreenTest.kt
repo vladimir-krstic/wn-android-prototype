@@ -105,14 +105,9 @@ class ChatsScreenTest {
         composeRule.onNodeWithContentDescription("Open Settings for Marmota").performClick()
         composeRule.runOnIdle { check(settingsOpened) }
 
-        composeRule.onNodeWithContentDescription("Filter Chats").performClick()
-        composeRule.onNode(hasText("Chats").and(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)))
-            .assertIsSelected()
-        composeRule.onNodeWithText("Unread").performClick()
-        composeRule.onNodeWithText("Unread").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Filter Chats").performClick()
-        composeRule.onNode(hasText("Unread").and(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)))
-            .assertIsSelected().performClick()
+        composeRule.onNodeWithTag("chats.scope.chats").assertIsSelected()
+        composeRule.onNodeWithTag("chats.folder.system:unread").performClick().assertIsSelected()
+        composeRule.onNodeWithTag("chats.folder.system:unread").performClick().assertIsSelected()
 
         composeRule.onNodeWithContentDescription("Search Chats").performClick()
         composeRule.onNode(hasSetTextAction()).performTextInput("not a fixture")

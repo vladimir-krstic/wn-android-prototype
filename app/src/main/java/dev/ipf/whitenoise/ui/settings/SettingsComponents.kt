@@ -2,8 +2,11 @@
 
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +25,8 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +37,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +47,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -128,40 +135,76 @@ internal fun SettingsSection(title: String) {
         text = title,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics { heading() }
             .padding(
                 start = WhiteNoiseSpacing.SettingsSectionInset,
                 end = WhiteNoiseSpacing.SettingsSectionInset,
-                top = WhiteNoiseSpacing.Section,
-                bottom = WhiteNoiseSpacing.Related,
+                top = if (LocalSettingsList.current) WhiteNoiseSpacing.FormField else WhiteNoiseSpacing.Section,
+                bottom = if (LocalSettingsList.current) 0.dp else WhiteNoiseSpacing.Related,
             ),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelLarge,
     )
 }
 
+/** Builds the visible rows before assigning Material's first/middle/last shapes. */
+class SettingsGroupScope {
+    internal val rows = mutableListOf<SettingsGroupEntry>()
+
+    fun row(content: @Composable () -> Unit) {
+        rows.add(SettingsGroupEntry(native = true, content))
+    }
+
+    fun item(content: @Composable () -> Unit) {
+        rows.add(SettingsGroupEntry(native = false, content))
+    }
+}
+
+internal data class SettingsGroupEntry(val native: Boolean, val content: @Composable () -> Unit)
+
+private val LocalSettingsRowShapes = staticCompositionLocalOf<ListItemShapes?> { null }
+private val LocalSettingsRowColor = staticCompositionLocalOf { Color.Transparent }
+private val LocalSettingsList = staticCompositionLocalOf { false }
+
 @Composable
 internal fun SettingsGroup(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLowest,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable SettingsGroupScope.() -> Unit,
 ) {
+    val group = SettingsGroupScope().apply { content() }
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
-            .clip(MaterialTheme.shapes.large)
-            .background(containerColor),
-        content = content,
-    )
+            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+    ) {
+        group.rows.forEachIndexed { index, row ->
+            val shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, group.rows.size)
+            CompositionLocalProvider(
+                LocalSettingsRowShapes provides shapes,
+                LocalSettingsRowColor provides containerColor,
+                // A row may contain its own explanatory content; it owns its spacing.
+                LocalSettingsList provides false,
+            ) {
+                if (row.native) {
+                    row.content()
+                } else {
+                    Surface(color = containerColor, shape = shapes.shape) {
+                        Column(Modifier.fillMaxWidth()) { row.content() }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
+private fun settingsRowShapes(): ListItemShapes = LocalSettingsRowShapes.current ?: WhiteNoiseListItemDefaults.shapes()
+
+@Composable
 internal fun SettingsDivider(modifier: Modifier = Modifier) {
-    HorizontalDivider(
-        modifier = modifier.fillMaxWidth(),
-        thickness = 2.dp,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    )
+    Spacer(modifier.fillMaxWidth().height(ListItemDefaults.SegmentedGap))
 }
 
 @Composable
@@ -179,42 +222,22 @@ internal fun SettingsLink(
         destructive -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurface
     }
-    val supportingColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-        alpha = if (enabled) 1f else 0.38f,
-    )
+    val summary = listOfNotNull(value, subtitle).distinct().joinToString("\n").takeIf { it.isNotEmpty() }
     ListItem(
-        headlineContent = { Text(title, color = headlineColor) },
-        supportingContent = subtitle?.let { { Text(it, color = supportingColor) } },
+        onClick = onClick,
+        enabled = enabled,
+        content = { Text(title, color = headlineColor) },
+        supportingContent = summary?.let { { Text(it) } },
         leadingContent = leading,
         trailingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-            ) {
-                value?.let {
-                    Text(
-                        text = it,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = supportingColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    tint = supportingColor,
-                )
-            }
+            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null)
         },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .semantics {
-                role = Role.Button
-                if (!enabled) disabled()
-            },
+        shapes = settingsRowShapes(),
+        colors = ListItemDefaults.colors(
+            containerColor = LocalSettingsRowColor.current,
+            disabledContainerColor = LocalSettingsRowColor.current,
+        ),
+        modifier = Modifier.fillMaxWidth().semantics { role = Role.Button },
     )
 }
 
@@ -233,7 +256,11 @@ internal fun SettingsSwitch(
         alpha = if (enabled) 1f else 0.38f,
     )
     ListItem(
-        headlineContent = { Text(title, color = headlineColor) },
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        enabled = enabled,
+        shapes = settingsRowShapes(),
+        content = { Text(title, color = headlineColor) },
         supportingContent = subtitle?.let { { Text(it, color = supportingColor) } },
         trailingContent = {
             Switch(
@@ -243,18 +270,12 @@ internal fun SettingsSwitch(
                 modifier = Modifier.clearAndSetSemantics { },
             )
         },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = checked,
-                enabled = enabled,
-                role = Role.Switch,
-                onValueChange = onCheckedChange,
-            )
-            .semantics {
-                if (!enabled) disabled()
-            },
+        colors = ListItemDefaults.colors(
+            containerColor = LocalSettingsRowColor.current,
+            disabledContainerColor = LocalSettingsRowColor.current,
+            selectedContainerColor = LocalSettingsRowColor.current,
+        ),
+        modifier = Modifier.fillMaxWidth().semantics { role = Role.Switch },
     )
 }
 
@@ -270,7 +291,11 @@ internal fun SettingsChoice(
 ) {
     val alpha = if (enabled) 1f else 0.38f
     ListItem(
-        headlineContent = {
+        selected = selected,
+        onClick = onClick,
+        enabled = enabled,
+        shapes = settingsRowShapes(),
+        content = {
             Text(
                 text = title,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
@@ -293,20 +318,11 @@ internal fun SettingsChoice(
             )
         },
         colors = ListItemDefaults.colors(
-            containerColor = if (selected && highlightSelected) {
-                MaterialTheme.colorScheme.surfaceContainerHigh
-            } else {
-                Color.Transparent
-            },
+            containerColor = LocalSettingsRowColor.current,
+            disabledContainerColor = LocalSettingsRowColor.current,
+            selectedContainerColor = if (highlightSelected) MaterialTheme.colorScheme.surfaceContainerHigh else LocalSettingsRowColor.current,
         ),
-        modifier = modifier
-            .fillMaxWidth()
-            .selectable(
-                selected = selected,
-                enabled = enabled,
-                role = Role.RadioButton,
-                onClick = onClick,
-            ),
+        modifier = modifier.fillMaxWidth(),
     )
 }
 
@@ -326,7 +342,10 @@ internal fun SettingsAction(
         else -> MaterialTheme.colorScheme.onSurface
     }
     ListItem(
-        headlineContent = { Text(title, color = headlineColor) },
+        onClick = onClick,
+        enabled = enabled,
+        shapes = settingsRowShapes(),
+        content = { Text(title, color = headlineColor) },
         supportingContent = subtitle?.let {
             {
                 Text(
@@ -338,14 +357,8 @@ internal fun SettingsAction(
             }
         },
         leadingContent = leading,
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .semantics {
-                role = Role.Button
-                if (!enabled) disabled()
-            },
+        colors = ListItemDefaults.colors(containerColor = LocalSettingsRowColor.current, disabledContainerColor = LocalSettingsRowColor.current),
+        modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
     )
 }
 
@@ -353,9 +366,12 @@ internal fun SettingsAction(
 internal fun SettingsValue(
     title: String,
     value: String,
+    modifier: Modifier = Modifier,
 ) {
     ListItem(
-        headlineContent = { Text(title) },
+        modifier = modifier,
+        shapes = settingsRowShapes(),
+        content = { Text(title) },
         supportingContent = {
             Text(
                 text = value,
@@ -363,28 +379,13 @@ internal fun SettingsValue(
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        colors = ListItemDefaults.colors(containerColor = LocalSettingsRowColor.current, disabledContainerColor = LocalSettingsRowColor.current),
     )
 }
 
 @Composable
-internal fun SettingsMetadata(
-    title: String,
-    value: String,
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        trailingContent = {
-            Text(
-                text = value,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
+internal fun SettingsMetadata(title: String, value: String) {
+    SettingsValue(title, value)
 }
 
 @Composable
@@ -394,50 +395,36 @@ internal fun SettingsCallout(
     title: String? = null,
     isError: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
+    @androidx.annotation.DrawableRes icon: Int = if (isError) R.drawable.ic_error else R.drawable.ic_info,
 ) {
-    val container = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainer
-    val contentColor = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-        color = container,
-        contentColor = contentColor,
-        shape = MaterialTheme.shapes.large,
-    ) {
-        Row(
-            modifier = Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),
-            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
-            verticalAlignment = Alignment.Top,
-        ) {
-            leading?.invoke()
-            Column(modifier = Modifier.weight(1f)) {
-                title?.let {
-                    Text(
-                        text = it,
-                        color = contentColor,
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                }
-                Text(
-                    text = text,
-                    color = contentColor,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-    }
+    dev.ipf.whitenoise.ui.components.WhiteNoiseCallout(
+        text = text, title = title, isError = isError, leading = leading, icon = icon,
+        modifier = modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+    )
 }
 
 @Composable
 internal fun SettingsList(content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("settings.list"),
-        contentPadding = PaddingValues(bottom = WhiteNoiseSpacing.Section),
-        content = content,
-    )
+    CompositionLocalProvider(LocalSettingsList provides true) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().testTag("settings.list"),
+            contentPadding = PaddingValues(top = WhiteNoiseSpacing.Related, bottom = WhiteNoiseSpacing.Section),
+            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            content = {
+                val list = this
+                val scope = object : LazyListScope by list {
+                    override fun item(key: Any?, contentType: Any?, content: @Composable LazyItemScope.() -> Unit) {
+                        list.item(key, contentType) {
+                            Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+                                content()
+                            }
+                        }
+                    }
+                }
+                scope.content()
+            },
+        )
+    }
 }
 
 @Composable
@@ -447,7 +434,7 @@ internal fun SettingsExplainer(text: String) {
             .fillMaxWidth()
             .padding(
                 start = WhiteNoiseSpacing.SettingsSectionInset,
-                top = WhiteNoiseSpacing.Related,
+                top = if (LocalSettingsList.current) 0.dp else WhiteNoiseSpacing.Related,
                 end = WhiteNoiseSpacing.SettingsSectionInset,
             ),
     ) {

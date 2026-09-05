@@ -4,34 +4,50 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AgentConnector
 import dev.ipf.whitenoise.model.AgentSetupPolicy
 import dev.ipf.whitenoise.model.Profile
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseCallout
+import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
+import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 private const val AgentConnectorDocs =
@@ -53,6 +69,7 @@ fun AiAgentsScreen(
     val context = LocalContext.current
     val publicKey = AgentSetupPolicy.publicKeyOrNull(profile)
     var feedback by rememberSaveable(profile.id) { mutableStateOf<Int?>(null) }
+    var selectedConnector by rememberSaveable(profile.id, publicKey) { mutableStateOf<AgentConnector?>(null) }
     val copyValue = copyOverride ?: remember(context) {
         { label: String, value: String -> copyToClipboard(context, label, value) }
     }
@@ -60,168 +77,165 @@ fun AiAgentsScreen(
         { openAgentConnectorDocs(context) }
     }
 
-    SettingsScaffold(
-        title = stringResource(R.string.ai_agents_title),
-        onBack = onBack,
-    ) {
+    SettingsScaffold(title = stringResource(R.string.ai_agents_title), onBack = onBack) {
         SettingsList {
-            item { SettingsSection(stringResource(R.string.ai_agents_about_section)) }
             item {
-                SettingsGroup {
-                    SettingsExplainer(
-                        stringResource(R.string.ai_agents_about_body),
-                    )
-                }
+                SettingsCallout(
+                    title = stringResource(R.string.ai_agents_about_section),
+                    text = stringResource(R.string.ai_agents_about_body),
+                )
+            }
+            if (publicKey == null) item {
+                SettingsCallout(stringResource(R.string.ai_agents_public_key_unavailable), isError = true)
             }
             item { SettingsSection(stringResource(R.string.ai_agents_connectors_section)) }
             item {
                 SettingsGroup(modifier = Modifier.testTag("ai_agents.connectors")) {
-                    SettingsExplainer(stringResource(R.string.ai_agents_connectors_body))
-                    AgentSetupPolicy.connectors.forEachIndexed { index, connector ->
-                        key(connector) {
-                            if (index > 0) SettingsDivider()
-                            AgentConnectorRow(
-                                connector = connector,
-                                publicKey = publicKey,
-                                onCopy = { name, prompt ->
-                                    copyValue("$name setup prompt", prompt)
-                                    feedback = R.string.ai_agents_prompt_copied
-                                },
+                    AgentSetupPolicy.connectors.forEach { connector ->
+                        row {
+                            SettingsLink(
+                                title = stringResource(connector.resources().name),
+                                subtitle = stringResource(connector.resources().subtitle),
+                                enabled = publicKey != null,
+                                onClick = { selectedConnector = connector },
                             )
                         }
                     }
                 }
             }
+            item { SettingsExplainer(stringResource(R.string.ai_agents_connectors_body)) }
             item { SettingsSection(stringResource(R.string.ai_agents_manual_section)) }
             item {
                 SettingsGroup(modifier = Modifier.testTag("ai_agents.manual")) {
-                    SettingsExplainer(stringResource(R.string.ai_agents_manual_body))
-                    if (publicKey == null) {
-                        Text(
-                            text = stringResource(R.string.ai_agents_public_key_unavailable),
-                            modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    } else {
-                        Column(
-                            modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
-                            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.ai_agents_public_key_label),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                            SelectionContainer {
-                                Text(
-                                    text = publicKey,
-                                    modifier = Modifier.testTag("ai_agents.public_key"),
-                                    fontFamily = FontFamily.Monospace,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            TextButton(
-                                onClick = {
-                                    copyValue("Public key", publicKey)
+                    item {
+                        ListItem(
+                            onClick = {
+                                publicKey?.let {
+                                    copyValue("Public key", it)
                                     feedback = R.string.ai_agents_public_key_copied
-                                },
-                                modifier = Modifier.testTag("ai_agents.copy_public_key"),
-                            ) { Text(stringResource(R.string.ai_agents_copy_public_key)) }
-                        }
+                                }
+                            },
+                            enabled = publicKey != null,
+                            modifier = Modifier.fillMaxWidth().testTag("ai_agents.copy_public_key"),
+                            shapes = WhiteNoiseListItemDefaults.shapes(),
+                            colors = ListItemDefaults.colors(
+                                containerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                            ),
+                            supportingContent = publicKey?.let {
+                                { Text(profile.shortPublicKey, Modifier.testTag("ai_agents.public_key")) }
+                            },
+                            trailingContent = {
+                                Icon(painterResource(R.drawable.ic_content_copy), contentDescription = null)
+                            },
+                        ) { Text(stringResource(R.string.ai_agents_copy_public_key)) }
                     }
-                    SettingsDivider()
-                    SettingsLink(
-                        title = stringResource(R.string.ai_agents_docs_title),
-                        subtitle = stringResource(R.string.ai_agents_docs_subtitle),
-                        onClick = {
-                            feedback = if (openDocs()) {
-                                R.string.ai_agents_docs_opened
-                            } else {
-                                R.string.ai_agents_docs_failed
-                            }
-                        },
-                    )
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.ai_agents_docs_title),
+                            subtitle = stringResource(R.string.ai_agents_docs_subtitle),
+                            onClick = {
+                                feedback = if (openDocs()) R.string.ai_agents_docs_opened else R.string.ai_agents_docs_failed
+                            },
+                        )
+                    }
                 }
             }
+            item { SettingsExplainer(stringResource(R.string.ai_agents_manual_body)) }
             feedback?.let { message ->
                 item {
-                    Text(
+                    SettingsCallout(
                         text = stringResource(message),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(WhiteNoiseSpacing.FormField)
-                            .testTag("ai_agents.feedback")
+                        modifier = Modifier.testTag("ai_agents.feedback")
                             .semantics { liveRegion = LiveRegionMode.Polite },
-                        color = if (message == R.string.ai_agents_docs_failed) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
+                        isError = message == R.string.ai_agents_docs_failed,
                     )
                 }
             }
         }
     }
+    selectedConnector?.let { connector ->
+        if (publicKey != null) AgentSetupSheet(
+            connector = connector,
+            publicKey = publicKey,
+            onDismiss = { selectedConnector = null },
+            onCopy = copyValue,
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AgentConnectorRow(
+private fun AgentSetupSheet(
     connector: AgentConnector,
-    publicKey: String?,
-    onCopy: (name: String, prompt: String) -> Unit,
+    publicKey: String,
+    onDismiss: () -> Unit,
+    onCopy: (label: String, value: String) -> Unit,
 ) {
     val resources = connector.resources()
     val name = stringResource(resources.name)
-    val prompt = publicKey?.let { stringResource(resources.prompt, it) }
-    var expanded by rememberSaveable(connector.name, publicKey) { mutableStateOf(false) }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(WhiteNoiseSpacing.FormField)
-            .testTag("ai_agents.connector.${connector.name.lowercase()}"),
-        verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-    ) {
-        Text(name, style = MaterialTheme.typography.titleMedium)
-        Text(
-            stringResource(resources.subtitle),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-            TextButton(
-                onClick = { expanded = !expanded },
-                enabled = prompt != null,
-                modifier = Modifier.testTag("ai_agents.toggle.${connector.name.lowercase()}"),
+    val prompt = stringResource(resources.prompt, publicKey)
+    val id = connector.name.lowercase()
+    var copied by rememberSaveable(connector, publicKey) { mutableStateOf(false) }
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
+    WhiteNoiseModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(Modifier.fillMaxWidth().heightIn(max = LocalWindowInfo.current.containerDpSize.height * 0.88f)) {
+            WhiteNoiseSheetHeader(stringResource(R.string.ai_agents_setup_title, name), onClose = onDismiss)
+            WhiteNoiseLazyColumn(
+                modifier = Modifier.weight(1f, fill = false).fillMaxWidth().testTag("ai_agents.setup_content"),
+                contentPadding = PaddingValues(
+                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                    vertical = WhiteNoiseSpacing.Related,
+                ),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
             ) {
-                Text(
-                    stringResource(
-                        if (expanded) R.string.ai_agents_hide_prompt else R.string.ai_agents_show_prompt,
-                    ),
-                )
-            }
-            TextButton(
-                onClick = { prompt?.let { onCopy(name, it) } },
-                enabled = prompt != null,
-                modifier = Modifier.testTag("ai_agents.copy.${connector.name.lowercase()}"),
-            ) { Text(stringResource(R.string.ai_agents_copy_prompt)) }
-        }
-        if (expanded && prompt != null) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("ai_agents.prompt.${connector.name.lowercase()}"),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                SelectionContainer {
+                item {
+                    WhiteNoiseCallout(text = stringResource(R.string.ai_agents_setup_instruction, name))
+                }
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().testTag("ai_agents.prompt.$id"),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text = prompt,
+                                modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
+                                fontFamily = FontFamily.Monospace,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+                item {
                     Text(
-                        text = prompt,
-                        modifier = Modifier.padding(WhiteNoiseSpacing.FormField),
-                        fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall,
+                        stringResource(R.string.ai_agents_manual_body),
+                        Modifier.padding(horizontal = WhiteNoiseSpacing.FormField),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+            Column(
+                Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            ) {
+                if (copied) Text(
+                    stringResource(R.string.ai_agents_prompt_copied),
+                    Modifier.testTag("ai_agents.copy_feedback").semantics { liveRegion = LiveRegionMode.Polite },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                WhiteNoiseButton(
+                    onClick = { onCopy("$name setup prompt", prompt); copied = true },
+                    modifier = Modifier.fillMaxWidth().testTag("ai_agents.copy.$id"),
+                ) {
+                    Icon(painterResource(R.drawable.ic_content_copy), contentDescription = null, modifier = Modifier.size(24.dp))
+                    Text(stringResource(R.string.ai_agents_copy_prompt), Modifier.padding(start = WhiteNoiseSpacing.Related))
                 }
             }
         }

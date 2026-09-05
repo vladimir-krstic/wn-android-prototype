@@ -123,3 +123,30 @@ zero lint errors (15 retained dependency/version warnings and two hints), and
 builds both debug APKs. Ten B26 Compose interaction cases compile in the
 instrumentation APK; they were not executed. No device, emulator or visual
 inspection was performed.
+
+
+## Chat bubble reset in the header — 2026-09-05
+
+The user's selected placement moves the reset action from the bottom of Chat
+bubble colors into a trailing three-dot header menu using the shared native
+menu component. Global editing offers Reset to default; per-chat editing offers
+Reset to global colors. The menu item retains its previous availability rule,
+clears only the relevant overrides and closes after selection. Back/outside
+press dismisses the menu without resetting. The existing per-chat interaction
+case now opens the menu, checks reset isolation/dismissal, then verifies disabled
+reset when no overrides remain. Color pickers and previews are unchanged.
+
+Host validation passes: 894 unit tests, zero lint errors, debug and
+instrumentation-test APK assembly. The updated menu UI case compiles only;
+no device/emulator inspection was performed.
+
+
+## Standard Apply color button — 2026-09-05
+
+The shared full-spectrum picker now uses `WhiteNoiseButton` for Apply color:
+56 dp minimum task height and the shared 24 dp horizontal/8 dp vertical content
+padding. This applies to Action color and both global/per-chat bubble pickers.
+Full-width placement, valid-hex enablement and application behavior are unchanged.
+
+The debug APK builds and whitespace checks pass. This uses the existing shared
+button without new behavior or tests; no device inspection was performed.

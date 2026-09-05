@@ -3,6 +3,8 @@
 package dev.ipf.whitenoise.ui.chats
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.input.TextFieldState
@@ -31,23 +33,52 @@ import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun ChatSelectionBar(selected: List<Chat>, onClose: () -> Unit, onSelectAll: () -> Unit, onAction: (ChatBulkAction) -> Unit) {
+internal fun ChatSelectionBar(onClose: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.select_chats)) },
+        navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_selection_close)) } },
+    )
+}
+
+@Composable
+internal fun ChatSelectionBottomBar(selected: List<Chat>, onSelectAll: () -> Unit, onAction: (ChatBulkAction) -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val archive = ChatOrganization.archiveAction(selected)
-    TopAppBar(
-        title = { Text(pluralStringResource(R.plurals.selected_count, selected.size, selected.size), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
-        navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_selection_close)) } },
-        actions = {
-            TextButton(onClick = onSelectAll) { Text(stringResource(R.string.chat_select_all), maxLines = 1) }
-            Box {
-                IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_options)) }
-                WhiteNoiseDropdownMenu(expanded = menu, onDismissRequest = { menu = false }, items =
-                    listOf(ChatBulkAction.Read, ChatBulkAction.Unread, archive, ChatBulkAction.Folder, ChatBulkAction.Delete).map { action ->
-                        WhiteNoiseMenuItem(label = stringResource(action.labelResource), onClick = { menu = false; onAction(action) }, destructive = action == ChatBulkAction.Delete)
-                    })
+    Row(
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related)
+            .testTag("chats.selectionControls"),
+        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            FilledTonalIconButton(onClick = { menu = true }) {
+                Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_options))
             }
-        },
-    )
+            WhiteNoiseDropdownMenu(expanded = menu, onDismissRequest = { menu = false }, items =
+                listOf(ChatBulkAction.Read, ChatBulkAction.Unread, archive, ChatBulkAction.Folder, ChatBulkAction.Delete).map { action ->
+                    WhiteNoiseMenuItem(label = stringResource(action.labelResource), onClick = { menu = false; onAction(action) }, destructive = action == ChatBulkAction.Delete)
+                })
+        }
+        Surface(
+            modifier = Modifier.weight(1f).testTag("chats.selectionCount").semantics { liveRegion = LiveRegionMode.Polite },
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ) {
+            Text(
+                pluralStringResource(R.plurals.selected_count, selected.size, selected.size),
+                modifier = Modifier.padding(WhiteNoiseSpacing.Related),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+            FilledTonalButton(onClick = onSelectAll) {
+                Text(stringResource(R.string.chat_select_all), textAlign = TextAlign.Center)
+            }
+        }
+    }
 }
 
 internal val ChatBulkAction.labelResource get() = when (this) {
@@ -152,8 +183,12 @@ internal fun ChatConnectionBanner(profile: Profile, onRetry: () -> Unit, onRelay
     val roleState = ProfileRelayFixtures.availability(profile.settings.relays, RelayRole.ChatMessages)
     val relayIssue = profile.chatRelayUrls.isEmpty() || roleState != RelayRoleAvailability.Available
     if (phase == ChatConnectionPhase.Online && !relayIssue) return
-    Column(Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin).testTag("chats.connection")
-        .semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+    dev.ipf.whitenoise.ui.components.WhiteNoiseCallout(
+        modifier = Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin).testTag("chats.connection")
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        icon = if (relayIssue || phase == ChatConnectionPhase.Offline || phase == ChatConnectionPhase.Failed)
+            R.drawable.ic_warning else R.drawable.ic_info,
+    ) {
         if (phase != ChatConnectionPhase.Online) {
             Text(stringResource(when (phase) {
                 ChatConnectionPhase.Offline -> R.string.chat_connection_offline

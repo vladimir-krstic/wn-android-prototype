@@ -16,6 +16,255 @@ screens.
 Every item below is reference-backed and implemented unless its status names
 an approved Android difference or explicitly defers device/visual acceptance.
 
+## 2026-09-05 chat selection layout
+
+Selectable chat rows retain avatars/pin badges and have 8 dp between rounded
+surfaces. The “Select chats” header keeps Close; a transparent bottom row hosts
+bulk actions, one centered tonal count and Select All. Shared action eligibility,
+current-filter selection, Back and restoration remain. `ChatOrganizationFlowTest`
+adds compiled avatar/spacing/count/bottom-action coverage. 898 unit tests pass,
+lint has zero errors and both debug APKs assemble. See
+[the organization brief](../screens/chat-organization-and-recovery.md).
+Device visual acceptance remains pending.
+
+## 2026-09-05 message action menu simplification
+
+Bubble menus and matching accessibility actions omit Open message and Share.
+Select text/Read more retain reader access; reader and media sharing remain.
+MessageActionPolicy and its updated unit test capture the approved presentation
+change; see [the interaction brief](../screens/message-interactions-and-search.md).
+
+## 2026-09-05 message selection polish
+
+Conversation selection drops full-row tint/ripple while preserving whole-row
+Checkbox semantics and bubble-contained feedback. The fixed “Select messages”
+header leaves the live count only in the transparent bottom action row. Tonal
+action buttons retain paired contrast and native disabled states. Updated
+interaction coverage verifies title/count/toggle behavior (compiled only).
+898 unit tests pass, lint has zero errors and both APKs assemble; visual
+acceptance remains pending. See [the interaction brief](../screens/message-interactions-and-search.md).
+
+## 2026-09-05 latest-message jump polish
+
+`ConversationScreen` replaces the latest/unread text jump pill with a trailing
+down-arrow tonal icon button. `ConversationReading.showTailJump` gates it at two
+viewport heights using native lazy-list pixel estimates, including newer unloaded
+history, and rejects unmeasured layouts. Existing target/mention behavior stays
+intact. Threshold/resize/history unit regressions and a compiled icon-only return
+flow provide evidence. 898 unit tests pass, lint has zero errors and both debug
+APKs assemble; current-build device acceptance remains pending. See
+[the history brief](../screens/conversation-history-and-reading.md).
+
+## 2026-09-05 conversation search control polish
+
+Removed the full-width gray backing from `SearchResultsBottomBar`; individual
+arrows/count retain contrasting paired tonal colors, native disabled states and
+existing IME/navigation-bar clearance. No search behavior or parity status changes.
+Host assembly and diff checks pass; device visual acceptance remains pending.
+See [the interaction brief](../screens/message-interactions-and-search.md).
+
+## 2026-09-05 horizontal Chats filters and folders
+
+The regular Chats header dropdown is replaced by a horizontal Material pill row:
+Chats, saved folders in management order, Left, and Folders management. The active
+pill uses a stable neutral capsule. Existing filtering, profile ownership, folder
+assignment, deletion fallback and management routes remain intact. Search retains
+its advanced filter menu and hides the pill row. `ChatsScreen.kt` and the updated
+`ChatsScreenTest`, `ChatsPolishTest`, `ChatOrganizationFlowTest` and
+`ChatFolderFlowTest` provide implementation/compiled interaction evidence,
+including distant-folder scrolling, restoration, reorder and profile switching.
+895 unit tests pass, lint has zero errors, and both debug APKs assemble. Compose
+interaction tests were compiled only; current-build device and visual acceptance
+remain pending. See [the folder brief](../screens/chat-folders.md).
+
+## 2026-09-05 shared section polish
+
+App-wide SettingsGroup consumers now use visible-row positional Material shapes
+and native gaps, with distinct rows for conditional controls and choices.
+Shared link/metadata values wrap below their labels; section helpers follow
+controls at the shared inset. Read Aloud/Dictation selection dialogs reuse the
+native-dialog inset composition. Existing product capabilities and feature
+statuses remain unchanged. 892 unit tests pass, lint has zero errors, and both
+debug APKs assemble; three new layout regressions compile only.
+[Implementation and validation evidence](../screens/shared-settings-polish.md).
+Current-build device inspection and user visual acceptance remain pending.
+
+The modal-selector follow-up centralizes rounded selected/pressed surfaces for
+radio choices and modal checkbox/switch rows. Photo quality, retention presets
+and developer scenario lists now share the existing preference/speech/mute row;
+selection and cancellation behavior remain unchanged. `ModalSelectorTest`
+compiles three corner-containment and accessible interaction cases. The host
+gate passes with 892 unit tests, zero lint errors and both debug APKs assembled;
+device execution and visual acceptance remain pending.
+
+## 2026-09-05 compact Chats update entry
+
+The large Chats update callout is replaced by a native icon button immediately
+before Filters. It opens Settings to the gray update row below the profile
+switcher; it does not start the update flow. Self-managed/new-version eligibility
+is preserved, while prior banner dismissal no longer hides the compact entry.
+Search and selection modes omit it. The host gate passes 895 unit tests, zero
+lint errors, and both debug APKs. Revised navigation/availability interaction
+cases compile only; device visual acceptance is pending.
+[Evidence](../screens/distribution-gated-app-updates.md#2026-09-05--compact-chats-update-entry).
+
+## 2026-09-05 update summary placement and copy
+
+Settings places App updates immediately below the profile/account switcher in a
+neutral gray row. Available copy names only the offered version; installed-version
+and release-gap text are removed from ordinary update surfaces, including the
+Chats banner. Internal update/dismissal behavior remains unchanged. All supported
+locales use concise check/current status. The host gate passes 895 unit tests,
+zero lint errors, and both debug APKs; updated interaction cases compile only.
+[Evidence](../screens/distribution-gated-app-updates.md#2026-09-05--update-row-placement-and-concise-summary).
+
+## 2026-09-05 normal-startup loading flash
+
+Normal app construction now starts Ready because initial state is synchronous,
+removing the artificial 300 ms spinner/text screen after Android's splash.
+Explicit developer startup failure/retry/recovery behavior remains available.
+A new startup regression passes; the host gate passes 895 unit tests, zero lint
+errors, and both debug APKs. Device timing and visual acceptance remain pending.
+[Evidence](../screens/onboarding-and-profiles.md#2026-09-05--remove-the-normal-launch-loading-flash).
+
+## 2026-09-05 search update-callout visibility
+
+The app-update callout is omitted for the entire Search mode, including an
+empty query and filter-only results. Update state and ordinary Chats banner
+eligibility are unchanged. Debug APK assembly and whitespace checks pass.
+[Evidence](../screens/global-search.md#2026-09-05--suppress-update-callout-during-search).
+
+## 2026-09-05 search filter context menu
+
+Search now shares the regular Chats header filter icon button and native
+`WhiteNoiseDropdownMenu`. The old outlined Filters chip/category dialog is
+removed. Categories open their existing pickers directly; active icon/category
+state, removable chips, Clear All, and query/filter behavior are preserved.
+The host gate passes 894 unit tests, zero lint errors, and both debug APKs.
+Existing filter interaction cases use the new entry path; one additional
+active-state/clear-query regression compiles only. Device visual acceptance is
+pending. [Evidence](../screens/global-search.md#2026-09-05--shared-filter-icon-and-context-menu).
+
+## 2026-09-05 native voice search repair
+
+The search microphone now launches the installed Android speech recognizer and
+searches its returned phrase. The old timed “trailhead” response is restricted
+to an explicit Developer Tools scenario. Cancellation, missing providers, empty
+results, stale profile/query/closed-search results, and recreation are handled
+without overwriting unrelated search state. No app recording/network permission
+or styling override is added to the provider-owned screen.
+The final host gate passes 894 unit tests, zero lint errors, and both debug APKs;
+six new Activity Result registry cases compile only. Real speech recognition and
+device visual acceptance remain pending.
+[Evidence](../screens/global-search.md#2026-09-05--native-voice-search-repair).
+
+## 2026-09-05 AI agent setup polish
+
+AI Agents now presents a short gray introduction and four native segmented
+agent rows. Selecting one opens a focused setup sheet with selectable prompt,
+next-step guidance, a standard full-size copy button, and visible copy feedback.
+Manual public-key copy and documentation remain available in their own group.
+All original prompt payloads and public-key availability rules are preserved;
+shortened interface instructions are localized in all five resource sets.
+The host gate passes 894 unit tests, zero lint errors, and both APK assemblies.
+`AgentFeaturesInteractionTest` compiles eight interaction cases, including all
+four prompt copies, no-action dismissal, missing keys, and large-type access.
+Device execution and visual acceptance remain pending.
+[Evidence](../screens/ai-agents-and-streaming-operations.md).
+
+## 2026-09-05 folder icons
+
+Settings → Folders and every folder management row now use the same official
+Material Symbols Rounded folder asset. Text semantics and actions are unchanged.
+Debug APK assembly and whitespace checks pass; no device inspection was performed.
+[Evidence](../screens/chat-folders.md).
+
+## 2026-09-05 Apply color button sizing
+
+All full-spectrum Apply color buttons use the shared 56 dp-minimum task button
+and its standard padding. Hex validation and callbacks are unchanged. Debug APK
+assembly and whitespace checks pass; no device inspection was performed.
+[Evidence](../screens/appearance-typography-and-input.md).
+
+## 2026-09-05 chat bubble reset menu
+
+Chat bubble colors exposes reset in its header overflow menu instead of below
+the pickers. Global/per-chat scope, availability and reset callbacks remain
+unchanged. 894 unit tests pass, lint has zero errors and both debug APKs build;
+the updated per-chat menu case compiles only. Device/visual verification remains
+pending. [Evidence](../screens/appearance-typography-and-input.md).
+
+## 2026-09-05 concise media-quality picker
+
+Media quality now shows only its four choices and Cancel; the long paragraph
+has been removed from all locales. Quality selection and processing behavior
+are unchanged. Lint passes with zero errors and the debug APK builds. Device
+inspection remains pending. [Evidence](../screens/downloads-and-media-quality.md).
+
+## 2026-09-05 Amber account parity and informational callouts
+
+Amber resolves the same canonical account as regular sign-in for each origin.
+Successful method changes preserve existing profile/chats/drafts and update
+signing custody without duplicating the account. Profile Keys uses the shared
+gray info-icon callout and exposes no local-secret controls for Amber. Existing
+standalone developer/help/support, relay, speech, connection and update notices
+share the callout with meaning-appropriate icons and preserved actions.
+Two added host regressions cover both origins and data-preserving method changes;
+894 unit tests pass. The key UI assertion compiles. See
+[onboarding](../screens/onboarding-and-profiles.md),
+[keys](../screens/keys-and-profile-exit.md) and
+[callouts](../screens/shared-settings-polish.md).
+
+## 2026-09-05 New Message connection actions
+
+New Message offers Connect with QR and Invite a friend beside New Group.
+The QR entry routes to the existing display/scanner/share destination;
+invitation uses the native Sharesheet with the public profile link and handles
+unavailable sharing. Two UI cases compile for entry/callback and invitation
+handoff/failure behavior. 894 unit tests pass, lint has zero errors and both
+debug APKs assemble. No device or emulator inspection was performed; visual
+acceptance remains pending. [Evidence](../screens/chats-and-chat-creation.md).
+
+## 2026-09-05 access progress cleanup
+
+The shared access feedback hides its standalone Cancel action while sign-in,
+Amber, profile creation, retained access or recovery is busy. Existing Back
+cancellation, failure/retry controls and recovery consent are preserved. 892
+unit tests pass, lint reports zero errors and both debug APKs assemble. The
+updated recovery-retry UI assertion compiles; device verification remains
+pending. [Evidence](../screens/onboarding-and-profiles.md).
+
+## 2026-09-05 sign-in action grouping
+
+“Sign in with Amber” now sits directly above “Sign In” in the same pinned action
+group, matching Welcome's outlined/filled stack and 8 dp spacing. Existing
+validation, availability and action callbacks are preserved. 892 unit tests
+pass, lint reports zero errors and the debug APK builds; device/visual
+acceptance remains pending. [Evidence](../screens/onboarding-and-profiles.md).
+
+## 2026-09-05 stable list-row shapes
+
+User-approved follow-up: shared settings and app-wide interactive/segmented
+list rows now keep the resting shape for selection, checked, pressed, focused,
+hovered and dragged states through `WhiteNoiseListItemDefaults`. Native controls,
+state colors and semantics remain unchanged. 892 unit tests pass, lint reports
+zero errors (15 warnings, two hints), and both debug APKs build. Existing UI
+tests compile; no device execution or visual verification is claimed.
+[Evidence](../screens/shared-settings-polish.md).
+
+## 2026-09-05 directory selector sheets
+
+Folder Included Chats, People and Preview, global chat/sender filters, group
+admin selection and forwarding/incoming profile choices now use the shared
+searchable Material bottom sheet. Existing contact, forwarding, contact-group
+and profile switcher sheets use matching white segmented rows. Draft/save,
+filter application, confirmation and share-operation ownership remain with each
+flow. `EntityPickerSheetTest` compiles three restoration, read-only and disabled
+selection regressions; the folder integration test asserts the sheet boundary.
+The host gate passes: 892 unit tests, zero lint errors (15 warnings, two hints),
+debug APK assembly and instrumentation-test APK compilation. No device run or
+visual acceptance is claimed. [Evidence](../screens/shared-settings-polish.md).
+
 ## 2026-09-04 production B32
 
 C120/C121 are implemented and host-verified within Q06. One app-wide update

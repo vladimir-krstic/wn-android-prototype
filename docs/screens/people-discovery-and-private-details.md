@@ -99,3 +99,9 @@ composition, with scrollable IME-safe dialogs and wrapping status text.
 B03 started from clean B02 commit `7514ff7`. The audit's pinned production source
 remains unchanged; B01/B02 edits are the only intervening implementation drift.
 Commit title: `B03: Add people discovery and private contact flows`.
+
+
+New Message also offers Connect with QR and Invite a friend before the people
+list, without requiring an empty search. These reuse the existing Share &
+Connect scanner/display destination and the public-profile invitation Sharesheet.
+See `chats-and-chat-creation.md` for the 2026-09-05 entry-point follow-up.

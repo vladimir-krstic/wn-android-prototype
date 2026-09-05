@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -44,6 +45,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -92,6 +94,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEntityPickerSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoisePickerItem
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatMessage
@@ -604,12 +608,6 @@ internal fun ForwardMessagesSheet(
         (destination.id != profile.id || it.id != sourceChatId) && (query.isBlank() || it.title.contains(query, ignoreCase = true))
     }
     val folders = destination.chatFolders.filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
-    if (profileChoice) AlertDialog(onDismissRequest = { profileChoice = false }, title = { Text(stringResource(R.string.batch_profile_choice)) },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-            destinationProfiles.forEach { candidate -> TextButton(onClick = { destinationId = candidate.id; selected = emptySet(); profileChoice = false; startFailed = false }) {
-                Text(candidate.name)
-            } }
-        } }, confirmButton = { TextButton(onClick = { profileChoice = false }) { Text(stringResource(R.string.cancel)) } })
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -707,15 +705,10 @@ internal fun ForwardMessagesSheet(
                                     val checked = chat.id in selected
                                     val failure = MessageForwarding.targetFailure(destination, chat)
                                     val enabled = checked || failure == null
-                                    val shapes = ListItemDefaults.segmentedShapes(
+                                    val shapes = WhiteNoiseListItemDefaults.segmentedShapes(
                                         index = index,
                                         count = chats.size,
-                                        defaultShapes = ListItemDefaults.shapes(
-                                            shape = RoundedCornerShape(0.dp),
-                                        ),
-                                    ).let { positionalShapes ->
-                                        positionalShapes.copy(selectedShape = positionalShapes.shape)
-                                    }
+                                    )
                                     val destinationColors = ListItemDefaults.colors(
                                         containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                                         selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -828,6 +821,13 @@ internal fun ForwardMessagesSheet(
             }
         }
     }
+    if (profileChoice) WhiteNoiseEntityPickerSheet(
+        title = stringResource(R.string.batch_profile_choice),
+        items = destinationProfiles.map { WhiteNoisePickerItem(it.id, it.name, it.avatar) },
+        onSelect = { destinationId = it; selected = emptySet(); profileChoice = false; startFailed = false },
+        onDismiss = { profileChoice = false },
+    )
+
 }
 
 @Composable
@@ -978,51 +978,54 @@ internal fun SelectionBottomBar(
     onDelete: () -> Unit,
     onForward: () -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Column(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(WhiteNoiseSpacing.Related),
+    Column(
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(
+            horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+            FilledTonalIconButton(
+                onClick = onDelete,
+                enabled = selectedCount > 0,
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
             ) {
-                IconButton(onClick = onDelete, enabled = selectedCount > 0) {
-                    Icon(
-                        painterResource(R.drawable.ic_delete),
-                        contentDescription = stringResource(R.string.delete_selected_messages),
-                        tint = if (selectedCount > 0) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        },
-                    )
-                }
-                Text(
-                    pluralStringResource(R.plurals.selected_count, selectedCount, selectedCount),
-                    modifier = Modifier.weight(1f).semantics {
-                        liveRegion = LiveRegionMode.Polite
-                    },
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                FilledTonalIconButton(onClick = onForward, enabled = canForward) {
-                    Icon(
-                        painterResource(R.drawable.ic_forward),
-                        contentDescription = stringResource(R.string.forward_selected_messages),
-                    )
-                }
-            }
-            if (selectedCount > 0 && !canForward) {
-                Text(
-                    stringResource(R.string.forward_selection_unavailable),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.Related),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodySmall,
+                Icon(
+                    painterResource(R.drawable.ic_delete),
+                    contentDescription = stringResource(R.string.delete_selected_messages),
                 )
             }
+            Text(
+                pluralStringResource(R.plurals.selected_count, selectedCount, selectedCount),
+                modifier = Modifier.weight(1f).semantics {
+                    liveRegion = LiveRegionMode.Polite
+                },
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            FilledTonalIconButton(onClick = onForward, enabled = canForward) {
+                Icon(
+                    painterResource(R.drawable.ic_forward),
+                    contentDescription = stringResource(R.string.forward_selected_messages),
+                )
+            }
+        }
+        if (selectedCount > 0 && !canForward) {
+            Text(
+                stringResource(R.string.forward_selection_unavailable),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.Related),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }
@@ -1039,56 +1042,55 @@ internal fun SearchResultsBottomBar(
     } else {
         pluralStringResource(R.plurals.match_position, count, current + 1, count)
     }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
-                .testTag("conversation.searchControls")
-                .padding(
-                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                    vertical = WhiteNoiseSpacing.Related,
-                ),
-            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-            verticalAlignment = Alignment.CenterVertically,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .testTag("conversation.searchControls")
+            .padding(
+                horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                vertical = WhiteNoiseSpacing.Related,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FilledTonalIconButton(
+            onClick = onOlder,
+            enabled = count > 0 && current < count - 1,
         ) {
-            FilledTonalIconButton(
-                onClick = onOlder,
-                enabled = count > 0 && current < count - 1,
-            ) {
-                Icon(
-                    painterResource(R.drawable.ic_arrow_up),
-                    contentDescription = stringResource(R.string.previous_match),
-                )
-            }
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("conversation.searchCount")
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            ) {
-                Text(
-                    countLabel,
-                    modifier = Modifier.padding(
-                        horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                        vertical = 10.dp,
-                    ),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-            FilledTonalIconButton(
-                onClick = onNewer,
-                enabled = count > 0 && current > 0,
-            ) {
-                Icon(
-                    painterResource(R.drawable.ic_arrow_down),
-                    contentDescription = stringResource(R.string.next_match),
-                )
-            }
+            Icon(
+                painterResource(R.drawable.ic_arrow_up),
+                contentDescription = stringResource(R.string.previous_match),
+            )
+        }
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .testTag("conversation.searchCount")
+                .semantics { liveRegion = LiveRegionMode.Polite },
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ) {
+            Text(
+                countLabel,
+                modifier = Modifier.padding(
+                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+                    vertical = 10.dp,
+                ),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        FilledTonalIconButton(
+            onClick = onNewer,
+            enabled = count > 0 && current > 0,
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_arrow_down),
+                contentDescription = stringResource(R.string.next_match),
+            )
         }
     }
 }

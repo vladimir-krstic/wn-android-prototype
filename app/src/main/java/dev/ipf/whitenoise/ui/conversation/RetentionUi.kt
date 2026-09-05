@@ -2,7 +2,6 @@ package dev.ipf.whitenoise.ui.conversation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -10,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -22,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.foundation.selection.selectableGroup
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.state.*
@@ -88,11 +88,14 @@ internal fun RetentionPicker(current: DisappearingDuration, editable: Boolean = 
             Text(stringResource(R.string.retention_existing_deadlines))
             if (!editable) Text(stringResource(R.string.retention_readonly))
             error?.let { Text(it, Modifier.semantics { liveRegion = LiveRegionMode.Polite }, color = MaterialTheme.colorScheme.error) }
-            DisappearingDuration.entries.forEach { duration ->
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected == duration, enabled = editable, role = Role.RadioButton, onClick = { selected = duration }),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected == duration, onClick = null, enabled = editable, modifier = Modifier.clearAndSetSemantics { })
-                    Text(retentionLabel(duration), Modifier.padding(start = WhiteNoiseSpacing.Related))
+            Column(Modifier.selectableGroup()) {
+                DisappearingDuration.entries.forEach { duration ->
+                    WhiteNoiseDialogChoiceRow(
+                        title = retentionLabel(duration),
+                        selected = selected == duration,
+                        enabled = editable,
+                        onClick = { selected = duration },
+                    )
                 }
             }
             TextButton(onClick = { custom = true }, enabled = editable) {

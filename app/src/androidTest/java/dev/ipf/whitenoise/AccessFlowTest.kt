@@ -72,6 +72,7 @@ class AccessFlowTest {
         rule.onNodeWithText("Try Again").performClick()
         rule.onNodeWithText("Recover profile setup?").assertDoesNotExist()
         rule.runOnIdle { assertEquals(AccessPhase.Recovering, vm.accessAttempt!!.phase) }
+        rule.onNodeWithText("Cancel").assertDoesNotExist()
     }
 
     @Test fun retainedPickerStartsTheSelectedStoredProfile() {
@@ -110,6 +111,8 @@ class AccessFlowTest {
         rule.setContent { WhiteNoiseTheme {
             ProfileKeysScreen(ProfileFixtures.openCircuit.copy(signingMode = ProfileSigningMode.Amber), {})
         } }
+        rule.onNodeWithTag("profile_keys.amber_info").assertIsDisplayed()
+        rule.onNodeWithText("Signed in with Amber").assertIsDisplayed()
         rule.onNodeWithText("Amber holds this profile’s Private Key. Manage backups in Amber.").assertIsDisplayed()
         rule.onNodeWithText("Copy Private Key").assertDoesNotExist()
         rule.onNodeWithText("Export Private Key").assertDoesNotExist()

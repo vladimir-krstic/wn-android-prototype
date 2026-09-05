@@ -89,9 +89,9 @@ fun DeveloperToolsScreen(
     onRecentMediaAccess: (dev.ipf.whitenoise.model.RecentMediaAccess) -> Unit = {},
     attachmentTransferScenario: dev.ipf.whitenoise.model.AttachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success,
     onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
-    downloadExampleControls: @Composable () -> Unit = {},
-    relayPublicationControls: @Composable () -> Unit = {},
-    updateControls: @Composable () -> Unit = {},
+    downloadExampleControls: @Composable SettingsGroupScope.() -> Unit = {},
+    relayPublicationControls: @Composable SettingsGroupScope.() -> Unit = {},
+    updateControls: @Composable SettingsGroupScope.() -> Unit = {},
     photoEditorScenario: dev.ipf.whitenoise.model.PhotoEditorScenario = dev.ipf.whitenoise.model.PhotoEditorScenario.Success,
     onPhotoEditorScenario: (dev.ipf.whitenoise.model.PhotoEditorScenario) -> Unit = {},
     locationScenario: dev.ipf.whitenoise.model.LocationScenario = dev.ipf.whitenoise.model.LocationScenario.Unavailable,
@@ -281,11 +281,13 @@ fun DeveloperToolsScreen(
             }
             item {
                 SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                    SettingsSwitch(
-                        title = stringResource(R.string.developer_tools),
-                        checked = tools.isEnabled,
-                        onCheckedChange = { onEnabled(it) },
-                    )
+                    row {
+                        SettingsSwitch(
+                            title = stringResource(R.string.developer_tools),
+                            checked = tools.isEnabled,
+                            onCheckedChange = { onEnabled(it) },
+                        )
+                    }
                 }
                 SettingsExplainer(stringResource(R.string.developer_enable_technical_tools_for_this_profile))
             }
@@ -295,95 +297,178 @@ fun DeveloperToolsScreen(
                 item {
                     SettingsGroup {
                         if (speech != null) {
-                            SettingsLink(stringResource(R.string.developer_read_aloud_history_outcomes), speech.edgeScenario.name, { speechOpen = true })
-                            SettingsLink(stringResource(R.string.developer_read_aloud_engine_audio_and_background_outcomes), onClick = { speechPreferencesOpen = true })
+                            row {
+                                SettingsLink(stringResource(R.string.developer_read_aloud_history_outcomes), speech.edgeScenario.name, { speechOpen = true })
+                            }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_read_aloud_engine_audio_and_background_outcomes), onClick = { speechPreferencesOpen = true })
+                            }
                         }
                         if (capture != null) {
-                            SettingsLink(stringResource(R.string.developer_dictation_outcomes), capture.scenario.developerLabel, { dictationOpen = true })
-                            SettingsLink(stringResource(R.string.developer_voice_recording_outcomes), capture.voiceScenario.developerLabel, { recordingOpen = true })
+                            row {
+                                SettingsLink(stringResource(R.string.developer_dictation_outcomes), capture.scenario.developerLabel, { dictationOpen = true })
+                            }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_voice_recording_outcomes), capture.voiceScenario.developerLabel, { recordingOpen = true })
+                            }
                         }
-                        SettingsLink(stringResource(R.string.developer_history_loading_scenarios), historyScenario.developerLabel, { historyOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_message_edit_outcomes), messageEditScenario.developerLabel, { editOpen = true })
-                        SettingsLink(stringResource(R.string.developer_message_deletion_outcomes), messageDeleteScenario.developerLabel, { deleteOpen = true })
-                        SettingsLink(stringResource(R.string.developer_recent_media_access), recentMediaAccess.name, { recentOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_attachment_transfer_outcomes), attachmentTransferScenario.developerLabel, { transferOpen = true })
+                        row {
+                            SettingsLink(stringResource(R.string.developer_history_loading_scenarios), historyScenario.developerLabel, { historyOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_message_edit_outcomes), messageEditScenario.developerLabel, { editOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_message_deletion_outcomes), messageDeleteScenario.developerLabel, { deleteOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_recent_media_access), recentMediaAccess.name, { recentOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_attachment_transfer_outcomes), attachmentTransferScenario.developerLabel, { transferOpen = true })
+                        }
                         downloadExampleControls()
                         relayPublicationControls()
                         updateControls()
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_photo_editor_outcomes), photoEditorScenario.developerLabel, { photoEditorOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_location_sharing_outcomes), locationScenario.developerLabel, { locationOpen = true })
-                        SettingsLink(stringResource(R.string.developer_file_opening_outcomes), attachmentAccessScenario.developerLabel, { attachmentAccessOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_message_forwarding_outcomes), messageForwardScenario.developerLabel, { forwardOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_voice_search_scenarios), globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_chat_action_scenarios), chatBatchScenario.developerLabel, { chatBatchOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_chat_connection_scenarios), profile.chatConnection.phase.name, { chatConnectionOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_profile_save_scenarios), profileSaveScenario.developerLabel, { profileSaveScenariosOpen = true })
-                        SettingsDivider()
-                        SettingsSwitch(stringResource(R.string.developer_next_profile_image_fails), profileImageFails, onProfileImageFails)
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_people_search_scenarios), peopleSearchScenario.developerLabel, { peopleScenariosOpen = true })
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_group_contact_scenarios), groupContactScenario.developerLabel, { groupScenariosOpen = true })
+                        row {
+                            SettingsLink(stringResource(R.string.developer_photo_editor_outcomes), photoEditorScenario.developerLabel, { photoEditorOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_location_sharing_outcomes), locationScenario.developerLabel, { locationOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_file_opening_outcomes), attachmentAccessScenario.developerLabel, { attachmentAccessOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_message_forwarding_outcomes), messageForwardScenario.developerLabel, { forwardOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_voice_search_scenarios), globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_chat_action_scenarios), chatBatchScenario.developerLabel, { chatBatchOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_chat_connection_scenarios), profile.chatConnection.phase.name, { chatConnectionOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_profile_save_scenarios), profileSaveScenario.developerLabel, { profileSaveScenariosOpen = true })
+                        }
+                        row {
+                            SettingsSwitch(stringResource(R.string.developer_next_profile_image_fails), profileImageFails, onProfileImageFails)
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_people_search_scenarios), peopleSearchScenario.developerLabel, { peopleScenariosOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_group_contact_scenarios), groupContactScenario.developerLabel, { groupScenariosOpen = true })
+                        }
                         if (groupWork != null) {
-                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_roster), groupWork.rosterScenario.developerLabel, { groupWorkChoice = "roster" })
-                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_member_updates), groupWork.mutationScenario.developerLabel, { groupWorkChoice = "members" })
-                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_images), groupWork.imageScenario.developerLabel, { groupWorkChoice = "images" })
-                            SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_creation), groupWork.createScenario.developerLabel, { groupWorkChoice = "create" })
-                            if (groupLifecycle != null) {
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_administration), groupLifecycle.scenario.developerLabel, { groupWorkChoice = "lifecycle" })
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_group_lifecycle), groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
+                            row {
+                                SettingsLink(stringResource(R.string.developer_group_roster), groupWork.rosterScenario.developerLabel, { groupWorkChoice = "roster" })
                             }
-                            if (transcript != null) { SettingsDivider(); SettingsLink(stringResource(R.string.developer_transcript_export), transcript.scenario.developerLabel, { groupWorkChoice = "transcript" }) }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_group_member_updates), groupWork.mutationScenario.developerLabel, { groupWorkChoice = "members" })
+                            }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_group_images), groupWork.imageScenario.developerLabel, { groupWorkChoice = "images" })
+                            }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_group_creation), groupWork.createScenario.developerLabel, { groupWorkChoice = "create" })
+                            }
+                            if (groupLifecycle != null) {
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_group_administration), groupLifecycle.scenario.developerLabel, { groupWorkChoice = "lifecycle" })
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_group_lifecycle), groupLifecycle.stateScenario.developerLabel, { groupWorkChoice = "groupState" })
+                                }
+                            }
+                            if (transcript != null) {
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_transcript_export), transcript.scenario.developerLabel, { groupWorkChoice = "transcript" })
+                                }
+                            }
                             if (auditLogs != null) {
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_audit_log_outcome),auditLogs.scenario.label,{auditChoice = true})
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_audit_log_outcome),auditLogs.scenario.label,{auditChoice = true})
+                                }
                             }
                             if (appLock != null) {
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_app_unlock_outcome),appLock.scenario.label,{unlockChoice = true})
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_lock_now),stringResource(R.string.developer_lock_now_help),appLock::lockNow)
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_app_unlock_outcome),appLock.scenario.label,{unlockChoice = true})
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_lock_now),stringResource(R.string.developer_lock_now_help),appLock::lockNow)
+                                }
                             }
                             if (notificationActions != null) {
-                                SettingsDivider(); SettingsLink(stringResource(R.string.notification_action_title), stringResource(R.string.developer_notification_action_help), { actionChoice = "action" })
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_notification_action_outcome), notificationActions.scenario.label, { actionChoice = "outcome" })
+                                row {
+                                    SettingsLink(stringResource(R.string.notification_action_title), stringResource(R.string.developer_notification_action_help), { actionChoice = "action" })
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_notification_action_outcome), notificationActions.scenario.label, { actionChoice = "outcome" })
+                                }
                             }
                             if (incoming != null) {
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_incoming_request), stringResource(R.string.developer_incoming_request_help), { incomingExampleOpen = true })
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_incoming_request_outcome), incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_defer_incoming_requests), if (incoming.locked) "Locked" else "Unlocked", { incoming.chooseLock(!incoming.locked) })
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_incoming_request), stringResource(R.string.developer_incoming_request_help), { incomingExampleOpen = true })
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_incoming_request_outcome), incoming.scenario.developerLabel, { incomingOutcomeOpen = true })
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_defer_incoming_requests), if (incoming.locked) "Locked" else "Unlocked", { incoming.chooseLock(!incoming.locked) })
+                                }
                             }
                             if (notificationControls != null) {
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_notification_outcomes),notificationControls.scenario.developerLabel,{notificationChoice = "outcome"})
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_native_push_availability),notificationControls.environment.push.name,{notificationChoice = "push"})
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_android_vibration_override),notificationControls.environment.vibrationOverride.name,{notificationChoice = "vibration"})
-                                SettingsDivider(); SettingsSwitch(stringResource(R.string.developer_vibration_preview_available),notificationControls.environment.previewAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(previewAvailable = it))})
-                                SettingsDivider(); SettingsSwitch(stringResource(R.string.developer_app_update_distribution),notificationControls.environment.updatesAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(updatesAvailable = it))})
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_stop_background_connection),stringResource(R.string.developer_stop_background_help),notificationControls::stopBackground,enabled = notificationControls.backgroundConnection)
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_notification_outcomes),notificationControls.scenario.developerLabel,{notificationChoice = "outcome"})
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_native_push_availability),notificationControls.environment.push.name,{notificationChoice = "push"})
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_android_vibration_override),notificationControls.environment.vibrationOverride.name,{notificationChoice = "vibration"})
+                                }
+                                row {
+                                    SettingsSwitch(stringResource(R.string.developer_vibration_preview_available),notificationControls.environment.previewAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(previewAvailable = it))})
+                                }
+                                row {
+                                    SettingsSwitch(stringResource(R.string.developer_app_update_distribution),notificationControls.environment.updatesAvailable,{notificationControls.chooseEnvironment(notificationControls.environment.copy(updatesAvailable = it))})
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_stop_background_connection),stringResource(R.string.developer_stop_background_help),notificationControls::stopBackground,enabled = notificationControls.backgroundConnection)
+                                }
                             }
                             if (retention != null) {
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_retention_update), retention.scenario.developerLabel, { groupWorkChoice = "retention" })
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_retention_example), retention.example.developerLabel, { groupWorkChoice = "expiry" })
-                                SettingsDivider(); SettingsLink(stringResource(R.string.developer_advance_expiry_clock), stringResource(R.string.developer_advance_expiry_help), { retention.advanceExampleClock(60_000) })
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_retention_update), retention.scenario.developerLabel, { groupWorkChoice = "retention" })
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_retention_example), retention.example.developerLabel, { groupWorkChoice = "expiry" })
+                                }
+                                row {
+                                    SettingsLink(stringResource(R.string.developer_advance_expiry_clock), stringResource(R.string.developer_advance_expiry_help), { retention.advanceExampleClock(60_000) })
+                                }
                             }
                         }
-                        SettingsDivider()
-                        SettingsSwitch(stringResource(R.string.developer_next_created_chat_cannot_open), createdChatUnavailable, onCreatedChatUnavailable)
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_access_scenarios), accessScenario.developerLabel, { showAccessScenarios = true })
-                        SettingsDivider()
-                        SettingsAction(stringResource(R.string.developer_preview_startup_failure), onClick = onStartupFailure)
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_sign_out_scenarios), exitScenario.developerLabel, { showExitScenarios = true })
+                        row {
+                            SettingsSwitch(stringResource(R.string.developer_next_created_chat_cannot_open), createdChatUnavailable, onCreatedChatUnavailable)
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_access_scenarios), accessScenario.developerLabel, { showAccessScenarios = true })
+                        }
+                        row {
+                            SettingsAction(stringResource(R.string.developer_preview_startup_failure), onClick = onStartupFailure)
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_sign_out_scenarios), exitScenario.developerLabel, { showExitScenarios = true })
+                        }
                         if (profile.signingMode == dev.ipf.whitenoise.model.ProfileSigningMode.LocalKey) {
-                            SettingsDivider()
-                            SettingsSwitch(stringResource(R.string.developer_local_key_available), profile.localKeyAvailable, onLocalKeyAvailable)
+                            row {
+                                SettingsSwitch(stringResource(R.string.developer_local_key_available), profile.localKeyAvailable, onLocalKeyAvailable)
+                            }
                         }
                     }
                     SettingsExplainer(stringResource(R.string.developer_choose_a_result_then_use_add_profile_or_sign_out_witho))
@@ -391,14 +476,19 @@ fun DeveloperToolsScreen(
                 item { SettingsSection(stringResource(R.string.developer_debugging)) }
                 item {
                     SettingsGroup {
-                        SettingsSwitch(
-                            title = stringResource(R.string.developer_debug_mode),
-                            checked = tools.debugMode,
-                            onCheckedChange = { onDebugMode(it) },
-                        )
-                        SettingsDivider()
-                        SettingsLink(stringResource(R.string.developer_diagnostics), stringResource(R.string.developer_diagnostics_help), onDiagnostics)
-                        SettingsDivider(); SettingsLink(stringResource(R.string.audit_logs_title),stringResource(R.string.audit_logs_sensitive),onAuditLogs)
+                        row {
+                            SettingsSwitch(
+                                title = stringResource(R.string.developer_debug_mode),
+                                checked = tools.debugMode,
+                                onCheckedChange = { onDebugMode(it) },
+                            )
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_diagnostics), stringResource(R.string.developer_diagnostics_help), onDiagnostics)
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.audit_logs_title),stringResource(R.string.audit_logs_sensitive),onAuditLogs)
+                        }
                     }
                     SettingsExplainer(
                         stringResource(R.string.developer_debug_mode_adds_technical_details_to_supported_convers),
@@ -406,52 +496,59 @@ fun DeveloperToolsScreen(
                 }
                 item {
                     SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                        SettingsLink(stringResource(R.string.developer_key_packages), stringResource(R.string.developer_key_packages_help), onKeyPackages)
+                        row {
+                            SettingsLink(stringResource(R.string.developer_key_packages), stringResource(R.string.developer_key_packages_help), onKeyPackages)
+                        }
                     }
                 }
                 item { SettingsSection(stringResource(R.string.developer_diagnostic_logs)) }
                 item {
                     val nonemptyRecords = profile.diagnostics.records.filter { it.byteCount > 0 }
                     SettingsGroup {
-                        SettingsMetadata(
-                            title = stringResource(R.string.developer_diagnostic_logging),
-                            value = if (profile.diagnostics.loggingEnabled) "On" else "Off",
-                        )
-                        SettingsDivider()
+                        row {
+                            SettingsMetadata(
+                                title = stringResource(R.string.developer_diagnostic_logging),
+                                value = if (profile.diagnostics.loggingEnabled) "On" else "Off",
+                            )
+                        }
                         if (nonemptyRecords.isEmpty()) {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            ) {
-                                Text(
-                                    text = "There are no logs.",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            item {
+                                ListItem(
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                ) {
+                                    Text(
+                                        text = "There are no logs.",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
-                        nonemptyRecords.forEachIndexed { index, file ->
-                            if (index > 0) SettingsDivider()
-                            ListItem(
-                                supportingContent = { Text("${fileSize(file.byteCount)} · ${file.createdLabel} · ${file.profileName}") },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            ) {
-                                Text(file.filename, fontFamily = FontFamily.Monospace)
+                        nonemptyRecords.forEach { file ->
+                            item {
+                                ListItem(
+                                    supportingContent = { Text("${fileSize(file.byteCount)} · ${file.createdLabel} · ${file.profileName}") },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                ) {
+                                    Text(file.filename, fontFamily = FontFamily.Monospace)
+                                }
                             }
                         }
                         if (nonemptyRecords.isNotEmpty()) {
-                            SettingsDivider()
-                            SettingsAction(
-                                title = stringResource(R.string.developer_export_diagnostic_logs),
-                                onClick = {
-                                    exportContent = profile.diagnostics.diagnosticLogExportText
-                                    exportLogs.launch("White Noise Diagnostic Logs.txt")
-                                },
-                                leading = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_download),
-                                        contentDescription = null,
-                                    )
-                                },
-                            )
+                            row {
+                                SettingsAction(
+                                    title = stringResource(R.string.developer_export_diagnostic_logs),
+                                    onClick = {
+                                        exportContent = profile.diagnostics.diagnosticLogExportText
+                                        exportLogs.launch("White Noise Diagnostic Logs.txt")
+                                    },
+                                    leading = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_download),
+                                            contentDescription = null,
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                     SettingsExplainer(
@@ -463,9 +560,12 @@ fun DeveloperToolsScreen(
             item { SettingsSection(stringResource(R.string.about)) }
             item {
                 SettingsGroup {
-                    SettingsMetadata("Version", "0.1 (1)")
-                    SettingsDivider()
-                    SettingsMetadata("Built on", "MarmotKit (790eb860)")
+                    row {
+                        SettingsMetadata("Version", "0.1 (1)")
+                    }
+                    row {
+                        SettingsMetadata("Built on", "MarmotKit (790eb860)")
+                    }
                 }
             }
         }
@@ -500,7 +600,7 @@ fun DiagnosticsScreen(
         parityController.work?.let { if (it.phase == dev.ipf.whitenoise.model.DeveloperPhase.Running) parityController.dismiss(it.id) }
     }
     if (!profile.developerTools.isEnabled) {
-        SettingsScaffold(title = stringResource(R.string.developer_diagnostics), onBack = onBack) { SettingsExplainer(stringResource(R.string.developer_disabled)) }
+        SettingsScaffold(title = stringResource(R.string.developer_diagnostics), onBack = onBack) { SettingsCallout(stringResource(R.string.developer_disabled)) }
         return
     }
     val context = LocalContext.current
@@ -720,91 +820,170 @@ fun ConversationDebugScreen(
                     item { SettingsSection(stringResource(R.string.developer_conversation)) }
                     item {
                         SettingsGroup {
-                            DebugValue("State", info.lifecycle)
-                            DebugValue("Epoch", info.epoch.toString())
-                            info.memberCount?.let { DebugValue("MLS members", it.toString()) }
-                            info.adminCount?.let { DebugValue("Admins", it.toString()) }
-                            info.currentRole?.let { DebugValue("Your role", it) }
-                            DebugValue("Event kinds", info.requiredEventKinds.joinToString())
-                            DebugValue("Required components", dev.ipf.whitenoise.model.DeveloperInspection.requiredComponents.joinToString("\n"))
-                            CopyableDebugValue("MLS group ID", info.mlsGroupId) {
-                                copyToClipboard(context, "MLS group ID", info.mlsGroupId)
+                            row {
+                                DebugValue("State", info.lifecycle)
                             }
-                            CopyableDebugValue("Nostr group ID", info.nostrGroupId) {
-                                copyToClipboard(context, "Nostr group ID", info.nostrGroupId)
+                            row {
+                                DebugValue("Epoch", info.epoch.toString())
+                            }
+                            info.memberCount?.let {
+                                row {
+                                    DebugValue("MLS members", it.toString())
+                                }
+                            }
+                            info.adminCount?.let {
+                                row {
+                                    DebugValue("Admins", it.toString())
+                                }
+                            }
+                            info.currentRole?.let {
+                                row {
+                                    DebugValue("Your role", it)
+                                }
+                            }
+                            row {
+                                DebugValue("Event kinds", info.requiredEventKinds.joinToString())
+                            }
+                            row {
+                                DebugValue("Required components", dev.ipf.whitenoise.model.DeveloperInspection.requiredComponents.joinToString("\n"))
+                            }
+                            item {
+                                CopyableDebugValue("MLS group ID", info.mlsGroupId) {
+                                    copyToClipboard(context, "MLS group ID", info.mlsGroupId)
+                                }
+                            }
+                            item {
+                                CopyableDebugValue("Nostr group ID", info.nostrGroupId) {
+                                    copyToClipboard(context, "Nostr group ID", info.nostrGroupId)
+                                }
                             }
                         }
                     }
                     item { SettingsSection(stringResource(R.string.developer_history_examples)) }
                     item {
                         SettingsGroup {
-                            SettingsLink(stringResource(R.string.developer_add_unread_mention), stringResource(R.string.developer_unread_mention_help), { onAddArrival(false) })
-                            SettingsDivider()
-                            SettingsLink(stringResource(R.string.developer_add_streaming_message), stringResource(R.string.developer_streaming_message_help), { onAddArrival(true) })
-                            SettingsDivider()
-                            SettingsLink(
-                                stringResource(R.string.agent_examples_add),
-                                stringResource(R.string.agent_examples_add_detail),
-                                onAddAgentExamples,
-                            )
-                            SettingsDivider()
-                            SettingsLink(
-                                stringResource(R.string.nostr_event_examples_add),
-                                stringResource(R.string.nostr_event_examples_add_detail),
-                                onAddNostrEventExamples,
-                            )
-                            SettingsDivider()
-                            SettingsLink(stringResource(R.string.developer_add_long_document), stringResource(R.string.developer_long_document_help), onAddReadingExample)
-                            SettingsDivider()
-                            SettingsLink(stringResource(R.string.developer_add_file_examples), stringResource(R.string.developer_file_examples_help), onAddAttachmentExamples)
+                            row {
+                                SettingsLink(stringResource(R.string.developer_add_unread_mention), stringResource(R.string.developer_unread_mention_help), { onAddArrival(false) })
+                            }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_add_streaming_message), stringResource(R.string.developer_streaming_message_help), { onAddArrival(true) })
+                            }
+                            row {
+                                SettingsLink(
+                                    stringResource(R.string.agent_examples_add),
+                                    stringResource(R.string.agent_examples_add_detail),
+                                    onAddAgentExamples,
+                                )
+                            }
+                            row {
+                                SettingsLink(
+                                    stringResource(R.string.nostr_event_examples_add),
+                                    stringResource(R.string.nostr_event_examples_add_detail),
+                                    onAddNostrEventExamples,
+                                )
+                            }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_add_long_document), stringResource(R.string.developer_long_document_help), onAddReadingExample)
+                            }
+                            row {
+                                SettingsLink(stringResource(R.string.developer_add_file_examples), stringResource(R.string.developer_file_examples_help), onAddAttachmentExamples)
+                            }
                         }
                     }
                     if (parityController != null) item {
-                        SettingsGroup { TextButton(onClick = { parityController.begin(dev.ipf.whitenoise.model.DeveloperOperation.RefreshPush) },
-                            enabled = parityController.work?.phase != dev.ipf.whitenoise.model.DeveloperPhase.Running) { Text(stringResource(R.string.developer_refresh)) } }
+                        SettingsGroup {
+                            item {
+                                TextButton(onClick = { parityController.begin(dev.ipf.whitenoise.model.DeveloperOperation.RefreshPush) },
+                                                           enabled = parityController.work?.phase != dev.ipf.whitenoise.model.DeveloperPhase.Running) { Text(stringResource(R.string.developer_refresh)) }
+                            }
+                        }
                         DeveloperResult(parityController)
                     }
                     if (parityController == null || parityController.work?.phase == dev.ipf.whitenoise.model.DeveloperPhase.Complete) {
                     item { SettingsSection(stringResource(R.string.developer_delivery_notifications)) }
                     item {
                         SettingsGroup {
-                            DebugValue("Chat relays", info.relayCount.toString())
-                            DebugValue("Notifications", if (info.push.notificationsEnabled) "On" else "Off")
-                            DebugValue("Push", info.push.registrationStatus)
-                            DebugValue("Total tokens", info.push.totalTokenCount.toString())
-                            DebugValue("Active tokens", info.push.activeTokenCount.toString())
-                            DebugValue("Local notifications", info.push.localNotifications.toString())
-                            DebugValue("Shareable", info.push.shareable.toString())
-                            DebugValue("Local leaf", info.push.localLeaf?.toString() ?: "Unavailable")
-                            DebugValue("Local token cached", info.push.localTokenCached.toString())
-                            DebugValue("Token list updated", info.push.updatedAt)
+                            row {
+                                DebugValue("Chat relays", info.relayCount.toString())
+                            }
+                            row {
+                                DebugValue("Notifications", if (info.push.notificationsEnabled) "On" else "Off")
+                            }
+                            row {
+                                DebugValue("Push", info.push.registrationStatus)
+                            }
+                            row {
+                                DebugValue("Total tokens", info.push.totalTokenCount.toString())
+                            }
+                            row {
+                                DebugValue("Active tokens", info.push.activeTokenCount.toString())
+                            }
+                            row {
+                                DebugValue("Local notifications", info.push.localNotifications.toString())
+                            }
+                            row {
+                                DebugValue("Shareable", info.push.shareable.toString())
+                            }
+                            row {
+                                DebugValue("Local leaf", info.push.localLeaf?.toString() ?: "Unavailable")
+                            }
+                            row {
+                                DebugValue("Local token cached", info.push.localTokenCached.toString())
+                            }
+                            row {
+                                DebugValue("Token list updated", info.push.updatedAt)
+                            }
                             if (info.push.staleTokenCount > 0) {
-                                DebugValue("Push tokens", "${info.push.staleTokenCount} stale")
+                                row {
+                                    DebugValue("Push tokens", "${info.push.staleTokenCount} stale")
+                                }
                             }
                             if (info.push.missingRelayHintCount > 0) {
-                                DebugValue("Relay hints", "${info.push.missingRelayHintCount} missing")
+                                row {
+                                    DebugValue("Relay hints", "${info.push.missingRelayHintCount} missing")
+                                }
                             }
                         }
                     }
                     info.push.members.forEach { token -> item(key = "push-${token.memberId}") {
                         SettingsSection(stringResource(R.string.developer_member_token, token.leaf))
                         SettingsGroup {
-                            CopyableDebugValue("Member", token.memberId) { copyToClipboard(context, "Member", token.memberId) }
-                            DebugValue("Platform", token.platform)
-                            DebugValue("Fingerprint", token.fingerprint)
-                            CopyableDebugValue("Push server public key", token.serverKey) { copyToClipboard(context, "Push server public key", token.serverKey) }
-                            DebugValue("Relay hint", token.relayHint.toString())
-                            DebugValue("Active leaf", token.activeLeaf.toString())
-                            DebugValue("Matches active leaf", token.matchesLeaf.toString())
-                            DebugValue("Local member", token.localMember.toString())
-                            DebugValue("Updated", token.updatedAt)
+                            item {
+                                CopyableDebugValue("Member", token.memberId) { copyToClipboard(context, "Member", token.memberId) }
+                            }
+                            row {
+                                DebugValue("Platform", token.platform)
+                            }
+                            row {
+                                DebugValue("Fingerprint", token.fingerprint)
+                            }
+                            item {
+                                CopyableDebugValue("Push server public key", token.serverKey) { copyToClipboard(context, "Push server public key", token.serverKey) }
+                            }
+                            row {
+                                DebugValue("Relay hint", token.relayHint.toString())
+                            }
+                            row {
+                                DebugValue("Active leaf", token.activeLeaf.toString())
+                            }
+                            row {
+                                DebugValue("Matches active leaf", token.matchesLeaf.toString())
+                            }
+                            row {
+                                DebugValue("Local member", token.localMember.toString())
+                            }
+                            row {
+                                DebugValue("Updated", token.updatedAt)
+                            }
                         }
                     } }
                     }
                     item { SettingsSection(stringResource(R.string.developer_diagnostics)) }
                     item {
                         SettingsGroup {
-                            SettingsLink(stringResource(R.string.developer_diagnostics), stringResource(R.string.developer_diagnostics_conversation_help), onDiagnostics)
+                            row {
+                                SettingsLink(stringResource(R.string.developer_diagnostics), stringResource(R.string.developer_diagnostics_conversation_help), onDiagnostics)
+                            }
                         }
                     }
                     }

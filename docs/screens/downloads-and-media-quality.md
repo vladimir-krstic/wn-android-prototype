@@ -117,3 +117,17 @@ Its matrix, quality, gate and policy contracts are unchanged from the pinned aud
 IntentStore additions concern installer ownership; Worker changes include strict
 protocol ID lengths and durable-work observation. Those belong at production's
 installer/worker seam and do not add services or durable storage here.
+
+
+## Quality picker copy polish — 2026-09-05
+
+The user requested a concise selector. The Media quality dialog now contains
+only Low, Standard, High and Original, plus its existing Cancel action. The
+long explanatory paragraph is removed from the UI and all five locale resource
+files. The existing section helper remains below the setting. Selection and
+encoding behavior are unchanged. Original remains the label because some photo
+formats require conversion and voice uses the High policy; it does not promise
+unconditional absence of compression.
+
+Host validation: lint passes with zero errors and the debug APK assembles.
+This copy-only change adds no tests or device inspection.

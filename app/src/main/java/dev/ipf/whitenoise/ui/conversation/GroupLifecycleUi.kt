@@ -14,6 +14,8 @@ import androidx.compose.ui.semantics.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEntityPickerSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoisePickerItem
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import dev.ipf.whitenoise.model.*
@@ -106,41 +108,68 @@ internal fun GroupLifecyclePanel(profile: Profile, chat: Chat, onLeft: () -> Uni
         })) }
         SettingsGroup {
             if (admin) {
-                LifecycleRow(stringResource(R.string.group_transfer_admin), !busy && chat.members.any { it.personId != profile.id && it.role == GroupRole.Member }) {
-                    thenLeave = false; pick = true
+                item {
+                    LifecycleRow(stringResource(R.string.group_transfer_admin), !busy && chat.members.any { it.personId != profile.id && it.role == GroupRole.Member }) {
+                        thenLeave = false; pick = true
+                    }
                 }
-                LifecycleRow(stringResource(R.string.group_step_down), !busy && chat.members.any { it.personId != profile.id }) {
-                    if (chat.isSoleAdmin(profile.id)) { thenLeave = false; pick = true } else confirm = GroupLifecycleAction.StepDown.name
+                item {
+                    LifecycleRow(stringResource(R.string.group_step_down), !busy && chat.members.any { it.personId != profile.id }) {
+                        if (chat.isSoleAdmin(profile.id)) { thenLeave = false; pick = true } else confirm = GroupLifecycleAction.StepDown.name
+                    }
                 }
-                if (capability.canEnable && !capability.enabled) LifecycleRow(stringResource(R.string.group_enable_disband), !busy && capability.blockers.isEmpty() && !capability.requestFailed) {
-                    confirm = GroupLifecycleAction.EnableDisband.name
+                if (capability.canEnable && !capability.enabled) {
+                    item {
+                        LifecycleRow(stringResource(R.string.group_enable_disband), !busy && capability.blockers.isEmpty() && !capability.requestFailed) {
+                            confirm = GroupLifecycleAction.EnableDisband.name
+                        }
+                    }
                 }
-                if (capability.enabled && capability.canDisband) LifecycleRow(stringResource(R.string.group_disband_action), !busy && capability.blockers.isEmpty() && !capability.requestFailed, true) {
-                    confirm = GroupLifecycleAction.Disband.name
+                if (capability.enabled && capability.canDisband) {
+                    item {
+                        LifecycleRow(stringResource(R.string.group_disband_action), !busy && capability.blockers.isEmpty() && !capability.requestFailed, true) {
+                            confirm = GroupLifecycleAction.Disband.name
+                        }
+                    }
                 }
             }
-            if (chat.membership == ChatMembership.Active && chat.groupLifecycle == GroupLifecycle.Active) LifecycleRow(
-                stringResource(if (chat.isSoleMember(profile.id)) R.string.group_delete_solo else R.string.leave_group),
-                !busy && chat.hasVerifiedSelf(profile.id), true) {
-                if (chat.isSoleAdmin(profile.id) && !chat.isSoleMember(profile.id)) { thenLeave = true; pick = true }
-                else confirm = (if (chat.isSoleMember(profile.id)) GroupLifecycleAction.Delete else GroupLifecycleAction.Leave).name
+            item {
+                if (chat.membership == ChatMembership.Active && chat.groupLifecycle == GroupLifecycle.Active) LifecycleRow(
+                    stringResource(if (chat.isSoleMember(profile.id)) R.string.group_delete_solo else R.string.leave_group),
+                    !busy && chat.hasVerifiedSelf(profile.id), true) {
+                    if (chat.isSoleAdmin(profile.id) && !chat.isSoleMember(profile.id)) { thenLeave = true; pick = true }
+                    else confirm = (if (chat.isSoleMember(profile.id)) GroupLifecycleAction.Delete else GroupLifecycleAction.Leave).name
+                }
             }
-            if (chat.hasEndedMembership || chat.groupLifecycle == GroupLifecycle.Disbanded) LifecycleRow(stringResource(R.string.group_delete_local), !busy, true) {
-                confirm = GroupLifecycleAction.Delete.name
+            if (chat.hasEndedMembership || chat.groupLifecycle == GroupLifecycle.Disbanded) {
+                item {
+                    LifecycleRow(stringResource(R.string.group_delete_local), !busy, true) {
+                        confirm = GroupLifecycleAction.Delete.name
+                    }
+                }
             }
-            if (chat.groupLifecycle == GroupLifecycle.Unrecoverable) LifecycleRow(stringResource(R.string.group_repair), !busy && chat.hasVerifiedSelf(profile.id)) {
-                rejected = !controller.begin(owner, GroupLifecycleAction.Recover)
+            if (chat.groupLifecycle == GroupLifecycle.Unrecoverable) {
+                item {
+                    LifecycleRow(stringResource(R.string.group_repair), !busy && chat.hasVerifiedSelf(profile.id)) {
+                        rejected = !controller.begin(owner, GroupLifecycleAction.Recover)
+                    }
+                }
             }
         }
     }
-    if (pick) AlertDialog(onDismissRequest = { pick = false }, title = { Text(stringResource(if (thenLeave) R.string.group_transfer_leave else R.string.group_transfer_admin)) },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-            Text(stringResource(R.string.group_select_admin))
-            chat.members.filter { it.personId != profile.id && it.personId != "white-noise-support" && it.role == GroupRole.Member }.forEach { member ->
-                val name = profile.people.firstOrNull { it.id == member.personId }?.displayName ?: stringResource(R.string.group_member_fallback)
-                TextButton(onClick = { target = member.personId; pick = false; confirm = GroupLifecycleAction.Transfer.name }, enabled = admin && !busy) { Text(name) }
-            }
-        } }, confirmButton = {}, dismissButton = { TextButton(onClick = { pick = false }) { Text(stringResource(R.string.cancel)) } })
+    if (pick) WhiteNoiseEntityPickerSheet(
+        title = stringResource(if (thenLeave) R.string.group_transfer_leave else R.string.group_transfer_admin),
+        description = stringResource(R.string.group_select_admin),
+        items = chat.members.filter {
+            it.personId != profile.id && it.personId != "white-noise-support" && it.role == GroupRole.Member
+        }.map { member ->
+            val person = profile.people.firstOrNull { it.id == member.personId }
+            WhiteNoisePickerItem(member.personId, person?.displayName ?: stringResource(R.string.group_member_fallback),
+                person?.avatar, enabled = admin && !busy)
+        },
+        onSelect = { target = it; pick = false; confirm = GroupLifecycleAction.Transfer.name },
+        onDismiss = { pick = false },
+    )
     confirm?.let { raw ->
         val action = GroupLifecycleAction.valueOf(raw)
         val name = profile.people.firstOrNull { it.id == target }?.displayName ?: stringResource(R.string.group_member_fallback)

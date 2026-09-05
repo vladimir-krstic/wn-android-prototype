@@ -161,7 +161,11 @@ class AppViewModel(
         private set
     var nextAccessScenario by mutableStateOf(initialAccessScenario)
         private set
-    var startupState by mutableStateOf(StartupState(fails = startupFails))
+    // Initial state is synchronous; only an explicit failure preview needs startup staging.
+    var startupState by mutableStateOf(StartupState(
+        phase = if (startupFails) StartupPhase.Loading else StartupPhase.Ready,
+        fails = startupFails,
+    ))
         private set
     private var profileExitGeneration = 0L
     var profileExitAttempt by mutableStateOf<ProfileExitAttempt?>(null)
@@ -485,11 +489,8 @@ class AppViewModel(
 
     fun beginAmberSignIn(origin: OnboardingOrigin): Boolean = beginAccess(
         origin,
-        ProfileFixtures.openCircuit.copy(
-            id = "amber-open-circuit",
-            publicKey = "npub1" + "z".repeat(58),
-            signingMode = ProfileSigningMode.Amber,
-        ),
+        (if (origin == OnboardingOrigin.Initial) ProfileFixtures.marmota else ProfileFixtures.openCircuit)
+            .copy(signingMode = ProfileSigningMode.Amber),
         AccessMethod.Amber,
     )
 
@@ -537,7 +538,7 @@ class AppViewModel(
             return false
         }
         val stored = uiState.profiles.firstOrNull { it.id == attempt.candidate.id }
-        if (stored != null && stored.signingMode != attempt.candidate.signingMode) {
+        if (stored != null && stored.publicKey != attempt.candidate.publicKey) {
             accessAttempt = attempt.copy(phase = AccessPhase.Failed, failure = AccessFailure.AmberMismatch)
             return false
         }
@@ -1009,7 +1010,7 @@ class AppViewModel(
         nextProfileSaveScenario = ProfileSaveScenario.Success
         nextProfileImageFails = false
         nextChatBatchScenario = ChatBatchScenario.Success
-        nextGlobalVoiceScenario = GlobalVoiceScenario.Success
+        nextGlobalVoiceScenario = GlobalVoiceScenario.Device
         nextHistoryScenario = dev.ipf.whitenoise.model.HistoryScenario.Success
         nextMessageEditScenario = MessageEditScenario.Success
         nextMessageDeleteScenario = MessageDeleteScenario.Success
@@ -1228,7 +1229,7 @@ class AppViewModel(
         return id
     }
 
-    var nextGlobalVoiceScenario by mutableStateOf(GlobalVoiceScenario.Success)
+    var nextGlobalVoiceScenario by mutableStateOf(GlobalVoiceScenario.Device)
         private set
 
     var nextHistoryScenario by mutableStateOf(dev.ipf.whitenoise.model.HistoryScenario.Success)
@@ -1303,7 +1304,11 @@ class AppViewModel(
 
     fun consumeGlobalVoiceScenario(profileId: String): GlobalVoiceScenario {
         if (uiState.activeProfileId != profileId) return GlobalVoiceScenario.Unavailable
-        return nextGlobalVoiceScenario.also { nextGlobalVoiceScenario = GlobalVoiceScenario.Success }
+        if (uiState.activeProfile?.developerTools?.isEnabled != true) {
+            nextGlobalVoiceScenario = GlobalVoiceScenario.Device
+            return GlobalVoiceScenario.Device
+        }
+        return nextGlobalVoiceScenario.also { nextGlobalVoiceScenario = GlobalVoiceScenario.Device }
     }
 
     fun openGlobalSearchMessage(profileId: String, chatId: String, messageId: String): Boolean {
@@ -2786,7 +2791,9 @@ class AppViewModel(
         }
 
         val activatedIndex = profiles.indexOfFirst { it.id == profile.id }
-        profiles[activatedIndex] = profiles[activatedIndex].copy(connectionInformationPublished = true,
+        profiles[activatedIndex] = profiles[activatedIndex].copy(
+            signingMode = profile.signingMode,
+            connectionInformationPublished = true,
             chatConnection = profiles[activatedIndex].chatConnection.let { connection ->
                 if (connection.phase == ChatConnectionPhase.Connecting || connection.phase == ChatConnectionPhase.CatchingUp)
                     connection.copy(generation = connection.generation + 1) else connection

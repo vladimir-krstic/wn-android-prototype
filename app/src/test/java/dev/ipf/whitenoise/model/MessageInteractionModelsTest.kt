@@ -25,11 +25,16 @@ class MessageInteractionModelsTest {
         )
 
         assertEquals(
-            listOf(MessageAction.Reply, MessageAction.Forward, MessageAction.Share, MessageAction.SaveAttachments, MessageAction.Select, MessageAction.Info, MessageAction.Delete),
+            listOf(MessageAction.Reply, MessageAction.Forward, MessageAction.SaveAttachments, MessageAction.Select, MessageAction.Info, MessageAction.Delete),
             MessageActionPolicy.available(incomingAttachment, ProfileFixtures.MARMOTA_ID),
         )
         assertEquals(MessageAction.RetrySend, MessageActionPolicy.available(failedText, ProfileFixtures.MARMOTA_ID).first())
         assertTrue(MessageAction.Copy in MessageActionPolicy.available(failedText, ProfileFixtures.MARMOTA_ID))
+        val menuActions = MessageActionPolicy.available(failedText, ProfileFixtures.MARMOTA_ID)
+        assertFalse(MessageAction.OpenMessage in menuActions)
+        assertFalse(MessageAction.Share in menuActions)
+        assertTrue(MessageAction.SelectText in menuActions)
+        assertTrue(MessageAction.Share in MessageActionPolicy.available(failedText, ProfileFixtures.MARMOTA_ID, inReader = true))
         assertEquals(listOf(MessageAction.Delete), MessageActionPolicy.available(failedText.copy(deletionState = MessageDeletionState.DeletedByCurrentProfile), ProfileFixtures.MARMOTA_ID))
     }
 

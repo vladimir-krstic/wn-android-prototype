@@ -26,18 +26,32 @@ filters are active, avoiding claims that a profile itself matches a date or
 attachment type. Chat filters also hide People, since their scope is chat history.
 Empty query plus active filters browses matching messages.
 
-Use the shared compact search field, adaptive list, Material filter/input chips,
-checkbox/radio dialogs and native DateRangePicker. Filters are removable singly
+Use the shared compact search field and adaptive list. The header uses a native filter icon button (filled when active) and
+`WhiteNoiseDropdownMenu`. The 2026-09-05 regular Chats pill row is hidden during
+search and does not replace these advanced search categories.
+Menu categories open searchable chat/sender bottom sheets, simple-value
+checkbox/radio dialogs, and the native DateRangePicker. Active input chips remain
+below the header; there is no empty filter row or intermediate category dialog. Filters are removable singly
 and through Clear All. Back dismisses a picker/filter before search; selection
 still takes priority. Save query and small filter values across recreation and
 navigation; reset on profile change and reconcile removed chat/sender IDs.
 Existing long-press chat actions and selection remain available for chat rows.
 
-Voice Search is a deterministic entry dialog with success, cancellation and
-unavailable/retry. Success supplies the phrase “trailhead”; cancel/failure never
-overwrite existing text. Results are guarded by owner/request/query and cancelled
-on navigation. No RecognizerIntent, microphone permission or recording is used.
-The eventual production seam is the existing RecognizerIntent result contract.
+Voice Search launches `RecognizerIntent.ACTION_RECOGNIZE_SPEECH` through the
+Activity Result API. The installed Android recognizer owns listening, language,
+permissions, processing, and its UI; White Noise does not draw a substitute
+listening dialog. The returned nonblank phrase replaces the current query and
+immediately searches the existing local data. Cancellation preserves the query.
+Missing/blocked recognizers, unsuccessful results, and empty transcripts offer
+Try Again or Cancel without overwriting text.
+
+The outstanding platform launch and its profile/query ownership are saved across
+recreation. Only one native request may be outstanding; a late result after a
+query edit, closed search, or profile change cannot overwrite another search.
+Developer Tools retains explicit one-shot success/cancel/unavailable scenarios;
+normal operation and the reset value are Device speech recognition. The fixed
+“trailhead” phrase belongs only to the explicitly selected developer success
+scenario. No app microphone permission or speech service is introduced.
 
 ## Time and integration
 
@@ -72,8 +86,10 @@ Official sources checked 2026-09-04:
 [state saving](https://developer.android.com/develop/ui/compose/state-saving),
 [Java API desugaring](https://developer.android.com/studio/write/java8-support).
 
-Only in-memory state and existing loaded data. No backend, persistence, network,
-permission or speech service. Android's core-library desugaring 2.1.5 supplies
+Search remains in-memory over existing loaded data, with no backend or durable
+storage. The 2026-09-05 user request authorizes real device-owned speech input:
+the external recognizer may use its own services/settings, but White Noise adds
+no network or microphone permission and does not record audio itself. Android's core-library desugaring 2.1.5 supplies
 Java time on API 23–25; the official Google Maven release and Google changelog
 were checked before pinning. See WN-ANDROID-0128. No device execution/visual acceptance.
 
@@ -94,15 +110,15 @@ interaction tests and run the full host gate before the B07 commit.
   case/diacritic chat matching remains; deleted/system/private-note data is excluded.
 - `ChatsScreen.kt` / `GlobalSearchUi.kt`: grouped rows with sender/chat context,
   exact-message callbacks, saved query/filter state, removable chips, native
-  checkbox/radio filter dialogs and DateRangePicker. Empty and failed lookup
+  chat/sender filter sheets, simple-value dialogs and DateRangePicker. Empty and failed lookup
   results keep their useful actions visible. Profile switches reset state and
   deleted chats/senders are reconciled. Opening a result preserves search for Back.
 - `AppViewModel.openGlobalSearchMessage` checks owner/chat/message before opening
   its reading context. B08 now marks only settled visible rows read, preserving
   unread content outside the revealed window. `WhiteNoiseNavHost` carries the exact target ID to Conversation
   and reuses accepted discovered-person navigation. Developer Tools supplies
-  one-shot voice outcomes; ordinary Voice Search has success/cancel/unavailable
-  and retry with no microphone or speech-service access.
+  one-shot voice outcomes. Ordinary Voice Search now uses `VoiceSearchContract`
+  and the installed recognizer, preserving query/owner guards and retry.
 - `GlobalSearchTest` / `GlobalSearchStateTest`: 19 new passing tests cover matching,
   exclusions, filter algebra, all content kinds, inclusive and DST boundaries,
   fixture label mapping, snippet safety, identifier outcomes, deleted targets,
@@ -120,3 +136,62 @@ interaction tests and run the full host gate before the B07 commit.
   UI cases were compiled only; no device, emulator or visual acceptance is claimed.
 
 Commit title: `B07: Add cross-chat search and typed filters`.
+
+## 2026-09-05 — native voice search repair
+
+The user reported that Voice Search did not work and requested the Google/Android
+flow. The previous timed dialog never recognized speech; it always returned a
+fixture phrase. `VoiceSearchContract` now launches the installed recognizer
+without styling overrides, parses the returned phrase, and distinguishes success,
+cancellation, and unavailable results. `ChatsScreen` saves the pending request,
+hides the keyboard before launch, blocks repeated launches, and applies only a
+result still owned by the active search. A saved native request does not relaunch
+on recreation. Actual listening UI is owned by the installed provider (Google
+when that is the configured provider), not guaranteed to look identical on every
+device.
+
+`GlobalSearchTest` now validates actual returned phrases, trimming, blank/null
+results, stale queries, and owner/search guards. `GlobalSearchStateTest` checks
+native defaults, one-shot developer overrides, and reset on disabling Developer
+Tools. `VoiceSearchFlowTest` adds six compiled Activity Result registry cases for
+native handoff/real phrase, cancellation/empty output, missing provider/retry,
+stale query/profile, closing search, and recreation without duplicate launch.
+The registry tests never open a recognizer or microphone.
+
+Official sources consulted 2026-09-05:
+[RecognizerIntent](https://developer.android.com/reference/android/speech/RecognizerIntent),
+[Activity Results](https://developer.android.com/training/basics/intents/result).
+The final host gate
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes 894 unit tests with zero failures/errors/skips, zero lint errors (16
+existing warnings and two hints), and both debug APKs. Six new registry-based
+Compose cases compile only. Actual recognition, device presentation, and
+hands-on acceptance remain unverified; no device execution was requested.
+
+## 2026-09-05 — shared filter icon and context menu
+
+The user requested the regular Chats filter affordance in Search. Both modes now
+use `ChatFilterIconButton`, preserving native touch target, active fill, icon,
+and selected semantics. Search anchors the existing `WhiteNoiseDropdownMenu` to
+that header button, with Chats, Senders, Date, Content, active-category checks,
+and Clear All when applicable. Selecting a category closes the menu and opens
+its existing picker directly. Picker dismissal returns to search; query and
+filter rules are preserved. Closing Search or switching profiles dismisses its
+menu; active chips remain individually removable.
+
+`GlobalSearchFlowTest` uses the new header/menu path in existing filter cases and
+adds a regression for active icon/category state and clearing without losing the
+query. [Compose menus](https://developer.android.com/develop/ui/compose/components/menu)
+was checked on 2026-09-05 for the native icon/anchor/dismissal pattern.
+The host gate `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes: 894 unit tests with zero failures/errors/skips, zero lint errors (16
+existing warnings and two hints), and both APKs assembled. Updated filter
+interaction cases compile only; no device or visual inspection was requested.
+
+## 2026-09-05 — suppress update callout during search
+
+Per user direction, `ChatsScreen` omits the app-update banner whenever Search is
+open, including an empty query and filter-only browsing. Closing Search restores
+normal banner eligibility without dismissing the update or changing its state.
+
+Debug APK assembly and whitespace checks pass. No device inspection was performed.

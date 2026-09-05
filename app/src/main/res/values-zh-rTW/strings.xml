@@ -58,6 +58,7 @@
     <string name="signing_in">簽名於…</string>
     <string name="sign_in_with_amber">使用 Amber 登入</string>
     <string name="access_signing">簽名</string>
+    <string name="access_amber_signed_in">已透過 Amber 登入</string>
     <string name="access_amber_owns_key">Amber持有此配置的私人金鑰 。 在安珀管理備份.</string>
     <string name="private_key_public_error">這是公用鑰匙 輸入要簽名的私鑰 。</string>
     <string name="private_key_encrypted_error">此金鑰已加密 。 先解鎖您的備份, 然後輸入它的私人金鑰 。</string>
@@ -143,8 +144,6 @@
     <string name="search_chats">搜尋聊天</string>
     <string name="close_search">關閉搜尋</string>
     <string name="clear_search">清除搜尋</string>
-    <string name="filter_chats">過濾聊天</string>
-    <string name="selected_chat_scope">選中 :%1$s</string>
     <string name="open_settings_for">開啟設定%1$s</string>
     <string name="open_share_connect_for">開啟共享連線( C)%1$s</string>
     <string name="actions_for">行動%1$s</string>
@@ -345,6 +344,8 @@
     </plurals>
     <string name="delete_selected_messages">刪除選中信件</string>
     <string name="forward_selected_messages">轉發選中信件</string>
+    <string name="select_chats">選擇聊天</string>
+    <string name="select_messages">選擇訊息</string>
     <string name="close_selection">關閉選擇</string>
     <string name="search_messages">搜尋信件</string>
     <string name="conversation_debug">對話除錯</string>
@@ -433,6 +434,8 @@
     <string name="people_partial">一些結果是無法取得的。 你可以使用顯示的人 或者再次嘗試。</string>
     <string name="people_unavailable">無法搜尋 。 這個裝置上的人仍然被顯示.</string>
     <string name="people_retry">再試一次</string>
+    <string name="connect_with_qr">透過 QR 碼連線</string>
+    <string name="invite_friend">邀請好友</string>
     <string name="people_invite">共享邀請</string>
     <string name="people_invite_text">連線%1$s開啟White Noise:\\n%2$s</string>
     <string name="people_share_unavailable">無法共享 。 再試一次</string>
@@ -1282,7 +1285,6 @@
     <string name="download_sent_media">已傳送媒體</string>
     <string name="download_quality">媒體品質</string>
     <string name="download_quality_help">適用於新照片和語音資訊. 影片和音訊檔案作為-is傳送.</string>
-    <string name="download_quality_detail">低用少資料. 標準平衡質量和規模. High更詳細。 原件儘可能儲存照片質量;有些格式需要轉換。 在每個模式中從照片中刪除位置和裝置後設資料。 語音質量從低調提升到高調;原聲使用高調語音質量.</string>
     <string name="download_done">完成</string>
     <string name="download_stop_confirmation">清除此配置檔案的自動下載嗎 ? 您自己開始的主動下載將會繼續.</string>
     <string name="download_waiting">等待下載</string>
@@ -1308,18 +1310,17 @@
     <string name="relay_imported_issue_detail">輸入的中繼器不使用安全的wss://地址。 移除它或新增安全替換。 其職責得到保留。</string>
     <string name="relay_needs_attention">需要關注</string>
     <string name="ai_agents_title">AI 代理人</string>
-    <string name="ai_agents_about_section">關於 AI 代理</string>
-    <string name="ai_agents_about_body">AI代理在您自己的機器或伺服器上單獨執行. 在設定後, 新增代理商的公用鑰匙, 並與其他聯絡人一樣與其聊天 。</string>
-    <string name="ai_agents_connectors_section">聯結器</string>
-    <string name="ai_agents_connectors_body">選擇您的代理,審查它的設定提示,然後將提示覆制到該代理中. 提示包括您的公用鑰匙, 而不是您的私人鑰匙, 在安裝前請求您的批准 。</string>
+    <string name="ai_agents_about_section">與您的 AI 智慧體聊天</string>
+    <string name="ai_agents_about_body">連接在您自己的電腦或伺服器上執行的智慧體。</string>
+    <string name="ai_agents_connectors_section">選擇智慧體</string>
+    <string name="ai_agents_connectors_body">選擇智慧體以檢視並複製設定提示詞。</string>
+    <string name="ai_agents_setup_title">設定 %1$s</string>
+    <string name="ai_agents_setup_instruction">將此提示詞複製到 %1$s 中。它包含您的公開金鑰，並要求在安裝前徵得您的同意。</string>
     <string name="ai_agents_manual_section">手動設定</string>
-    <string name="ai_agents_manual_body">當代理給您其公鑰時,啟動新訊息,搜尋該金鑰,並新增代理作為聯絡人.</string>
-    <string name="ai_agents_public_key_label">你的公用鑰匙</string>
+    <string name="ai_agents_manual_body">設定完成後，在「新訊息」中新增智慧體的公開金鑰即可開始聊天。</string>
     <string name="ai_agents_public_key_unavailable">你的公用鑰匙沒有 返回設定並嘗試另一個配置 。</string>
     <string name="ai_agents_copy_public_key">複製公鑰</string>
     <string name="ai_agents_public_key_copied">公鑰已複製 。</string>
-    <string name="ai_agents_show_prompt">顯示設定提示</string>
-    <string name="ai_agents_hide_prompt">隱藏設定提示</string>
     <string name="ai_agents_copy_prompt">複製提示</string>
     <string name="ai_agents_prompt_copied">設定快速複製 。</string>
     <string name="ai_agents_docs_title">代理聯結器檔案</string>
@@ -1409,21 +1410,13 @@
     <string name="external_open_failed_detail">這個目的地現在沒有了 再試一次, 或返回關於許可證( L) 。</string>
     <string name="help_retry">重試</string>
     <string name="app_updates_title">應用程式更新</string>
-    <string name="app_update_settings_title">Zapstore 版本</string>
-    <string name="app_update_settings_unknown">已安裝 :%1$s磁帶檢查</string>
+    <string name="app_update_settings_unknown">檢查更新</string>
     <string name="app_update_settings_checking">正在檢查更新…</string>
-    <string name="app_update_settings_current">已安裝 :%1$s最新資料</string>
-    <string name="app_update_settings_available">已安裝 :%1$s最新資料:%2$s· 可提供最新資料</string>
-    <plurals name="app_update_settings_available_count">
-        <item quantity="other">已安裝 :%1$s最新資料:%2$s · %3$d後釋放</item>
-    </plurals>
+    <string name="app_update_settings_current">已是最新版本</string>
     <string name="app_update_settings_failed">無法檢查更新 。 重試</string>
     <string name="app_update_available_title">有可用更新</string>
     <string name="app_update_important_title">有重要更新</string>
     <string name="app_update_available_detail">Zapstore 上已提供 %1$s 版本。</string>
-    <plurals name="app_update_releases_behind">
-        <item quantity="other">落後 %1$d 個版本</item>
-    </plurals>
     <string name="app_update_now">立即更新</string>
     <string name="app_update_dismiss">調離更新</string>
     <string name="app_update_resolving_title">正在檢查版本</string>

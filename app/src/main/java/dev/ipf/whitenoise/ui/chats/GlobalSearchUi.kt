@@ -2,7 +2,7 @@
 
 package dev.ipf.whitenoise.ui.chats
 
-import androidx.activity.compose.BackHandler
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -26,9 +26,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEntityPickerSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoisePickerItem
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
@@ -73,7 +77,7 @@ private fun searchDateLabel(filters: GlobalSearchFilters): String = if (filters.
 } else stringResource(filters.date.labelResource)
 
 @Composable
-internal fun GlobalSearchFilterBar(profile: Profile, filters: GlobalSearchFilters, onChange: (GlobalSearchFilters) -> Unit, onOpen: () -> Unit) {
+internal fun GlobalSearchFilterBar(profile: Profile, filters: GlobalSearchFilters, onChange: (GlobalSearchFilters) -> Unit) {
     val chips = buildList<Pair<String, () -> Unit>> {
         filters.chatIds.forEach { id -> profile.chats.firstOrNull { it.id == id }?.let { chat ->
             add(stringResource(R.string.global_chat_filter, chat.title) to { onChange(filters.copy(chatIds = filters.chatIds - id)) })
@@ -83,7 +87,6 @@ internal fun GlobalSearchFilterBar(profile: Profile, filters: GlobalSearchFilter
         filters.content.forEach { kind -> add(stringResource(kind.labelResource) to { onChange(filters.copy(content = filters.content - kind)) }) }
     }
     LazyRow(Modifier.fillMaxWidth().testTag("global.filters"), contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin), horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-        item { AssistChip(onClick = onOpen, label = { Text(stringResource(R.string.global_filters)) }, leadingIcon = { Icon(painterResource(R.drawable.ic_filter_list), null) }) }
         if (filters.active) item { TextButton(onClick = { onChange(GlobalSearchFilters()) }) { Text(stringResource(R.string.global_clear_all)) } }
         items(chips) { (label, remove) ->
             val description = stringResource(R.string.global_remove_filter, label)
@@ -93,36 +96,58 @@ internal fun GlobalSearchFilterBar(profile: Profile, filters: GlobalSearchFilter
 }
 
 @Composable
-internal fun GlobalSearchFiltersDialog(profile: Profile, filters: GlobalSearchFilters, onChange: (GlobalSearchFilters) -> Unit, onDismiss: () -> Unit) {
-    var category by rememberSaveable(profile.id) { mutableStateOf<String?>(null) }
-    var custom by rememberSaveable(profile.id) { mutableStateOf(false) }
-    val query = rememberSaveable(category, saver = TextFieldState.Saver) { TextFieldState() }
-    fun back() { if (category != null) category = null else onDismiss() }
-    BackHandler(onBack = ::back)
-    AlertDialog(onDismissRequest = ::back,
+internal fun GlobalSearchFilterMenu(
+    expanded: Boolean,
+    filters: GlobalSearchFilters,
+    onDismiss: () -> Unit,
+    onCategory: (String) -> Unit,
+    onClear: () -> Unit,
+) {
+    WhiteNoiseDropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("global.filterMenu"),
+        items = listOf(
+            Triple("chats", R.string.global_chats, filters.chatIds.isNotEmpty()),
+            Triple("senders", R.string.global_senders, filters.senderIds.isNotEmpty()),
+            Triple("dates", R.string.global_dates, filters.date != GlobalSearchDate.AnyTime),
+            Triple("content", R.string.global_content, filters.content.isNotEmpty()),
+        ).map { (category, label, active) ->
+            WhiteNoiseMenuItem(
+                label = stringResource(label), selected = active,
+                onClick = { onDismiss(); onCategory(category) },
+            )
+        } + if (filters.active) listOf(
+            WhiteNoiseMenuItem(label = stringResource(R.string.global_clear_all), onClick = { onDismiss(); onClear() }),
+        ) else emptyList(),
+    )
+}
+
+@Composable
+internal fun GlobalSearchFilterPicker(profile: Profile, category: String, filters: GlobalSearchFilters, onChange: (GlobalSearchFilters) -> Unit, onDismiss: () -> Unit) {
+    var custom by rememberSaveable(profile.id, category) { mutableStateOf(false) }
+    if (category == "chats" || category == "senders") {
+        val isChats = category == "chats"
+        val selected = if (isChats) filters.chatIds else filters.senderIds
+        WhiteNoiseEntityPickerSheet(
+            title = stringResource(if (isChats) R.string.global_chats else R.string.global_senders),
+            items = if (isChats) profile.chats.map { WhiteNoisePickerItem(it.id, it.title, it.avatar) }
+                else GlobalSearch.senders(profile).map { (id, name) ->
+                    WhiteNoisePickerItem(id, name, if (id == profile.id) profile.avatar else profile.people.firstOrNull { it.id == id }?.avatar)
+                },
+            selectedIds = selected, multiple = true,
+            onSelect = { id ->
+                val changed = if (id in selected) selected - id else selected + id
+                onChange(if (isChats) filters.copy(chatIds = changed) else filters.copy(senderIds = changed))
+            },
+            onDismiss = onDismiss, onDone = onDismiss,
+            searchTag = "global.filterSearch", rowTagPrefix = "global.choice",
+        )
+    } else AlertDialog(onDismissRequest = onDismiss,
         title = { Text(stringResource(when (category) { "chats" -> R.string.global_chats; "senders" -> R.string.global_senders; "dates" -> R.string.global_dates; "content" -> R.string.global_content; else -> R.string.global_filters })) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 when (category) {
-                    null -> {
-                        listOf("chats" to R.string.global_chats, "senders" to R.string.global_senders, "dates" to R.string.global_dates, "content" to R.string.global_content).forEach { (key, title) ->
-                            TextButton(onClick = { category = key }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(title)) }
-                        }
-                        if (filters.active) TextButton(onClick = { onChange(GlobalSearchFilters()) }) { Text(stringResource(R.string.global_clear_all)) }
-                    }
-                    "chats", "senders" -> {
-                        WhiteNoiseTextField(query, Modifier.fillMaxWidth().testTag("global.filterSearch"), label = { Text(stringResource(R.string.folder_search)) }, lineLimits = TextFieldLineLimits.SingleLine)
-                        val candidates = if (category == "chats") profile.chats.map { it.id to it.title } else GlobalSearch.senders(profile)
-                        val visible = candidates.filter { it.second.contains(query.text.toString().trim(), true) }
-                        if (visible.isEmpty()) Text(stringResource(R.string.no_results))
-                        visible.forEach { (id, label) ->
-                            val selected = if (category == "chats") filters.chatIds else filters.senderIds
-                            SearchCheckRow(label, id in selected, "global.choice.$id") {
-                                val changed = if (id in selected) selected - id else selected + id
-                                onChange(if (category == "chats") filters.copy(chatIds = changed) else filters.copy(senderIds = changed))
-                            }
-                        }
-                    }
                     "dates" -> GlobalSearchDate.entries.forEach { date ->
                         WhiteNoiseDialogChoiceRow(stringResource(date.labelResource), filters.date == date, onClick = {
                             if (date == GlobalSearchDate.Custom) custom = true
@@ -136,7 +161,6 @@ internal fun GlobalSearchFiltersDialog(profile: Profile, filters: GlobalSearchFi
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
-        dismissButton = { if (category != null) TextButton(onClick = { category = null }) { Text(stringResource(R.string.global_filters)) } },
     )
     if (custom) GlobalDateRangeDialog(filters, onDismiss = { custom = false }, onApply = { start, end ->
         onChange(filters.copy(date = GlobalSearchDate.Custom, fromDay = start, toDay = end)); custom = false
@@ -169,7 +193,7 @@ internal fun GlobalDateRangeDialog(filters: GlobalSearchFilters, onDismiss: () -
 
 @Composable
 internal fun GlobalMessageRow(result: GlobalMessageResult, query: String, onOpen: () -> Unit) {
-    ListItem(onClick = onOpen, modifier = Modifier.testTag("global.message.${result.chatId}.${result.message.id}")) {
+    ListItem(shapes = WhiteNoiseListItemDefaults.shapes(), onClick = onOpen, modifier = Modifier.testTag("global.message.${result.chatId}.${result.message.id}")) {
         Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
             Text(stringResource(R.string.global_message_context, result.sender, result.chatTitle), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
             SearchHighlightedText(result.snippet, GlobalSearch.normalize(query), style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -181,7 +205,7 @@ internal fun GlobalMessageRow(result: GlobalMessageResult, query: String, onOpen
 @Composable
 internal fun GlobalPersonRow(result: PeopleResult, unknown: Boolean, onOpen: (Person) -> Unit) {
     val name = if (unknown) stringResource(R.string.global_unknown_profile) else result.person.displayName
-    ListItem(onClick = { onOpen(if (unknown) result.person.copy(name = name) else result.person) }, modifier = Modifier.testTag("global.person.${result.person.id}"),
+    ListItem(shapes = WhiteNoiseListItemDefaults.shapes(), onClick = { onOpen(if (unknown) result.person.copy(name = name) else result.person) }, modifier = Modifier.testTag("global.person.${result.person.id}"),
         leadingContent = { ProfileAvatar(name, result.person.avatar, Modifier.size(40.dp), contentDescription = null) },
     ) { Column { Text(name); if (result.person.nostrAddress.isNotBlank()) Text(result.person.nostrAddress, style = MaterialTheme.typography.bodySmall) } }
 }

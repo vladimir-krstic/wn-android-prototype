@@ -2,10 +2,12 @@
 
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.input.TextFieldState
@@ -19,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
@@ -31,11 +34,18 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 
+internal fun shareProfileInvitation(context: android.content.Context, profile: Profile): Boolean = runCatching {
+    val profileLink = ProfileLinks.forKey(profile.publicKey)?.uri ?: profile.publicKey
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, context.getString(R.string.people_invite_text, profile.name, profileLink))
+    }
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.people_invite)))
+}.isSuccess
+
 @Composable
 internal fun PeopleSearchFeedback(profile: Profile, status: PeopleSearchStatus, resolving: Boolean, onRetry: () -> Unit) {
     val context = LocalContext.current
-    val inviteText = stringResource(R.string.people_invite_text, profile.name, "https://whitenoise.chat/${profile.publicKey}")
-    val inviteTitle = stringResource(R.string.people_invite)
     var shareFailed by remember { mutableStateOf(false) }
     val textId = when {
         resolving -> R.string.people_resolving
@@ -62,13 +72,7 @@ internal fun PeopleSearchFeedback(profile: Profile, status: PeopleSearchStatus, 
         }
         if (!resolving && status in setOf(PeopleSearchStatus.NoResults, PeopleSearchStatus.AddressNotFound, PeopleSearchStatus.NoProfile)) {
             TextButton(onClick = {
-                shareFailed = runCatching {
-                    val intent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, inviteText)
-                    }
-                    context.startActivity(Intent.createChooser(intent, inviteTitle))
-                }.isFailure
+                shareFailed = !shareProfileInvitation(context, profile)
             }) { Text(stringResource(R.string.people_invite)) }
             if (shareFailed) Text(stringResource(R.string.people_share_unavailable), color = MaterialTheme.colorScheme.error)
         }
@@ -134,13 +138,17 @@ fun ContactGroupsSheet(
                     TextButton(onClick = { onRetryRoster(); retry++ }) { Text(stringResource(R.string.people_retry)) }
                 }
                 if (groups.isEmpty()) item { Text(stringResource(R.string.contact_no_eligible_groups), Modifier.padding(vertical = WhiteNoiseSpacing.FormField)) }
-                items(groups, key = Chat::id) { group ->
+                itemsIndexed(groups, key = { _, group -> group.id }) { index, group ->
+                    if (index > 0) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
                     ListItem(
-                        leadingContent = { Checkbox(checked = group.id in selected, onCheckedChange = null) },
-                        modifier = Modifier.fillMaxWidth().testTag("contact.group.${group.id}").toggleable(
-                            value = group.id in selected, role = Role.Checkbox,
-                            onValueChange = { checked -> selected = if (checked) selected + group.id else selected - group.id },
-                        ),
+                        checked = group.id in selected,
+                        onCheckedChange = { checked -> selected = if (checked) selected + group.id else selected - group.id },
+                        shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, groups.size),
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                            selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                        leadingContent = { Checkbox(checked = group.id in selected, onCheckedChange = null,
+                            modifier = Modifier.clearAndSetSemantics { }) },
+                        modifier = Modifier.fillMaxWidth().testTag("contact.group.${group.id}"),
                     ) { Text(group.title) }
                 }
             }

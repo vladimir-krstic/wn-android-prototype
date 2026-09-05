@@ -72,13 +72,15 @@ fun KeyPackagesScreen(profile: Profile, controller: DeveloperParityController, o
         TextButton(onClick = { controller.begin(DeveloperOperation.RefreshPackages) }, enabled = enabled) { Text(stringResource(R.string.developer_refresh)) }
     }) {
         SettingsList {
-            if (!profile.developerTools.isEnabled) item { SettingsExplainer(stringResource(R.string.developer_disabled)) }
+            if (!profile.developerTools.isEnabled) item { SettingsCallout(stringResource(R.string.developer_disabled)) }
             else {
                 item { SettingsSection(stringResource(R.string.developer_publishing)) }
                 item {
                     SettingsGroup {
-                        TextButton(onClick = { controller.begin(DeveloperOperation.Republish) }, enabled = enabled && packages.any { it.local && it.id == profile.developerTools.keyPackage.id }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.developer_republish))
+                        item {
+                            TextButton(onClick = { controller.begin(DeveloperOperation.Republish) }, enabled = enabled && packages.any { it.local && it.id == profile.developerTools.keyPackage.id }, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(R.string.developer_republish))
+                            }
                         }
                     }
                     SettingsExplainer(stringResource(R.string.developer_republish_help))
@@ -94,23 +96,43 @@ fun KeyPackagesScreen(profile: Profile, controller: DeveloperParityController, o
                 packages.filter { it.relays.isNotEmpty() }.forEach { kp ->
                     item(key = "published-${kp.id}") {
                         SettingsGroup {
-                            SettingsValue("Package ID", kp.id)
-                            SettingsValue("Published", kp.published)
-                            SettingsValue("Source", if (kp.local) "Local and relay" else "Relay")
-                            SettingsValue(stringResource(R.string.developer_seen_on), kp.relays.joinToString("\n"))
-                            TextButton(onClick = { controller.begin(DeveloperOperation.DeletePackage, kp.id) }, enabled = enabled) {
-                                Text(stringResource(R.string.developer_delete_package), color = MaterialTheme.colorScheme.error)
+                            row {
+                                SettingsValue("Package ID", kp.id)
+                            }
+                            row {
+                                SettingsValue("Published", kp.published)
+                            }
+                            row {
+                                SettingsValue("Source", if (kp.local) "Local and relay" else "Relay")
+                            }
+                            row {
+                                SettingsValue(stringResource(R.string.developer_seen_on), kp.relays.joinToString("\n"))
+                            }
+                            item {
+                                TextButton(onClick = { controller.begin(DeveloperOperation.DeletePackage, kp.id) }, enabled = enabled) {
+                                    Text(stringResource(R.string.developer_delete_package), color = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }
                 }
                 item { SettingsSection(stringResource(R.string.developer_retained)) }
-                item { SettingsExplainer(stringResource(R.string.developer_retained_help)) }
                 val retained = packages.filter { it.local && it.relays.isEmpty() }
                 if (retained.isEmpty()) item { SettingsExplainer(stringResource(R.string.developer_no_retained)) }
                 retained.forEach { kp -> item(key = "local-${kp.id}") {
-                    SettingsGroup { SettingsValue("Package ID", kp.id); SettingsValue("Source", "Local"); SettingsValue("Size", kp.size) }
+                    SettingsGroup {
+                        row {
+                            SettingsValue("Package ID", kp.id)
+                        }
+                        row {
+                            SettingsValue("Source", "Local")
+                        }
+                        row {
+                            SettingsValue("Size", kp.size)
+                        }
+                    }
                 } }
+                item { SettingsExplainer(stringResource(R.string.developer_retained_help)) }
             }
         }
     }
@@ -135,20 +157,28 @@ internal fun DiagnosticHealthSheet(profile: Profile, controller: DeveloperParity
         Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = WhiteNoiseSpacing.Section)) {
             SettingsSection(stringResource(R.string.developer_health))
             SettingsGroup {
-                TextButton(onClick = { controller.begin(DeveloperOperation.RefreshHealth) }, enabled = !busy) { Text(stringResource(R.string.developer_refresh)) }
-                SettingsValue("Active profile", "Present")
-                val health = profile.developerTools.health
-                if (health == null) SettingsValue("Relay health", "Unavailable") else {
-                    SettingsValue("Relays", health.total.toString())
-                    SettingsValue("Connected", health.connected.toString())
-                    SettingsValue("Connecting", health.connecting.toString())
-                    SettingsValue("Disconnected", health.disconnected.toString())
-                    SettingsValue("Connection attempts", health.attempts.toString())
-                    SettingsValue("Connection successes", health.successes.toString())
-                    SettingsValue("Signed-in profiles", health.profiles.toString())
-                    SettingsValue("Bootstrap relays", health.bootstrapRelays.toString())
+                item {
+                    TextButton(onClick = { controller.begin(DeveloperOperation.RefreshHealth) }, enabled = !busy) { Text(stringResource(R.string.developer_refresh)) }
                 }
-                TextButton(onClick = { controller.begin(DeveloperOperation.SendToSelf) }, enabled = !busy) { Text(stringResource(R.string.developer_self_send)) }
+                row {
+                    SettingsValue("Active profile", "Present")
+                }
+                val health = profile.developerTools.health
+                if (health == null) {
+                    row { SettingsValue("Relay health", "Unavailable") }
+                } else {
+                    row { SettingsValue("Relays", health.total.toString()) }
+                    row { SettingsValue("Connected", health.connected.toString()) }
+                    row { SettingsValue("Connecting", health.connecting.toString()) }
+                    row { SettingsValue("Disconnected", health.disconnected.toString()) }
+                    row { SettingsValue("Connection attempts", health.attempts.toString()) }
+                    row { SettingsValue("Connection successes", health.successes.toString()) }
+                    row { SettingsValue("Signed-in profiles", health.profiles.toString()) }
+                    row { SettingsValue("Bootstrap relays", health.bootstrapRelays.toString()) }
+                }
+                item {
+                    TextButton(onClick = { controller.begin(DeveloperOperation.SendToSelf) }, enabled = !busy) { Text(stringResource(R.string.developer_self_send)) }
+                }
             }
             if (profile.developerTools.health != null && controller.work?.let { it.operation == DeveloperOperation.RefreshHealth && it.phase != DeveloperPhase.Complete } == true) {
                 SettingsExplainer(stringResource(R.string.developer_showing_the_last_successful_health_snapshot))
@@ -157,9 +187,13 @@ internal fun DiagnosticHealthSheet(profile: Profile, controller: DeveloperParity
             if (controller.performanceAvailable) {
                 SettingsSection(stringResource(R.string.developer_performance))
                 SettingsGroup {
-                    SettingsSwitch(stringResource(R.string.developer_performance), checked = remaining > 0,
-                        onCheckedChange = { controller.performance(it); remaining = controller.remainingMillis() })
-                    SettingsValue("Status", if (remaining > 0) pluralStringResource(R.plurals.developer_performance_remaining, ((remaining + 59_999) / 60_000).toInt(), ((remaining + 59_999) / 60_000).toInt()) else stringResource(R.string.developer_inactive))
+                    row {
+                        SettingsSwitch(stringResource(R.string.developer_performance), checked = remaining > 0,
+                            onCheckedChange = { controller.performance(it); remaining = controller.remainingMillis() })
+                    }
+                    row {
+                        SettingsValue("Status", if (remaining > 0) pluralStringResource(R.plurals.developer_performance_remaining, ((remaining + 59_999) / 60_000).toInt(), ((remaining + 59_999) / 60_000).toInt()) else stringResource(R.string.developer_inactive))
+                    }
                 }
                 SettingsExplainer(stringResource(R.string.developer_performance_help))
             }
@@ -173,9 +207,15 @@ internal fun DeveloperParityControls(profile: Profile, controller: DeveloperPari
     var inventory by remember { mutableStateOf(false) }
     SettingsSection(stringResource(R.string.developer_inspection_controls))
     SettingsGroup {
-        SettingsSwitch(stringResource(R.string.developer_streaming), checked = profile.developerTools.streamingDebug, onCheckedChange = controller::streaming)
-        SettingsLink(stringResource(R.string.developer_inspection_operation_outcome), controller.outcome.name, { choose = true })
-        SettingsLink(stringResource(R.string.developer_key_package_inventory_example), onClick = { inventory = true })
+        row {
+            SettingsSwitch(stringResource(R.string.developer_streaming), checked = profile.developerTools.streamingDebug, onCheckedChange = controller::streaming)
+        }
+        row {
+            SettingsLink(stringResource(R.string.developer_inspection_operation_outcome), controller.outcome.name, { choose = true })
+        }
+        row {
+            SettingsLink(stringResource(R.string.developer_key_package_inventory_example), onClick = { inventory = true })
+        }
     }
     SettingsExplainer(stringResource(R.string.developer_streaming_help))
     if (inventory) ScenarioChoiceDialog(stringResource(R.string.developer_key_package_inventory_example), PackageInventoryExample.entries, PackageInventoryExample.Published, { it.name }, controller::inventoryExample, { inventory = false })

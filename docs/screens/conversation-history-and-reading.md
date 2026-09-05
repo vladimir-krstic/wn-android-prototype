@@ -139,3 +139,30 @@ device behavior and visual acceptance remain separate.
   user visual acceptance remain pending.
 
 Commit title: `B08: Add conversation history and unread recovery`.
+
+
+## 2026-09-05 latest-message jump polish
+
+The jump control appears only after the initial viewport settles and the distance
+to the latest messages reaches two transcript viewport heights. It is a native
+FilledTonalIconButton containing only a down arrow, aligned to the trailing edge
+above the composer; the containing stack also aligns children to that edge when
+a mention action is present. Accessible latest/unread labels, target recovery,
+unread targeting, mention navigation and search/selection suppression remain.
+
+Distance uses Compose's public
+[ScrollIndicatorState](https://developer.android.com/reference/kotlin/androidx/compose/foundation/ScrollIndicatorState)
+(reviewed 2026-09-05). Lazy-list pixel totals/offsets are native estimates for
+variable-height content; newer unloaded entries extend that estimate using the
+loaded average. Invalid/unmeasured metrics never expose the control. The visible
+viewport adapts to available height. No message-count threshold or custom gesture
+handler is introduced.
+
+Unit regressions cover the two-viewport boundary, returning near the tail,
+viewport resizing, unloaded newer history and invalid/overflow metrics. A Compose
+regression covers icon-only semantics and return from older loaded history; it is
+compiled only. Host gate: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`.
+Device visual acceptance remains pending.
+
+Host result: 898 unit tests pass, lint reports zero errors, both debug APKs
+assemble, and `git diff --check` passes. The added Compose flow compiles only.

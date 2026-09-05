@@ -23,6 +23,9 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.captureToImage
@@ -1693,7 +1696,12 @@ class ConversationScreenTest {
         composeRule.onNodeWithTag("conversation.message.fiatjaf-8")
             .performSemanticsAction(SemanticsActions.OnLongClick)
         composeRule.onNodeWithText("Select").performClick()
-        composeRule.onAllNodesWithText("1 Selected")[0].assertIsDisplayed()
+        composeRule.onNodeWithText("Select messages").assertIsDisplayed()
+        composeRule.onAllNodesWithText("1 Selected").assertCountEquals(1)
+        composeRule.onNodeWithTag("conversation.message.fiatjaf-8").assertIsOn()
+        composeRule.onNodeWithTag("conversation.message.fiatjaf-8").performClick().assertIsOff()
+        composeRule.onAllNodesWithText("0 Selected").assertCountEquals(1)
+        composeRule.onNodeWithTag("conversation.message.fiatjaf-8").performClick().assertIsOn()
         composeRule.onNodeWithContentDescription("Close Selection").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Delete Selected Messages").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Forward Selected Messages").assertIsDisplayed()

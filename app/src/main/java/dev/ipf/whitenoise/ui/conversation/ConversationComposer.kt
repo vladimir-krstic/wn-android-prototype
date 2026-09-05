@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import dev.ipf.whitenoise.model.effectivePhotoQuality
 import dev.ipf.whitenoise.model.SentMediaQuality
 import dev.ipf.whitenoise.model.PhotoQuality
@@ -2127,12 +2128,9 @@ private fun ContactPickerSheet(
                     }
                 } else {
                     itemsIndexed(filteredPeople, key = { _, person -> person.id }) { index, person ->
-                        val shapes = ListItemDefaults.segmentedShapes(
+                        val shapes = WhiteNoiseListItemDefaults.segmentedShapes(
                             index = index,
                             count = filteredPeople.size,
-                            defaultShapes = ListItemDefaults.shapes(
-                                shape = RoundedCornerShape(0.dp),
-                            ),
                         )
                         ListItem(
                             onClick = { onSelect(person) },
@@ -2164,7 +2162,7 @@ private fun ContactPickerSheet(
                             Spacer(
                                 Modifier
                                     .fillMaxWidth()
-                                    .height(2.dp)
+                                    .height(ListItemDefaults.SegmentedGap)
                                     .background(MaterialTheme.colorScheme.surfaceContainerLow),
                             )
                         }

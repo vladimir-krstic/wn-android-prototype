@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatListAction
 import dev.ipf.whitenoise.model.ChatListActionPolicy
@@ -37,7 +38,10 @@ internal fun ChatContextMenuRow(
         // A lazy row can lose its anchor without the underlying chat being deleted.
         onDispose { dismissCurrentMenu() }
     }
-    Box(Modifier.padding(horizontal = ChatRowHorizontalInset)) {
+    Box(Modifier.padding(
+        horizontal = ChatRowHorizontalInset,
+        vertical = if (selecting) WhiteNoiseSpacing.Related / 2 else 0.dp,
+    )) {
         ChatListRow(chat, onOpen, onShowMenu, onAction, highlighted = expanded || checked, availableActions = availableActions, selecting = selecting, checked = checked)
         WhiteNoiseDropdownMenu(
             expanded = expanded,

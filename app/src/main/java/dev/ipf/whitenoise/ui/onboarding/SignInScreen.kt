@@ -138,17 +138,28 @@ fun SignInScreen(
                     .padding(WhiteNoiseSpacing.PinnedActionInset),
                 contentAlignment = Alignment.Center,
             ) {
-                WhiteNoiseButton(
-                    onClick = ::beginSignIn,
-                    enabled = keyState == PrivateKeyState.Valid && (attempt == null || isSigningIn),
-                    loading = isSigningIn,
-                    loadingLabel = stringResource(accessProgressLabel(attempt?.phase)),
-                    modifier = Modifier
-                        .widthIn(max = 520.dp)
-                        .fillMaxWidth()
-                        .testTag("onboarding.sign_in.action"),
+                Column(
+                    modifier = Modifier.widthIn(max = 520.dp).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
                 ) {
-                    Text(stringResource(R.string.sign_in))
+                    WhiteNoiseOutlinedButton(
+                        onClick = onAmberSignIn,
+                        enabled = attempt == null,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.sign_in_with_amber))
+                    }
+                    WhiteNoiseButton(
+                        onClick = ::beginSignIn,
+                        enabled = keyState == PrivateKeyState.Valid && (attempt == null || isSigningIn),
+                        loading = isSigningIn,
+                        loadingLabel = stringResource(accessProgressLabel(attempt?.phase)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("onboarding.sign_in.action"),
+                    ) {
+                        Text(stringResource(R.string.sign_in))
+                    }
                 }
             }
         },
@@ -244,13 +255,6 @@ fun SignInScreen(
                             contentDescription = stringResource(R.string.scan_qr_code),
                         )
                     }
-                }
-                WhiteNoiseOutlinedButton(
-                    onClick = onAmberSignIn,
-                    enabled = attempt == null,
-                    modifier = Modifier.fillMaxWidth().padding(top = WhiteNoiseSpacing.FormField),
-                ) {
-                    Text(stringResource(R.string.sign_in_with_amber))
                 }
                 AccessFeedback(attempt, onRetry, onRecover, onCancel)
             }

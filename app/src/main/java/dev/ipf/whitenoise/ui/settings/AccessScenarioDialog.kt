@@ -6,25 +6,20 @@ import androidx.compose.ui.res.stringResource
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import dev.ipf.whitenoise.model.AccessScenario
 import dev.ipf.whitenoise.model.ProfileExitScenario
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
@@ -56,18 +51,13 @@ internal fun AccessScenarioDialog(current: AccessScenario, onSelect: (AccessScen
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                 Text(stringResource(R.string.developer_the_next_access_attempt_uses_this_one_shot_result_retr))
-                LazyColumn(Modifier.weight(1f, fill = false)) {
+                LazyColumn(Modifier.weight(1f, fill = false).selectableGroup()) {
                     items(AccessScenario.entries, key = { it.name }) { scenario ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().selectable(
-                                selected = selected == scenario, role = Role.RadioButton,
-                                onClick = { selected = scenario },
-                            ).padding(vertical = WhiteNoiseSpacing.Related),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = selected == scenario, onClick = null)
-                            Text(scenario.developerLabel, Modifier.padding(start = WhiteNoiseSpacing.Related))
-                        }
+                        WhiteNoiseDialogChoiceRow(
+                            title = scenario.developerLabel,
+                            selected = selected == scenario,
+                            onClick = { selected = scenario },
+                        )
                     }
                 }
             }
@@ -93,16 +83,13 @@ internal fun ProfileExitScenarioDialog(current: ProfileExitScenario, onSelect: (
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.developer_sign_out_scenarios)) },
         text = {
-            LazyColumn {
+            LazyColumn(Modifier.selectableGroup()) {
                 items(ProfileExitScenario.entries, key = { it.name }) { scenario ->
-                    Row(
-                        Modifier.fillMaxWidth().selectable(selected == scenario, role = Role.RadioButton,
-                            onClick = { selected = scenario }).padding(vertical = WhiteNoiseSpacing.Related),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected == scenario, onClick = null)
-                        Text(scenario.developerLabel, Modifier.padding(start = WhiteNoiseSpacing.Related))
-                    }
+                    WhiteNoiseDialogChoiceRow(
+                        title = scenario.developerLabel,
+                        selected = selected == scenario,
+                        onClick = { selected = scenario },
+                    )
                 }
             }
         },
@@ -113,16 +100,21 @@ internal fun ProfileExitScenarioDialog(current: ProfileExitScenario, onSelect: (
 
 @Composable
 internal fun <T> ScenarioChoiceDialog(title: String, choices: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit, onDismiss: () -> Unit) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss, title = { androidx.compose.material3.Text(title) },
-        text = { androidx.compose.foundation.lazy.LazyColumn {
-            items(choices.size) { index ->
-                val choice = choices[index]
-                androidx.compose.material3.TextButton(onClick = { onSelect(choice); onDismiss() }) {
-                    androidx.compose.material3.Text((if (choice == selected) "✓ " else "") + label(choice))
+    WhiteNoiseAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            LazyColumn(Modifier.selectableGroup()) {
+                items(choices.size) { index ->
+                    val choice = choices[index]
+                    WhiteNoiseDialogChoiceRow(
+                        title = label(choice),
+                        selected = choice == selected,
+                        onClick = { onSelect(choice); onDismiss() },
+                    )
                 }
             }
-        } },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text(stringResource(R.string.close)) } },
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
     )
 }

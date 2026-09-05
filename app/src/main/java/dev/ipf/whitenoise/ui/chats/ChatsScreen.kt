@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.chats
 
+import android.content.ActivityNotFoundException
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import dev.ipf.whitenoise.model.GlobalSearch
 import dev.ipf.whitenoise.model.GlobalSearchFilters
@@ -20,6 +22,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -58,6 +66,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -76,7 +85,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
@@ -93,15 +101,13 @@ import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll
 import dev.ipf.whitenoise.ui.components.MuteDurationDialog
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
-import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseCompactSearchField
-import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseContentMaxWidth
 import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import dev.ipf.whitenoise.ui.components.WhiteNoiseScaffold as Scaffold
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
-import dev.ipf.whitenoise.ui.updates.AppUpdateBanner
+import dev.ipf.whitenoise.ui.updates.AppUpdateIconButton
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -124,7 +130,7 @@ fun ChatsScreen(
     onOpenSearchMessage: (String, String) -> Boolean = { _, _ -> false },
     onOpenSearchPerson: (Person) -> Unit = {},
     peopleScenario: PeopleSearchScenario = PeopleSearchScenario.Success,
-    onVoiceScenario: () -> GlobalVoiceScenario = { GlobalVoiceScenario.Success },
+    onVoiceScenario: () -> GlobalVoiceScenario = { GlobalVoiceScenario.Device },
     onFolders: () -> Unit = {},
     onMovePin: (String, Int) -> Unit = { _, _ -> },
     onCreateFolder: (String) -> String? = { null },
@@ -145,13 +151,34 @@ fun ChatsScreen(
     val scope = ChatScope.valueOf(scopeName)
     var query by rememberSaveable(profile?.id) { mutableStateOf("") }
     var isSearching by rememberSaveable(profile?.id) { mutableStateOf(false) }
-    var filterMenuOpen by remember { mutableStateOf(false) }
+    var filterMenuOpen by remember(profile?.id) { mutableStateOf(false) }
     var searchFilters by rememberSaveable(profile?.id, stateSaver = GlobalSearchFilterSaver) { mutableStateOf(GlobalSearchFilters()) }
-    var searchFilterDialog by rememberSaveable(profile?.id) { mutableStateOf(false) }
+    var searchFilterCategory by rememberSaveable(profile?.id) { mutableStateOf<String?>(null) }
     var lookupRetried by rememberSaveable(profile?.id, query) { mutableStateOf(false) }
     var lookupPending by remember(profile?.id, query) { mutableStateOf(false) }
-    var voiceGeneration by remember(profile?.id) { mutableStateOf(0L) }
-    var voiceRequest by remember(profile?.id) { mutableStateOf<GlobalVoiceRequest?>(null) }
+    var voiceGeneration by rememberSaveable(profile?.id) { mutableStateOf(0L) }
+    var voiceRequest by rememberSaveable(profile?.id, stateSaver = GlobalVoiceRequestSaver) { mutableStateOf<GlobalVoiceRequest?>(null) }
+    // Keep the outstanding platform launch separate from the editable/profile-owned search.
+    // Closing search must not let a late result be mistaken for a newer request.
+    var platformVoiceRequest by rememberSaveable(stateSaver = GlobalVoiceRequestSaver) { mutableStateOf<GlobalVoiceRequest?>(null) }
+    val voiceLauncher = rememberLauncherForActivityResult(VoiceSearchContract()) { result ->
+        val request = platformVoiceRequest
+        platformVoiceRequest = null
+        if (request != null && voiceRequest?.id == request.id && voiceRequest?.profileId == request.profileId) {
+            when (result) {
+                is VoiceSearchResult.Recognized -> {
+                    GlobalSearch.voiceResult(request, profile?.id, query, isSearching, result.text)?.let { query = it }
+                    voiceRequest = null
+                }
+                VoiceSearchResult.Cancelled -> voiceRequest = null
+                VoiceSearchResult.Unavailable -> {
+                    voiceRequest = if (request.profileId == profile?.id && request.originalQuery == query && isSearching) {
+                        request.copy(scenario = GlobalVoiceScenario.Unavailable)
+                    } else null
+                }
+            }
+        }
+    }
     val globalActive = isSearching && (query.isNotBlank() || searchFilters.active)
     val globalResults = remember(profile, query, searchFilters, globalActive) {
         if (profile != null && globalActive) GlobalSearch.results(profile, query, searchFilters) else null
@@ -263,14 +290,29 @@ fun ChatsScreen(
         isSearching = false
         query = ""
         searchFilters = GlobalSearchFilters()
-        searchFilterDialog = false
+        searchFilterCategory = null
+        filterMenuOpen = false
         voiceRequest = null
     }
     fun startVoice() {
         val owner = profile ?: return
+        if (platformVoiceRequest != null) return
         focusManager.clearFocus()
         keyboardController?.hide()
-        voiceRequest = GlobalVoiceRequest(++voiceGeneration, owner.id, query, onVoiceScenario())
+        val request = GlobalVoiceRequest(++voiceGeneration, owner.id, query, onVoiceScenario())
+        voiceRequest = request
+        if (request.scenario == GlobalVoiceScenario.Device) {
+            platformVoiceRequest = request
+            try {
+                voiceLauncher.launch(Unit)
+            } catch (_: ActivityNotFoundException) {
+                platformVoiceRequest = null
+                voiceRequest = request.copy(scenario = GlobalVoiceScenario.Unavailable)
+            } catch (_: SecurityException) {
+                platformVoiceRequest = null
+                voiceRequest = request.copy(scenario = GlobalVoiceScenario.Unavailable)
+            }
+        }
     }
 
     BackHandler(enabled = isSearching, onBack = ::closeSearch)
@@ -282,18 +324,7 @@ fun ChatsScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             AdaptiveContent(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
-                if (selecting) ChatSelectionBar(
-                    selected = rows.filter { it.id in visibleSelected },
-                    onClose = { selectedIds = emptyList() },
-                    onSelectAll = { selectedIds = rows.map { it.id } },
-                    onAction = { action ->
-                        when (action) {
-                            ChatBulkAction.Delete -> deleteIds = visibleSelected
-                            ChatBulkAction.Folder -> folderTargets = visibleSelected
-                            else -> onBeginBatch?.invoke(visibleSelected, action, null, false)
-                        }
-                    },
-                ) else Crossfade(
+                if (selecting) ChatSelectionBar(onClose = { selectedIds = emptyList() }) else Crossfade(
                     targetState = isSearching,
                     label = "Chats search mode",
                 ) { searching ->
@@ -304,27 +335,58 @@ fun ChatsScreen(
                             onClose = ::closeSearch,
                             closeSearchDescription = closeSearchDescription,
                             onVoice = ::startVoice,
+                            voicePending = platformVoiceRequest != null,
+                            filters = searchFilters,
+                            filterMenuOpen = filterMenuOpen,
+                            onFilterMenuOpenChange = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                filterMenuOpen = it
+                            },
+                            onFilterCategory = { searchFilterCategory = it },
+                            onClearFilters = { searchFilters = GlobalSearchFilters() },
                         )
                     } else {
-                        ChatsTopBar(
-                            profile = profile,
-                            scope = scope,
-                            folderId = selectedFolder?.id,
-                            onFolders = onFolders,
-                            onFolderChange = { folderId = it; filterMenuOpen = false },
-                            filterMenuOpen = filterMenuOpen,
-                            onFilterMenuOpenChange = { menuTarget = null; filterMenuOpen = it },
-                            onScopeChange = {
-                                folderId = null
-                                scopeName = it.name
-                                filterMenuOpen = false
-                            },
-                            onSettings = { menuTarget = null; onSettings() },
-                            onSearch = { isSearching = true },
-                            searchChatsDescription = searchChatsDescription,
-                        )
+                        Column {
+                            ChatsTopBar(
+                                profile = profile,
+                                updateState = appUpdates?.state,
+                                onSettings = { menuTarget = null; onSettings() },
+                                onSearch = { isSearching = true },
+                                searchChatsDescription = searchChatsDescription,
+                            )
+                            ChatFolderPills(
+                                profile = profile,
+                                scope = scope,
+                                folderId = selectedFolder?.id,
+                                onFolderChange = { menuTarget = null; folderId = it },
+                                onScopeChange = {
+                                    menuTarget = null
+                                    folderId = null
+                                    scopeName = it.name
+                                },
+                                onFolders = { menuTarget = null; onFolders() },
+                            )
+                        }
                     }
                 }
+            }
+        },
+        bottomBar = {
+            if (selecting) AdaptiveContent(
+                Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+            ) {
+                ChatSelectionBottomBar(
+                    selected = rows.filter { it.id in visibleSelected },
+                    onSelectAll = { selectedIds = rows.map { it.id } },
+                    onAction = { action ->
+                        when (action) {
+                            ChatBulkAction.Delete -> deleteIds = visibleSelected
+                            ChatBulkAction.Folder -> folderTargets = visibleSelected
+                            else -> onBeginBatch?.invoke(visibleSelected, action, null, false)
+                        }
+                    },
+                )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -367,19 +429,8 @@ fun ChatsScreen(
                     if (isSearching || selecting) WhiteNoiseSpacing.CompactScreenMargin
                     else 56.dp + WhiteNoiseSpacing.CompactScreenMargin * 2),
             ) {
-                appUpdates?.state?.let { update ->
-                    if (dev.ipf.whitenoise.model.AppUpdates.showsBanner(update)) {
-                        item(key = "app-update") {
-                            AppUpdateBanner(
-                                state = update,
-                                onUpdate = appUpdates::beginSelfUpdate,
-                                onDismiss = appUpdates::dismissBanner,
-                            )
-                        }
-                    }
-                }
-                if (isSearching && !selecting && profile != null) item(key = "search-filters") {
-                    GlobalSearchFilterBar(profile, searchFilters, onChange = { searchFilters = it }, onOpen = { searchFilterDialog = true; focusManager.clearFocus(); keyboardController?.hide() })
+                if (isSearching && !selecting && profile != null && searchFilters.active) item(key = "search-filters") {
+                    GlobalSearchFilterBar(profile, searchFilters, onChange = { searchFilters = it })
                 }
                 profile?.let { owner ->
                     item(key = "connection") { ChatConnectionBanner(owner, onRetryConnection, onProfileRelays) }
@@ -440,11 +491,14 @@ fun ChatsScreen(
             }
         }
     }
-    if (searchFilterDialog && profile != null) GlobalSearchFiltersDialog(profile, searchFilters, { searchFilters = it }, { searchFilterDialog = false })
-    voiceRequest?.let { request ->
+    searchFilterCategory?.let { category ->
+        if (profile != null) GlobalSearchFilterPicker(profile, category, searchFilters,
+            onChange = { searchFilters = it }, onDismiss = { searchFilterCategory = null })
+    }
+    voiceRequest?.takeIf { it.scenario != GlobalVoiceScenario.Device }?.let { request ->
         GlobalVoiceDialog(request, onComplete = { completed ->
             if (voiceRequest?.id == completed.id) {
-                GlobalSearch.voiceResult(completed, profile?.id, query, isSearching)?.let { query = it }
+                GlobalSearch.voiceResult(completed, profile?.id, query, isSearching, GlobalSearch.voicePhrase)?.let { query = it }
                 voiceRequest = null
             }
         }, onRetry = ::startVoice, onDismiss = { voiceRequest = null })
@@ -521,33 +575,16 @@ fun ChatsScreen(
 @Composable
 private fun ChatsTopBar(
     profile: Profile?,
-    scope: ChatScope,
-    folderId: String?,
-    onFolderChange: (String) -> Unit,
-    onFolders: () -> Unit,
-    filterMenuOpen: Boolean,
-    onFilterMenuOpenChange: (Boolean) -> Unit,
-    onScopeChange: (ChatScope) -> Unit,
+    updateState: dev.ipf.whitenoise.model.AppUpdateState?,
     onSettings: () -> Unit,
     onSearch: () -> Unit,
     searchChatsDescription: String,
 ) {
-    val filterDescription = stringResource(R.string.filter_chats)
-    val folder = profile?.chatFolders?.firstOrNull { it.id == folderId }
-    val scopeTitle = folder?.name ?: chatScopeLabel(scope)
-    val selectedScopeDescription = stringResource(R.string.selected_chat_scope, scopeTitle)
     val settingsDescription = profile?.let {
         stringResource(R.string.open_settings_for, it.name)
     }
     TopAppBar(
-        title = {
-            Text(
-                text = if (scope == ChatScope.Chats && folder == null) "" else scopeTitle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleLarge,
-            )
-        },
+        title = {},
         navigationIcon = {
             profile?.let {
                 IconButton(
@@ -568,50 +605,7 @@ private fun ChatsTopBar(
             }
         },
         actions = {
-            Box {
-                if (scope == ChatScope.Chats && folder == null) {
-                    IconButton(
-                        onClick = { onFilterMenuOpenChange(true) },
-                        modifier = Modifier.semantics {
-                            contentDescription = filterDescription
-                            stateDescription = selectedScopeDescription
-                            selected = false
-                        },
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_filter_list),
-                            contentDescription = null,
-                        )
-                    }
-                } else {
-                    FilledIconButton(
-                        onClick = { onFilterMenuOpenChange(true) },
-                        modifier = Modifier.semantics {
-                            contentDescription = filterDescription
-                            stateDescription = selectedScopeDescription
-                            selected = true
-                        },
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_filter_list),
-                            contentDescription = null,
-                        )
-                    }
-                }
-                WhiteNoiseDropdownMenu(
-                    expanded = filterMenuOpen,
-                    onDismissRequest = { onFilterMenuOpenChange(false) },
-                    modifier = Modifier.testTag("chats.filterMenu"),
-                    items = listOf(
-                        WhiteNoiseMenuItem(label = chatScopeLabel(ChatScope.Chats), onClick = { onScopeChange(ChatScope.Chats) }, selected = scope == ChatScope.Chats && folder == null),
-                    ) + profile?.chatFolders.orEmpty().map { candidate ->
-                        WhiteNoiseMenuItem(label = candidate.name, onClick = { onFolderChange(candidate.id) }, selected = candidate.id == folderId)
-                    } + listOf(
-                        WhiteNoiseMenuItem(label = chatScopeLabel(ChatScope.Left), onClick = { onScopeChange(ChatScope.Left) }, selected = scope == ChatScope.Left && folder == null),
-                        WhiteNoiseMenuItem(label = stringResource(R.string.chat_folders), icon = R.drawable.ic_filter_list, onClick = { onFilterMenuOpenChange(false); onFolders() }),
-                    ),
-                )
-            }
+            updateState?.let { AppUpdateIconButton(it, onOpenSettings = onSettings) }
             IconButton(onClick = onSearch) {
                 Icon(painterResource(R.drawable.ic_search), contentDescription = searchChatsDescription)
             }
@@ -620,6 +614,77 @@ private fun ChatsTopBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
             scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    )
+}
+
+/** Saved folders keep their management order; selecting an active pill never clears it. */
+@Composable
+private fun ChatFolderPills(
+    profile: Profile?,
+    scope: ChatScope,
+    folderId: String?,
+    onFolderChange: (String) -> Unit,
+    onScopeChange: (ChatScope) -> Unit,
+    onFolders: () -> Unit,
+) {
+    val folders = profile?.chatFolders.orEmpty()
+    val selectedIndex = when {
+        folderId != null -> folders.indexOfFirst { it.id == folderId } + 1
+        scope == ChatScope.Left -> folders.size + 1
+        else -> 0
+    }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+    LaunchedEffect(profile?.id, selectedIndex, folders.map { it.id }) {
+        val layout = listState.layoutInfo
+        val item = layout.visibleItemsInfo.firstOrNull { it.index == selectedIndex }
+        if (item == null || item.offset < layout.viewportStartOffset ||
+            item.offset + item.size > layout.viewportEndOffset
+        ) listState.scrollToItem(selectedIndex)
+    }
+    LazyRow(
+        state = listState,
+        modifier = Modifier.fillMaxWidth().testTag("chats.folders"),
+        contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
+        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        item(key = "scope:chats") {
+            ChatFolderPill(chatScopeLabel(ChatScope.Chats), folderId == null && scope == ChatScope.Chats,
+                "chats.scope.chats", { onScopeChange(ChatScope.Chats) })
+        }
+        items(folders, key = { "folder:${it.id}" }) { folder ->
+            ChatFolderPill(folder.name, folder.id == folderId,
+                "chats.folder.${folder.id}", { onFolderChange(folder.id) })
+        }
+        item(key = "scope:left") {
+            ChatFolderPill(chatScopeLabel(ChatScope.Left), folderId == null && scope == ChatScope.Left,
+                "chats.scope.left", { onScopeChange(ChatScope.Left) })
+        }
+        item(key = "manage") {
+            TextButton(onClick = onFolders, modifier = Modifier.testTag("chats.manageFolders")) {
+                Icon(painterResource(R.drawable.ic_folder), contentDescription = null,
+                    modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.chat_folders), modifier = Modifier.padding(start = WhiteNoiseSpacing.Related))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatFolderPill(label: String, selected: Boolean, tag: String, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        modifier = Modifier.testTag(tag),
+        shape = CircleShape,
+        border = null,
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = Color.Transparent,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            selectedLabelColor = MaterialTheme.colorScheme.onSurface,
         ),
     )
 }
@@ -642,12 +707,20 @@ private fun ChatsSearchTopBar(
     onClose: () -> Unit,
     closeSearchDescription: String,
     onVoice: () -> Unit,
+    voicePending: Boolean,
+    filters: GlobalSearchFilters,
+    filterMenuOpen: Boolean,
+    onFilterMenuOpenChange: (Boolean) -> Unit,
+    onFilterCategory: (String) -> Unit,
+    onClearFilters: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-        keyboardController?.show()
+        if (!voicePending) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
     }
 
     TopAppBar(
@@ -670,7 +743,24 @@ private fun ChatsSearchTopBar(
                 )
             }
         },
-        actions = { IconButton(onClick = onVoice) { Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.global_voice)) } },
+        actions = {
+            Box {
+                ChatFilterIconButton(
+                    active = filters.active,
+                    description = stringResource(R.string.global_filters),
+                    modifier = Modifier.testTag("global.filterButton"),
+                    onClick = { onFilterMenuOpenChange(true) },
+                )
+                GlobalSearchFilterMenu(
+                    expanded = filterMenuOpen, filters = filters,
+                    onDismiss = { onFilterMenuOpenChange(false) },
+                    onCategory = onFilterCategory, onClear = onClearFilters,
+                )
+            }
+            IconButton(onClick = onVoice, enabled = !voicePending) {
+                Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.global_voice))
+            }
+        },
         scrollBehavior = LocalWhiteNoiseHeaderScroll.current,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -711,4 +801,35 @@ private fun ChatEmptyState(
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         WhiteNoiseEmptyState(title = title, detail = detail)
     }
+}
+
+private val GlobalVoiceRequestSaver = listSaver<GlobalVoiceRequest?, Any>(
+    save = { request ->
+        request?.let { listOf(it.id, it.profileId, it.originalQuery, it.scenario.name) } ?: emptyList()
+    },
+    restore = { values ->
+        if (values.isEmpty()) null else GlobalVoiceRequest(
+            values[0] as Long, values[1] as String, values[2] as String,
+            GlobalVoiceScenario.valueOf(values[3] as String),
+        )
+    },
+)
+
+/** Advanced search filters retain a native icon and anchored menu. */
+@Composable
+private fun ChatFilterIconButton(
+    active: Boolean,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val semantics = modifier.semantics {
+        contentDescription = description
+        selected = active
+    }
+    val icon: @Composable () -> Unit = {
+        Icon(painterResource(R.drawable.ic_filter_list), contentDescription = null)
+    }
+    if (active) FilledIconButton(onClick = onClick, modifier = semantics, content = icon)
+    else IconButton(onClick = onClick, modifier = semantics, content = icon)
 }

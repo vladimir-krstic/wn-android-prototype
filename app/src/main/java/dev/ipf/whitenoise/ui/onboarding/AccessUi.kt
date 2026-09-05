@@ -79,7 +79,8 @@ fun AccessFeedback(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (attempt == null) return
+    // Progress belongs to the primary action; Back remains the way to leave an in-flight form.
+    if (attempt == null || attempt.phase.isBusy) return
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),

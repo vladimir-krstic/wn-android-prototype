@@ -2,6 +2,7 @@
 
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.conversation.LocalGroupWork
 import dev.ipf.whitenoise.ui.conversation.GroupCreateStatus
@@ -144,7 +145,10 @@ fun NewChatScreen(
     modifier: Modifier = Modifier,
     searchScenario: PeopleSearchScenario = PeopleSearchScenario.Success,
     onResolvedPerson: (Person) -> Unit = { onPerson(it.id) },
+    onConnectWithQr: () -> Unit = {},
 ) {
+    val inviteContext = LocalContext.current
+    var inviteFailed by rememberSaveable(profile.id) { mutableStateOf(false) }
     var query by rememberSaveable(profile.id) { mutableStateOf("") }
     var retry by remember(profile.id) { mutableIntStateOf(0) }
     var resolving by remember(profile.id, query, retry) { mutableStateOf(query.isNotBlank()) }
@@ -180,18 +184,40 @@ fun NewChatScreen(
             }
             item {
                 SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Related)) {
-                    SettingsLink(
-                        title = stringResource(R.string.new_group),
-                        onClick = onNewGroup,
-                        leading = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_group_add),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        },
-                    )
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.new_group),
+                            onClick = onNewGroup,
+                            leading = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_group_add),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            },
+                        )
+                    }
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.connect_with_qr),
+                            onClick = onConnectWithQr,
+                            leading = { Icon(painterResource(R.drawable.ic_qr_code_scanner), null, Modifier.size(24.dp)) },
+                        )
+                    }
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.invite_friend),
+                            onClick = { inviteFailed = !shareProfileInvitation(inviteContext, profile) },
+                            leading = { Icon(painterResource(R.drawable.ic_share), null, Modifier.size(24.dp)) },
+                        )
+                    }
                 }
+            }
+            if (inviteFailed) item {
+                dev.ipf.whitenoise.ui.settings.SettingsCallout(
+                    stringResource(R.string.people_share_unavailable), icon = R.drawable.ic_warning,
+                    modifier = Modifier.padding(top = WhiteNoiseSpacing.Related),
+                )
             }
             item { PeopleSearchFeedback(profile, searchResult.status, resolving, onRetry = { retry++ }) }
             val sourceGroups = if (query.isBlank()) mapOf(null to searchResult.people) else searchResult.people.groupBy { it.source }
@@ -354,59 +380,70 @@ fun PersonProfileScreen(
                 }
                 SettingsGroup {
                     if (groups.isNotEmpty()) {
-                        SettingsLink(
-                            title = stringResource(R.string.groups_in_common),
-                            onClick = onGroupsInCommon,
-                            leading = { GroupAvatarStack(groups) },
-                        )
-                        SettingsDivider()
-                    }
-                    SettingsAction(title = stringResource(R.string.contact_private_details), onClick = { showPrivateDetails = true })
-                    SettingsDivider()
-                    SettingsAction(title = stringResource(R.string.contact_start_group), onClick = onStartGroup,
-                        leading = { ProfileActionIcon(R.drawable.ic_group_add) })
-                    SettingsDivider()
-                    SettingsAction(title = stringResource(R.string.contact_add_groups), onClick = { groupAction = GroupContactAction.Invite })
-                    SettingsDivider()
-                    SettingsAction(title = stringResource(R.string.contact_promote_groups), onClick = { groupAction = GroupContactAction.Promote })
-                    SettingsDivider()
-                    SettingsAction(
-                        title = stringResource(if (person.isFollowing) R.string.unfollow else R.string.follow),
-                        onClick = onToggleFollow,
-                        leading = { ProfileActionIcon(R.drawable.ic_settings_person_add) },
-                    )
-                    SettingsDivider()
-                    SettingsAction(
-                        title = stringResource(if (person.isBlocked) R.string.unblock else R.string.block),
-                        destructive = !person.isBlocked,
-                        onClick = {
-                            if (person.isBlocked) onToggleBlock() else showBlockConfirmation = true
-                        },
-                        leading = {
-                            ProfileActionIcon(
-                                if (person.isBlocked) R.drawable.ic_check else R.drawable.ic_close,
-                                destructive = !person.isBlocked,
+                        row {
+                            SettingsLink(
+                                title = stringResource(R.string.groups_in_common),
+                                onClick = onGroupsInCommon,
+                                leading = { GroupAvatarStack(groups) },
                             )
-                        },
-                    )
+                        }
+                    }
+                    row {
+                        SettingsAction(title = stringResource(R.string.contact_private_details), onClick = { showPrivateDetails = true })
+                    }
+                    row {
+                        SettingsAction(title = stringResource(R.string.contact_start_group), onClick = onStartGroup,
+                            leading = { ProfileActionIcon(R.drawable.ic_group_add) })
+                    }
+                    row {
+                        SettingsAction(title = stringResource(R.string.contact_add_groups), onClick = { groupAction = GroupContactAction.Invite })
+                    }
+                    row {
+                        SettingsAction(title = stringResource(R.string.contact_promote_groups), onClick = { groupAction = GroupContactAction.Promote })
+                    }
+                    row {
+                        SettingsAction(
+                            title = stringResource(if (person.isFollowing) R.string.unfollow else R.string.follow),
+                            onClick = onToggleFollow,
+                            leading = { ProfileActionIcon(R.drawable.ic_settings_person_add) },
+                        )
+                    }
+                    row {
+                        SettingsAction(
+                            title = stringResource(if (person.isBlocked) R.string.unblock else R.string.block),
+                            destructive = !person.isBlocked,
+                            onClick = {
+                                if (person.isBlocked) onToggleBlock() else showBlockConfirmation = true
+                            },
+                            leading = {
+                                ProfileActionIcon(
+                                    if (person.isBlocked) R.drawable.ic_check else R.drawable.ic_close,
+                                    destructive = !person.isBlocked,
+                                )
+                            },
+                        )
+                    }
                 }
                 if (canManageGroup && groupRole != null) {
                     SettingsSection(stringResource(R.string.group_actions))
                     SettingsGroup {
-                        SettingsAction(
-                            title = stringResource(
-                                if (groupRole == GroupRole.Admin) R.string.remove_admin else R.string.make_admin,
-                            ),
-                            onClick = { showRoleConfirmation = true },
-                            leading = { ProfileActionIcon(R.drawable.ic_person) },
-                        )
-                        SettingsDivider()
-                        SettingsAction(
-                            title = stringResource(R.string.remove_from_group),
-                            destructive = true,
-                            onClick = { showRemoveConfirmation = true },
-                            leading = { ProfileActionIcon(R.drawable.ic_delete, destructive = true) },
-                        )
+                        row {
+                            SettingsAction(
+                                title = stringResource(
+                                    if (groupRole == GroupRole.Admin) R.string.remove_admin else R.string.make_admin,
+                                ),
+                                onClick = { showRoleConfirmation = true },
+                                leading = { ProfileActionIcon(R.drawable.ic_person) },
+                            )
+                        }
+                        row {
+                            SettingsAction(
+                                title = stringResource(R.string.remove_from_group),
+                                destructive = true,
+                                onClick = { showRemoveConfirmation = true },
+                                leading = { ProfileActionIcon(R.drawable.ic_delete, destructive = true) },
+                            )
+                        }
                     }
                 }
             }
@@ -507,27 +544,31 @@ fun GroupsInCommonScreen(
             item {
                 SettingsGroup {
                     if (groups.isEmpty()) {
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    stringResource(R.string.no_groups_in_common),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-                    } else {
-                        groups.forEachIndexed { index, group ->
-                            GroupLink(group = group, onClick = { onOpenGroup(group.id) })
-                            if (index != groups.lastIndex) SettingsDivider()
+                        item {
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        stringResource(R.string.no_groups_in_common),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
                         }
-                        SettingsDivider()
+                    } else {
+                        groups.forEach { group ->
+                            item {
+                                GroupLink(group = group, onClick = { onOpenGroup(group.id) })
+                            }
+                        }
                     }
-                    SettingsAction(
-                        title = stringResource(R.string.add_to_another_group),
-                        onClick = { showAddToGroup = true },
-                        leading = { ProfileActionIcon(R.drawable.ic_group_add) },
-                    )
+                    row {
+                        SettingsAction(
+                            title = stringResource(R.string.add_to_another_group),
+                            onClick = { showAddToGroup = true },
+                            leading = { ProfileActionIcon(R.drawable.ic_group_add) },
+                        )
+                    }
                 }
             }
         }
@@ -819,7 +860,9 @@ fun GroupSetupScreen(
                     )
                 }
                 dev.ipf.whitenoise.ui.settings.SettingsGroup(Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                    dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.disappearing_messages_title), value = dev.ipf.whitenoise.ui.conversation.retentionLabel(timer), onClick = { timerOpen = true }, enabled = editable)
+                    row {
+                        dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.disappearing_messages_title), value = dev.ipf.whitenoise.ui.conversation.retentionLabel(timer), onClick = { timerOpen = true }, enabled = editable)
+                    }
                 }
                 if (work != null) GroupCreateStatus(work, { workController.retryCreate(work.id) }, { workController.skipFailedTimer(work.id) })
                 SettingsSection(stringResource(R.string.members))
@@ -1183,16 +1226,12 @@ private fun PersonRow(
 ) {
     val grouped = groupIndex != null && groupCount > 0
     val shapes = if (grouped) {
-        ListItemDefaults.segmentedShapes(
+        WhiteNoiseListItemDefaults.segmentedShapes(
             index = groupIndex,
             count = groupCount,
-            defaultShapes = ListItemDefaults.shapes(shape = RoundedCornerShape(0.dp)),
-        ).let { positionalShapes ->
-            // Membership is conveyed by the trailing check, not by breaking the group geometry.
-            positionalShapes.copy(selectedShape = positionalShapes.shape)
-        }
+        )
     } else {
-        ListItemDefaults.shapes()
+        WhiteNoiseListItemDefaults.shapes()
     }
     val containerColor = if (grouped) {
         MaterialTheme.colorScheme.surfaceContainerLowest

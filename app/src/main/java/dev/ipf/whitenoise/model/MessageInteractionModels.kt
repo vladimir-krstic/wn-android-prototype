@@ -47,6 +47,7 @@ object MessageActionPolicy {
                 ?.transcript != null,
         ),
         canWrite: Boolean = true,
+        inReader: Boolean = false,
     ): List<MessageAction> {
         if (message.isDeleted) return listOf(MessageAction.Delete)
         val hasVoice = message.attachments.any { it.kind == MessageAttachmentKind.Voice }
@@ -62,12 +63,11 @@ object MessageActionPolicy {
             if (canWrite && MessageEditing.eligible(message, profileId)) add(MessageAction.Edit)
             if (message.editHistory != null) add(MessageAction.EditHistory)
             if (message.text.isNotBlank()) {
-                add(MessageAction.OpenMessage)
                 add(MessageAction.SelectText)
             }
             add(MessageAction.Reply)
             add(MessageAction.Forward)
-            add(MessageAction.Share)
+            if (inReader) add(MessageAction.Share)
             if (AttachmentExports.keys(message).isNotEmpty()) add(MessageAction.SaveAttachments)
             if (message.text.isNotBlank()) {
                 add(if (hasVoice) MessageAction.CopyTranscript else MessageAction.Copy)

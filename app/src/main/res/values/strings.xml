@@ -58,6 +58,7 @@
     <string name="signing_in">Signing In…</string>
     <string name="sign_in_with_amber">Sign in with Amber</string>
     <string name="access_signing">Signing</string>
+    <string name="access_amber_signed_in">Signed in with Amber</string>
     <string name="access_amber_owns_key">Amber holds this profile’s Private Key. Manage backups in Amber.</string>
     <string name="private_key_public_error">This is a Public Key. Enter your Private Key to sign in.</string>
     <string name="private_key_encrypted_error">This key is encrypted. Unlock your backup first, then enter its Private Key.</string>
@@ -143,8 +144,6 @@
     <string name="search_chats">Search Chats</string>
     <string name="close_search">Close search</string>
     <string name="clear_search">Clear search</string>
-    <string name="filter_chats">Filter Chats</string>
-    <string name="selected_chat_scope">Selected: %1$s</string>
     <string name="open_settings_for">Open Settings for %1$s</string>
     <string name="open_share_connect_for">Open Share &amp; Connect for %1$s</string>
     <string name="actions_for">Actions for %1$s</string>
@@ -356,6 +355,8 @@
     </plurals>
     <string name="delete_selected_messages">Delete Selected Messages</string>
     <string name="forward_selected_messages">Forward Selected Messages</string>
+    <string name="select_chats">Select chats</string>
+    <string name="select_messages">Select messages</string>
     <string name="close_selection">Close Selection</string>
     <string name="search_messages">Search Messages</string>
     <string name="conversation_debug">Conversation Debug</string>
@@ -447,6 +448,8 @@
     <string name="people_partial">Some results are unavailable. You can use the people shown or try again.</string>
     <string name="people_unavailable">Search is unavailable. People already on this device are still shown.</string>
     <string name="people_retry">Try Again</string>
+    <string name="connect_with_qr">Connect with QR</string>
+    <string name="invite_friend">Invite a friend</string>
     <string name="people_invite">Share invitation</string>
     <string name="people_invite_text">Connect with %1$s on White Noise:\n%2$s</string>
     <string name="people_share_unavailable">Sharing is unavailable. Try again.</string>
@@ -1319,7 +1322,6 @@
     <string name="download_sent_media">Sent media</string>
     <string name="download_quality">Media quality</string>
     <string name="download_quality_help">Applies to new photos and voice messages. Videos and audio files are sent as-is.</string>
-    <string name="download_quality_detail">Low uses less data. Standard balances quality and size. High keeps more detail. Original preserves photo quality when possible; some formats need conversion. Location and device metadata are removed from photos in every mode. Voice quality increases from Low to High; Original uses High voice quality.</string>
     <string name="download_done">Done</string>
     <string name="download_stop_confirmation">Clear waiting automatic downloads for this profile? Active downloads and downloads you started yourself will continue.</string>
     <string name="download_waiting">Waiting to download</string>
@@ -1345,18 +1347,17 @@
     <string name="relay_imported_issue_detail">An imported relay doesn’t use a secure wss:// address. Remove it or add a secure replacement. Its role assignments were kept.</string>
     <string name="relay_needs_attention">Needs attention</string>
     <string name="ai_agents_title">AI Agents</string>
-    <string name="ai_agents_about_section">About AI agents</string>
-    <string name="ai_agents_about_body">An AI agent runs separately on your own machine or server. After setup, add the agent’s public key and chat with it like any other contact.</string>
-    <string name="ai_agents_connectors_section">Connectors</string>
-    <string name="ai_agents_connectors_body">Choose your agent, review its setup prompt, then copy the prompt into that agent. The prompt includes your public key, never your private key, and asks for your approval before installation.</string>
+    <string name="ai_agents_about_section">Chat with your AI agent</string>
+    <string name="ai_agents_about_body">Connect an agent running on your own machine or server.</string>
+    <string name="ai_agents_connectors_section">Choose an agent</string>
+    <string name="ai_agents_connectors_body">Choose an agent to review and copy its setup prompt.</string>
+    <string name="ai_agents_setup_title">Set up %1$s</string>
+    <string name="ai_agents_setup_instruction">Copy this prompt into %1$s. It includes your public key and asks for approval before installation.</string>
     <string name="ai_agents_manual_section">Manual setup</string>
-    <string name="ai_agents_manual_body">When the agent gives you its public key, start a new message, search for that key, and add the agent as a contact.</string>
-    <string name="ai_agents_public_key_label">Your public key</string>
+    <string name="ai_agents_manual_body">After setup, add the agent’s public key in New Message to start chatting.</string>
     <string name="ai_agents_public_key_unavailable">Your public key is unavailable. Return to Settings and try another profile.</string>
     <string name="ai_agents_copy_public_key">Copy public key</string>
     <string name="ai_agents_public_key_copied">Public key copied.</string>
-    <string name="ai_agents_show_prompt">Show setup prompt</string>
-    <string name="ai_agents_hide_prompt">Hide setup prompt</string>
     <string name="ai_agents_copy_prompt">Copy prompt</string>
     <string name="ai_agents_prompt_copied">Setup prompt copied.</string>
     <string name="ai_agents_docs_title">Agent connector documentation</string>
@@ -1447,23 +1448,13 @@
     <string name="external_open_failed_detail">This destination is unavailable right now. Try again or return to About &amp; licenses.</string>
     <string name="help_retry">Retry</string>
     <string name="app_updates_title">App updates</string>
-    <string name="app_update_settings_title">Zapstore release</string>
-    <string name="app_update_settings_unknown">Installed: %1$s · Tap to check</string>
+    <string name="app_update_settings_unknown">Check for updates</string>
     <string name="app_update_settings_checking">Checking for updates…</string>
-    <string name="app_update_settings_current">Installed: %1$s · Up to date</string>
-    <string name="app_update_settings_available">Installed: %1$s · Latest: %2$s · Update available</string>
-    <plurals name="app_update_settings_available_count">
-        <item quantity="one">Installed: %1$s · Latest: %2$s · %3$d release behind</item>
-        <item quantity="other">Installed: %1$s · Latest: %2$s · %3$d releases behind</item>
-    </plurals>
+    <string name="app_update_settings_current">Up to date</string>
     <string name="app_update_settings_failed">Couldn’t check for updates. Tap to retry.</string>
     <string name="app_update_available_title">Update available</string>
     <string name="app_update_important_title">Important update available</string>
     <string name="app_update_available_detail">Version %1$s is available on Zapstore.</string>
-    <plurals name="app_update_releases_behind">
-        <item quantity="one">%1$d release behind</item>
-        <item quantity="other">%1$d releases behind</item>
-    </plurals>
     <string name="app_update_now">Update now</string>
     <string name="app_update_dismiss">Dismiss update</string>
     <string name="app_update_resolving_title">Checking release</string>

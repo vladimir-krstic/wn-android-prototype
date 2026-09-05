@@ -56,14 +56,13 @@ class ChatsPolishTest {
         val vm = model()
         var created = false
         rule.setContent { WhiteNoiseTheme { Chats(vm, onNew = { created = true }) } }
-        rule.onNodeWithText("Chats").assertDoesNotExist()
+        rule.onNodeWithTag("chats.scope.chats").assertIsSelected()
+        rule.onNodeWithContentDescription("Filter Chats").assertDoesNotExist()
         rule.onNodeWithText("New Message").assertDoesNotExist()
         rule.onNodeWithTag("chats.newMessage").assertIsDisplayed()
         rule.onNodeWithContentDescription("New Message").performClick()
         rule.runOnIdle { assertTrue(created) }
-        rule.onNodeWithContentDescription("Filter Chats").performClick()
-        rule.onNodeWithText("Unread").performClick()
-        rule.onNodeWithContentDescription("Filter Chats").assertIsSelected()
+        rule.onNodeWithTag("chats.folder.system:unread").performClick().assertIsSelected()
         rule.onNodeWithText("Unread").assertIsDisplayed()
         rule.onNodeWithContentDescription("New Message").assertIsDisplayed()
     }
@@ -102,8 +101,8 @@ class ChatsPolishTest {
         rule.onNodeWithTag("chat.row.catalog-direct-dates").performSemanticsAction(SemanticsActions.OnLongClick)
         rule.onNodeWithTag("chat.menu.catalog-direct-text").assertDoesNotExist()
         rule.onAllNodesWithText("Archive").assertCountEquals(1)
-        rule.onNodeWithContentDescription("Filter Chats").performClick()
-        rule.onNodeWithText("Left").performClick()
+        rule.onNodeWithTag("chats.folders").performScrollToNode(hasTestTag("chats.scope.left"))
+        rule.onNodeWithTag("chats.scope.left").performClick()
         rule.onNodeWithText("Archive").assertDoesNotExist()
     }
 

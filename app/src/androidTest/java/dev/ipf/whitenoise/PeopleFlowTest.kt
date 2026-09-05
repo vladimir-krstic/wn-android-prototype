@@ -20,6 +20,38 @@ import org.junit.runner.RunWith
 class PeopleFlowTest {
     @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
 
+    @Test fun newMessageOffersQrAndInvitationWithoutAnEmptySearch() {
+        var openedQr = 0
+        rule.setContent { WhiteNoiseTheme {
+            NewChatScreen(ProfileFixtures.marmota, {}, {}, {}, onConnectWithQr = { openedQr++ })
+        } }
+        rule.onNodeWithText("Invite a friend").assertIsDisplayed().assertHasClickAction()
+        rule.onNodeWithText("Connect with QR").assertIsDisplayed().performClick()
+        rule.runOnIdle { assertEquals(1, openedQr) }
+    }
+
+    @Test fun invitationHandsOnlyThePublicProfileLinkToAndroidChooserAndReportsFailure() {
+        var captured: android.content.Intent? = null
+        val context = object : android.content.ContextWrapper(rule.activity) {
+            override fun startActivity(intent: android.content.Intent) { captured = intent }
+        }
+        val profile = ProfileFixtures.marmota
+        assertTrue(shareProfileInvitation(context, profile))
+        assertEquals(android.content.Intent.ACTION_CHOOSER, captured!!.action)
+        val send = androidx.core.content.IntentCompat.getParcelableExtra(
+            captured!!, android.content.Intent.EXTRA_INTENT, android.content.Intent::class.java,
+        )!!
+        assertEquals(android.content.Intent.ACTION_SEND, send.action)
+        assertEquals("text/plain", send.type)
+        assertEquals(context.getString(R.string.people_invite_text, profile.name,
+            ProfileLinks.forKey(profile.publicKey)!!.uri), send.getStringExtra(android.content.Intent.EXTRA_TEXT))
+        assertFalse(send.hasExtra(android.content.Intent.EXTRA_STREAM))
+        val unavailable = object : android.content.ContextWrapper(rule.activity) {
+            override fun startActivity(intent: android.content.Intent) { throw android.content.ActivityNotFoundException() }
+        }
+        assertFalse(shareProfileInvitation(unavailable, profile))
+    }
+
     @Test fun searchShowsNetworkOriginAndSelectsResolvedPerson() {
         var picked: Person? = null
         rule.setContent { WhiteNoiseTheme { NewChatScreen(ProfileFixtures.marmota, {}, {}, {}, onResolvedPerson = { picked = it }) } }

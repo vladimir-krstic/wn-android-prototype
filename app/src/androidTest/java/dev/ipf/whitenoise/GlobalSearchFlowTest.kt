@@ -39,9 +39,26 @@ class GlobalSearchFlowTest {
         if (query.isNotEmpty()) rule.onNodeWithTag("chats.searchField").performTextInput(query)
     }
     private fun openFilters(category: String) {
-        rule.onNodeWithTag("chats.list").performScrollToNode(hasTestTag("global.filters"))
-        rule.onNodeWithText("Filters").performClick()
-        rule.onNodeWithText(category).performClick()
+        rule.onNodeWithTag("global.filterButton").performClick()
+        rule.onNodeWithTag("global.filterMenu").assertIsDisplayed()
+        rule.onNode(hasText(category) and hasAnyAncestor(hasTestTag("global.filterMenu"))).performClick()
+        rule.onNodeWithTag("global.filterMenu").assertDoesNotExist()
+    }
+
+    @Test fun headerFilterMenuShowsActiveStateAndClearsWithoutClosingSearch() {
+        rule.setContent { WhiteNoiseTheme { SearchScreen() } }
+        search("Trailhead")
+        rule.onNodeWithTag("global.filterButton").assertIsNotSelected()
+        openFilters("Content")
+        rule.onNodeWithTag("global.content.Text").performClick()
+        rule.onNodeWithText("Done").performClick()
+        rule.onNodeWithTag("global.filterButton").assertIsSelected().performClick()
+        rule.onNode(hasText("Content") and hasAnyAncestor(hasTestTag("global.filterMenu"))).assertIsSelected()
+        rule.onNode(hasText("Clear All") and hasAnyAncestor(hasTestTag("global.filterMenu"))).performClick()
+        rule.onNodeWithTag("global.filterMenu").assertDoesNotExist()
+        rule.onNodeWithTag("global.filterButton").assertIsNotSelected()
+        rule.onNodeWithTag("global.filters").assertDoesNotExist()
+        rule.onNodeWithTag("chats.searchField").assertTextContains("Trailhead")
     }
 
     @Test fun exactResultNavigationPreservesQueryAndChatFilterOnBack() {

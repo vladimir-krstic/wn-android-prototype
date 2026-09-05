@@ -50,9 +50,10 @@ cards and readers.
 ## Entry, navigation, Back, and exit
 
 Settings → AI Agents opens the typed `AppRoute.AiAgents` destination. App-bar
-Back and system Back return to Settings through Navigation Compose. Prompt
-expansion is route-local saveable UI state; leaving the screen cannot perform
-or repeat setup.
+Back and system Back return to Settings through Navigation Compose. The selected agent is route-local saveable UI state, scoped to the active
+profile and public key. Selecting a row opens a Material bottom sheet. Close,
+system Back, or outside dismissal returns to the list without copying anything;
+leaving the screen cannot perform or repeat setup.
 
 Conversation Debug → Add agent conversation examples adds local rows to that
 exact chat. Returning to the conversation presents those rows through the
@@ -61,8 +62,8 @@ ordinary timeline. Profile switching invalidates the old insertion callback.
 ## Exact product copy
 
 All new interface copy is in `values/strings.xml`. The ordinary vocabulary is
-**AI Agents**, **About AI agents**, **Connectors**, **Manual setup**, **Show
-setup prompt**, **Copy prompt**, **Your public key**, **Agent operation**,
+**AI Agents**, **Chat with your AI agent**, **Choose an agent**, **Manual setup**,
+**Set up [agent]**, **Copy prompt**, **Copy public key**, **Agent operation**,
 **Queued**, **In progress**, **Completed**, **Failed**, **Cancelled** and
 **Unavailable**. Setup copy states that the prompt contains a public key and
 that the external agent must ask for approval before installation.
@@ -74,9 +75,24 @@ operation card.
 ## Android composition
 
 The screen reuses the established Settings scaffold, adaptive content bounds,
-tonal groups, list rows, 4/8 dp rhythm and app bar. Connector actions use
-Material text buttons in a wrapping row so 200% text does not clip. Expanded
-prompts and operation details use selectable monospace text.
+white segmented groups, stable row shapes, 4/8 dp rhythm and app bar. A gray
+info callout introduces externally hosted agents. Each agent is one native
+clickable row with its name, short description, and chevron. Supporting guidance
+sits below the group.
+
+A selected agent opens the shared `WhiteNoiseModalBottomSheet` with a Close
+header, concise gray instruction callout, white selectable prompt surface, and
+next-step guidance. The body scrolls independently while one standard 56 dp
+`WhiteNoiseButton` copies the exact prompt. Copy feedback is visible and announced
+beside that action. The sheet uses the established 88% window-height cap and
+shared safe-drawing insets; Material owns width, shape, dismissal, and gestures.
+
+Manual setup provides a compact copy row with the abbreviated public key and a
+copy icon, plus the documentation row. The complete key remains in the clipboard
+payload and setup prompt. Missing public identity disables agent rows and key
+copy, with a semantic error callout near the introduction. Documentation and
+manual-copy outcomes use the shared callout. Operation details remain selectable
+monospace text.
 
 The timeline uses a bounded neutral Material surface. Text labels communicate
 every phase; semantic error color reinforces Failed. Material linear progress
@@ -109,7 +125,8 @@ failure result when the handoff cannot start.
   relying on color or motion.
 - The progress count is written as “current of total steps”; queued work has a
   textual Queued label beside its indeterminate indicator.
-- Connector buttons retain Material touch targets and wrap under large type.
+- Agent rows retain native button semantics and touch targets. The sheet body
+  scrolls under large type, keeping the standard copy button reachable.
 - Prompt and detail text is selectable, while the copied identity is public.
 - The existing scaffold owns safe drawing insets and adaptive width. Lists
   remain scrollable at 200% text, and start/end layout supports RTL.
@@ -117,6 +134,10 @@ failure result when the handoff cannot start.
   introduced.
 
 ## Governing Android sources
+
+- [Bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets)
+  — a focused prompt-review task uses Material dismissal and sheet state
+  (consulted 2026-09-05).
 
 - [Navigation](https://developer.android.com/guide/navigation) — a typed
   destination and the existing NavHost own entry and Back.
@@ -155,8 +176,9 @@ added.
 ## Observable acceptance criteria
 
 - Settings exposes AI Agents and Back returns to Settings.
-- All four connectors can reveal and copy a prompt containing the exact active
-  profile public key; an unavailable key disables these actions.
+- All four agent rows open a setup sheet and copy a distinct prompt containing
+  the exact active profile public key; an unavailable key disables these actions.
+- Closing a setup sheet without copying performs no action.
 - Manual setup can copy the public key and reports documentation handoff
   failure.
 - Streaming text has visible progress metadata.
@@ -181,3 +203,20 @@ passes 817 unit tests with zero failures/errors/skips, zero lint errors (14
 existing warnings and two hints), and both APKs. All seven new Compose cases
 compile only. Device execution, screenshots and visual acceptance were not
 requested and are not claimed.
+
+## 2026-09-05 — agent setup design polish
+
+The user requested clearer hierarchy and recognizable actions, matching the
+shared Google/Material presentation established in the preceding polish pass.
+This replaces repeated inline preview/copy buttons with agent choices and a
+focused setup sheet. All four original prompt payloads, public-key ownership,
+clipboard behavior, manual setup, and browser handoff remain intact. Introduction
+and instructions are shortened in all five supported resource sets.
+
+`AgentFeaturesInteractionTest` now covers opening and copying every agent prompt,
+closing without copying, unavailable keys, manual copy/documentation failure,
+and large-type reachability of the sheet action. The complete host gate
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes: 894 unit tests, zero failures/errors/skips, zero lint errors, and both
+debug APKs assembled. The eight Compose cases compile only; no device execution
+or visual acceptance is claimed.

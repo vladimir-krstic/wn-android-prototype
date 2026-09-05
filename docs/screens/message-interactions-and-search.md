@@ -449,3 +449,49 @@ reasons and destination-profile choice. App-owned progress/retry survives route
 changes; completion never duplicates accepted sends. The clean host gate passes
 361 unit tests and both APKs; nine new UI cases compile. Device/visual acceptance
 is separate from the older evidence above.
+
+
+## 2026-09-05 search navigation backing removal
+
+User-requested polish removes the full-width gray Surface behind the previous/
+next buttons and live match count. The transparent Row keeps existing IME,
+navigation-bar clearance, spacing and native button targets. Only the individual
+controls retain tonal capsules: the count uses secondaryContainer and
+onSecondaryContainer, matching the native tonal icon buttons for clear text/icon
+contrast in light and dark themes. Disabled arrows retain native disabled states.
+Search order, callbacks and live-count semantics are unchanged. Host validation:
+`./gradlew assembleDebug` and `git diff --check`; device inspection not run.
+
+
+## 2026-09-05 message selection polish
+
+Latest user direction removes both the full-row selected tint and full-row tap
+indication from selectable messages. The whole-row Checkbox toggle target and
+native checked state remain; its interaction source now feeds only the existing
+bubble-clipped press layer. The header reads “Select messages” rather than
+repeating the selection count. The bottom count remains a polite live region.
+
+The bottom action row has no full-width backing Surface. Delete uses the paired
+errorContainer/onErrorContainer tonal button colors; Forward retains native tonal
+colors and the count uses onSurface. Native disabled states, 48 dp targets, safe
+insets, unavailable-forwarding explanations, selection toggling and action
+confirmations remain. Updated interaction coverage checks the fixed title, one
+count and toggling on/off; it compiles only. Current-build device inspection and
+visual acceptance remain pending.
+
+Selection-polish host gate: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 898 unit tests, zero lint errors and both APKs assembled. Compose
+interaction tests compile only; `git diff --check` passes.
+
+
+## 2026-09-05 message menu simplification
+
+User direction removes Open message and Share from bubble action menus and their
+matching accessibility actions. Shared MessageActionPolicy supplies that compact
+set; Select text and Read more still open their existing reader flows. The reader
+explicitly retains sharing in its own menu, and attachment/viewer sharing remains
+available. Existing policy tests verify the removed entries, retained text
+selection and reader sharing. No action ordering or eligibility changes otherwise.
+
+Menu-polish validation: `./gradlew testDebugUnitTest assembleDebug` passes
+with 898 unit tests; `git diff --check` passes. Device inspection was not run.

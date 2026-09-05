@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,6 +61,7 @@ import dev.ipf.whitenoise.model.ChatListPresentation
 import dev.ipf.whitenoise.model.ChatListStatus
 import dev.ipf.whitenoise.model.DisappearingDuration
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import dev.ipf.whitenoise.ui.conversation.retentionLabel
 
 internal val ChatRowHorizontalInset = 8.dp
@@ -141,13 +143,18 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
             )
         },
         leadingContent = {
-            if (selecting) androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = null)
-            else Box {
-                ProfileAvatar(chat.title, chat.visibleAvatar, Modifier.size(52.dp).testTag("chat.avatar.${chat.id}"), contentDescription = null)
-                if (chat.isPinned) {
-                    Surface(modifier = Modifier.size(20.dp).align(Alignment.BottomEnd), shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(painterResource(R.drawable.ic_push_pin), stringResource(R.string.pinned), Modifier.size(14.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (selecting) androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = null)
+                Box {
+                    ProfileAvatar(chat.title, chat.visibleAvatar, Modifier.size(52.dp).testTag("chat.avatar.${chat.id}"), contentDescription = null)
+                    if (chat.isPinned) {
+                        Surface(modifier = Modifier.size(20.dp).align(Alignment.BottomEnd), shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(painterResource(R.drawable.ic_push_pin), stringResource(R.string.pinned), Modifier.size(14.dp))
+                            }
                         }
                     }
                 }
@@ -164,11 +171,7 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
             top = ListItemDefaults.ContentPadding.calculateTopPadding(),
             bottom = ListItemDefaults.ContentPadding.calculateBottomPadding(),
         ),
-        // Hold the native selected shape after the long-press pointer is released.
-        // This is an ordinary clickable row, not a radio-button selection control.
-        shapes = ListItemDefaults.shapes(
-            shape = if (highlighted) ListItemDefaults.shapes().selectedShape else null,
-        ),
+        shapes = WhiteNoiseListItemDefaults.shapes(),
         colors = ListItemDefaults.colors(
             containerColor = if (highlighted) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
         ),

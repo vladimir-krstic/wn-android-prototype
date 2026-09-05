@@ -26,6 +26,7 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.ui.components.WhiteNoiseTextField
 import dev.ipf.whitenoise.ui.conversation.LocalReadAloudController
 import java.text.NumberFormat
@@ -39,7 +40,7 @@ internal data class SpeechSettingOption(val title: String, val selected: Boolean
 internal fun SpeechSettingsChoices(title: String, options: List<SpeechSettingOption>, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp).selectableGroup()) {
-            itemsIndexed(options) { index, option -> SettingsChoice(option.title, option.selected,
+            itemsIndexed(options) { index, option -> WhiteNoiseDialogChoiceRow(option.title, option.selected,
                 onClick = option.action, subtitle = option.subtitle, enabled = option.enabled,
                 modifier = Modifier.testTag("speech.choice.$index")) }
         }
@@ -81,43 +82,54 @@ internal fun ReadAloudSettingsScreen(profile: Profile, onBack: () -> Unit) {
     }
     SettingsScaffold(stringResource(R.string.read_aloud), onBack) {
         SettingsList {
-            if (status != null) item { SettingsExplainer(stringResource(status)) }
-            if (controller.discoveryFailed && discovery.phase != SpeechDiscoveryPhase.Failed) item { SettingsExplainer(stringResource(R.string.speech_discovery_failed)) }
-            if (controller.engineChange?.phase == SpeechEngineChangePhase.Initializing) item { SettingsExplainer(stringResource(R.string.speech_changing_engine)) }
-            if (controller.engineChange?.phase == SpeechEngineChangePhase.Failed) item { SettingsExplainer(stringResource(R.string.speech_selection_failed)) }
             item { SettingsGroup {
-                SettingsLink(stringResource(R.string.speech_engine), value = engineLabel,
-                    enabled = discovery.engines.isNotEmpty(), onClick = { choice = SpeechSettingChoice.Engine })
-                SettingsDivider()
-                SettingsLink(stringResource(R.string.speech_voice), value = if (preferences.voice(discovery.activePackage.orEmpty()) == null) automatic else voiceLabel,
-                    subtitle = if (discovery.voices.usingFallback) stringResource(R.string.speech_voice_fallback, voiceLabel.orEmpty()) else voiceLabel,
-                    enabled = discovery.activePackage != null, onClick = { choice = SpeechSettingChoice.Voice })
-                SettingsDivider()
-                SettingsLink(stringResource(R.string.speech_rate), value = preferences.rate?.let(::speechRateLabel) ?: system,
-                    onClick = { choice = SpeechSettingChoice.Rate })
+                row {
+                    SettingsLink(stringResource(R.string.speech_engine), value = engineLabel,
+                        enabled = discovery.engines.isNotEmpty(), onClick = { choice = SpeechSettingChoice.Engine })
+                }
+                row {
+                    SettingsLink(stringResource(R.string.speech_voice), value = if (preferences.voice(discovery.activePackage.orEmpty()) == null) automatic else voiceLabel,
+                        subtitle = if (discovery.voices.usingFallback) stringResource(R.string.speech_voice_fallback, voiceLabel.orEmpty()) else voiceLabel,
+                        enabled = discovery.activePackage != null, onClick = { choice = SpeechSettingChoice.Voice })
+                }
+                row {
+                    SettingsLink(stringResource(R.string.speech_rate), value = preferences.rate?.let(::speechRateLabel) ?: system,
+                        onClick = { choice = SpeechSettingChoice.Rate })
+                }
             } }
+            if (status != null) item { SettingsCallout(stringResource(status), icon = if (discovery.phase == SpeechDiscoveryPhase.Discovering) R.drawable.ic_info else R.drawable.ic_warning) }
+            if (controller.discoveryFailed && discovery.phase != SpeechDiscoveryPhase.Failed) item { SettingsCallout(stringResource(R.string.speech_discovery_failed), icon = R.drawable.ic_warning) }
+            if (controller.engineChange?.phase == SpeechEngineChangePhase.Initializing) item { SettingsCallout(stringResource(R.string.speech_changing_engine)) }
+            if (controller.engineChange?.phase == SpeechEngineChangePhase.Failed) item { SettingsCallout(stringResource(R.string.speech_selection_failed), icon = R.drawable.ic_warning) }
             item { SettingsGroup {
-                SettingsSwitch(stringResource(R.string.speech_auto_default), preferences.autoReadDefault,
-                    onCheckedChange = { enabled -> controller.changePreferences { it.copy(autoReadDefault = enabled) } },
-                    subtitle = stringResource(R.string.speech_auto_detail))
-                SettingsDivider()
-                SettingsSwitch(stringResource(R.string.speech_mix), preferences.mixWithMedia,
-                    onCheckedChange = { enabled -> controller.changePreferences { it.copy(mixWithMedia = enabled) } },
-                    subtitle = stringResource(R.string.speech_mix_detail))
+                row {
+                    SettingsSwitch(stringResource(R.string.speech_auto_default), preferences.autoReadDefault,
+                        onCheckedChange = { enabled -> controller.changePreferences { it.copy(autoReadDefault = enabled) } },
+                        subtitle = stringResource(R.string.speech_auto_detail))
+                }
+                row {
+                    SettingsSwitch(stringResource(R.string.speech_mix), preferences.mixWithMedia,
+                        onCheckedChange = { enabled -> controller.changePreferences { it.copy(mixWithMedia = enabled) } },
+                        subtitle = stringResource(R.string.speech_mix_detail))
+                }
                 if (preferences.mixWithMedia) {
-                    SettingsDivider()
-                    SettingsLink(stringResource(R.string.speech_mix_volume), value = speechVolumeLabel(preferences.mixVolume),
-                        onClick = { choice = SpeechSettingChoice.Volume })
+                    row {
+                        SettingsLink(stringResource(R.string.speech_mix_volume), value = speechVolumeLabel(preferences.mixVolume),
+                            onClick = { choice = SpeechSettingChoice.Volume })
+                    }
                 }
             } }
             item { SettingsGroup {
-                SettingsLink(stringResource(R.string.speech_refresh), onClick = controller::refresh)
-                SettingsDivider()
-                SettingsLink(stringResource(R.string.speech_android_settings), onClick = {
-                    settingsFailure = runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }.isFailure
-                })
+                row {
+                    SettingsLink(stringResource(R.string.speech_refresh), onClick = controller::refresh)
+                }
+                row {
+                    SettingsLink(stringResource(R.string.speech_android_settings), onClick = {
+                        settingsFailure = runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }.isFailure
+                    })
+                }
             } }
-            if (settingsFailure) item { SettingsExplainer(stringResource(R.string.speech_settings_failed)) }
+            if (settingsFailure) item { SettingsCallout(stringResource(R.string.speech_settings_failed), icon = R.drawable.ic_warning) }
         }
     }
     when (choice) {

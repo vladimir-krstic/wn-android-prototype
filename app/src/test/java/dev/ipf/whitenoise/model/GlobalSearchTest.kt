@@ -140,10 +140,12 @@ class GlobalSearchTest {
         assertEquals(PeopleSearchStatus.NoProfile, GlobalSearch.people(profile, "nostr:$key", PeopleSearchScenario.Success).status)
     }
     @Test fun voiceCompletionsRequireOwnerUnchangedQueryAndActiveSearch() {
-        val request = GlobalVoiceRequest(1, "me", "existing", GlobalVoiceScenario.Success)
-        assertEquals("trailhead", GlobalSearch.voiceResult(request, "me", "existing", true))
-        assertNull(GlobalSearch.voiceResult(request, "other", "existing", true)); assertNull(GlobalSearch.voiceResult(request, "me", "new", true))
-        assertNull(GlobalSearch.voiceResult(request, "me", "existing", false))
-        listOf(GlobalVoiceScenario.Cancelled, GlobalVoiceScenario.Unavailable).forEach { assertNull(GlobalSearch.voiceResult(request.copy(scenario = it), "me", "existing", true)) }
+        val request = GlobalVoiceRequest(1, "me", "existing", GlobalVoiceScenario.Device)
+        assertEquals("meeting tomorrow", GlobalSearch.voiceResult(request, "me", "existing", true, "  meeting tomorrow  "))
+        assertNull(GlobalSearch.voiceResult(request, "other", "existing", true, "meeting tomorrow")); assertNull(GlobalSearch.voiceResult(request, "me", "new", true, "meeting tomorrow"))
+        assertNull(GlobalSearch.voiceResult(request, "me", "existing", false, "meeting tomorrow"))
+        assertNull(GlobalSearch.voiceResult(request, "me", "existing", true, "  "))
+        assertNull(GlobalSearch.voiceResult(request, "me", "existing", true, null))
+        listOf(GlobalVoiceScenario.Cancelled, GlobalVoiceScenario.Unavailable).forEach { assertNull(GlobalSearch.voiceResult(request.copy(scenario = it), "me", "existing", true, "meeting tomorrow")) }
     }
 }

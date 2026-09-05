@@ -161,6 +161,10 @@ Share & Connect is selected.
   — installed-engine discovery requires the `android.intent.action.TTS_SERVICE`
   manifest query on Android 11+; speech starts after successful initialization.
 - [SpeechRecognizer](https://developer.android.com/reference/android/speech/SpeechRecognizer)
+- [RecognizerIntent](https://developer.android.com/reference/android/speech/RecognizerIntent)
+  — the 2026-09-05 voice-search request authorizes the installed provider's
+  recognition activity through Activity Results. No app recording permission or
+  customized provider UI is added; see [Global search](../screens/global-search.md).
 
 The current prototype uses deterministic voice recording/transcription state.
 Do not add microphone or speech-recognition permission merely because Android

@@ -123,8 +123,13 @@ class AppearanceInputInteractionTest {
             assertEquals(0xFFB91C1CL, chat.bubbleColors.mineArgb)
             assertEquals(0xFF1D4ED8L, profile.settings.colors.light.mineBubbleArgb)
         }
-        compose.onNodeWithText("Reset to global colors").performScrollTo().performClick()
+        compose.onNodeWithText("Reset to global colors").assertDoesNotExist()
+        compose.onNodeWithTag("bubble_colors.menu").performClick()
+        compose.onNodeWithText("Reset to global colors").performClick()
         compose.runOnIdle { assertEquals(ChatBubbleColorOverrides(), chat.bubbleColors) }
+        compose.onNodeWithText("Reset to global colors").assertDoesNotExist()
+        compose.onNodeWithTag("bubble_colors.menu").performClick()
+        compose.onNodeWithText("Reset to global colors").assertIsNotEnabled()
     }
 
     @Test fun selectedLocaleChangesAppOwnedResourcesImmediately() {

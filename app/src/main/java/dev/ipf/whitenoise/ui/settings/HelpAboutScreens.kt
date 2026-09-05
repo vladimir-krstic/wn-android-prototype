@@ -41,19 +41,22 @@ fun HelpScreen(
         SettingsList {
             item {
                 SettingsGroup(modifier = Modifier.padding(top = WhiteNoiseSpacing.Section)) {
-                    SettingsLink(
-                        title = stringResource(R.string.report_bug_title),
-                        subtitle = stringResource(R.string.report_bug_summary),
-                        onClick = onReportBug,
-                        leading = { HelpLeadingIcon(R.drawable.ic_bug_report) },
-                    )
-                    SettingsDivider()
-                    SettingsLink(
-                        title = stringResource(R.string.about_licenses_title),
-                        subtitle = stringResource(R.string.about_licenses_summary),
-                        onClick = onAbout,
-                        leading = { HelpLeadingIcon(R.drawable.ic_info) },
-                    )
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.report_bug_title),
+                            subtitle = stringResource(R.string.report_bug_summary),
+                            onClick = onReportBug,
+                            leading = { HelpLeadingIcon(R.drawable.ic_bug_report) },
+                        )
+                    }
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.about_licenses_title),
+                            subtitle = stringResource(R.string.about_licenses_summary),
+                            onClick = onAbout,
+                            leading = { HelpLeadingIcon(R.drawable.ic_info) },
+                        )
+                    }
                 }
             }
         }
@@ -87,10 +90,12 @@ fun BugReportScreen(
             item { SettingsSection(stringResource(R.string.report_bug_destination_section)) }
             item {
                 SettingsGroup {
-                    SettingsValue(
-                        title = stringResource(R.string.report_bug_destination),
-                        value = stringResource(R.string.report_bug_destination_detail),
-                    )
+                    row {
+                        SettingsValue(
+                            title = stringResource(R.string.report_bug_destination),
+                            value = stringResource(R.string.report_bug_destination_detail),
+                        )
+                    }
                 }
             }
             item { SettingsSection(stringResource(R.string.report_bug_privacy_section)) }
@@ -102,7 +107,7 @@ fun BugReportScreen(
                     leading = { HelpLeadingIcon(R.drawable.ic_settings_front_hand) },
                 )
             }
-            item { SettingsExplainer(stringResource(R.string.report_bug_public_reminder)) }
+            item { SettingsCallout(stringResource(R.string.report_bug_public_reminder), icon = R.drawable.ic_warning) }
         }
     }
     if (openFailed) {
@@ -138,27 +143,33 @@ fun AboutLicensesScreen(
             item { SettingsSection(stringResource(R.string.about_app_section)) }
             item {
                 SettingsGroup {
-                    SettingsMetadata(stringResource(R.string.about_version), versionName)
-                    SettingsDivider()
-                    SettingsMetadata(stringResource(R.string.about_build), buildNumber)
+                    row {
+                        SettingsMetadata(stringResource(R.string.about_version), versionName)
+                    }
+                    row {
+                        SettingsMetadata(stringResource(R.string.about_build), buildNumber)
+                    }
                 }
             }
             item { SettingsSection(stringResource(R.string.about_legal_section)) }
             item {
                 SettingsGroup {
-                    SettingsLink(
-                        title = stringResource(R.string.open_source_licenses),
-                        subtitle = stringResource(R.string.open_source_licenses_summary),
-                        onClick = ::showLicenses,
-                        leading = { HelpLeadingIcon(R.drawable.ic_description) },
-                    )
-                    SettingsDivider()
-                    SettingsLink(
-                        title = stringResource(R.string.privacy_policy),
-                        subtitle = stringResource(R.string.privacy_policy_summary),
-                        onClick = ::openPrivacy,
-                        leading = { HelpLeadingIcon(R.drawable.ic_settings_front_hand) },
-                    )
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.open_source_licenses),
+                            subtitle = stringResource(R.string.open_source_licenses_summary),
+                            onClick = ::showLicenses,
+                            leading = { HelpLeadingIcon(R.drawable.ic_description) },
+                        )
+                    }
+                    row {
+                        SettingsLink(
+                            title = stringResource(R.string.privacy_policy),
+                            subtitle = stringResource(R.string.privacy_policy_summary),
+                            onClick = ::openPrivacy,
+                            leading = { HelpLeadingIcon(R.drawable.ic_settings_front_hand) },
+                        )
+                    }
                 }
             }
         }

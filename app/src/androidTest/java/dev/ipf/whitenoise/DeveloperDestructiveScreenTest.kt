@@ -227,7 +227,6 @@ class DeveloperDestructiveScreenTest {
         composeRule.onNodeWithText(
             "Type “Marmota” to confirm permanent removal of this profile and its local data.",
         ).assertIsDisplayed()
-        composeRule.onNodeWithTag("sign_out.profile.divider").assertHeightIsEqualTo(2.dp)
         val signOutSheet = composeRule.onNodeWithTag("sheet.surface").fetchSemanticsNode().boundsInRoot
         val windowHeight = composeRule.activity.window.decorView.height.toFloat()
         assertTrue(signOutSheet.top <= windowHeight * 0.1f)

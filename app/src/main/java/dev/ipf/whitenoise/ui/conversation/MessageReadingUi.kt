@@ -171,7 +171,7 @@ internal fun MessageReaderDialog(profile: Profile, chat: Chat, message: ChatMess
             } }, navigationIcon = { IconButton(onClick = ::leave) { Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.back)) } }, actions = {
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.message_actions)) }
-                    val actions = MessageActionPolicy.available(message, profile.id, speech, chat.composerAvailability(profile) == ComposerAvailability.Available)
+                    val actions = MessageActionPolicy.available(message, profile.id, speech, chat.composerAvailability(profile) == ComposerAvailability.Available, inReader = true)
                         .filterNot { it == MessageAction.OpenMessage || it == MessageAction.Select }
                     WhiteNoiseDropdownMenu(expanded = menu, onDismissRequest = { menu = false }, items = actions.map { action ->
                         WhiteNoiseMenuItem(label = actionLabel(action), icon = actionIcon(action), onClick = {

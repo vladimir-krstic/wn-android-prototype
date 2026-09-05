@@ -13,6 +13,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
+import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -62,29 +69,33 @@ fun ActionColorScreen(
     val selected = settings.colors.forTheme(theme).actionArgb
     SettingsScaffold(title = stringResource(R.string.action_color), onBack = onBack) {
         SettingsList {
-            item { SettingsExplainer(stringResource(R.string.action_color_detail, theme.label())) }
             item {
                 SettingsGroup {
-                    Row(
-                        Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(R.string.color_preview), style = MaterialTheme.typography.titleMedium)
-                        Button(onClick = {}) { Text(stringResource(R.string.color_preview_action)) }
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(stringResource(R.string.color_preview), style = MaterialTheme.typography.titleMedium)
+                            Button(onClick = {}) { Text(stringResource(R.string.color_preview_action)) }
+                        }
                     }
                 }
             }
+
             item {
                 SettingsGroup {
-                    FullSpectrumColorPicker(
-                        selectedArgb = selected,
-                        fallbackArgb = colorLong(MaterialTheme.colorScheme.primary),
-                        onColorSelected = { color ->
-                            onChange(settings.copy(colors = settings.colors.updateTheme(theme) { it.copy(actionArgb = color) }))
-                        },
-                        modifier = Modifier.padding(16.dp),
-                    )
+                    item {
+                        FullSpectrumColorPicker(
+                            selectedArgb = selected,
+                            fallbackArgb = colorLong(MaterialTheme.colorScheme.primary),
+                            onColorSelected = { color ->
+                                onChange(settings.copy(colors = settings.colors.updateTheme(theme) { it.copy(actionArgb = color) }))
+                            },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
                 }
             }
             item {
@@ -94,6 +105,7 @@ fun ActionColorScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.reset_to_default)) }
             }
+            item { SettingsExplainer(stringResource(R.string.action_color_detail, theme.label())) }
         }
     }
 }
@@ -115,8 +127,76 @@ fun ChatBubbleColorsScreen(
     fun updateGlobal(transform: (ThemeColorOverrides) -> ThemeColorOverrides) {
         onProfileChange(settings.copy(colors = settings.colors.updateTheme(theme, transform)))
     }
-    SettingsScaffold(title = stringResource(R.string.chat_bubble_colors), onBack = onBack) {
+    var menuOpen by remember(profile.id, chat?.id) { mutableStateOf(false) }
+    val canReset = if (chat == null) global.mineBubbleArgb != null || global.otherBubbleArgb != null
+        else chat.bubbleColors.mineArgb != null || chat.bubbleColors.otherArgb != null
+    SettingsScaffold(
+        title = stringResource(R.string.chat_bubble_colors), onBack = onBack,
+        topBarActions = {
+            Box {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.testTag("bubble_colors.menu")) {
+                    Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_options))
+                }
+                WhiteNoiseDropdownMenu(
+                    expanded = menuOpen,
+                    onDismissRequest = { menuOpen = false },
+                    items = listOf(WhiteNoiseMenuItem(
+                        label = stringResource(if (chat == null) R.string.reset_to_default else R.string.reset_to_global_colors),
+                        enabled = canReset,
+                        onClick = {
+                            menuOpen = false
+                            if (chat == null) updateGlobal { it.copy(mineBubbleArgb = null, otherBubbleArgb = null) }
+                            else onChatChange(ChatBubbleColorOverrides())
+                        },
+                    )),
+                )
+            }
+        },
+    ) {
         SettingsList {
+            item {
+                SettingsGroup {
+                    item {
+                        BubblePreview(
+                            mineArgb = AppearanceColorPolicy.effectiveBubble(chat?.bubbleColors?.mineArgb, global.mineBubbleArgb),
+                            otherArgb = AppearanceColorPolicy.effectiveBubble(chat?.bubbleColors?.otherArgb, global.otherBubbleArgb),
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
+            }
+            item { SettingsSection(stringResource(R.string.bubble_my_messages)) }
+            item {
+                SettingsGroup {
+                    item {
+                        FullSpectrumColorPicker(
+                            selectedArgb = mineSelected,
+                            fallbackArgb = colorLong(defaults.mineContainer),
+                            onColorSelected = { color ->
+                                if (chat == null) updateGlobal { it.copy(mineBubbleArgb = color) }
+                                else onChatChange(chat.bubbleColors.copy(mineArgb = color))
+                            },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
+            }
+            item { SettingsSection(stringResource(R.string.bubble_other_messages)) }
+            item {
+                SettingsGroup {
+                    item {
+                        FullSpectrumColorPicker(
+                            selectedArgb = otherSelected,
+                            fallbackArgb = colorLong(defaults.otherContainer),
+                            onColorSelected = { color ->
+                                if (chat == null) updateGlobal { it.copy(otherBubbleArgb = color) }
+                                else onChatChange(chat.bubbleColors.copy(otherArgb = color))
+                            },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
+            }
             item {
                 SettingsExplainer(
                     stringResource(
@@ -124,56 +204,6 @@ fun ChatBubbleColorsScreen(
                         theme.label(),
                     ),
                 )
-            }
-            item {
-                SettingsGroup {
-                    BubblePreview(
-                        mineArgb = AppearanceColorPolicy.effectiveBubble(chat?.bubbleColors?.mineArgb, global.mineBubbleArgb),
-                        otherArgb = AppearanceColorPolicy.effectiveBubble(chat?.bubbleColors?.otherArgb, global.otherBubbleArgb),
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-            }
-            item { SettingsSection(stringResource(R.string.bubble_my_messages)) }
-            item {
-                SettingsGroup {
-                    FullSpectrumColorPicker(
-                        selectedArgb = mineSelected,
-                        fallbackArgb = colorLong(defaults.mineContainer),
-                        onColorSelected = { color ->
-                            if (chat == null) updateGlobal { it.copy(mineBubbleArgb = color) }
-                            else onChatChange(chat.bubbleColors.copy(mineArgb = color))
-                        },
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-            }
-            item { SettingsSection(stringResource(R.string.bubble_other_messages)) }
-            item {
-                SettingsGroup {
-                    FullSpectrumColorPicker(
-                        selectedArgb = otherSelected,
-                        fallbackArgb = colorLong(defaults.otherContainer),
-                        onColorSelected = { color ->
-                            if (chat == null) updateGlobal { it.copy(otherBubbleArgb = color) }
-                            else onChatChange(chat.bubbleColors.copy(otherArgb = color))
-                        },
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-            }
-            item {
-                TextButton(
-                    onClick = {
-                        if (chat == null) updateGlobal { it.copy(mineBubbleArgb = null, otherBubbleArgb = null) }
-                        else onChatChange(ChatBubbleColorOverrides())
-                    },
-                    enabled = if (chat == null) global.mineBubbleArgb != null || global.otherBubbleArgb != null
-                        else chat.bubbleColors.mineArgb != null || chat.bubbleColors.otherArgb != null,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(if (chat == null) R.string.reset_to_default else R.string.reset_to_global_colors))
-                }
             }
         }
     }
@@ -283,7 +313,7 @@ fun FullSpectrumColorPicker(
                 modifier = Modifier.weight(1f),
             )
         }
-        Button(
+        WhiteNoiseButton(
             onClick = { parsedHex?.let(onColorSelected) },
             enabled = parsedHex != null,
             modifier = Modifier.fillMaxWidth(),

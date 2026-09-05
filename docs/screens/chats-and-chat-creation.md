@@ -89,9 +89,11 @@ the global baseline or import its changed timelines/timestamps.
   zero vertical content inset at default scale so placeholder, entered text,
   cursor and icons are centered and fully visible; the field may grow for
   larger font scales rather than clipping a line into the compact height.
-- Expose Chats, Unread, Archived, and Left through a Material dropdown menu
-  opened by the adjacent filter action. Non-default scopes use a native filled
-  monochrome icon button with selected semantics and a named current scope.
+- Expose Chats, saved folders (including editable Unread/Archived/Groups),
+  Left and Folders management in horizontally scrollable capsule pills beneath
+  the header. Use a neutral gray selected fill, with no duplicate header title
+  or regular filter icon. See [chat-folders.md](chat-folders.md) for the
+  2026-09-05 user-approved replacement of the earlier dropdown.
 - Do not show **Read All** as a persistent top-app-bar action. Preserve the
   authoritative model operation for any bounded contextual treatment selected
   later; visual polish does not silently remove product behavior.
@@ -332,3 +334,37 @@ compatibility pin and compiled regression evidence are in `app-menus.md`.
 - [Compose text input](https://developer.android.com/develop/ui/compose/text/user-input)
 - [Compose semantics](https://developer.android.com/develop/ui/compose/accessibility/semantics)
 - [Adaptive apps](https://developer.android.com/develop/adaptive-apps)
+
+
+## New Message connection actions — 2026-09-05
+
+The user selected the missing connection/invitation entries on New Message.
+The top action group now contains New Group, “Connect with QR” and “Invite a
+friend”, using the shared white segmented rows and stable state shapes.
+Connect with QR navigates to the existing Share & Connect destination, which
+shows the active profile's code and offers Scan QR Code and Share Profile.
+The existing scanner handles permission, cancellation, invalid/unavailable
+results and discovery; opening a scanned profile reuses the existing person
+flow. Back returns to New Message with its saved search/list state.
+
+Invite a friend launches the native Android Sharesheet using ACTION_SEND,
+text/plain and the localized existing “Connect with %1$s on White Noise”
+invitation with the canonical public profile URI. No message is sent by the
+app and no secret or attachment is included. The existing empty-search
+invitation uses the same helper. A failed handoff shows the existing sharing
+unavailable notice in the shared warning callout; retry is the same action.
+Both entries remain available without entering a search or reaching no results.
+English, Russian, Turkish and both Chinese locales include the two labels.
+
+`PeopleFlowTest` covers visible entry/callback behavior, the native chooser's
+public-profile-only payload, and unavailable handoff. These instrumentation
+cases are compiled only. Existing product contracts and system-owned QR/share
+presentation remain unchanged; no external capability or backend is added.
+
+Host validation for the combined 2026-09-05 follow-up passes: 894 unit tests,
+lint with zero errors, debug APK and instrumentation-test APK assembly. UI
+cases compile only; no device/emulator use or visual verification is claimed.
+
+Current official [Android Sharesheet guidance](https://developer.android.com/develop/ui/compose/sharing/send)
+was checked for ACTION_SEND, text/plain and createChooser ownership. The app
+keeps the existing scanner and system-owned share presentation.

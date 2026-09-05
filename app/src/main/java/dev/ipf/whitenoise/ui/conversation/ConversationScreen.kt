@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -676,6 +677,23 @@ fun ConversationScreen(
         if (history.readyTarget?.id == target.id) history.readyTarget = null
     }
     val tailWasLoaded = ConversationProjection.orderedEntries(chat).lastOrNull { it.id in history.observedIds }?.id in history.windowIds
+    val newerEntryCount = remember(chat.timeline, history.windowIds) {
+        val entries = ConversationProjection.orderedEntries(chat)
+        val lastLoaded = entries.indexOfLast { it.id in history.windowIds }
+        if (lastLoaded < 0) 0 else entries.lastIndex - lastLoaded
+    }
+    val farFromTail by remember(listState, newerEntryCount) {
+        derivedStateOf {
+            val scroll = listState.scrollIndicatorState
+            scroll != null && ConversationReading.showTailJump(
+                contentPx = scroll.contentSize,
+                offsetPx = scroll.scrollOffset,
+                viewportPx = scroll.viewportSize,
+                loadedItems = listState.layoutInfo.totalItemsCount,
+                newerItems = newerEntryCount,
+            )
+        }
+    }
     val nearTail = initialViewportSettled && tailWasLoaded && !listState.canScrollForward
     LaunchedEffect(chat.timeline) {
         val follow = nearTail && !isSearching && !isSelecting && focusedMessageId == null
@@ -777,7 +795,6 @@ fun ConversationScreen(
             Column {
             when {
                 isSelecting -> SelectionTopBar(
-                    count = selectedMessageIds.size,
                     onClose = {
                         isSelecting = false
                         selectedMessageIds = emptySet()
@@ -841,18 +858,23 @@ fun ConversationScreen(
         floatingActionButton = {
             if (!isSearching && !isSelecting && focusedMessageId == null && !composerPresentationActive) {
                 val mentions = ConversationReading.mentions(readState, chat, profile)
-                Column(Modifier.imePadding().padding(bottom = with(density) { compactComposerHeightPx.toDp() }), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+                Column(Modifier.imePadding().padding(bottom = with(density) { compactComposerHeightPx.toDp() }),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                     if (mentions.isNotEmpty()) FilledTonalButton(onClick = {
                         history.target(chat, mentions.first(), onHistoryScenario(HistoryOperation.Target), markThrough = true)
                     }, modifier = Modifier.testTag("history.jumpMention")) { Text(stringResource(R.string.history_jump_mention)) }
-                    if (!nearTail && initialViewportSettled) FilledTonalButton(onClick = {
+                    if (!nearTail && initialViewportSettled && farFromTail) FilledTonalIconButton(onClick = {
                         val unread = history.jump.pendingId
                         val target = unread ?: ConversationProjection.orderedEntries(chat).filterIsInstance<ChatTimelineEntry.Message>().lastOrNull { !it.message.isDeleted }?.id
                         if (target != null) {
                             history.target(chat, target, onHistoryScenario(HistoryOperation.Target))
                         }
                     }, modifier = Modifier.testTag("history.jumpUnread")) {
-                        Text(stringResource(if (history.jump.pendingId != null) R.string.history_jump_unread else R.string.history_jump_latest))
+                        Icon(
+                            painterResource(R.drawable.ic_arrow_down),
+                            contentDescription = stringResource(if (history.jump.pendingId != null) R.string.history_jump_unread else R.string.history_jump_latest),
+                        )
                     }
                 }
             }
@@ -1723,7 +1745,7 @@ private fun ConversationTopBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SelectionTopBar(count: Int, onClose: () -> Unit) {
+private fun SelectionTopBar(onClose: () -> Unit) {
     TopAppBar(
         navigationIcon = {
             IconButton(onClick = onClose) {
@@ -1733,7 +1755,7 @@ private fun SelectionTopBar(count: Int, onClose: () -> Unit) {
                 )
             }
         },
-        title = { Text(pluralStringResource(R.plurals.selected_count, count, count)) },
+        title = { Text(stringResource(R.string.select_messages)) },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -2020,6 +2042,8 @@ private fun MessageRow(
         Modifier.toggleable(
             value = selected,
             role = Role.Checkbox,
+            interactionSource = messageInteractionSource,
+            indication = null,
             onValueChange = { onToggleSelection() },
         )
     } else {
@@ -2053,7 +2077,6 @@ private fun MessageRow(
             .padding(top = verticalPadding)
             .background(
                 color = when {
-                    isSelectionMode && selected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
                     sourceHighlighted -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
                     else -> Color.Transparent
                 },

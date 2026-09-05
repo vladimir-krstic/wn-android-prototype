@@ -1,5 +1,8 @@
 package dev.ipf.whitenoise.navigation
 
+import dev.ipf.whitenoise.ui.settings.DownloadExampleControls
+import dev.ipf.whitenoise.ui.settings.RelayPublicationDeveloperControls
+import dev.ipf.whitenoise.ui.settings.AppUpdateDeveloperControls
 import dev.ipf.whitenoise.R
 
 import androidx.activity.compose.BackHandler
@@ -678,11 +681,11 @@ fun WhiteNoiseNavHost(
                     onRecentMediaAccess = appViewModel::selectRecentMediaAccess,
                     attachmentTransferScenario = appViewModel.attachmentTransferScenario,
                     onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
-                    downloadExampleControls = { dev.ipf.whitenoise.ui.settings.DownloadExampleControls(
+                    downloadExampleControls = { DownloadExampleControls(
                         appViewModel.downloadNetworkExample, appViewModel.downloadTransfersHeld,
                         appViewModel::chooseDownloadNetwork, appViewModel::loadDownloadQueueExample, appViewModel::holdDownloadTransfers) },
-                    relayPublicationControls = { dev.ipf.whitenoise.ui.settings.RelayPublicationDeveloperControls(appViewModel.relayPublication, appViewModel::loadRelayImportExample) },
-                    updateControls = { dev.ipf.whitenoise.ui.settings.AppUpdateDeveloperControls(appViewModel.appUpdates) },
+                    relayPublicationControls = { RelayPublicationDeveloperControls(appViewModel.relayPublication, appViewModel::loadRelayImportExample) },
+                    updateControls = { AppUpdateDeveloperControls(appViewModel.appUpdates) },
                     photoEditorScenario = appViewModel.nextPhotoEditorScenario,
                     onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
                     locationScenario = appViewModel.nextLocationScenario,
@@ -752,6 +755,7 @@ fun WhiteNoiseNavHost(
                     profile = profile,
                     onBack = { navController.popBackStack() },
                     onNewGroup = { navController.navigate(AppRoute.NewGroup()) },
+                    onConnectWithQr = { navController.navigate(AppRoute.ShareConnect) },
                     onPerson = { navController.navigate(AppRoute.PersonProfile(it)) },
                     searchScenario = appViewModel.peopleSearchScenario,
                     onResolvedPerson = { person ->

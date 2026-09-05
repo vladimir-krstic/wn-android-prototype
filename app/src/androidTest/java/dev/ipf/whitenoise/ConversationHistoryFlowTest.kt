@@ -44,6 +44,21 @@ class ConversationHistoryFlowTest {
         rule.waitUntil(4_000) { rule.onAllNodesWithTag("conversation.message.$id").fetchSemanticsNodes().isNotEmpty() }
     }
 
+    @Test fun latestJumpIsIconOnlyAndReturnsFromOlderHistory() {
+        rule.setContent { WhiteNoiseTheme { Screen() } }
+        waitForMessage("h59")
+        rule.onNodeWithTag("history.jumpUnread").assertDoesNotExist()
+        scrollTo("history.Older")
+        rule.onNodeWithText("Load older messages").performClick()
+        rule.waitUntil(3_000) { rule.onAllNodesWithText("Loading messages…").fetchSemanticsNodes().isEmpty() }
+        scrollTo("conversation.message.h24")
+        rule.onNodeWithText("Jump to latest messages").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Jump to latest messages").assertIsDisplayed().performClick()
+        waitForMessage("h59")
+        rule.onNodeWithTag("conversation.message.h59").assertIsDisplayed()
+        rule.onNodeWithTag("history.jumpUnread").assertDoesNotExist()
+    }
+
     @Test fun olderFailureKeepsLoadedRowsAndRetryPrependsHistory() {
         var failed = false
         rule.setContent { WhiteNoiseTheme { Screen(scenario = { op -> if (op == HistoryOperation.Older && !failed) { failed = true; HistoryScenario.OlderFails } else HistoryScenario.Success }) } }

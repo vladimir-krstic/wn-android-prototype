@@ -2,6 +2,7 @@
 
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import dev.ipf.whitenoise.model.*
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -310,19 +311,25 @@ fun ChatInfoScreen(
                 }
                 item(key = "collapse_long_messages") {
                     dev.ipf.whitenoise.ui.settings.SettingsGroup {
-                        dev.ipf.whitenoise.ui.settings.SettingsSwitch(
-                            title = stringResource(R.string.message_collapse_long), checked = chat.collapseLongMessages,
-                            onCheckedChange = onCollapseLongMessages, subtitle = stringResource(R.string.message_collapse_long_detail),
-                        )
-                        dev.ipf.whitenoise.ui.settings.SettingsDivider()
-                        dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
+                        row {
+                            dev.ipf.whitenoise.ui.settings.SettingsSwitch(
+                                title = stringResource(R.string.message_collapse_long), checked = chat.collapseLongMessages,
+                                onCheckedChange = onCollapseLongMessages, subtitle = stringResource(R.string.message_collapse_long_detail),
+                            )
+                        }
+                        row {
+                            dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
+                        }
                     }
                 }
                 if (onNotifications != null) item(key = "notification_controls") {
                     dev.ipf.whitenoise.ui.settings.SettingsGroup {
-                        dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.notification_sounds_title),onClick = onNotifications)
-                        dev.ipf.whitenoise.ui.settings.SettingsDivider()
-                        dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.chat_bubble_colors),onClick = onBubbleColors)
+                        row {
+                            dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.notification_sounds_title),onClick = onNotifications)
+                        }
+                        row {
+                            dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.chat_bubble_colors),onClick = onBubbleColors)
+                        }
                     }
                 }
                 item(key = "retention_work") { RetentionWorkPanel(profile, chat) }
@@ -608,7 +615,7 @@ private fun ChatInfoActionGroup(actions: List<ChatInfoAction>, modifier: Modifie
                 } else {
                     null
                 },
-                shapes = ListItemDefaults.segmentedShapes(index, actions.size),
+                shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, actions.size),
                 colors = ListItemDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                     contentColor = contentColor,
@@ -648,7 +655,7 @@ private fun ChatInfoMemberRow(
         .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
         .padding(bottom = if (index == count - 1) 0.dp else 2.dp)
         .testTag("chat_info.member.${member.personId}")
-    val shapes = ListItemDefaults.segmentedShapes(index, count)
+    val shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, count)
     val colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
     if (person == null) {
         ListItem(

@@ -1,8 +1,9 @@
 package dev.ipf.whitenoise.ui.share
 
+import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.input.TextFieldState
@@ -23,6 +24,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import dev.ipf.whitenoise.ui.components.WhiteNoiseEntityPickerSheet
+import dev.ipf.whitenoise.ui.components.WhiteNoisePickerItem
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.state.*
@@ -129,20 +132,27 @@ internal fun IncomingShareScreen(controller: IncomingController) {
                     if (targets.isEmpty()) item { Text(stringResource(R.string.incoming_no_chats)) }
                     else {
                         item { Text(stringResource(R.string.incoming_recent),style = MaterialTheme.typography.titleSmall) }
-                        items(targets,key = { it.id }) { chat ->
+                        itemsIndexed(targets,key = { _, chat -> chat.id }) { index, chat ->
                             val checked = chat.id in work.selectedChatIds
-                            ListItem(supportingContent = if (chat.isArchived) ({ Text(stringResource(R.string.incoming_archived)) }) else null,
+                            ListItem(checked = checked, onCheckedChange = { controller.toggle(work.id,chat.id) },
+                                shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, targets.size),
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                                supportingContent = if (chat.isArchived) ({ Text(stringResource(R.string.incoming_archived)) }) else null,
                                 leadingContent = { Checkbox(checked,onCheckedChange = null, modifier = Modifier.clearAndSetSemantics { }) },
-                                modifier = Modifier.fillMaxWidth().toggleable(value = checked,role = Role.Checkbox,onValueChange = { controller.toggle(work.id,chat.id) }).testTag("incoming.chat.${chat.id}")) { Text(chat.title) }
+                                modifier = Modifier.fillMaxWidth().testTag("incoming.chat.${chat.id}")) { Text(chat.title) }
                         }
                     }
                 }
             }
         }
     }
-    if (choosingProfile) AlertDialog(onDismissRequest = { choosingProfile = false }, title = { Text(stringResource(R.string.incoming_choose_profile)) }, text = {
-        Column(Modifier.verticalScroll(rememberScrollState())) { profiles.forEach { p -> TextButton(onClick = { if (controller.chooseProfile(work.id,p.id)) choosingProfile = false }) { Text(p.name) } } }
-    }, confirmButton = { TextButton(onClick = { choosingProfile = false }) { Text(stringResource(R.string.cancel)) } })
+    if (choosingProfile) WhiteNoiseEntityPickerSheet(
+        title = stringResource(R.string.incoming_choose_profile),
+        items = profiles.map { WhiteNoisePickerItem(it.id, it.name, it.avatar) },
+        onSelect = { if (controller.chooseProfile(work.id, it)) choosingProfile = false },
+        onDismiss = { choosingProfile = false },
+    )
 }
 
 private fun incomingFailureResource(failure: IncomingFailure, staged: Boolean): Int = if (staged) R.string.incoming_open_failed else when(failure) {

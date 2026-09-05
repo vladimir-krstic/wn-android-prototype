@@ -85,3 +85,13 @@ slot, so the visible error circle matches a filled unread circle; the XML is
 not redrawn. Compose applies semantic primary/onPrimary/error/onSurface tints.
 The pencil, bell, pin/unpin and menu controls use their official assets without
 bespoke geometry.
+
+
+## Folder icon — 2026-09-05
+
+The user-selected Folders entry and folder-name rows use the same unmodified
+24 dp Material Symbols Rounded export:
+
+| Android resource | Official XML | SHA-256 |
+| --- | --- | --- |
+| `ic_folder` | [folder](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/folder/default/24px.xml) | `0899d6f45c49899b7bdaa42a591a6f4b953514af2f45b290805da744ffadc8d0` |

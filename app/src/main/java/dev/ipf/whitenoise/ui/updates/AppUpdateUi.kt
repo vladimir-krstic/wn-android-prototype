@@ -2,13 +2,7 @@ package dev.ipf.whitenoise.ui.updates
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -17,15 +11,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.AppSelfUpdateFailure
 import dev.ipf.whitenoise.model.AppSelfUpdatePhase
@@ -36,75 +27,24 @@ import dev.ipf.whitenoise.state.AppUpdateController
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog
 import dev.ipf.whitenoise.ui.settings.SettingsGroup
 import dev.ipf.whitenoise.ui.settings.SettingsLink
-import dev.ipf.whitenoise.ui.settings.SettingsSection
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import kotlinx.coroutines.delay
 
 @Composable
-fun AppUpdateBanner(
+fun AppUpdateIconButton(
     state: AppUpdateState,
-    onUpdate: () -> Unit,
-    onDismiss: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (!AppUpdates.showsBanner(state)) return
-    val latest = state.check.latestVersion ?: return
-    val important = AppUpdates.isImportant(state)
-    val accessibilityState = stringResource(
-        if (important) R.string.app_update_important_title else R.string.app_update_available_title,
+    if (!AppUpdates.showsSettings(state) || !AppUpdates.isAvailable(state)) return
+    val availability = stringResource(
+        if (AppUpdates.isImportant(state)) R.string.app_update_important_title else R.string.app_update_available_title,
     )
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related)
-            .testTag("appUpdate.banner")
-            .semantics {
-                stateDescription = accessibilityState
-            },
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
+    IconButton(
+        onClick = onOpenSettings,
+        modifier = modifier.testTag("appUpdate.openSettings").semantics { stateDescription = availability },
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.FormField),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_download),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-            ) {
-                Text(
-                    stringResource(if (important) R.string.app_update_important_title else R.string.app_update_available_title),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    stringResource(R.string.app_update_available_detail, latest),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                state.check.releasesBehind?.takeIf { it > 0 }?.let { count ->
-                    Text(
-                        pluralStringResource(R.plurals.app_update_releases_behind, count, count),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Button(onClick = onUpdate, modifier = Modifier.testTag("appUpdate.banner.update")) {
-                    Text(stringResource(R.string.app_update_now))
-                }
-            }
-            if (AppUpdates.canDismissBanner(state)) {
-                IconButton(onClick = onDismiss, modifier = Modifier.testTag("appUpdate.banner.dismiss")) {
-                    Icon(painterResource(R.drawable.ic_close), stringResource(R.string.app_update_dismiss))
-                }
-            }
-        }
+        Icon(painterResource(R.drawable.ic_download), contentDescription = stringResource(R.string.app_updates_title))
     }
 }
 
@@ -116,28 +56,19 @@ fun AppUpdateSettingsGroup(
 ) {
     if (!AppUpdates.showsSettings(state)) return
     val subtitle = when (state.check.phase) {
-        AppUpdateCheckPhase.Unknown -> stringResource(R.string.app_update_settings_unknown, state.installedVersion)
+        AppUpdateCheckPhase.Unknown -> stringResource(R.string.app_update_settings_unknown)
         AppUpdateCheckPhase.Checking -> stringResource(R.string.app_update_settings_checking)
-        AppUpdateCheckPhase.Current -> stringResource(R.string.app_update_settings_current, state.installedVersion)
-        AppUpdateCheckPhase.Available -> {
-            val latest = state.check.latestVersion.orEmpty()
-            state.check.releasesBehind?.let {
-                pluralStringResource(
-                    R.plurals.app_update_settings_available_count,
-                    it,
-                    state.installedVersion,
-                    latest,
-                    it,
-                )
-            } ?: stringResource(R.string.app_update_settings_available, state.installedVersion, latest)
-        }
+        AppUpdateCheckPhase.Current -> stringResource(R.string.app_update_settings_current)
+        AppUpdateCheckPhase.Available -> stringResource(R.string.app_update_available_detail, state.check.latestVersion.orEmpty())
         AppUpdateCheckPhase.Failed -> stringResource(R.string.app_update_settings_failed)
     }
-    Column(modifier) {
-        SettingsSection(stringResource(R.string.app_updates_title))
-        SettingsGroup {
+    SettingsGroup(
+        modifier = modifier.testTag("appUpdate.settings"),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        row {
             SettingsLink(
-                title = stringResource(R.string.app_update_settings_title),
+                title = stringResource(R.string.app_updates_title),
                 subtitle = subtitle,
                 onClick = onAction,
                 enabled = state.check.phase != AppUpdateCheckPhase.Checking,

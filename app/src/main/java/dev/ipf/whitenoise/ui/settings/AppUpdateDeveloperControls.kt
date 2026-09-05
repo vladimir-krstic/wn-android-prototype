@@ -15,7 +15,7 @@ import dev.ipf.whitenoise.model.AppUpdateDistribution
 import dev.ipf.whitenoise.state.AppUpdateController
 
 @Composable
-fun AppUpdateDeveloperControls(controller: AppUpdateController) {
+fun SettingsGroupScope.AppUpdateDeveloperControls(controller: AppUpdateController) {
     val state = controller.state
     var choice by remember { mutableStateOf<String?>(null) }
     if (choice == "check") {
@@ -38,29 +38,32 @@ fun AppUpdateDeveloperControls(controller: AppUpdateController) {
             onDismiss = { choice = null },
         )
     }
-    SettingsDivider()
-    SettingsSwitch(
-        title = stringResource(R.string.developer_store_managed_update_distribution),
-        subtitle = stringResource(R.string.developer_hides_every_in_app_update_entry_and_banner),
-        checked = state.distribution == AppUpdateDistribution.StoreManaged,
-        onCheckedChange = {
-            controller.selectDistribution(
-                if (it) AppUpdateDistribution.StoreManaged else AppUpdateDistribution.SelfManaged,
-            )
-        },
-    )
-    SettingsDivider()
-    SettingsLink(
-        title = stringResource(R.string.developer_update_check_state),
-        subtitle = state.checkScenario.developerLabel,
-        onClick = { choice = "check" },
-        enabled = state.distribution == AppUpdateDistribution.SelfManaged,
-    )
-    SettingsDivider()
-    SettingsLink(
-        title = stringResource(R.string.developer_self_update_outcome),
-        subtitle = state.selfUpdateScenario.developerLabel,
-        onClick = { choice = "flow" },
-        enabled = state.distribution == AppUpdateDistribution.SelfManaged,
-    )
+    row {
+        SettingsSwitch(
+            title = stringResource(R.string.developer_store_managed_update_distribution),
+            subtitle = stringResource(R.string.developer_hides_every_in_app_update_entry_and_banner),
+            checked = state.distribution == AppUpdateDistribution.StoreManaged,
+            onCheckedChange = {
+                controller.selectDistribution(
+                    if (it) AppUpdateDistribution.StoreManaged else AppUpdateDistribution.SelfManaged,
+                )
+            },
+        )
+    }
+    row {
+        SettingsLink(
+            title = stringResource(R.string.developer_update_check_state),
+            subtitle = state.checkScenario.developerLabel,
+            onClick = { choice = "check" },
+            enabled = state.distribution == AppUpdateDistribution.SelfManaged,
+        )
+    }
+    row {
+        SettingsLink(
+            title = stringResource(R.string.developer_self_update_outcome),
+            subtitle = state.selfUpdateScenario.developerLabel,
+            onClick = { choice = "flow" },
+            enabled = state.distribution == AppUpdateDistribution.SelfManaged,
+        )
+    }
 }

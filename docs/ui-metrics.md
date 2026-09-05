@@ -24,6 +24,29 @@ these values as screen-local magic numbers. Constrained/adaptive panes may add
 outer space at larger widths, but the compact margin remains 16 dp inside the
 active pane.
 
+## Grouped lists and supporting copy
+
+The 2026-09-05 app-wide polish uses Material's positional segmented list shapes
+and `ListItemDefaults.SegmentedGap` (2 dp in the pinned version). First and last
+rows have the native outer corners; shared inner edges retain rounded corners.
+Each visible control occupies a row, including conditional controls. Custom
+content cells use the same positional Material surface. Do not add dividers
+inside these groups or restore a single continuous background behind row gaps.
+
+`SettingsList` owns 8 dp top and peer-item spacing, 24 dp bottom clearance,
+and 8 dp between multiple roots inside a lazy item. A heading contributes
+16 dp above itself in that list, completing the 24 dp section relationship.
+Outside it, the heading owns 24 dp above and 8 dp below. Helpers follow controls
+at the shared 32 dp directional content line with an 8 dp relationship. The
+lazy list owns that gap inside lists; the helper owns it in regular columns.
+Section labels stay above groups. Empty states and actionable warnings retain
+their contextual placement.
+
+Setting values use supporting content beneath the label so long engine,
+language, voice and status names cannot consume the title's width. Disclosure
+icons retain the trailing slot. Speech-choice dialogs use the shared dialog
+choice row rather than nesting settings-row padding inside dialog padding.
+
 ## Interaction state-layer containment
 
 - A custom press, hover, focus, or ripple indication is bounded and clipped to
@@ -33,8 +56,9 @@ active pane.
   rectangular state layer across invisible target padding, alignment space, or
   a full-width parent when the visible control is smaller.
 - A whole-row indication is correct only when the row itself is the visible
-  interactive element, such as a grouped Material list row or the explicitly
-  accepted conversation selection row. Unbounded or intentionally overflowing
+  interactive element, such as a grouped Material list row. Conversation
+  selection keeps a whole-row toggle target but clips press feedback to the
+  bubble and has no full-row selected tint. Unbounded or intentionally overflowing
   indications require a component-specific decision; they are never the
   default.
 - Material components continue to own their native indication when their
@@ -195,8 +219,10 @@ active pane.
   when the available width requires it. Never wrap reactions into another row.
 - Multi-message selection reserves one 48 dp leading column independent of
   incoming/outgoing direction. Center the native Checkbox against message
-  content and retain a whole-row toggle target. Selection surfaces must not
-  alter bubble width, alignment, or cluster geometry.
+  content and retain a whole-row toggle target with no row indication or
+  selected background. Forward its interaction source to the existing clipped
+  bubble press layer; checkbox state communicates selection. Do not alter
+  bubble width, alignment, or cluster geometry.
 - Reply swipe follows semantic leading-to-trailing direction: 64 dp readiness,
   96 dp maximum visible travel, resisted overdrag, one threshold haptic, and a
   spring/short return. Bubble, metadata, and reactions move as one unit. Anchor
@@ -510,8 +536,7 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   the same slot and uses `error`. Failure suppresses the unread display only.
 - Long press uses `WhiteNoiseDropdownMenu`, the shared native Expressive menu
   described below. The highlighted row uses `surfaceContainerHigh` and the
-  native list selected shape (large/16 dp corners); no padding changes on
-  selection. Its popup anchor follows the inset row. Chats adds 8 dp of
+  resting list shape; neither shape nor padding changes on selection. Its popup anchor follows the inset row. Chats adds 8 dp of
   transparent vertical padding outside the menu group, separating its surface
   both below and above the row while preserving native fitting/fallback and
   start alignment in RTL. Other dropdowns keep their existing spacing. No
@@ -593,11 +618,11 @@ enlarge or reposition the system splash to imitate the Welcome composition.
 
 ## Ordinary Material sheets
 
-- `WhiteNoiseModalBottomSheet` uses one continuous `surfaceContainer`:
-  #EFEFEF in light mode, #1E1E1E in dark. This one-step-stronger neutral makes
-  the modal surface visibly gray over its scrim while staying in the same
-  semantic Material hierarchy as the Settings canvas. Ordinary `ListItem` containers are
-  transparent; intentional selected/tonal groups, fields and errors remain.
+- `WhiteNoiseModalBottomSheet` uses semantic `surfaceContainerLow` for the
+  ordinary sheet canvas. Chat, people and profile picker rows use
+  `surfaceContainerLowest` (white in light appearance), positional
+  `ListItemDefaults.segmentedShapes` and `SegmentedGap`. Existing active-profile
+  emphasis remains `surfaceContainerHigh`; all themes retain native states.
 - Material owns width, top corners, handle, motion, drag and dismissal. Its
   native 32×4 dp handle and 22 dp vertical padding already form a 48 dp slot.
   Do not add another top spacer. The modal owns safeDrawing/IME insets once.
@@ -652,6 +677,15 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   then restores 16 dp internal padding so the radio and label do not move. The
   selected duration remains visible and exposed through radio semantics when
   the dialog has a current value.
+
+- App-owned modal selectors share `WhiteNoiseDialogChoiceRow`. The selected
+  row uses `surfaceContainerHigh` inside the same `MaterialTheme.shapes.large`
+  clip as native press, hover, focus and ripple feedback; unselected rows are
+  transparent. This 2026-09-05 user-directed selected-fill treatment applies
+  to speech, mute, preferences, photo quality, disappearing-message durations
+  and developer scenario choices. Modal checkbox/switch option rows use the
+  same `whiteNoiseDialogSelection` boundary while retaining their own control
+  roles. Do not restore square selected backgrounds or unbounded row ripples.
 
 ### Destructive task sheets
 
@@ -832,3 +866,46 @@ in short windows and at large type. Use current window dimensions, not physical
 screen metrics. The app shell reserves transport space and owns its navigation
 bar/IME padding; descendants consume those insets once. There is no overlay on
 top of the composer and no new permanent speech command inside message bubbles.
+
+### Chat, people and profile picker sheets — 2026-09-05
+
+`WhiteNoiseEntityPickerSheet` shares the existing native modal sheet/header and
+compact search. It caps content at 88% of the app window height, lets short
+lists wrap their content, and keeps the search and optional Done action outside
+the lazy list. Use 16 dp horizontal list/search margins, 8 dp related spacing,
+48 dp decorative avatars, native list-item metrics, positional corners and the
+native 2 dp segmented gap. Native Checkbox semantics own multi-selection;
+read-only previews have no toggle/click action. Material owns width, handle,
+dismissal, safeDrawing and IME insets. Directory sheets use expanded/hidden
+anchors; they do not stop in a partially expanded state.
+
+### Stable row shapes — 2026-09-05
+
+The user's app-wide direction disables list-row shape changes. All segmented
+and interactive standalone rows use `WhiteNoiseListItemDefaults`: native
+resting geometry is copied into selected, pressed, focused, hovered and dragged
+shapes. First/middle/last/single corners still follow the visible group position;
+selection and toggles never change those boundaries. Native ripple, state-layer
+colors, checkmarks, radio/switch feedback, disabled states and semantics remain.
+This supersedes earlier references to a separate selected row shape.
+
+### Informational callouts — 2026-09-05
+
+`WhiteNoiseCallout` is the shared informational container, matching Developer
+Tools: large Material corners, gray semantic `surfaceContainer`,
+`onSurfaceVariant`, 16 dp padding, a decorative 24 dp icon and 16 dp text gap.
+TitleSmall/bodyMedium wrap without height limits. Info is the default icon;
+warning, download and existing privacy icons reflect the notice's meaning.
+Existing error callouts retain errorContainer/onErrorContainer. Settings adds
+its standard 16 dp screen margins through `SettingsCallout`; other callers own
+their margins once. Optional actions follow text with an 8 dp relationship.
+
+
+## Chat selection follow-up — 2026-09-05
+
+In chat selection mode, retain the 52 dp avatar/pin badge beside the native
+checkbox with an 8 dp relationship. Give every row 4 dp outer vertical clearance,
+producing 8 dp between rounded selection surfaces. The fixed “Select chats”
+header leaves the only count in the pinned bottom controls. Use shared 16 dp
+horizontal and 8 dp vertical insets, native tonal actions and a centered tonal
+count capsule over the transparent canvas; no full-width bottom backing.

@@ -187,21 +187,24 @@ fun DiagnosticsImprovementsScreen(
                     SettingsGroup(
                         modifier = Modifier.testTag("diagnostics.stored.group"),
                     ) {
-                        SettingsValue(
-                            "On This Device",
-                            if (profile.diagnostics.storedBytes == 0L) {
-                                "None"
-                            } else {
-                                Formatter.formatShortFileSize(context, profile.diagnostics.storedBytes)
-                            },
-                        )
-                        SettingsDivider(Modifier.testTag("diagnostics.stored.divider"))
-                        SettingsAction(
-                            title = stringResource(R.string.clear_diagnostic_logs),
-                            onClick = { confirmClear = true },
-                            enabled = profile.diagnostics.storedBytes > 0,
-                            destructive = true,
-                        )
+                        row {
+                            SettingsValue(
+                                "On This Device",
+                                if (profile.diagnostics.storedBytes == 0L) {
+                                    "None"
+                                } else {
+                                    Formatter.formatShortFileSize(context, profile.diagnostics.storedBytes)
+                                },
+                            )
+                        }
+                        row {
+                            SettingsAction(
+                                title = stringResource(R.string.clear_diagnostic_logs),
+                                onClick = { confirmClear = true },
+                                enabled = profile.diagnostics.storedBytes > 0,
+                                destructive = true,
+                            )
+                        }
                     }
                     SettingsExplainer(stringResource(R.string.diagnostic_logs_retained))
                 }
@@ -234,18 +237,21 @@ private fun DiagnosticsSwitches(
             .padding(top = WhiteNoiseSpacing.Section)
             .testTag("diagnostics.choices.group"),
     ) {
-        SettingsSwitch(
-            stringResource(R.string.share_anonymous_analytics),
-            profile.diagnostics.analyticsEnabled,
-            onAnalytics,
-            subtitle = stringResource(R.string.analytics_detail),
-        )
-        SettingsDivider(Modifier.testTag("diagnostics.choices.divider"))
-        SettingsSwitch(
-            stringResource(R.string.share_diagnostic_logs),
-            profile.diagnostics.loggingEnabled,
-            onLogging,
-            subtitle = stringResource(R.string.diagnostic_logging_detail),
-        )
+        row {
+            SettingsSwitch(
+                stringResource(R.string.share_anonymous_analytics),
+                profile.diagnostics.analyticsEnabled,
+                onAnalytics,
+                subtitle = stringResource(R.string.analytics_detail),
+            )
+        }
+        row {
+            SettingsSwitch(
+                stringResource(R.string.share_diagnostic_logs),
+                profile.diagnostics.loggingEnabled,
+                onLogging,
+                subtitle = stringResource(R.string.diagnostic_logging_detail),
+            )
+        }
     }
 }

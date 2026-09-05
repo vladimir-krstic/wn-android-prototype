@@ -4353,3 +4353,79 @@ a separately authorized production integration.
 
 Evidence: [B32 brief](screens/distribution-gated-app-updates.md#implementation-evidence),
 AppUpdates, AppUpdateController, AppUpdateUi and the state/Compose tests.
+
+
+## 2026-09-05 — Shared sections use native segmented rows and trailing helpers
+
+Approved by the user's explicit app-wide padding, helper-position and grouped-
+row polish request. This supersedes straight interior edges in the earlier
+settings/creation card decisions. Shared groups now derive positional shapes
+and row gaps from the pinned Material `ListItemDefaults`, including conditional
+rows. Native controls retain native surfaces and state shapes; custom cells
+use positional Material surfaces. Headings remain above groups, explanatory
+copy follows its controls, and the shared lazy list owns related-content gaps.
+Long setting values become supporting text beneath labels. Speech-choice dialogs
+use the existing dialog-specific row inset rather than a nested settings row.
+
+Product behavior, state, copy, navigation and platform capabilities are retained.
+See [the shared polish brief](screens/shared-settings-polish.md) for composition,
+sources, observable criteria and host-validation evidence. Device inspection and
+user visual acceptance are pending for this build.
+
+
+## 2026-09-05 — Modal option selection shares a rounded surface
+
+The user explicitly requested rounded selection corners across modal selectors.
+Reuse the established `WhiteNoiseDialogChoiceRow` boundary for its selected
+neutral fill as well as native state feedback. Migrate remaining hand-built
+radio lists to that shared row; use the same clip/fill modifier for modal
+checkbox and switch choices. Keep native control semantics, disabled states,
+scrolling, supporting text, immediate/staged selection and cancellation behavior.
+System-owned selectors remain platform-controlled. See the
+[modal selector follow-up](screens/shared-settings-polish.md#modal-selector-follow-up--2026-09-05)
+for coverage, official sources and compiled regression evidence.
+
+
+## App-wide directory pickers use Material bottom sheets — 2026-09-05
+
+Approved by explicit user direction: app-owned lists for choosing chats, people
+or profiles use the shared bottom-sheet directory pattern, including read-only
+folder previews. Use white semantic grouped rows with native segmented corners
+and gaps, compact search, and native dismissal. Simple setting values and
+consequence confirmations retain their dialog patterns. Selection/commit timing
+stays with the calling flow. See `screens/shared-settings-polish.md` and
+`ui-metrics.md` for the shared component and acceptance criteria.
+
+
+## List-row shapes stay stable in every state — 2026-09-05
+
+Approved by explicit user direction: keep the accepted white segmented list
+containers but disable their selected/checked and interaction shape changes
+app-wide. `WhiteNoiseListItemDefaults` assigns each row's native resting shape
+to all state shapes. This supersedes previous selected-row shape treatment;
+Material controls, ripple, state colors and accessibility remain enabled.
+
+
+## Amber shares canonical account identity; notices share the callout — 2026-09-05
+
+Approved by explicit user direction: Amber uses the regular sign-in account for
+each onboarding origin, preserving existing data when signing custody changes.
+Only successful access commits custody; public-identity mismatch still fails.
+Amber key management is explained with an info-icon callout and never exposes
+local secret controls. Standalone information notices reuse the Developer Tools
+gray callout, with icons appropriate to meaning and existing actions preserved.
+
+## 2026-09-05 — native Voice Search replaces timed fixture input
+
+The user reported broken voice search and explicitly requested the Google/Android
+interaction. This supersedes the B07 deterministic-only voice-entry boundary for
+Global Search. Launch the installed speech-recognition activity using
+`RecognizerIntent` and the Activity Result API; let the provider own listening,
+permissions, language, UI, and processing. Do not add White Noise microphone or
+network permission or force a Google package. Search the returned phrase locally.
+
+Preserve existing query/filters on cancellation and unavailable output, offer
+retry when launch/recognition fails, save pending ownership across recreation,
+and reject stale completions. Normal and reset behavior use the device; fixed
+success/cancel/unavailable outcomes remain explicit Developer Tools choices.
+[Implementation and validation](screens/global-search.md#2026-09-05--native-voice-search-repair).
