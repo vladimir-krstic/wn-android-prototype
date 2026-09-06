@@ -6,7 +6,6 @@ enum class PhotoQuality(val maxEdge: Int, val jpegQuality: Int) {
 }
 
 enum class PhotoMetadataPolicy { Reencoded, StrippedOriginal, SafeFallback }
-enum class RecentMediaAccess { None, SelectedOnly, Full, Unavailable }
 
 data class SharedDeviceContact(val name: String? = null, val phone: String? = null, val email: String? = null) {
     val fields: List<String> get() = listOfNotNull(name, phone, email).filter(String::isNotBlank)

@@ -1,5 +1,9 @@
 # F08 — Dictation and voice recording
 
+Historical production-parity specification. Later 2026-09-05 user-approved
+acquisition and presentation changes are recorded in [Dictation and voice recording](../../../screens/dictation-and-voice-recording.md); those current
+contracts supersede the corresponding original requirements below.
+
 ## Purpose and current composition
 
 Voice note and dictation are distinct modes competing for microphone ownership. Back/cancel never sends. Guard automatic send by the original profile/chat/draft revision.

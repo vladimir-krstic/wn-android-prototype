@@ -187,7 +187,7 @@ internal class ReadAloudController {
     fun chooseAudioScenario(value: SpeechAudioEnvironment?) {
         if (profile?.invoke()?.developerTools?.isEnabled == true) {
             audioScenario = value
-            if (value?.focusAvailable == false && !preferences.mixWithMedia) pause()
+            if (value?.focusAvailable == false && SpeechAudioPolicy.requestsFocus(preferences)) pause()
         }
     }
     private fun callback(id: String?, action: (SpeechToken) -> Unit) = postUpdate {

@@ -111,7 +111,7 @@ internal class SpeechPlatform(context: Context, private val onFocusLoss: () -> U
     }
 
     fun prepare(preferences: SpeechPreferences): SpeechStartRefusal? {
-        if (preferences.mixWithMedia) {
+        if (!SpeechAudioPolicy.requestsFocus(preferences)) {
             releaseFocus()
             return if (mediaActive) null else SpeechStartRefusal.MediaNotActive
         }

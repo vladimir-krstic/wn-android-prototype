@@ -67,6 +67,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
@@ -87,12 +88,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatListAction
-import dev.ipf.whitenoise.model.ChatListActionPolicy
 import dev.ipf.whitenoise.model.ChatListUndo
 import dev.ipf.whitenoise.model.ChatProjection
 import dev.ipf.whitenoise.model.ChatScope
@@ -170,7 +169,7 @@ fun ChatsScreen(
     var searchFilterCategory by rememberSaveable(profile?.id) { mutableStateOf<String?>(null) }
     var lookupRetried by rememberSaveable(profile?.id, query) { mutableStateOf(false) }
     var lookupPending by remember(profile?.id, query) { mutableStateOf(false) }
-    var voiceGeneration by rememberSaveable(profile?.id) { mutableStateOf(0L) }
+    var voiceGeneration by rememberSaveable(profile?.id) { mutableLongStateOf(0L) }
     var voiceRequest by rememberSaveable(profile?.id, stateSaver = GlobalVoiceRequestSaver) { mutableStateOf<GlobalVoiceRequest?>(null) }
     // Keep the outstanding platform launch separate from the editable/profile-owned search.
     // Closing search must not let a late result be mistaken for a newer request.

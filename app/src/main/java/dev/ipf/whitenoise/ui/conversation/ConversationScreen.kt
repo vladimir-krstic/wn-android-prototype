@@ -10,7 +10,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.SmallFloatingActionButton
@@ -39,7 +38,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -61,7 +59,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -98,6 +95,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -165,7 +163,6 @@ import kotlin.math.roundToInt
 import kotlin.math.min
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
-import dev.ipf.whitenoise.model.ChatKind
 import dev.ipf.whitenoise.model.ChatMessage
 import dev.ipf.whitenoise.model.ChatTimelineEntry
 import dev.ipf.whitenoise.model.ComposerAvailability
@@ -203,7 +200,6 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseCompactSearchField
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuGroup
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
-import dev.ipf.whitenoise.ui.components.drawableResource
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 
 private val FocusedMessageBackdropBlurRadius = 24.dp
@@ -417,7 +413,7 @@ fun ConversationScreen(
     var pinnedSearchMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var preSearchAnchor by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var preSearchOffset by rememberSaveable(profile.id, chat.id) { mutableIntStateOf(0) }
-    var handledSearchRequest by rememberSaveable(profile.id, chat.id) { mutableStateOf(0L) }
+    var handledSearchRequest by rememberSaveable(profile.id, chat.id) { mutableLongStateOf(0L) }
     var pendingInitialMessageId by rememberSaveable(profile.id, chat.id, initialMessageId, notificationRequestId) {
         mutableStateOf(initialMessageId ?: history.boundaryId)
     }

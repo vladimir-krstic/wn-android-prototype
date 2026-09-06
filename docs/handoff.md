@@ -1,350 +1,94 @@
-# Android port handoff
+# Android architecture and handoff
 
-2026-09-04: production parity B01–B22 are implemented and host-verified.
-The active goal covers B01–B32 with one commit per completed batch
-(`B01: <title>`). `docs/audits/production-android-parity/implementation-plan.md`
-tracks the sequence. The selected access/recovery and keys/profile-exit briefs
-record evidence. B22 is complete within its local scope: notification delivery
-recovery, app-wide background preference, categories, per-chat modes/vibration and
-custom mute expiry. Q06 still excludes actual delivery/services/publication and
-vibration. Continue with B23, notification routing and inline actions.
-B22's commit title is `B22: Add global and per-chat notification settings`. Q05 is resolved by the approved checked wipe
-default. Developer Tools now provides access/startup/sign-out outcomes and local
-key availability. B03 adds people-search/group scenarios and created-chat opening
-recovery; `docs/screens/people-discovery-and-private-details.md` records private
-detail/name propagation and group-role checks. B04 adds profile media and atomic
-Lightning/profile saving; see `docs/screens/profile-media-and-lightning.md`. B05 adds chat organization, staged deletion and connection recovery; see
-`docs/screens/chat-organization-and-recovery.md`. B06 completes folder management, rules, defaults/order and Chat Info assignment;
-see `docs/screens/chat-folders.md`. B07 adds global results and typed filters,
-exact-message targets, identifier lookup and deterministic voice entry; see
-`docs/screens/global-search.md`. Java time uses Android core-library desugaring
-2.1.5 for API 23 support (WN-ANDROID-0128). B08 adds paged history/target recovery,
-visible-only unread state, mention navigation and delivery facts; see
-`docs/screens/conversation-history-and-reading.md`. B09 adds accepted/pending edit
-state and history, full reading, per-chat collapse, native passage selection and
-source-aware Markdown; see `docs/screens/message-editing-and-reading.md`. Encoded
-Nostr reference resolution/profile presentation is host-verified in B30; see
-`docs/screens/verified-event-cards-and-readers.md`.
-B10 adds moderation, mixed deletion and app-owned forwarding/retry across both
-conversation and Shared Content; see `docs/screens/message-moderation-and-forwarding.md`.
-The 32/5 count caps are removed following the production source comparison.
-B11 adds reversible draft quality, recent-media fixtures, device-contact vCard/text,
-transfer progress/cancel/retry, actual GIF decoding and per-item save/share results;
-see `docs/screens/composer-attachment-actions.md`. Original/High behavior and Q06/Q07
-limits are recorded there. Foreground transfers continue across navigation; session
-changes invalidate revisions.
-B12 adds the draft photo editor with exact album-frame ownership, crop/rotation,
-ink-only erasing, undo/redo/reset, dirty discard and retry. Source images and
-recipes remain in memory; per-frame quality preserves siblings, whole-draft
-quality replays edits, and send/forward drops private originals and recipes.
-See `docs/screens/draft-photo-editor.md`. Nine new UI/bitmap cases compile.
-B13 adds strict bounded text/Markdown reading, full Copy/selection/native speech,
-shared media filters/month groups/Voice, source-owned audio controls and package
-fallback states. Real installation remains outside Q06. See
-`docs/screens/text-attachments-and-shared-content.md`. Thirteen new UI/platform
-cases compile; profile/source/lifecycle changes invalidate stale content.
-B14 adds coordinate selection/review, current-location outcomes and reply/draft-safe
-send/retry. Location-only wire bodies render offline cards with explicit Maps
-handoff/error/Copy; accepted messages are revealed from older history. See
-`docs/screens/location-sharing.md`. Thirteen new UI/platform cases compile.
-Q06 real GPS/map tiles/geocoding and permissions remain outside scope.
-B15 adds a single foreground Read Aloud engine/session, sentence/message transport,
-source-safe return, history retry and exact authored/Markdown passage seeking.
-Pause freezes current progress; resume restarts the sentence. Native word timing
-or chunk fallback drives highlighting/following. Manual scroll suspends follow;
-profile/background boundaries clear playback. File reading remains scoped to its
-reader. See `docs/screens/read-aloud-transport.md`. Fifteen new UI/platform cases
-compile. B16 adds the preferences/auto-read coordinator and local background
-controls; see `docs/screens/read-aloud-preferences.md`. Eight new UI cases compile.
-Actual background services/notifications remain outside Q06; no device execution.
-B17 adds inline dictation controls with an editable native draft, selected-service
-outcomes, manual/silence completion, guarded Send and retained review. Voice
-recording has shared capture ownership, RTL cancel/lock, tap-to-lock and typed
-failures. See `docs/screens/dictation-and-voice-recording.md`. Ten new UI cases
-compile only. No microphone/recognizer is started. Production master advanced to
-`911040c7e1c31652638c8cfd72812d1f3a694b9b`; its seven-commit diff changes no capture
-sources. Review roster/Nostr/installer/startup drift in relevant later batches
-and final reconciliation; keep the immutable audit baseline.
-B18 adds `GroupWorkController`, shared roster authority/primitive locks and separate
-private/public images. New group setup allows no other members and captures an
-initial timer. Once created, retries reuse that group and preserve applied stages.
-Group edits retain prepared drafts; emoji selection renders opaque local image
-bytes. Member commands show pending/convergence/failure with fresh role/revision
-checks. See `docs/screens/group-setup-images-and-roster.md`. Ten new UI/bitmap
-cases compile only. B18 reconciles warm-roster Add People presentation at the same
-master hash. B19 now preserves the new ChatListGroupSeed unrecoverable and
-terminal lifecycle behavior on cold/profile-switch frames. Timeline ordering drift remains
-for final reconciliation alongside Nostr/installer/startup seams.
-B19 adds `GroupLifecycleController` alongside the existing group lock and
-`TranscriptController` above navigation. Accepted grant/demotion stages survive
-partial failure; retry resumes only the remaining stage. Disband capability,
-blockers, acknowledgment and terminal precedence are typed. Full local history
-exports as JSON with authored identity and accepted revisions; Files results are
-bound to the original snapshot and stale/failed writes are cleaned up best-effort.
-See `docs/screens/group-administration-and-transcript.md`. Nine new UI cases
-compile only. The production export schema/engine callbacks must replace the
-local document schema and deterministic outcomes when migrating back.
-B20 adds `RetentionController` and shared staged presets/custom timer UI. The
-fixed clock sets first-read anchors once, sweeps all signed-in profiles, and clears
-canonical expired content, replies, selections, readers, forwarding and export.
-Read Aloud stops on missing current/queued source. Accepted policy and failed
-history refresh remain separate. See `docs/screens/disappearing-timers-and-expiry.md`;
-nine new UI cases compile only. Master remains unchanged; broader timeline-window
-ordering still needs final reconciliation.
-B21 adds `IncomingController`, `IncomingSharing`, full-screen Material destination
-selection and `ProfileLinks`. New requests replace old work; sign-out/wipe and
-explicit navigation clear pending ownership. Only accepted draft opening retries;
-it never repeats staging. Canonical QR resolves its actual public identity, and
-New Message/global recipient search accepts the same npub/nprofile/link/hex forms.
-See `docs/screens/incoming-sharing-and-profile-links.md`; 38 added unit cases and
-nine compiled UI cases cover the owned states. Real Intent/provider preparation,
-shortcut publication and app-lock integration remain production migration seams.
-B22 adds `NotificationController`, pure category/mute/vibration policies and a
-Sounds & notifications route. Notify for remains All/Mentions independently of mute.
-Native date/time input writes an exact deadline; the existing retention clock clears
-canonical expired mute state. Background connection is app-wide and survives profile
-switching; pending changes remain initiating-profile-owned. Erase App Data resets
-it. Category actions use existing Android targets or report app-settings fallback.
-Real channel publication, services, provider readiness and vibration are migration
-seams; `docs/screens/notification-controls.md` records 21 added unit cases and ten
-compiled UI/platform cases. B32 must reconnect app-update distribution availability.
-Latest host gate: 714 unit tests, zero lint errors, both APKs;
-14 pre-existing warnings. No runtime backend, new permission or device validation.
+The original iOS port and production Android batches B01–B32 are implemented.
+Current product contracts live in [screen briefs](screens/README.md), governed by
+[decisions](decisions.md) and [shared metrics](ui-metrics.md). The
+[parity ledger](port/feature-inventory.md) records implementation evidence and
+remaining acceptance gaps. Completed batch history lives in the
+[production implementation record](audits/production-android-parity/implementation-plan.md).
 
-The original iOS port is implemented inside the approved offline, deterministic
-boundary. Production Android parity remains in progress through B23–B32. This
-handoff describes the shape that should remain stable while visual polish proceeds
-one screen or bounded flow at a time.
+## Architecture and ownership
 
-## Architecture map
+One application module and launcher activity host a typed Navigation Compose
+graph. `MainActivity` enters `WhiteNoiseApp`, which composes the profile-owned
+theme, app-wide lifecycle hosts, privacy handling, and `WhiteNoiseNavHost`.
 
-```text
-MainActivity
-└── WhiteNoiseApp
-    ├── WhiteNoiseTheme (profile-owned System / Light / Dark)
-    ├── AppViewModel
-    │   └── AppUiState
-    │       └── Profile[]
-    │           ├── People[]
-    │           ├── Chat[] + timeline/draft/relay state
-    │           ├── ProfileSettings + profile relays
-    │           └── DeveloperToolsState + sanitized artifacts
-    └── WhiteNoiseNavHost
-        ├── Onboarding and profile routes
-        ├── Chats and creation routes
-        ├── Shared conversation and information routes
-        └── Settings, support, developer, and destructive routes
-```
+`AppViewModel` owns `AppUiState`: profiles, signed-in membership, the active
+profile, and first-login diagnostics state. Each profile owns people, chats,
+timelines/drafts, settings, relays, and developer artifacts. UI receives model
+values and callbacks. Chat rows, message documents, search results, availability,
+and shared content derive from that state rather than becoming another store.
 
-There is one application module, one launcher activity, one authoritative
-in-memory state holder, and one typed navigation graph. UI surfaces receive
-immutable model values plus mutation callbacks. Projections—chat rows,
-conversation clusters, search results, shared content, availability, and
-diagnostics—derive from the authoritative state rather than becoming a second
-store.
+Operation controllers in `state/` own staged group work, lifecycle changes,
+retention, capture, incoming sharing, notification actions/settings, transcript
+export, audit logs, relay publication, developer diagnostics, app lock, and app
+updates. Their callbacks re-check the initiating owner and operation revision.
+Accepted stages survive retry where the product contract requires it; stale
+results cannot mutate another profile or chat. Controllers remain in memory.
+
+Activity-wide hosts preserve work that should survive navigation, such as
+foreground attachment transfer progress. Screen-owned media, image preparation,
+recognition, and readers must release or cancel work at their lifecycle boundary.
+Process recreation resets product state; navigation must return safely to
+onboarding when a restored destination has no corresponding active profile.
+Temporary content files support Android URI handoff, not durable product storage.
 
 ## Android system boundaries
 
-| Capability | Android-native boundary | App permission |
+| Capability | Integration | App permission |
 | --- | --- | --- |
-| Back and destination state | Navigation Compose and system/predictive Back | None |
-| Private-key QR scan | Near-full Material sheet with CameraX and bundled on-device ML Kit | Camera, requested just in time |
-| Share & Connect QR scan | Shared near-full CameraX/ML Kit Material scanner sheet | Camera, requested just in time |
-| QR generation | Local ZXing matrix rendered in Compose | None |
-| Photos and videos | Android Photo Picker | None |
-| Documents | Storage Access Framework | None |
-| Camera attachment | External `TakePicture` contract and non-exported FileProvider | None |
-| Share/copy | Android Sharesheet and clipboard | None |
-| Read aloud | Android TextToSpeech with lifecycle shutdown | None |
-| Notification access | Android 13+ runtime prompt and app-notification settings handoff | Notifications, requested only from the explicit Settings action |
-| Security controls | Explicit Android security-settings intent | None |
-| Recents privacy | Activity `FLAG_SECURE` derived from active profile | None |
+| QR scanning | Shared CameraX and bundled ML Kit scanner | Camera, requested from the scan action |
+| QR generation | Local ZXing matrix | None |
+| Photos/videos | Standard Android Photo Picker | None |
+| Files/save destinations | Storage Access Framework | None |
+| Camera attachment | `TakePicture` and non-exported FileProvider | Camera: also required for this intent because the app declares it |
+| Share/copy | Android Sharesheet, URI grants, clipboard | None |
+| Video | Foreground Media3 player for local content | None |
+| Read Aloud | Local Android TextToSpeech with lifecycle shutdown | None |
+| Global voice search | Provider-owned recognition activity | Provider owns its permission flow |
+| Composer dictation | Android SpeechRecognizer, partial text in the editor | Microphone, requested when starting dictation |
+| Notification access | Explicit Android 13+ permission/settings action | Notifications |
+| Security/settings | Approved Android settings intents | None |
+| Window privacy | Central policy for Recents and chat capture | None |
 
-The merged application declares camera permission for the selected Private Key
-or Share & Connect QR scanner and `POST_NOTIFICATIONS` for the explicit Android
-notification-access gate. It intentionally declares no network, storage,
-microphone, or location permission. The notification prototype requests access
-but does not create or deliver notifications. There is no backend, transport,
-durable persistence, real authentication, cryptography, payment, telemetry
-upload, microphone capture, or speech recognition.
+The manifest declares `CAMERA`, `RECORD_AUDIO`, and `POST_NOTIFICATIONS`.
+It removes inherited network and wake-lock permissions and declares no storage
+or location permission. Speech service processing belongs to the installed
+provider; the app itself has no network transport. Live dictation and native voice
+search supersede their original deterministic-only acquisition paths; explicit
+Developer Tools outcomes remain available for tests.
 
-## Verification boundary
+Real notification delivery, background services, voice-note encoding, GPS/maps
+acquisition, incoming exported Android receivers, shortcut publication, installer
+work, backend authentication, cryptography, payment, and persistent product state
+remain outside the approved prototype boundary. See the relevant screen brief
+before changing any integration; historical batch restrictions are superseded
+only by the recorded user-approved capability.
 
-The complete static gate is:
+## Verification and next work
 
-```bash
-./gradlew clean testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
-```
+Use the exact setup and host/device commands in [README](../README.md#build-and-verification).
+The [engineering audit](codebase-hardening-audit.md) records dated results.
+Compiling instrumentation tests does not execute their interactions or establish
+accessibility/visual acceptance.
 
-Unit tests execute on the host. Compose instrumentation tests are compiled and
-packaged but are not run unless the user's current request explicitly asks for
-device/emulator testing. Prior inspection requests and an attached phone are
-not standing authorization. Do not use `adb`, install or launch the app,
-interact with a device, or capture device screenshots outside that explicit
-request. Static
-coverage includes model consequences, fixture integrity, navigation values,
-screen entry states, accessibility actions, adaptive width, 200% font scale,
-RTL composition, and packaged resource identities.
+The authorized 2026-08-31 Pixel 8a / Android 17 inspection is historical evidence
+for that build: 168 instrumentation tests passed, with selected direct inspection.
+It does not verify subsequent parity work or UI changes. Details remain in the
+[historical audit](codebase-hardening-audit.md).
 
-The explicitly authorized 2026-08-31 hardening pass ran the complete packaged
-suite on a physical Pixel 8a with Android 17: all 168 instrumentation tests
-passed with zero failures, errors, or skips. The final host gate also passes
-139 unit tests, both APK assemblies, and lint with zero errors plus six
-deliberately retained dependency-version warnings. Direct device inspection
-covered selected high-impact conversation/composer/search/info/contact/voice,
-Chats/creation, Settings/privacy, dark, 200%-type, RTL, and 610/838 dp-wide
-states. This is engineering evidence, not a replacement for user visual
-acceptance or a complete hands-on TalkBack pass.
+Future device testing requires an explicit request in the current task. Remaining
+checks include:
 
-## Visual-polish implementation authority
+- Full navigation, system/predictive Back, recreation, and profile isolation.
+- Live dictation permission/partial/error/pause/resume and voice-search return.
+- Photo Picker, Files, camera/scanner, Sharesheet, clipboard, document export,
+  TextToSpeech, Android settings, and video play/seek/audio-focus/release.
+- TalkBack, keyboard/D-pad, Switch Access, Voice Access, focus and custom actions.
+- Large text/display scale, RTL, light/dark, compact/expanded widths, landscape,
+  IME, cutouts, gesture/three-button navigation, and reduced motion.
+- User-led product and visual acceptance, one screen or bounded flow at a time.
 
-`docs/visual-polish.md` records the approved quiet Material 3 Expressive
-direction, visual-system contract, component migration matrix, cross-app state
-contract, foundation-first rollout, and acceptance gates. That plan supersedes
-the earlier screen order while preserving the one-screen-or-bounded-flow
-implementation workflow.
-
-The first implementation batch established the shared theme and primitives,
-then applied them to the paired Chats and Settings roots. The user accepted
-that cleaner direction on 2026-08-21. A second bounded batch applies the same
-system to Welcome, Sign In, Sign Up, Add Profile, and avatar-source states,
-with bounded forms, tonal alternate input, task-appropriate pinned or inline
-actions, compact progress, and shared empty/selected treatment. Sign Up's
-Pixel 8a polish pass moves completion into the IME-aware form scroll surface.
-Static coverage validates these presentations without changing their state or
-navigation contracts. Full flow device acceptance remains pending.
-
-A third bounded batch extends that system through New Message, Person Profile,
-New Group selection, and Set Up Group. Persistent people search remains visible
-where it is the primary task; native chips and toggleable rows own selection;
-tonal label-above forms, grouped member review, photo feedback, and pinned
-actions own setup; and the existing Relays destination now provides direct
-recovery when new messaging is unavailable.
-
-A fourth bounded batch recomposes the shared conversation shell without
-changing its state model: a small Material identity app bar replaces the
-crowded centered treatment; the transcript and composer share an adaptive
-measure; sticky dates, ordinary events, and support notices have distinct
-tonal hierarchy; message clusters use the shared shape/spacing system; and
-invitation, ended, blocked, failed-send, and missing-relay states expose clear
-semantic recovery.
-
-A fifth bounded batch recomposes composer and rich-content presentation while
-retaining the authoritative draft and timeline contracts. The composer is one
-tonal task region with stable Material add/input/send/record actions; draft
-attachments, links, replies, mentions, loading, and errors share the system;
-attachment sheets and rich cards use semantic icons; and draft/read-only media
-viewers use safe-area app bars and chronological pagers. Voice review and
-received speech use code-native waveforms, standard playback controls,
-transcript provenance, and accessible progress. Photo Picker, Files, external
-camera, document handoff, and TextToSpeech remain Android-owned runtime
-boundaries. Video handoff was subsequently replaced with foreground Media3
-playback inside the gallery on 2026-09-03 (WN-ANDROID-0123). At that point in
-the rollout, message actions/search and Chat Info
-remained later polish batches.
-
-A sixth bounded batch recomposes message interactions and in-conversation
-search without changing `MessageActionPolicy`, `ReactionCatalog`,
-`ConversationSearch`, or any mutation callback. Long-press opens a Material
-sheet with focused message context, quick reactions, and semantic command
-icons; emoji/configuration and forwarding sheets use adaptive targets, native
-selection, visible limits, and clear task hierarchy; selection/search bars use
-compact named actions and live state; and search adds focus, Clear, localized
-position, explicit current-result containment, and inline text highlighting.
-Message Details uses the same child-destination and tonal grouping system.
-Clipboard and IME behavior remain Android-owned runtime boundaries.
-
-A seventh bounded batch recomposes Chat and Group Info without changing its
-typed routes or model gates. Identity headers stay open; quick actions use
-quiet tonal icon controls; shared content, members, administration, and chat
-actions use deliberate grouped surfaces; selection uses native radio/checkbox
-semantics; Edit Group uses the shared form and pinned-action system; and Chat
-Relays exposes named removal, empty recovery, and captured-default restore.
-Member profiles separate relationship actions from role/removal actions while
-sole-admin, ended-membership, history, and relay consequences remain model
-owned. Photo Picker execution and visual/device acceptance remain pending.
-
-An eighth bounded batch brings the accepted system to consumer Settings
-details without changing the established destination graph or profile-owned
-state. Share & Connect, Profile, Keys, Notifications, Appearance, Privacy &
-Security, Data Usage, profile Relays, Support, and Donate now share tonal
-groups, native radio/switch semantics, label-above fields, concise value and
-action rows, explanatory disabled/recovery states, and pinned primary tasks
-where one task dominates. Profile and donation QR codes use a stable
-black-on-white technical surface; Android-owned scanner, Photo Picker, Files,
-Sharesheet, document creator, notification settings, and device-security
-settings remain unchanged.
-
-A ninth bounded batch completes the app-owned rollout through Developer Tools,
-Diagnostics, Audit Logs, Key Packages, Conversation Debug, Sign Out, Manage
-Profiles, Remove Profile, and Erase App Data. Technical state stays precise
-inside deliberate tonal groups and one adaptive console; warnings use text and
-Material symbols; unavailable and empty states remain actionable. Large
-destructive tasks stay native full-height sheets with close disabled during
-named progress, label-above exact confirmation, and one pinned error-role
-action. The active-profile and stable three-word gates, artifact preservation,
-sanitized-copy boundary, and exit routing remain model-owned and unchanged.
-All app-owned visual batches are now statically implemented; device visual
-acceptance remains pending.
-
-A cross-app form-system pass replaces the resting outline on every ordinary
-app-owned text, secure, and multiline field with a stronger tonal container.
-All 19 form fields keep the approved 28 dp corners, align label, input or
-leading icon artwork, and supporting/error copy to one 16 dp directional
-content line, and expose 2 dp full-shape focus/error rings. Search bars and
-message composers remain their specialized Material patterns. The clean gate
-passes with 94 unit tests, 74 compiled Compose instrumentation tests, zero lint
-issues, and both APKs; device visual acceptance remains pending.
-
-A focused Settings-overview refinement follows the user's hands-on review.
-Every destination now uses a consistent rounded Material Symbol, concise
-one-line label, and disclosure chevron inside the existing tonal groups.
-Descriptions that merely repeated the destination are removed; Appearance
-keeps its active value in the trailing slot, and Profile keeps a supporting
-reason only when its relay dependency disables editing. Navigation, account
-switching, destination order, state ownership, and destructive behavior remain
-unchanged. Shared Settings group headings use a 32 dp directional inset so
-they align with leading icons on the overview and row text on icon-free detail
-lists instead of sitting on the outer tonal-container edge.
-
-## Known polish and device backlog
-
-Latest approved batch (2026-08-26): Chats uses a title-free default scope,
-icon-only native New Message/recovery FAB, aligned 40/52 dp avatars, exclusive
-status indicators and all non-archived membership states. Native long-press
-DropdownMenus replace swipes and the chat-actions sheet, using Signal
-`441ba42` as interaction evidence only. Read/archive changes have field-level
-Undo; TalkBack exposes the same eligible commands. Ordinary headers use pinned
-Material behavior tied to actual scroll; Chats' bottom inset is content
-padding. New profile-owned DiagnosticsState supplies the first-login
-content-height sheet and Privacy & Security → Diagnostics & Improvements.
-Prompt timing waits for RESUMED Chats; actual dismissal, not rotation,
-records seen state. Developer Tools does not own or disable consent. Ordinary
-sheets now share surfaceContainerLow, transparent ordinary rows, a wrapping
-titleLarge/24 dp header and 8 dp body gap with no extra handle spacer. Both
-mute entry points use the shared immediate-choice Material dialog.
-
-Scoped iOS evidence is `4c25393`, without changing the global baseline or
-conversation fixture timestamps/content. Static gate: 117 unit tests, 121
-compiled UI tests, no lint issues, both APKs. No device execution or screenshots
-were performed for this batch. Briefs, metrics, source map and decisions
-0035–0039 record the implementation; 0038 retires the old swipe exception.
-
-- Repeat the complete packaged suite after future product changes; the
-  2026-08-31 Pixel 8a / Android 17 baseline is 168 of 168 passing.
-- Complete user-led visual acceptance and remaining hands-on landscape,
-  three-button navigation, display-scale, cutout, and motion checks; automated
-  and selected direct inspection already cover compact/expanded windows, IME,
-  gesture navigation, 200% type, dark theme, RTL, and wider windows.
-- Walk every flow with TalkBack and keyboard/D-pad focus; confirm switch and
-  custom-action announcement quality.
-- Exercise Photo Picker, Files, external camera, Sharesheet, clipboard,
-  document viewer, TextToSpeech, settings intents, and Code Scanner on real
-  system surfaces. Verify the embedded video player's play/pause, scrubbing,
-  replay, local URI failures, audio focus, page/lifecycle release, and compact
-  landscape controls when the user requests a device run.
-- Capture Android screenshots and compare hierarchy, density, typography,
-  rhythm, shape, state color, motion, and empty/error/recovery treatment one
-  selected flow at a time.
-- Treat any visual changes as presentation refinements unless the user
-  explicitly changes the accepted product behavior or offline boundary.
+Apply the [visual contract](visual-polish.md) and current screen brief during
+future polish. Do not treat old screenshots, rollout plans, or test totals as a
+current visual specification or authorization for device use.

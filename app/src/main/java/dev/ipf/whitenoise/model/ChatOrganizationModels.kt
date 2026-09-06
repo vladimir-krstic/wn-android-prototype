@@ -18,7 +18,8 @@ object ChatOrganization {
         val index = ids.indexOf(id)
         if (index < 0 || index + delta !in ids.indices) return chats
         ids[index] = ids[index + delta].also { ids[index + delta] = id }
-        return chats.map { chat -> ids.indexOf(chat.id).takeIf { it >= 0 }?.let { chat.copy(pinnedOrder = it) } ?: chat }
+        val positions = ids.withIndex().associate { (index, id) -> id to index }
+        return chats.map { chat -> positions[chat.id]?.let { chat.copy(pinnedOrder = it) } ?: chat }
     }
 
     fun actions(chat: Chat, chats: List<Chat>): List<ChatListAction> {
@@ -30,7 +31,10 @@ object ChatOrganization {
         }
     }
 
-    fun reconcile(selected: List<String>, visible: List<Chat>) = selected.distinct().filter { id -> visible.any { it.id == id } }
+    fun reconcile(selected: List<String>, visible: List<Chat>): List<String> {
+        val visibleIds = visible.mapTo(mutableSetOf()) { it.id }
+        return selected.distinct().filter { it in visibleIds }
+    }
     fun archiveAction(chats: List<Chat>) = if (chats.isNotEmpty() && chats.all { it.isArchived }) ChatBulkAction.Unarchive else ChatBulkAction.Archive
     fun requiresAdmin(chat: Chat, owner: String) = chat.membership == ChatMembership.Active && chat.groupLifecycle == GroupLifecycle.Active &&
         chat.isSoleAdmin(owner) && chat.members.any { it.personId != owner }

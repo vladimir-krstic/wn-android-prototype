@@ -2,7 +2,6 @@ package dev.ipf.whitenoise.model
 
 import org.junit.Assert.*
 import org.junit.Test
-import kotlin.math.abs
 
 class PhotoEditorModelsTest {
     private fun stroke(id: Long = 1, count: Int = 2) = PhotoStroke(id, List(count) { PhotoPoint(if (it % 2 == 0) 0f else 1f, 0.5f) }, PhotoPenWidth.Medium, PhotoPenColor.Red)

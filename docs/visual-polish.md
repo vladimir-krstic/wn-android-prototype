@@ -1,9 +1,13 @@
-# Visual-polish preparation
+# Visual direction and rollout evidence
 
 Status: **Chats + Settings direction accepted; all app-owned rollout batches
 implemented at the static gate; device inspection remains pending**
 
-Last verified against current official guidance: **2026-08-26**
+Source review for this rollout: **2026-08-26**. The dated progress/assessment
+sections describe that rollout, not the current build. Later approved
+[decisions](decisions.md), [metrics](ui-metrics.md), and [screen briefs](screens/README.md)
+govern changes such as Chats-owned profile switching, stable segmented rows,
+optional appearance colors, and live dictation.
 
 Expressive is the approved direction, not a claim that every component already
 uses the newest API family. The 2026-08-26 menu audit found baseline dropdowns,
@@ -12,7 +16,7 @@ standard global motion. All six dropdown entry points now use official
 Expressive menu APIs; the button and theme findings are documented follow-up,
 not silently changed. See `screens/app-menus.md` and WN-ANDROID-0040.
 
-## Implementation progress
+## Historical implementation progress — August 2026
 
 - The shared Material theme now provides the approved typography and shape
   scales, standard vector action icons, destination top-bar hierarchy, empty
@@ -132,7 +136,7 @@ These decisions are settled for the first implementation batch:
   compact and icon-led; supporting text is reserved for current state or an
   actionable unavailable reason rather than repeating the destination label.
 
-## Current implementation assessment
+## Initial implementation assessment — August 2026
 
 ### What is already strong
 

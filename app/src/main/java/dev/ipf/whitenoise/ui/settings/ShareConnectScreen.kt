@@ -50,9 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
-import dev.ipf.whitenoise.model.AvatarWebImageCatalog
 import dev.ipf.whitenoise.model.Profile
-import dev.ipf.whitenoise.model.ProfileAvatar as ProfileAvatarModel
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll
 import dev.ipf.whitenoise.ui.components.ProfileAvatar

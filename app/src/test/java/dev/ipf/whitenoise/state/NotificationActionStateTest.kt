@@ -104,6 +104,35 @@ class NotificationActionStateTest {
         val old=vm.notificationActions.work!!; vm.signOutActiveProfile(false); vm.notificationActions.advance(old.id,old.phase,old.attempt)
         assertNull(vm.notificationActions.work); assertTrue(vm.notificationActions.cards.isEmpty())
     }
+    @Test fun wipingAProfileDropsItsNotificationRequestPayloadAndIdentity() {
+        val vm = model()
+        val firstTarget = target(vm)
+        val oldId = vm.notificationActions.submit(input(firstTarget, text = "Old private reply"))!!
+        vm.signOutActiveProfile(wipeData = true)
+        assertNull(vm.notificationActions.work)
+        vm.completeSignIn(OnboardingOrigin.Initial)
+        vm.setDeveloperToolsEnabled(true)
+        val newTarget = target(vm)
+        val newId = vm.notificationActions.submit(input(newTarget, text = "New reply"))!!
+        assertNotEquals(oldId, newId)
+        step(vm)
+        step(vm)
+        assertEquals("New reply", sent(vm, newTarget).single().message.text)
+    }
+
+    @Test fun retainingAProfileKeepsRequestDeduplicationAcrossSignIn() {
+        val vm = model()
+        val action = input(target(vm))
+        val id = vm.notificationActions.submit(action)!!
+        step(vm)
+        step(vm)
+        vm.signOutActiveProfile(wipeData = false)
+        vm.completeSignIn(OnboardingOrigin.Initial)
+        assertEquals(id, vm.notificationActions.submit(action))
+        assertNull(vm.notificationActions.work)
+        assertEquals(1, sent(vm, action.card.target).size)
+    }
+
     @Test fun dismissingAcceptedStatusStillFinishesReadAndCardCleanup() {
         val vm=model(); val t=target(vm); val action=input(t); vm.notificationActions.recordCard(action.card)
         val id=vm.notificationActions.submit(action)!!; step(vm); vm.notificationActions.dismiss(id)

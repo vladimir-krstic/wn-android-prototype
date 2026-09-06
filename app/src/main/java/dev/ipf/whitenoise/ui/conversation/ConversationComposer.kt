@@ -55,7 +55,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -99,6 +98,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -127,7 +127,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -518,7 +517,7 @@ fun FullConversationComposer(
     val toolbarProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f).apply { updateBounds(0f, 1f) } }
     val widthProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f).apply { updateBounds(0f, 1f) } }
     val textMeasurer = rememberTextMeasurer()
-    var requestedDragProgress by remember { mutableStateOf(0f) }
+    var requestedDragProgress by remember { mutableFloatStateOf(0f) }
     var expansionJob by remember { mutableStateOf<Job?>(null) }
     var isDraggingExpansion by remember { mutableStateOf(false) }
     var isSettlingExpansion by remember { mutableStateOf(false) }

@@ -13,7 +13,6 @@ import dev.ipf.whitenoise.state.AppViewModel
 import dev.ipf.whitenoise.ui.chats.PersonProfileScreen
 import dev.ipf.whitenoise.ui.settings.EditProfileScreen
 import dev.ipf.whitenoise.ui.settings.ProfileImageActions
-import dev.ipf.whitenoise.ui.settings.ProfileImageViewer
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
 import org.junit.Assert.*
 import org.junit.Rule

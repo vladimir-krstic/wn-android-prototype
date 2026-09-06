@@ -26,7 +26,9 @@ object ConversationTranscript {
         it.createdAtMillis?.takeIf { value -> value > 0 } ?: GlobalSearchClock.timestamp(it)
     } ?: GlobalSearchClock.timestamp(ChatMessage(entry.id, "", entry.dayOrdinal, entry.dayLabel, entry.minuteOfDay, ""))
     fun ordered(source: TranscriptSource): List<ChatTimelineEntry> = source.entries.distinctBy { it.id }
-        .sortedWith(compareBy<ChatTimelineEntry> { timestamp(it) }.thenBy { it.id })
+        .map { timestamp(it) to it }
+        .sortedWith(compareBy<Pair<Long, ChatTimelineEntry>> { it.first }.thenBy { it.second.id })
+        .map { it.second }
 
     fun encode(source: TranscriptSource, entries: List<ChatTimelineEntry>): String = json(linkedMapOf(
         "schema" to "white-noise-local-transcript", "version" to 1, "exported_at_ms" to MessageForwarding.nowMillis, "chat_id" to source.chatId,

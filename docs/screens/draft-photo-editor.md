@@ -91,26 +91,26 @@ pending explicit authorization.
 Implemented and host-verified on 2026-09-04; device and user visual acceptance
 remain pending. No device, emulator, installation or screenshot was used.
 
-- [PhotoEditorModels.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/model/PhotoEditorModels.kt:40)
+- [PhotoEditorModels.kt](../../app/src/main/java/dev/ipf/whitenoise/model/PhotoEditorModels.kt)
   owns reversible history, source-space geometry, limits and typed session events.
-- [AppViewModel.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/state/AppViewModel.kt:1447)
+- [AppViewModel.kt](../../app/src/main/java/dev/ipf/whitenoise/state/AppViewModel.kt)
   owns profile/chat/attachment/frame sessions and revision-checked load/save.
   It commits only the rendered frame, preserving identity, siblings, caption,
   reply and retained sources. Removal, quality changes and profile/session
   changes invalidate stale work. Save failure retains the recipe and supports
   Retry or editing at a lower quality.
-- [PhotoEditorUi.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/PhotoEditorUi.kt:50)
+- [PhotoEditorUi.kt](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/PhotoEditorUi.kt)
   adds the Material editor, crop/draw/erase canvas, native coordinate sliders,
   quality, live feedback and dirty dismissal. Editing is included in the existing
   modal exclusion from conversation read acknowledgement. Controls scroll and
   move beside the canvas in wide/short windows; physical image coordinates are
   independent of layout direction.
-- [PhotoEditorRenderer.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/PhotoEditorRenderer.kt:94)
+- [PhotoEditorRenderer.kt](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/PhotoEditorRenderer.kt)
   decodes a bounded source region, applies EXIF orientation, crop/rotation and a
   separate ink layer, then returns measured PNG/JPEG bytes. Preview and export
   share annotation drawing; erasing never clears source pixels. Animated,
   corrupt, unavailable, over-limit and allocation failures remain explicit.
-- [ConversationComposer.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationComposer.kt:2099)
+- [ConversationComposer.kt](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationComposer.kt)
   reviews every album frame, targets the selected frame for editing and retains
   review exclusion across saved edits/recreation. Inclusion remains an
   attachment-level action. B11 quality changes replay recipes, and the composer
@@ -131,9 +131,9 @@ UI/platform cases compile for selected pixels/dimensions, erasing, quality
 replay, all eight EXIF orientations, invalid/animated input, dirty dismissal,
 retry, accessible coordinate actions and album review. They were not run.
 
-Evidence: [PhotoEditorModelsTest.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/test/java/dev/ipf/whitenoise/model/PhotoEditorModelsTest.kt),
-[PhotoEditorStateTest.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/test/java/dev/ipf/whitenoise/state/PhotoEditorStateTest.kt),
-[PhotoEditorTest.kt](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/androidTest/java/dev/ipf/whitenoise/PhotoEditorTest.kt).
+Evidence: [PhotoEditorModelsTest.kt](../../app/src/test/java/dev/ipf/whitenoise/model/PhotoEditorModelsTest.kt),
+[PhotoEditorStateTest.kt](../../app/src/test/java/dev/ipf/whitenoise/state/PhotoEditorStateTest.kt),
+[PhotoEditorTest.kt](../../app/src/androidTest/java/dev/ipf/whitenoise/PhotoEditorTest.kt).
 Transient validation logs are `/tmp/wn-b12-final-gate.log` and
 `/tmp/wn-b12-canvas-check.log`; the latter clears two new KTX helper warnings
 found by the clean lint pass.

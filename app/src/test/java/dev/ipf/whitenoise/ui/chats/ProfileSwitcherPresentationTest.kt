@@ -1,52 +1,31 @@
-package dev.ipf.whitenoise.ui.settings
+package dev.ipf.whitenoise.ui.chats
 
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatKind
 import dev.ipf.whitenoise.model.ChatMembership
 import dev.ipf.whitenoise.model.ProfileFixtures
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
 import org.junit.Test
 
-class ProfileManagementPresentationTest {
+class ProfileSwitcherPresentationTest {
     @Test
-    fun noInactiveProfileProjectsAdd() {
-        assertSame(
-            ProfileManagementPresentation.Add,
-            profileManagementPresentation(
-                profiles = listOf(ProfileFixtures.marmota),
-                activeProfileId = ProfileFixtures.MARMOTA_ID,
-            ),
-        )
+    fun emptyProfilesProduceNoSwitcherRows() {
+        assertEquals(emptyList<ProfileSwitcherPresentation>(), profileSwitcherPresentation(emptyList(), null))
     }
 
     @Test
-    fun oneInactiveProfileProjectsTheStoredAlternate() {
-        val result = profileManagementPresentation(
-            profiles = listOf(ProfileFixtures.marmota, ProfileFixtures.pebble),
-            activeProfileId = ProfileFixtures.MARMOTA_ID,
-        ) as ProfileManagementPresentation.SingleAlternate
-
-        assertEquals(ProfileFixtures.PEBBLE_ID, result.profile.id)
+    fun aSingleActiveProfileStillAppearsAsSelected() {
+        val result = profileSwitcherPresentation(listOf(ProfileFixtures.marmota), ProfileFixtures.MARMOTA_ID)
+        assertEquals(listOf(ProfileFixtures.MARMOTA_ID), result.map { it.profile.id })
+        assertEquals(listOf(true), result.map { it.isActive })
     }
 
     @Test
-    fun multipleInactiveProfilesPreserveOrderAndCalculateRemainingCount() {
-        val profiles = listOf(
-            ProfileFixtures.marmota,
-            ProfileFixtures.pebble,
-            *ProfileFixtures.showcaseProfiles.toTypedArray(),
-        )
-        val result = profileManagementPresentation(
-            profiles = profiles,
-            activeProfileId = ProfileFixtures.MARMOTA_ID,
-        ) as ProfileManagementPresentation.MultipleAlternates
-
-        assertEquals(
-            listOf("pebble", "open-quill", "cipher-wheel"),
-            result.previewProfiles.map { it.id },
-        )
-        assertEquals(3, result.remainingCount)
+    fun absentActiveProfilePreservesStoredOrderWithoutSelectingAnAlternate() {
+        val profiles = listOf(ProfileFixtures.pebble, ProfileFixtures.openCircuit)
+        val result = profileSwitcherPresentation(profiles, "removed")
+        assertEquals(profiles, result.map { it.profile })
+        assertEquals(listOf(false, false), result.map { it.isActive })
     }
 
     @Test

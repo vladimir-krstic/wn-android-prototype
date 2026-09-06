@@ -14,8 +14,9 @@ Q07 retains explicit Android document destinations for Save.
 - Message actions share text and attachments and save selected attachments.
   Each item reports prepared/saved/unavailable/cancelled/failed independently;
   opening the Sharesheet means handed to Android, never delivered to a recipient.
-- A recent-media sheet exposes none, selected-only, full and unavailable states
-  with bundled content; Gallery always launches the standard Photo Picker.
+- Photos and videos opens the standard Photo Picker. The former app-owned
+  recent-media and device-contact acquisition surfaces are retired by the
+  2026-09-05 menu decision.
 - Draft photos offer Low, Standard, High and Original. Preserve original source
   in memory for reversible changes; discard that source from outgoing messages.
   Display the actual prepared byte count. JPEG/PNG Original strips identifying
@@ -35,8 +36,8 @@ Q07 retains explicit Android document destinations for Save.
 
 Retain the accepted Add popup, ordered draft shelf and media viewer. Use native
 Material sheets/dialogs, radio buttons, checkboxes, progress and list rows, with
-shared margins/spacing. New labels include “Recent media”, “Device contact”,
-“Photo quality”, “Original”, “Save attachments”, “Share”, “Retry” and “Cancel”.
+shared margins/spacing. Current labels include “Photo quality”, “Original”, “Save attachments”,
+“Share”, “Retry” and “Cancel”.
 Errors distinguish unavailable bytes, no compatible app, expired and invalid
 attachments. Exact final copy lives in string resources.
 
@@ -127,7 +128,7 @@ No Android decoder/playback, real picker, save destination or recipient app was
 run in this task. Host build/logic evidence does not constitute visual acceptance.
 
 
-Source anchors: [MessageAttachmentExport.kt:47](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageAttachmentExport.kt:47), [AttachmentAcquisitionUi.kt:100](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/AttachmentAcquisitionUi.kt:100), [DraftPhotoProcessor.kt:18](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/DraftPhotoProcessor.kt:18), [AttachmentModels.kt:41](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/model/AttachmentModels.kt:41), [AnimatedAttachmentImage.kt:32](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/AnimatedAttachmentImage.kt:32), [AttachmentAcquisitionUi.kt:65](/Users/vladimirkrstic/Workspaces/wn-android-prototype/app/src/main/java/dev/ipf/whitenoise/ui/conversation/AttachmentAcquisitionUi.kt:65).
+Source anchors: [MessageAttachmentExport.kt:47](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageAttachmentExport.kt), [AttachmentAcquisitionUi.kt:100](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/AttachmentAcquisitionUi.kt), [DraftPhotoProcessor.kt:18](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/DraftPhotoProcessor.kt), [AttachmentModels.kt:41](../../app/src/main/java/dev/ipf/whitenoise/model/AttachmentModels.kt), [AnimatedAttachmentImage.kt:32](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/AnimatedAttachmentImage.kt), [AttachmentAcquisitionUi.kt:65](../../app/src/main/java/dev/ipf/whitenoise/ui/conversation/AttachmentAcquisitionUi.kt).
 
 ## Attachment menu simplification — 2026-09-05
 
@@ -135,8 +136,9 @@ The menu now contains Camera, Photos and videos, Files, Location, Contact and
 Dictation when available. Contact retains the existing searchable picker and
 contact-card draft behavior. Its menu and sheet title use the same short label
 in all five bundled locales. Removed unreachable device-contact launcher/preview
-and recent-media sheet wiring from the composer. Existing acquisition helpers
-and photo processing remain available to their independent callers.
+and recent-media sheet wiring from the composer. The 2026-09-06 cleanup also removes the unreachable acquisition helpers,
+obsolete UI-only tests, and ineffective Recent media developer selector.
+Contact payload export and quality/photo-editor behavior remain covered.
 
 `ConversationScreenTest` covers the reduced menu and Contact picker navigation.
 Host gate `testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`

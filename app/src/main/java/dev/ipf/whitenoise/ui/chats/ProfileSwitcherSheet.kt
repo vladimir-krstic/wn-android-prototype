@@ -36,7 +36,6 @@ import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
-import dev.ipf.whitenoise.ui.settings.profileSwitcherPresentation
 import dev.ipf.whitenoise.ui.settings.SettingsGroup
 import dev.ipf.whitenoise.ui.settings.SettingsAction
 

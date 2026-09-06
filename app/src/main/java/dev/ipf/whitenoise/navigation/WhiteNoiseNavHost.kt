@@ -678,8 +678,8 @@ fun WhiteNoiseNavHost(
                     messageDeleteScenario = appViewModel.nextMessageDeleteScenario,
                     onMessageDeleteScenario = appViewModel::selectMessageDeleteScenario,
                     messageForwardScenario = appViewModel.nextMessageForwardScenario,
-                    recentMediaAccess = appViewModel.recentMediaAccess,
-                    onRecentMediaAccess = appViewModel::selectRecentMediaAccess,
+
+
                     attachmentTransferScenario = appViewModel.attachmentTransferScenario,
                     onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
                     downloadExampleControls = { DownloadExampleControls(
@@ -867,11 +867,11 @@ fun WhiteNoiseNavHost(
                             if (applied && event is dev.ipf.whitenoise.model.LocationEvent.Sent && appViewModel.locationSession == null)
                                 appViewModel.chat(chat.id)?.timeline?.lastOrNull()?.id else null
                         },
-                        recentAccess = appViewModel.recentMediaAccess,
+
                         editorSession = appViewModel.photoEditorSession?.takeIf { it.profileId == profile.id && it.chatId == chat.id },
                         openEditor = { attachmentId, imageIndex -> appViewModel.openPhotoEditor(profile.id, chat.id, attachmentId, imageIndex) },
                         editorEvent = appViewModel::photoEditorAction,
-                        replacePhotos = { expected, quality, prepared -> appViewModel.replaceDraftPhotos(profile.id, chat.id, expected, quality, prepared) },
+
                         transfer = { messageId, attachmentId, action, revision -> appViewModel.attachmentTransferAction(profile.id, chat.id, messageId, attachmentId, action, revision) },
                     )) {
                 dev.ipf.whitenoise.ui.conversation.AttachmentReaderScope(profile, chat,

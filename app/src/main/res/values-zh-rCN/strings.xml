@@ -57,7 +57,6 @@
     <string name="turn_flashlight_off">关上手电筒</string>
     <string name="signing_in">签名于…</string>
     <string name="sign_in_with_amber">使用 Amber 登录</string>
-    <string name="access_signing">签名</string>
     <string name="access_amber_signed_in">已通过 Amber 登录</string>
     <string name="access_amber_owns_key">Amber持有此配置的私人密钥 。 在安珀管理备份.</string>
     <string name="private_key_public_error">这是公用钥匙 输入要签名的私钥 。</string>
@@ -222,7 +221,6 @@
     <string name="decline_group_detail">这个组邀请及其信件将从Chats中删除.</string>
     <string name="not_delivered_retry">未交付, 需要重试</string>
     <string name="original_message_unavailable">未提供原始信件</string>
-    <string name="reply_from">答复来自%1$s</string>
     <string name="you">你</string>
     <string name="check_chat_relays">检查聊天中继器</string>
     <string name="chat_relays_missing_detail">此聊天没有聊天消息转发 。 从 Chat Info 中添加一个来发送消息 。</string>
@@ -275,7 +273,6 @@
     <string name="cancel_media_changes">取消媒体更改</string>
     <string name="media_item_position">%1$d页:1%2$d</string>
     <string name="reading_aloud_progress">大声念%1$d%%</string>
-    <string name="open_attachment">打开%1$s</string>
     <string name="play">播放</string>
     <string name="pause">暂停</string>
     <string name="show_transcript">显示记录</string>
@@ -283,7 +280,6 @@
     <string name="copy_transcript">复制语录</string>
     <string name="read_aloud">大声读取</string>
     <string name="stop_reading">停止阅读</string>
-    <string name="media_viewer">媒体查看器</string>
     <string name="video_playback_position">播放位置</string>
     <string name="video_playback_speed">回放速度</string>
     <string name="show_message_actions">显示信件动作</string>
@@ -696,13 +692,6 @@
     <string name="batch_delete_failed_remote">无法删除每个人:%1$d.</string>
     <string name="batch_delete_failed_local">无法从此设备中移除 :%1$d.</string>
     <string name="batch_automatic_retry">正在自动重试…</string>
-    <string name="device_contact">设备联系人</string>
-    <string name="contact_choose_fields">选择要共享的细节 。</string>
-    <string name="recent_media">近期媒体</string>
-    <string name="recent_media_none">未选择最近媒体 。</string>
-    <string name="recent_media_selected">只有选定的媒体可供使用。</string>
-    <string name="recent_media_full">选择要添加到此聊天的媒体 。</string>
-    <string name="recent_media_unavailable">最近没有媒体。 您仍然可以选择照片和视频 。</string>
     <string name="photo_quality">照片质量</string>
     <string name="photo_quality_low">低</string>
     <string name="photo_quality_standard">标准</string>
@@ -736,10 +725,6 @@
     <string name="attachment_add">添加</string>
     <string name="attachment_retry">重试</string>
     <string name="attachment_contact">联系人</string>
-    <string name="recent_add_marmot">添加marmot图片</string>
-    <string name="recent_add_fox">添加狐狸照片</string>
-    <string name="recent_add_badger">添加错误照片</string>
-    <string name="recent_add_sloth">添加槽照片</string>
     <string name="photo_editor_title">编辑照片</string>
     <string name="photo_editor_crop">作物</string>
     <string name="photo_editor_draw">绘制</string>
@@ -1394,8 +1379,6 @@
     <string name="app_update_available_title">有可用更新</string>
     <string name="app_update_important_title">有重要更新</string>
     <string name="app_update_available_detail">Zapstore 上已提供 %1$s 版本。</string>
-    <string name="app_update_now">立即更新</string>
-    <string name="app_update_dismiss">调离更新</string>
     <string name="app_update_resolving_title">正在检查版本</string>
     <string name="app_update_resolving_detail">正在检查签名Zapstore发布此设备的细节…</string>
     <string name="app_update_state_resolving">正在检查版本</string>
@@ -1562,7 +1545,6 @@
     <string name="developer_history_loading_scenarios">历史加载方案</string>
     <string name="developer_message_edit_outcomes">消息编辑结果</string>
     <string name="developer_message_deletion_outcomes">信件删除结果</string>
-    <string name="developer_recent_media_access">最近媒体访问</string>
     <string name="developer_attachment_transfer_outcomes">附件转移结果</string>
     <string name="developer_photo_editor_outcomes">图片编辑器结果</string>
     <string name="developer_location_sharing_outcomes">地点共享结果</string>

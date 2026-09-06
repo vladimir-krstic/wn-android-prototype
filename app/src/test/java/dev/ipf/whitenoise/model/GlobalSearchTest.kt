@@ -22,6 +22,17 @@ class GlobalSearchTest {
         assertEquals("Ally", results.messages.first().sender)
         assertEquals(listOf("title"), GlobalSearch.results(profile(title.copy(title = "Café plans")), "CAFE", GlobalSearchFilters()).chats.map { it.id })
     }
+    @Test fun resultsSortByTimestampThenChatAndMessageIdentityWithoutCrossChatIdCollisions() {
+        val profile = profile(
+            chat("z", message("same", day = "Yesterday"), message("new", minute = 601)),
+            chat("a", message("z"), message("same")),
+        )
+        val results = GlobalSearch.results(profile, "trailhead", GlobalSearchFilters()).messages
+        assertEquals(listOf("z/new", "a/same", "a/z", "z/same"), results.map { "${it.chatId}/${it.message.id}" })
+        val today = GlobalSearch.results(profile, "trailhead", GlobalSearchFilters(date = GlobalSearchDate.Today)).messages
+        assertEquals(results.dropLast(1), today)
+    }
+
     @Test fun excludesDeletedSystemPrivateNotesAuthorNamesAndUnsentDrafts() {
         val chat = chat("a", message("deleted").copy(deletionState = MessageDeletionState.DeletedByOther), message("safe", "quiet"))
             .copy(draftText = "trailhead", timeline = listOf(ChatTimelineEntry.Event("event", "trailhead"), ChatTimelineEntry.Notice("notice", "trailhead")) +

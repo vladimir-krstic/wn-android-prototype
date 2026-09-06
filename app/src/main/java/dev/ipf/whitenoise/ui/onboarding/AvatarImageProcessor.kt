@@ -63,40 +63,40 @@ object AvatarImageProcessor {
             )
         } ?: return@withContext null
 
-        coroutineContext.ensureActive()
-        val oriented = orientBitmap(
-            bitmap = decoded,
-            orientation = contentResolver.openInputStream(uri)?.use { input ->
-                ExifInterface(input).getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL,
-                )
-            } ?: ExifInterface.ORIENTATION_NORMAL,
-        )
-        val targetSize = targetSize(oriented.width, oriented.height, maximumDimension)
-        val prepared = if (
-            targetSize.width == oriented.width && targetSize.height == oriented.height
-        ) {
-            oriented
-        } else {
-            oriented.scale(
-                targetSize.width,
-                targetSize.height,
-                true,
+        var oriented = decoded
+        var prepared = decoded
+        try {
+            coroutineContext.ensureActive()
+            oriented = orientBitmap(
+                bitmap = decoded,
+                orientation = contentResolver.openInputStream(uri)?.use { input ->
+                    ExifInterface(input).getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_NORMAL,
+                    )
+                } ?: ExifInterface.ORIENTATION_NORMAL,
             )
-        }
-
-        ByteArrayOutputStream().use { output ->
-            val format = if (preservePng && (bounds.outMimeType == "image/png" || prepared.hasAlpha())) {
-                Bitmap.CompressFormat.PNG
+            val targetSize = targetSize(oriented.width, oriented.height, maximumDimension)
+            prepared = if (targetSize.width == oriented.width && targetSize.height == oriented.height) {
+                oriented
             } else {
-                Bitmap.CompressFormat.JPEG
+                oriented.scale(targetSize.width, targetSize.height, true)
             }
-            val succeeded = prepared.compress(format, jpegQuality, output)
-            if (prepared !== oriented) prepared.recycle()
+
+            coroutineContext.ensureActive()
+            ByteArrayOutputStream().use { output ->
+                val format = if (preservePng && (bounds.outMimeType == "image/png" || prepared.hasAlpha())) {
+                    Bitmap.CompressFormat.PNG
+                } else {
+                    Bitmap.CompressFormat.JPEG
+                }
+                if (prepared.compress(format, jpegQuality, output)) output.toByteArray() else null
+            }
+        } finally {
+            // Decoding, EXIF, scaling, compression, and cancellation share the same cleanup path.
+            if (prepared !== oriented && prepared !== decoded) prepared.recycle()
             if (oriented !== decoded) oriented.recycle()
             decoded.recycle()
-            if (succeeded) output.toByteArray() else null
         }
     }
 

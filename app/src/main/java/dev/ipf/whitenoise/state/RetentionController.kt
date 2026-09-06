@@ -103,15 +103,17 @@ class RetentionController(
     fun dismiss(owner: GroupOwner, id: Long) {
         if (owner.profileId == activeId() && work[owner]?.let { it.id == id && !it.running } == true) work = work - owner
     }
-    fun hasDeadlines(): Boolean = profiles().filter { signedIn(it.id) }.any { p -> p.chats.any { c ->
-        c.timeline.filterIsInstance<ChatTimelineEntry.Message>().any { MessageRetentionPolicy.deadline(it.message) != null }
-    } }
+    fun hasDeadlines(): Boolean = profiles().any { profile ->
+        signedIn(profile.id) && profile.chats.any { chat ->
+            chat.timeline.any { it is ChatTimelineEntry.Message && MessageRetentionPolicy.deadline(it.message) != null }
+        }
+    }
     fun tick(expectedNow: Long) { if (expectedNow == nowMillis) advanceClock(1_000) }
     fun advanceExampleClock(milliseconds: Long) { if (developer() && milliseconds in 1..86_400_000L) advanceClock(milliseconds) }
     private fun advanceClock(milliseconds: Long) {
         nowMillis = if (nowMillis > Long.MAX_VALUE - milliseconds) Long.MAX_VALUE else nowMillis + milliseconds
         profiles().filter { signedIn(it.id) }.forEach { p -> p.chats.forEach { c ->
-            val expired = c.timeline.filterIsInstance<ChatTimelineEntry.Message>().filter { MessageRetentionPolicy.expired(it.message, nowMillis) }.mapTo(linkedSetOf()) { it.id }
+            val expired = c.timeline.asSequence().filterIsInstance<ChatTimelineEntry.Message>().filter { MessageRetentionPolicy.expired(it.message, nowMillis) }.mapTo(linkedSetOf()) { it.id }
             if (expired.isNotEmpty()) removeExpired(GroupOwner(p.id, c.id), expired)
         } }
         onClockAdvanced(nowMillis)

@@ -29,26 +29,6 @@ import java.nio.ByteBuffer
 class AttachmentAcquisitionTest {
     @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
-    @Test fun contactPreviewOmitsUncheckedPhoneAndNeverAddsOnCancel() {
-        var result: SharedDeviceContact? = null; var dismissed = false
-        rule.setContent { WhiteNoiseTheme { DeviceContactPreview(SharedDeviceContact("Ada", "123", "ada@example.com"), { dismissed = true }, { result = it }) } }
-        rule.onNodeWithText("123").performClick(); rule.onNodeWithTag("contact.preview.add").performClick()
-        rule.runOnIdle { assertNull(result!!.phone); assertEquals("ada@example.com", result!!.email); result = null }
-        rule.onNodeWithText("Cancel").performClick(); rule.runOnIdle { assertTrue(dismissed); assertNull(result) }
-    }
-    @Test fun contactCannotQueueAnEmptyCard() {
-        rule.setContent { WhiteNoiseTheme { DeviceContactPreview(SharedDeviceContact("Ada"), {}, {}) } }
-        rule.onNodeWithText("Ada").performClick(); rule.onNodeWithTag("contact.preview.add").assertIsNotEnabled()
-    }
-    @Test fun recentAccessChangesVisibleItemsAndKeepsGalleryAvailable() {
-        var access by mutableStateOf(RecentMediaAccess.None); var gallery = 0; var selected: ProfileAvatar? = null
-        rule.setContent { WhiteNoiseTheme { RecentMediaSheet(access, {}, { gallery++ }, { selected = it }) } }
-        rule.onNodeWithText("No recent media selected.").assertExists(); rule.onNodeWithTag("recent.media.gallery").performClick()
-        rule.runOnIdle { access = RecentMediaAccess.SelectedOnly; assertEquals(1, gallery) }
-        rule.onNodeWithTag("recent.media.Fox").assertDoesNotExist(); rule.onNodeWithTag("recent.media.Marmot").performClick()
-        rule.runOnIdle { assertEquals(ProfileAvatar.Asset(AvatarAsset.Marmot), selected); access = RecentMediaAccess.Unavailable }
-        rule.onNodeWithTag("recent.media.Marmot").assertDoesNotExist(); rule.onNodeWithTag("recent.media.gallery").assertIsEnabled()
-    }
     @Test fun qualityPickerReportsChoiceAndCancellationDoesNotChangeIt() {
         var chosen = PhotoQuality.High
         rule.setContent { WhiteNoiseTheme { PhotoQualityDialog(PhotoQuality.High, {}, { chosen = it }) } }

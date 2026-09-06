@@ -57,7 +57,6 @@
     <string name="turn_flashlight_off">El fenerini kapat</string>
     <string name="signing_in">Oturum Açılıyor…</string>
     <string name="sign_in_with_amber">Amber ile giriş yap</string>
-    <string name="access_signing">İmzalama</string>
     <string name="access_amber_signed_in">Amber ile giriş yapıldı</string>
     <string name="access_amber_owns_key">Amber bu profilin Özel Anahtarını tutar. Yedeklemeleri Amber\'de yönetin.</string>
     <string name="private_key_public_error">Bu bir Genel Anahtardır. Oturum açmak için Özel Anahtarınızı girin.</string>
@@ -224,7 +223,6 @@
     <string name="decline_group_detail">Bu grup davetiyesi ve mesajları Sohbetlerden kaldırılacak.</string>
     <string name="not_delivered_retry">Teslim edilmedi, yeniden denemek için dokunun</string>
     <string name="original_message_unavailable">Orijinal mesaj mevcut değil</string>
-    <string name="reply_from">%1$s\'den yanıt</string>
     <string name="you">Sen</string>
     <string name="check_chat_relays">Sohbet Aktarmalarını Kontrol Edin</string>
     <string name="chat_relays_missing_detail">Bu sohbette Sohbet Mesajı aktarımı yok. Mesaj göndermek için Sohbet Bilgilerinden bir tane ekleyin.</string>
@@ -280,7 +278,6 @@
     <string name="cancel_media_changes">Medya Değişikliklerini İptal Et</string>
     <string name="media_item_position">%1$d veya %2$d</string>
     <string name="reading_aloud_progress">Yüksek sesle okuma, %1$d%%</string>
-    <string name="open_attachment">%1$s\'yi açın</string>
     <string name="play">Oynat</string>
     <string name="pause">Duraklat</string>
     <string name="show_transcript">Transkripti Göster</string>
@@ -288,7 +285,6 @@
     <string name="copy_transcript">Transkripti Kopyala</string>
     <string name="read_aloud">Yüksek Sesle Oku</string>
     <string name="stop_reading">Okumayı Durdur</string>
-    <string name="media_viewer">Medya Görüntüleyici</string>
     <string name="video_playback_position">Oynatma Konumu</string>
     <string name="video_playback_speed">Oynatma Hızı</string>
     <string name="show_message_actions">Mesaj Eylemlerini Göster</string>
@@ -719,13 +715,6 @@
     <string name="batch_delete_failed_remote">Herkes için silinemedi: %1$d.</string>
     <string name="batch_delete_failed_local">Bu cihazdan kaldırılamadı: %1$d.</string>
     <string name="batch_automatic_retry">Otomatik olarak yeniden deneniyor…</string>
-    <string name="device_contact">Cihaz kontağı</string>
-    <string name="contact_choose_fields">Paylaşılacak ayrıntıları seçin.</string>
-    <string name="recent_media">Son medya</string>
-    <string name="recent_media_none">Hiçbir yeni medya seçilmedi.</string>
-    <string name="recent_media_selected">Yalnızca seçilen ortam kullanılabilir.</string>
-    <string name="recent_media_full">Bu sohbete eklenecek medyayı seçin.</string>
-    <string name="recent_media_unavailable">Güncel medya kullanılamıyor. Fotoğrafları ve videoları hâlâ seçebilirsiniz.</string>
     <string name="photo_quality">Fotoğraf kalitesi</string>
     <string name="photo_quality_low">Düşük</string>
     <string name="photo_quality_standard">Standart</string>
@@ -759,10 +748,6 @@
     <string name="attachment_add">Ekle</string>
     <string name="attachment_retry">Yeniden dene</string>
     <string name="attachment_contact">Kişi</string>
-    <string name="recent_add_marmot">marmot fotoğrafı ekle</string>
-    <string name="recent_add_fox">Tilki fotoğrafı ekle</string>
-    <string name="recent_add_badger">Porsuk fotoğrafı ekle</string>
-    <string name="recent_add_sloth">Tembel hayvan fotoğrafı ekle</string>
     <string name="photo_editor_title">Fotoğrafı düzenle</string>
     <string name="photo_editor_crop">Kırpma</string>
     <string name="photo_editor_draw">Beraberlik</string>
@@ -1431,8 +1416,6 @@
     <string name="app_update_available_title">Güncelleme mevcut</string>
     <string name="app_update_important_title">Önemli güncelleme mevcut</string>
     <string name="app_update_available_detail">%1$s sürümü Zapstore\'da mevcut.</string>
-    <string name="app_update_now">Şimdi güncelle</string>
-    <string name="app_update_dismiss">Güncellemeyi reddet</string>
     <string name="app_update_resolving_title">Sürüm kontrol ediliyor</string>
     <string name="app_update_resolving_detail">Bu cihaz için imzalı Zapstore sürüm ayrıntıları kontrol ediliyor…</string>
     <string name="app_update_state_resolving">Sürüm kontrol ediliyor</string>
@@ -1599,7 +1582,6 @@
     <string name="developer_history_loading_scenarios">Geçmiş yükleme senaryoları</string>
     <string name="developer_message_edit_outcomes">Mesaj düzenleme sonuçları</string>
     <string name="developer_message_deletion_outcomes">Mesaj silme sonuçları</string>
-    <string name="developer_recent_media_access">Son medya erişimi</string>
     <string name="developer_attachment_transfer_outcomes">Ek aktarım sonuçları</string>
     <string name="developer_photo_editor_outcomes">Fotoğraf düzenleyici sonuçları</string>
     <string name="developer_location_sharing_outcomes">Konum paylaşımı sonuçları</string>

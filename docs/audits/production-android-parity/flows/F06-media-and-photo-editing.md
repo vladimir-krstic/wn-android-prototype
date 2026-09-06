@@ -1,5 +1,9 @@
 # F06 — Media acquisition, editing and reading
 
+Historical production-parity specification. Later 2026-09-05 user-approved
+acquisition and presentation changes are recorded in [Attachment actions](../../../screens/composer-attachment-actions.md); those current
+contracts supersede the corresponding original requirements below.
+
 ## Purpose and current composition
 
 Extend composer attachments, rich message bodies, viewer and Shared Content. External pickers remain system-owned. Draft identity survives edit/preview/cancel, and bytes/URI failures never become a sent success.

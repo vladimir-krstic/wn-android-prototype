@@ -1,7 +1,8 @@
 # Documentation instructions
 
-- Keep active Android product decisions in this `docs/` tree. The
-  `reference/` tree is evidence, not a place to edit current requirements.
+- Keep active Android product decisions in this `docs/` tree. Pinned
+  upstream sources in `references/ios-prototype.md` and `port/source-map.md` are
+  read-only evidence, not a place to edit current requirements.
 - Update `decisions.md` only for durable choices that affect later work. Do not
   log every visual experiment.
 - Preserve exact approved product copy in the selected screen brief. Keep

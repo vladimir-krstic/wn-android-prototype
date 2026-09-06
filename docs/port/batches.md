@@ -1,12 +1,11 @@
 # Android port batches
 
-This is the execution order for the persistent full-port goal. Each batch must
-leave the application buildable, keep prior behavior intact, and update the
-parity ledger with concrete evidence.
-
-Visual acceptance is intentionally separate. During these batches, implement
-complete Android-native behavior and static quality; later, inspect and polish
-one screen or flow at a time with the user.
+Historical implementation record for the completed original iOS port (batches
+0–9). Commands, source pins, permission descriptions, and test totals below
+record their batch-time context. They are not an active goal or current device
+authorization. Current behavior and limits live in [the handoff](../handoff.md),
+[screen briefs](../screens/README.md), and [parity ledger](feature-inventory.md).
+Production Android extensions use [B01–B32](../audits/production-android-parity/implementation-plan.md).
 
 ## Working cadence
 

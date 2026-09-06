@@ -8,7 +8,11 @@ import androidx.core.graphics.createBitmap
 import androidx.exifinterface.media.ExifInterface
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import dev.ipf.whitenoise.ui.conversation.ConversationImageProcessor
+import dev.ipf.whitenoise.ui.conversation.DraftPhotoProcessor
+import dev.ipf.whitenoise.model.MessageAttachment
+import dev.ipf.whitenoise.model.MessageAttachmentKind
+import dev.ipf.whitenoise.model.PhotoQuality
+import dev.ipf.whitenoise.model.ProfileAvatar
 import dev.ipf.whitenoise.ui.onboarding.AvatarImageProcessor
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -32,8 +36,7 @@ class ConversationImageImportTest {
     @Test
     fun screenshotRetainsFullResolutionAndExactPixelsWhileAvatarsStaySmall() = runBlocking {
         val source = imageFile(1080, 2400, Bitmap.CompressFormat.PNG)
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", source)
-        val media = checkNotNull(ConversationImageProcessor.prepare(context.contentResolver, uri))
+        val media = checkNotNull(prepareMedia(source))
         val bitmap = checkNotNull(BitmapFactory.decodeByteArray(media, 0, media.size))
         try {
             assertEquals(1080, bitmap.width)
@@ -43,7 +46,7 @@ class ConversationImageImportTest {
         } finally {
             bitmap.recycle()
         }
-        val avatar = checkNotNull(AvatarImageProcessor.prepare(context.contentResolver, uri))
+        val avatar = checkNotNull(AvatarImageProcessor.prepare(context.contentResolver, FileProvider.getUriForFile(context, "${context.packageName}.files", source)))
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(avatar, 0, avatar.size, bounds)
         assertEquals(512, bounds.outHeight)
@@ -56,8 +59,7 @@ class ConversationImageImportTest {
             setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
             saveAttributes()
         }
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", source)
-        val media = checkNotNull(ConversationImageProcessor.prepare(context.contentResolver, uri))
+        val media = checkNotNull(prepareMedia(source))
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(media, 0, media.size, bounds)
         assertEquals(512, bounds.outWidth)
@@ -67,8 +69,17 @@ class ConversationImageImportTest {
     @Test
     fun unreadableSelectionReturnsTheExistingImportFailure() = runBlocking {
         val source = temporaryFiles.newFile("broken.png").apply { writeText("not an image") }
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", source)
-        assertNull(ConversationImageProcessor.prepare(context.contentResolver, uri))
+        assertNull(prepareMedia(source))
+    }
+
+    /** Exercise the same quality-aware pipeline used by the composer. */
+    private suspend fun prepareMedia(source: File): ByteArray? {
+        val attachment = MessageAttachment(
+            "selected", MessageAttachmentKind.Photo, "Photo",
+            images = listOf(ProfileAvatar.DeviceImage(source.readBytes())),
+        )
+        val prepared = DraftPhotoProcessor.prepare(context, attachment, PhotoQuality.High)
+        return (prepared?.images?.singleOrNull() as? ProfileAvatar.DeviceImage)?.bytes
     }
 
     private fun imageFile(width: Int, height: Int, format: Bitmap.CompressFormat): File {

@@ -1,38 +1,22 @@
 package dev.ipf.whitenoise.ui.conversation
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.ContactsContract
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectableGroup
-import dev.ipf.whitenoise.ui.components.WhiteNoiseSheetHeader
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
-import dev.ipf.whitenoise.ui.components.WhiteNoiseModalBottomSheet as ModalBottomSheet
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
-import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.*
 import kotlinx.coroutines.delay
@@ -41,11 +25,9 @@ internal data class AttachmentEnvironment(
     val locationSession: LocationSession? = null,
     val openLocation: () -> Boolean = { false },
     val locationEvent: (Long, LocationEvent) -> String? = { _, _ -> null },
-    val recentAccess: RecentMediaAccess = RecentMediaAccess.Full,
     val editorSession: PhotoEditorSession? = null,
     val openEditor: (String, Int) -> Boolean = { _, _ -> false },
     val editorEvent: (Long, PhotoEditorEvent) -> Boolean = { _, _ -> false },
-    val replacePhotos: (List<MessageAttachment>, PhotoQuality, List<MessageAttachment>) -> Boolean = { _, _, _ -> false },
     val transfer: (String, String, String, Long) -> Unit = { _, _, _, _ -> },
 )
 internal val LocalAttachmentEnvironment = staticCompositionLocalOf { AttachmentEnvironment() }
@@ -68,74 +50,6 @@ internal fun AttachmentTransferHost(chat: Chat) {
                     }
                 }
             }
-        }
-    }
-}
-
-internal class PickDeviceContactPhone : ActivityResultContract<Unit, Uri?>() {
-    override fun createIntent(context: Context, input: Unit) = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
-    override fun parseResult(resultCode: Int, intent: Intent?) = intent?.data?.takeIf { resultCode == Activity.RESULT_OK && it.scheme == "content" }
-}
-
-/** Only the returned phone row is covered by the picker's grant. No email-table query. */
-internal fun readDeviceContact(context: Context, uri: Uri): SharedDeviceContact? = runCatching {
-    context.contentResolver.query(uri, arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-        ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, null)?.use { cursor ->
-        if (!cursor.moveToFirst()) null else SharedDeviceContact(
-            name = cursor.getString(0)?.trim()?.takeIf(String::isNotEmpty),
-            phone = cursor.getString(1)?.trim()?.takeIf(String::isNotEmpty),
-        ).takeIf { it.fields.isNotEmpty() }
-    }
-}.getOrNull()
-
-@Composable
-internal fun DeviceContactPreview(contact: SharedDeviceContact, onDismiss: () -> Unit, onAdd: (SharedDeviceContact) -> Unit) {
-    var name by rememberSaveable(contact) { mutableStateOf(contact.name != null) }
-    var phone by rememberSaveable(contact) { mutableStateOf(contact.phone != null) }
-    var email by rememberSaveable(contact) { mutableStateOf(contact.email != null) }
-    val selected = contact.selected(name, phone, email)
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.device_contact)) },
-        text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-            Text(stringResource(R.string.contact_choose_fields))
-            listOf(Triple(contact.name, name, { v: Boolean -> name = v }), Triple(contact.phone, phone, { v: Boolean -> phone = v }), Triple(contact.email, email, { v: Boolean -> email = v }))
-                .forEach { (value, checked, change) -> if (value != null)
-                    dev.ipf.whitenoise.ui.components.WhiteNoiseDialogCheckRow(value, checked, change)
-                }
-        } }, confirmButton = { TextButton({ onAdd(selected) }, enabled = selected.fields.isNotEmpty(), modifier = Modifier.testTag("contact.preview.add")) { Text(stringResource(R.string.attachment_add)) } },
-        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } })
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun RecentMediaSheet(access: RecentMediaAccess, onDismiss: () -> Unit, onGallery: () -> Unit, onAdd: (ProfileAvatar) -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        WhiteNoiseSheetHeader(stringResource(R.string.recent_media), onClose = onDismiss)
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(when (access) {
-                RecentMediaAccess.None -> R.string.recent_media_none
-                RecentMediaAccess.SelectedOnly -> R.string.recent_media_selected
-                RecentMediaAccess.Full -> R.string.recent_media_full
-                RecentMediaAccess.Unavailable -> R.string.recent_media_unavailable
-            }))
-            val assets = when (access) {
-                RecentMediaAccess.Full -> listOf(AvatarAsset.Marmot, AvatarAsset.Fox, AvatarAsset.Badger, AvatarAsset.Sloth)
-                RecentMediaAccess.SelectedOnly -> listOf(AvatarAsset.Marmot)
-                else -> emptyList()
-            }
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(assets) { asset ->
-                val image = ProfileAvatar.Asset(asset)
-                val description = stringResource(when (asset) {
-                    AvatarAsset.Marmot -> R.string.recent_add_marmot
-                    AvatarAsset.Fox -> R.string.recent_add_fox
-                    AvatarAsset.Badger -> R.string.recent_add_badger
-                    else -> R.string.recent_add_sloth
-                })
-                FilledTonalButton({ onAdd(image) }, modifier = Modifier.testTag("recent.media.${asset.name}").semantics { contentDescription = description }, contentPadding = PaddingValues(8.dp)) {
-                    ComposerImage(image, Modifier.size(80.dp))
-                    Text(stringResource(R.string.attachment_add), Modifier.padding(start = 8.dp))
-                }
-            } }
-            FilledTonalButton(onGallery, modifier = Modifier.fillMaxWidth().testTag("recent.media.gallery")) { Text(stringResource(R.string.photos_and_videos)) }
         }
     }
 }

@@ -45,9 +45,9 @@ internal fun ConversationQuoteBlock(
     contentColor: Color,
     secondaryColor: Color,
     accentColor: Color,
-    shape: Shape = MaterialTheme.shapes.medium,
-    modifier: Modifier = Modifier,
     testTagPrefix: String,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.medium,
     cancelDescription: String? = null,
     onCancel: (() -> Unit)? = null,
 ) {

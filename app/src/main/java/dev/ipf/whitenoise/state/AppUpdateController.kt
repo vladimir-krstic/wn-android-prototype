@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 import dev.ipf.whitenoise.model.AppSelfUpdateScenario
 import dev.ipf.whitenoise.model.AppUpdateCheckScenario
 import dev.ipf.whitenoise.model.AppUpdateDistribution
-import dev.ipf.whitenoise.model.AppUpdateState
 import dev.ipf.whitenoise.model.AppUpdates
 
 class AppUpdateController(installedVersion: String) {

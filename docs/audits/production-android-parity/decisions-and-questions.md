@@ -1,6 +1,8 @@
 # Decisions and questions
 
-These questions affect only the linked capability slices. The recommendation is first. Independent ready batches may proceed while they are open.
+These decisions apply only to their linked capabilities. B01–B32 implementation
+is complete; retained restrictions describe future capability expansion, not an
+unfinished batch. Later approved screen decisions supersede historical outcomes.
 
 <a id="q01"></a>
 
@@ -60,6 +62,14 @@ default nor the scope of real external operations.
 - **Recommendation:** First implement deterministic app-owned states and launch contracts where already approved. Keep networking/services/installers off. Approve each real permission or service only with its bounded implementation batch; prefer permissionless system surfaces.
 - **Blocks:** device-executed capability, not the audit specs or deterministic UI/state implementations. B11 implements C049 with bundled access states and a standard Photo Picker; real library permission/MediaStore access remains outside the prototype scope. B14 implements C058 through coordinate entry, one-shot local outcomes and explicit permissionless external Maps handoff; GPS, map tiles/geocoding, new permissions and device execution remain outside scope. B16 implements C066 as a developer-only lifecycle/notification-controls example; actual native speech stops in the background. B17 implements C070 with exact selected-service and permission/failure outcomes, disclosure and retained review; it starts no microphone, recognizer or provider Activity. Real speech services, notification delivery and hardware validation remain outside scope. B32 implements C121 as app-wide deterministic checking, resolution, download, verification, ready, permission and installer-handoff states; it performs no release lookup, network/file/digest, package-install permission, notification or installer operation.
 
+- **2026-09-05 supersession:** Global Search now launches provider-owned voice
+  recognition. Composer dictation uses SpeechRecognizer and just-in-time
+  RECORD_AUDIO permission, streams into the draft, and pauses on editing or
+  lifecycle exit. This supersedes B17's pre-start disclosure and separate review
+  path. Voice-note encoding and the other unapproved services above remain
+  deterministic. See [dictation](../../screens/dictation-and-voice-recording.md)
+  and [global search](../../screens/global-search.md).
+
 <a id="q07"></a>
 
 ### Q07 — Media save destination
@@ -87,7 +97,7 @@ default nor the scope of real external operations.
   OFL metadata, full family licenses and reproducible API-23-compatible static
   instances are documented in [font assets](../../references/font-assets.md).
   Every existing language remains, and Russian, Turkish, Simplified Chinese and
-  Traditional Chinese each provide all 1,762 translatable resources with
+  Traditional Chinese each provided all 1,762 then-current translatable resources with
   verified format-token and plural parity.
 
 ## Nonblocking evidence uncertainties

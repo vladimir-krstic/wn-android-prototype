@@ -1,6 +1,15 @@
 # Android decisions
 
-This file records only durable decisions that govern later Android work.
+This file records durable decisions in chronological order. Later explicit
+supersessions apply only to their named scope. Current metrics and screen
+contracts are indexed in [ui-metrics.md](ui-metrics.md) and
+[the screen directory](screens/README.md); historical evidence is not a current
+build result or standing task authorization.
+
+Current cross-app changes begin with [shared segmented sections](#2026-09-05--shared-sections-use-native-segmented-rows-and-trailing-helpers).
+For [live composer dictation](#live-composer-dictation--2026-09-05) and
+[native voice search](#2026-09-05--native-voice-search-replaces-timed-fixture-input),
+use the later approval rather than the original deterministic-only acquisition rule.
 
 ## WN-ANDROID-0001 — Clean Android restart
 
@@ -1022,8 +1031,9 @@ is authorized only for the current Settings organization and profile lifecycle
 evidence. Android `ListItem`, selected containers, modal sheet behavior,
 insets, targets, type growth, RTL and dismissal remain native.
 
-Evidence: `ProfileManagementPresentation.kt`, `ProfileSettingsScreens.kt`,
-`ProfileSwitcherSheet.kt`, `ProfileManagementPresentationTest`,
+Historical evidence: the retired Settings profile-management projection,
+`ProfileSettingsScreens.kt` and `ProfileSwitcherSheet.kt` (current projection and
+tests: `ProfileSwitcherPresentation.kt` and `ProfileSwitcherPresentationTest`),
 `SettingsScreenTest`, and the exact Add Profile fixture-set assertions in
 `AppViewModelTest`.
 Sources: [Android settings patterns](https://developer.android.com/design/ui/mobile/guides/patterns/settings),
@@ -3587,7 +3597,7 @@ source jars provide the clipping/expanded-layer evidence.
 - Status: Implemented from user direction; host gate passes, device acceptance pending.
 
 Picked/camera message photos no longer use the avatar's 512 px import policy.
-`ConversationImageProcessor` configures the existing orientation-aware decoder
+At approval, `ConversationImageProcessor` configured the orientation-aware decoder
 for a 4096 px long edge, lossless PNG/alpha, and JPEG quality 95 otherwise.
 Avatar callers retain 512 px/JPEG 88. Encoded image bytes remain in the existing
 in-memory attachment model through sending; no new storage or permission is
@@ -3609,6 +3619,9 @@ execution or current-build visual acceptance is claimed.
 
 Sources: [Android bitmap decoding](https://developer.android.com/topic/performance/graphics/load-bitmap)
 and [Photo Picker](https://developer.android.com/training/data-storage/shared/photo-picker).
+
+The obsolete media-import wrapper was retired during the 2026-09-06 cleanup;
+`DraftPhotoProcessor` now owns the quality-aware composer path.
 
 ## WN-ANDROID-0126 — Read Aloud for authored text in both directions
 

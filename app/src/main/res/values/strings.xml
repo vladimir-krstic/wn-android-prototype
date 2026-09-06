@@ -57,7 +57,6 @@
     <string name="turn_flashlight_off">Turn flashlight off</string>
     <string name="signing_in">Signing In…</string>
     <string name="sign_in_with_amber">Sign in with Amber</string>
-    <string name="access_signing">Signing</string>
     <string name="access_amber_signed_in">Signed in with Amber</string>
     <string name="access_amber_owns_key">Amber holds this profile’s Private Key. Manage backups in Amber.</string>
     <string name="private_key_public_error">This is a Public Key. Enter your Private Key to sign in.</string>
@@ -224,7 +223,6 @@
     <string name="decline_group_detail">This group invitation and its messages will be removed from Chats.</string>
     <string name="not_delivered_retry">Not delivered, tap to retry</string>
     <string name="original_message_unavailable">Original message unavailable</string>
-    <string name="reply_from">Reply from %1$s</string>
     <string name="you">You</string>
     <string name="check_chat_relays">Check Chat Relays</string>
     <string name="chat_relays_missing_detail">This chat has no Chat Message relays. Add one from Chat Info to send messages.</string>
@@ -280,7 +278,6 @@
     <string name="cancel_media_changes">Cancel Media Changes</string>
     <string name="media_item_position">%1$d of %2$d</string>
     <string name="reading_aloud_progress">Reading aloud, %1$d%%</string>
-    <string name="open_attachment">Open %1$s</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
     <string name="show_transcript">Show Transcript</string>
@@ -288,7 +285,6 @@
     <string name="copy_transcript">Copy Transcript</string>
     <string name="read_aloud">Read Aloud</string>
     <string name="stop_reading">Stop Reading</string>
-    <string name="media_viewer">Media Viewer</string>
     <string name="video_playback_position">Playback Position</string>
     <string name="video_playback_speed">Playback Speed</string>
     <string name="show_message_actions">Show Message Actions</string>
@@ -720,13 +716,6 @@
     <string name="batch_delete_failed_remote">Couldn’t delete for everyone: %1$d.</string>
     <string name="batch_delete_failed_local">Couldn’t remove from this device: %1$d.</string>
     <string name="batch_automatic_retry">Retrying automatically…</string>
-    <string name="device_contact">Device contact</string>
-    <string name="contact_choose_fields">Choose the details to share.</string>
-    <string name="recent_media">Recent media</string>
-    <string name="recent_media_none">No recent media selected.</string>
-    <string name="recent_media_selected">Only selected media is available.</string>
-    <string name="recent_media_full">Choose media to add to this chat.</string>
-    <string name="recent_media_unavailable">Recent media is unavailable. You can still choose photos and videos.</string>
     <string name="photo_quality">Photo quality</string>
     <string name="photo_quality_low">Low</string>
     <string name="photo_quality_standard">Standard</string>
@@ -760,10 +749,6 @@
     <string name="attachment_add">Add</string>
     <string name="attachment_retry">Retry</string>
     <string name="attachment_contact">Contact</string>
-    <string name="recent_add_marmot">Add marmot photo</string>
-    <string name="recent_add_fox">Add fox photo</string>
-    <string name="recent_add_badger">Add badger photo</string>
-    <string name="recent_add_sloth">Add sloth photo</string>
     <string name="photo_editor_title">Edit photo</string>
     <string name="photo_editor_crop">Crop</string>
     <string name="photo_editor_draw">Draw</string>
@@ -1432,8 +1417,6 @@
     <string name="app_update_available_title">Update available</string>
     <string name="app_update_important_title">Important update available</string>
     <string name="app_update_available_detail">Version %1$s is available on Zapstore.</string>
-    <string name="app_update_now">Update now</string>
-    <string name="app_update_dismiss">Dismiss update</string>
     <string name="app_update_resolving_title">Checking release</string>
     <string name="app_update_resolving_detail">Checking the signed Zapstore release details for this device…</string>
     <string name="app_update_state_resolving">Checking release</string>
@@ -1604,7 +1587,6 @@
     <string name="developer_history_loading_scenarios">History loading scenarios</string>
     <string name="developer_message_edit_outcomes">Message edit outcomes</string>
     <string name="developer_message_deletion_outcomes">Message deletion outcomes</string>
-    <string name="developer_recent_media_access">Recent media access</string>
     <string name="developer_attachment_transfer_outcomes">Attachment transfer outcomes</string>
     <string name="developer_photo_editor_outcomes">Photo editor outcomes</string>
     <string name="developer_location_sharing_outcomes">Location sharing outcomes</string>

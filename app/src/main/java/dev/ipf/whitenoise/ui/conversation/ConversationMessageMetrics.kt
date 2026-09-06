@@ -4,7 +4,8 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.model.MessageAttachment
 import dev.ipf.whitenoise.model.MessageAttachmentKind
@@ -72,18 +73,19 @@ internal fun timelineSingleMediaSize(
 @Composable
 internal fun rememberTimelineSingleMediaSize(attachment: MessageAttachment?): SingleMediaSize? {
     if (attachment == null) return null
-    val context = LocalContext.current
-    return remember(attachment, context) {
+    val resources = LocalResources.current
+    val configuration = LocalConfiguration.current
+    return remember(attachment, resources, configuration) {
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         when (val image = attachment.images.firstOrNull()) {
             is ProfileAvatar.DeviceImage -> BitmapFactory.decodeByteArray(
                 image.bytes, 0, image.bytes.size, options,
             )
             is ProfileAvatar.Asset -> BitmapFactory.decodeResource(
-                context.resources, image.asset.drawableResource, options,
+                resources, image.asset.drawableResource, options,
             )
             is ProfileAvatar.WebImage -> BitmapFactory.decodeResource(
-                context.resources, image.asset.drawableResource, options,
+                resources, image.asset.drawableResource, options,
             )
             ProfileAvatar.Monogram, null -> Unit
         }

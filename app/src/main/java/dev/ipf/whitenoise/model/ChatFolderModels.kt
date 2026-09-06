@@ -42,17 +42,24 @@ object ChatFolders {
             (!rule.groupsOnly || chat.isGroup) && (rule.includeMuted || chat.muteDuration == null)
     }
 
-    fun rows(chats: List<Chat>, folder: ChatFolder, query: String = ""): List<Chat> = chats.filter {
-        it.id in folder.chatIds || matches(it, folder.rule)
-    }.filter { query.isBlank() || it.title.normalizedSearchText().contains(query.normalizedSearchText()) ||
-        it.displayPreview.normalizedSearchText().contains(query.normalizedSearchText()) }.sortedWith(ChatOrganization.order)
+    fun rows(chats: List<Chat>, folder: ChatFolder, query: String = ""): List<Chat> {
+        val needle = query.normalizedSearchText()
+        return chats.asSequence()
+            .filter { it.id in folder.chatIds || matches(it, folder.rule) }
+            .filter {
+                needle.isEmpty() || it.title.normalizedSearchText().contains(needle) ||
+                    it.displayPreview.normalizedSearchText().contains(needle)
+            }
+            .sortedWith(ChatOrganization.order)
+            .toList()
+    }
 
     fun preview(profile: Profile, draft: ChatFolderDraft) = rows(profile.chats,
         ChatFolder("preview", draft.name, draft.chatIds, draft.description, draft.rule))
 
     fun move(folders: List<ChatFolder>, id: String, delta: Int): List<ChatFolder> {
         val index = folders.indexOfFirst { it.id == id }
-        if (delta !in setOf(-1, 1) || index < 0 || index + delta !in folders.indices) return folders
+        if ((delta != -1 && delta != 1) || index < 0 || index + delta !in folders.indices) return folders
         return folders.toMutableList().apply { add(index + delta, removeAt(index)) }
     }
     fun restore(folders: List<ChatFolder>) = folders + defaults.filter { candidate -> folders.none { it.id == candidate.id } }

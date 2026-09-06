@@ -66,7 +66,6 @@ import dev.ipf.whitenoise.model.NostrEventKind
 import dev.ipf.whitenoise.model.NostrEventReference
 import dev.ipf.whitenoise.model.NostrEventState
 import dev.ipf.whitenoise.model.NostrProfileOccurrence
-import dev.ipf.whitenoise.model.Person
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.shortenedReference
 import dev.ipf.whitenoise.ui.components.AdaptiveContent

@@ -29,7 +29,6 @@ import dev.ipf.whitenoise.model.PhotoEditorTool
 import dev.ipf.whitenoise.model.PhotoStroke
 import dev.ipf.whitenoise.model.PhotoEditLimit
 
-import dev.ipf.whitenoise.model.*
 
 import dev.ipf.whitenoise.model.ChatOrganization
 import dev.ipf.whitenoise.model.MessageEditing
@@ -66,7 +65,6 @@ import dev.ipf.whitenoise.model.ChatRelayPolicy
 import dev.ipf.whitenoise.model.ChatMessage
 import dev.ipf.whitenoise.model.ComposerAvailability
 import dev.ipf.whitenoise.model.GroupMember
-import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.model.GroupRole
 import dev.ipf.whitenoise.model.DisappearingDuration
 import dev.ipf.whitenoise.model.MuteDuration
@@ -97,19 +95,15 @@ import dev.ipf.whitenoise.model.RelayConnectionStatus
 import dev.ipf.whitenoise.model.ConversationDebugPolicy
 import dev.ipf.whitenoise.model.ConversationDebugSnapshot
 import dev.ipf.whitenoise.model.ConversationMediaKey
-import dev.ipf.whitenoise.model.ConversationMediaProjection
 import dev.ipf.whitenoise.model.DiagnosticEvent
-import dev.ipf.whitenoise.model.KeyPackage
 import dev.ipf.whitenoise.model.ProfileExitDestination
 import dev.ipf.whitenoise.model.WipeConfirmationPhrase
 import dev.ipf.whitenoise.model.LinkPreviewDetector
 import dev.ipf.whitenoise.model.VoiceMessageFixture
 import dev.ipf.whitenoise.model.VoiceMessageFormat
 import dev.ipf.whitenoise.model.VoiceDraftSubmission
-import dev.ipf.whitenoise.model.MessageActionPolicy
 import dev.ipf.whitenoise.model.MessageDeletionScope
 import dev.ipf.whitenoise.model.composerAvailability
-import dev.ipf.whitenoise.model.visibleText
 import dev.ipf.whitenoise.navigation.OnboardingOrigin
 import dev.ipf.whitenoise.model.AccessAttempt
 import dev.ipf.whitenoise.model.AccessFailure
@@ -1021,7 +1015,6 @@ class AppViewModel(
         nextPhotoEditorScenario = PhotoEditorScenario.Success
         nextAttachmentAccessScenario = dev.ipf.whitenoise.model.AttachmentAccessScenario.Success
         attachmentAccessScenarioOwner = null
-        recentMediaAccess = dev.ipf.whitenoise.model.RecentMediaAccess.Full
         attachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success
         downloadNetworks = emptyMap()
         heldDownloadProfiles = emptySet()
@@ -1903,14 +1896,9 @@ class AppViewModel(
         return publish(next)
     }
 
-    var recentMediaAccess by mutableStateOf(dev.ipf.whitenoise.model.RecentMediaAccess.Full)
-        private set
     var attachmentTransferScenario by mutableStateOf(dev.ipf.whitenoise.model.AttachmentTransferScenario.Success)
         private set
 
-    fun selectRecentMediaAccess(value: dev.ipf.whitenoise.model.RecentMediaAccess) {
-        if (uiState.activeProfile?.developerTools?.isEnabled == true) recentMediaAccess = value
-    }
 
     fun selectAttachmentTransferScenario(value: dev.ipf.whitenoise.model.AttachmentTransferScenario) {
         if (uiState.activeProfile?.developerTools?.isEnabled != true) return

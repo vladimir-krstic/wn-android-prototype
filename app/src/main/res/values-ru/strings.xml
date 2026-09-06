@@ -57,7 +57,6 @@
     <string name="turn_flashlight_off">Выключить фонарик</string>
     <string name="signing_in">Вход в систему…</string>
     <string name="sign_in_with_amber">Войти через Amber</string>
-    <string name="access_signing">Подписание</string>
     <string name="access_amber_signed_in">Вход выполнен через Amber</string>
     <string name="access_amber_owns_key">Amber содержит закрытый ключ этого профиля. Управляйте резервными копиями в Amber.</string>
     <string name="private_key_public_error">Это открытый ключ. Введите свой закрытый ключ для входа.</string>
@@ -228,7 +227,6 @@
     <string name="decline_group_detail">Это групповое приглашение и его сообщения будут удалены из чатов.</string>
     <string name="not_delivered_retry">Не доставлено. Нажмите, чтобы повторить попытку.</string>
     <string name="original_message_unavailable">Исходное сообщение недоступно</string>
-    <string name="reply_from">Ответ от %1$s</string>
     <string name="you">Вы</string>
     <string name="check_chat_relays">Проверьте реле чата</string>
     <string name="chat_relays_missing_detail">В этом чате нет ретрансляторов сообщений чата. Добавьте один из информации о чате, чтобы отправлять сообщения.</string>
@@ -290,7 +288,6 @@
     <string name="cancel_media_changes">Отменить изменения носителя</string>
     <string name="media_item_position">%1$d из %2$d</string>
     <string name="reading_aloud_progress">Чтение вслух, %1$d%%</string>
-    <string name="open_attachment">Открыть %1$s</string>
     <string name="play">Воспроизвести</string>
     <string name="pause">Пауза</string>
     <string name="show_transcript">Показать стенограмму</string>
@@ -298,7 +295,6 @@
     <string name="copy_transcript">Копировать стенограмму</string>
     <string name="read_aloud">Читать вслух</string>
     <string name="stop_reading">Хватит читать</string>
-    <string name="media_viewer">Медиа-просмотрщик</string>
     <string name="video_playback_position">Позиция воспроизведения</string>
     <string name="video_playback_speed">Скорость воспроизведения</string>
     <string name="show_message_actions">Показать действия с сообщениями</string>
@@ -765,13 +761,6 @@
     <string name="batch_delete_failed_remote">Не удалось удалить для всех: %1$d.</string>
     <string name="batch_delete_failed_local">Не удалось удалить с этого устройства: %1$d.</string>
     <string name="batch_automatic_retry">Автоматическая повторная попытка…</string>
-    <string name="device_contact">Контакт устройства</string>
-    <string name="contact_choose_fields">Выберите детали, которыми хотите поделиться.</string>
-    <string name="recent_media">Последние СМИ</string>
-    <string name="recent_media_none">Последние медиа не выбраны.</string>
-    <string name="recent_media_selected">Доступны только выбранные носители.</string>
-    <string name="recent_media_full">Выберите медиа, чтобы добавить в этот чат.</string>
-    <string name="recent_media_unavailable">Последние медиа недоступны. Вы по-прежнему можете выбирать фото и видео.</string>
     <string name="photo_quality">Качество фотографии</string>
     <string name="photo_quality_low">Низкое</string>
     <string name="photo_quality_standard">Стандартное</string>
@@ -805,10 +794,6 @@
     <string name="attachment_add">Добавить</string>
     <string name="attachment_retry">Повторить</string>
     <string name="attachment_contact">Контакт</string>
-    <string name="recent_add_marmot">Добавить фото marmot</string>
-    <string name="recent_add_fox">Добавить фото лисы</string>
-    <string name="recent_add_badger">Добавить фото барсука</string>
-    <string name="recent_add_sloth">Добавить фото ленивца</string>
     <string name="photo_editor_title">Редактировать фотографию</string>
     <string name="photo_editor_crop">Обрезка</string>
     <string name="photo_editor_draw">Ничья</string>
@@ -1505,8 +1490,6 @@
     <string name="app_update_available_title">Доступно обновление</string>
     <string name="app_update_important_title">Доступно важное обновление</string>
     <string name="app_update_available_detail">Версия %1$s доступна в Zapstore.</string>
-    <string name="app_update_now">Обновить</string>
-    <string name="app_update_dismiss">Закрыть обновление</string>
     <string name="app_update_resolving_title">Проверка версии</string>
     <string name="app_update_resolving_detail">Проверяем подписанную информацию о выпуске Zapstore для этого устройства…</string>
     <string name="app_update_state_resolving">Проверка версии</string>
@@ -1673,7 +1656,6 @@
     <string name="developer_history_loading_scenarios">Сценарии загрузки истории</string>
     <string name="developer_message_edit_outcomes">Результаты редактирования сообщения</string>
     <string name="developer_message_deletion_outcomes">Результаты удаления сообщения</string>
-    <string name="developer_recent_media_access">Недавний доступ к СМИ</string>
     <string name="developer_attachment_transfer_outcomes">Результаты передачи вложений</string>
     <string name="developer_photo_editor_outcomes">Результаты фоторедактора</string>
     <string name="developer_location_sharing_outcomes">Результаты совместного использования местоположения</string>

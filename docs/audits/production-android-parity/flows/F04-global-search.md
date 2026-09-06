@@ -1,5 +1,9 @@
 # F04 — Global message and people search
 
+Historical production-parity specification. Later 2026-09-05 user-approved
+acquisition and presentation changes are recorded in [Global Search](../../../screens/global-search.md); those current
+contracts supersede the corresponding original requirements below.
+
 ## Purpose and current composition
 
 Chats search expands into global results and typed filters. Opening a result preserves query/filter state and targets the exact message. Back clears a modal filter, then closes search.

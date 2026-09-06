@@ -19,6 +19,10 @@ build/
 captures/
 screenshots/
 
+# Python verification output
+__pycache__/
+*.pyc
+
 # Operating-system files
 .DS_Store
 Thumbs.db

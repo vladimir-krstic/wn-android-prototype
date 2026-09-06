@@ -1,8 +1,6 @@
 package dev.ipf.whitenoise.model
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OnboardingValidationTest {
@@ -35,31 +33,5 @@ class OnboardingValidationTest {
         }
         assertEquals(null, PrivateKeyValidator.scannedValue("https://whitenoise.chat.evil.example/$publicKey"))
         assertEquals(null, PrivateKeyValidator.scannedValue("marmot://profile/${LoginPrototypeData.privateKey}"))
-    }
-
-    @Test
-    fun verifiedAddressRequiresEmailShapedValue() {
-        assertTrue(VerifiedNostrAddress.isValid("marmota@whitenoise.example"))
-        assertFalse(VerifiedNostrAddress.isValid("marmota"))
-        assertFalse(VerifiedNostrAddress.isValid("marmota@localhost"))
-        assertFalse(VerifiedNostrAddress.isValid("@whitenoise.example"))
-    }
-
-    @Test
-    fun restoringStoredVerifiedAddressRestoresVerification() {
-        assertTrue(
-            VerifiedNostrAddress.isVerifiedDraft(
-                value = "  marmota@whitenoise.example ",
-                matching = "marmota@whitenoise.example",
-                storedIsVerified = true,
-            ),
-        )
-        assertFalse(
-            VerifiedNostrAddress.isVerifiedDraft(
-                value = "river@example.com",
-                matching = "marmota@whitenoise.example",
-                storedIsVerified = true,
-            ),
-        )
     }
 }

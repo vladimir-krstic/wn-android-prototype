@@ -8,7 +8,6 @@ import dev.ipf.whitenoise.model.AppSelfUpdatePhase
 import dev.ipf.whitenoise.model.AppSelfUpdateScenario
 import dev.ipf.whitenoise.model.AppUpdateCheckScenario
 import dev.ipf.whitenoise.model.AppUpdateDistribution
-import dev.ipf.whitenoise.model.AppUpdates
 import dev.ipf.whitenoise.state.AppUpdateController
 import dev.ipf.whitenoise.state.AppViewModel
 import dev.ipf.whitenoise.navigation.AppRoute

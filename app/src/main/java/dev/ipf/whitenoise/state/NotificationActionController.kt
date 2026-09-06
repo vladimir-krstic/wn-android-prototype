@@ -50,6 +50,9 @@ class NotificationActionController(private val profiles: () -> List<Profile>, pr
         save(w); return w.id
     }
     fun reconcile() {
+        // Deduplication survives a retained sign-out, but wiped profiles must release reply payloads.
+        val retainedProfileIds = profiles().mapTo(hashSetOf()) { it.id }
+        requests.entries.removeAll { it.value.input.card.target.profileId !in retainedProfileIds }
         if (scenarioOwner != null && (scenarioOwner != activeId() || profile(scenarioOwner!!)?.developerTools?.isEnabled != true)) { scenario = NotificationActionScenario.Success; scenarioOwner = null }
         cards = cards.filter { profile(it.target.profileId) != null }
         val w = work ?: return

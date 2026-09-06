@@ -45,6 +45,8 @@ data class GlobalSearchFilters(
 object GlobalSearchClock {
     val today: LocalDate = LocalDate.of(2026, 8, 3)
     val zone: ZoneId = ZoneOffset.UTC
+    private val dateFormat = DateTimeFormatter.ofPattern("MMM d, uuuu", Locale.ENGLISH)
+    private val weekdayFormat = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH)
     fun pickerDay(utcMillis: Long) = Instant.ofEpochMilli(utcMillis).atZone(ZoneOffset.UTC).toLocalDate().toEpochDay()
     fun pickerMillis(day: Long) = LocalDate.ofEpochDay(day).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     fun date(message: ChatMessage): LocalDate {
@@ -53,13 +55,13 @@ object GlobalSearchClock {
         if (label.equals("Yesterday", true)) return today.minusDays(1)
         DayOfWeek.entries.firstOrNull { it.name.equals(label, true) || it.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).equals(label, true) }
             ?.let { return today.with(TemporalAdjusters.previous(it)) }
-        runCatching { LocalDate.parse(label, DateTimeFormatter.ofPattern("MMM d, uuuu", Locale.ENGLISH)) }.getOrNull()?.let { return it }
+        runCatching { LocalDate.parse(label, dateFormat) }.getOrNull()?.let { return it }
         val monthDay = label.substringAfter(", ", label)
         val weekday = label.substringBefore(", ").takeIf { ", " in label }
         for (year in today.year downTo today.year - 7) {
-            val candidate = runCatching { LocalDate.parse("$monthDay, $year", DateTimeFormatter.ofPattern("MMM d, uuuu", Locale.ENGLISH)) }.getOrNull() ?: continue
+            val candidate = runCatching { LocalDate.parse("$monthDay, $year", dateFormat) }.getOrNull() ?: continue
             if (candidate > today) continue
-            if (weekday != null && candidate.format(DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH)) != weekday) continue
+            if (weekday != null && candidate.format(weekdayFormat) != weekday) continue
             return candidate
         }
         return today.minusDays((3L - message.dayOrdinal).coerceAtLeast(0))
@@ -128,21 +130,33 @@ object GlobalSearch {
         val needle = normalize(query)
         if (!filters.valid) return GlobalSearchResults(emptyList(), emptyList())
         if (needle.isEmpty() && !filters.active) return GlobalSearchResults(emptyList(), emptyList())
+        val normalizedNeedle = needle.normalizedSearchText()
         val scoped = profile.chats.filter { filters.chatIds.isEmpty() || it.id in filters.chatIds }
         val chats = if (filters.messageOnly) emptyList() else scoped.filter { needle.isEmpty() ||
-            listOf(it.title, it.displayPreview, if (it.isGroup) it.description else "").any { text -> normalize(text).normalizedSearchText().contains(needle.normalizedSearchText()) }
+            listOf(it.title, it.displayPreview, if (it.isGroup) it.description else "").any { text -> normalize(text).normalizedSearchText().contains(normalizedNeedle) }
         }.sortedWith(ChatOrganization.order)
         val bounds = filters.bounds()
-        val messages = scoped.flatMap { chat -> chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().map { it.message }
-            .filter { !it.isDeleted && (filters.senderIds.isEmpty() || it.authorId in filters.senderIds) &&
-                (bounds == null || GlobalSearchClock.timestamp(it) in bounds) &&
-                (filters.content.isEmpty() || content(it).any { kind -> kind in filters.content }) }
-            .mapNotNull { message ->
-                val text = body(message)
-                if (text.isBlank() || (needle.isNotEmpty() && !text.contains(needle, true))) null
-                else GlobalMessageResult(chat.id, chat.title, message, senderName(profile, message.authorId), snippet(text, needle))
-            }
-        }.sortedWith(compareByDescending<GlobalMessageResult> { GlobalSearchClock.timestamp(it.message) }.thenBy { it.chatId }.thenBy { it.message.id })
+        // Parse each candidate date once. Sorting must not reparse display labels on every comparison.
+        val messages = scoped.flatMap { chat ->
+            chat.timeline.asSequence()
+                .filterIsInstance<ChatTimelineEntry.Message>()
+                .map { it.message }
+                .filter { !it.isDeleted && (filters.senderIds.isEmpty() || it.authorId in filters.senderIds) }
+                .mapNotNull { message ->
+                    val timestamp = if (bounds != null) GlobalSearchClock.timestamp(message) else null
+                    if (bounds != null && timestamp != null && timestamp !in bounds) return@mapNotNull null
+                    if (filters.content.isNotEmpty() && content(message).none { it in filters.content }) return@mapNotNull null
+                    val text = body(message)
+                    if (text.isBlank() || (needle.isNotEmpty() && !text.contains(needle, true))) return@mapNotNull null
+                    val result = GlobalMessageResult(
+                        chat.id, chat.title, message, senderName(profile, message.authorId), snippet(text, needle),
+                    )
+                    (timestamp ?: GlobalSearchClock.timestamp(message)) to result
+                }
+                .toList()
+        }.sortedWith(compareByDescending<Pair<Long, GlobalMessageResult>> { it.first }
+            .thenBy { it.second.chatId }.thenBy { it.second.message.id })
+            .map { it.second }
         return GlobalSearchResults(chats, messages)
     }
     fun voiceResult(request: GlobalVoiceRequest, owner: String?, currentQuery: String, isSearching: Boolean, recognizedText: String?): String? =

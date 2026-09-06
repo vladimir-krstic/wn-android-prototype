@@ -55,6 +55,9 @@ cleanup, never repeats the mutation. Separate replies with equal text remain
 separate user actions. Reactions set the chosen value without toggle-off on replay.
 Mark-read uses the exact boundary. Dismissal is generation/owner aware, so a newer
 card or sibling arrival survives stale cleanup. All proof and work stay in memory.
+Request deduplication survives sign-out when the profile is retained. Wiping or
+removing the profile releases its cached reply payloads and request identities;
+a later profile session can reuse an external request key without stale collision.
 
 ## Presentation, copy and Android composition
 
@@ -130,6 +133,11 @@ Validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAn
 `NotificationRouteStateTest` adds 34 unit cases covering ownership, replay,
 cleanup, exact boundaries, lock/retry accounting, malformed/changed inputs,
 invitation probes and role-change entry. No device/emulator/visual execution.
+
+2026-09-06 hardening: `NotificationActionStateTest` adds paired regressions for
+wiped-profile payload/identity cleanup and retained-profile replay protection.
+Both pass on the host. Repository-wide verification is recorded in the
+[engineering audit](../codebase-hardening-audit.md#2026-09-06-repository-cleanup).
 
 ## Production migration seam
 

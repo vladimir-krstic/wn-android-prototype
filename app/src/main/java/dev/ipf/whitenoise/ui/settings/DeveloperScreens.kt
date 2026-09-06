@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -44,7 +43,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -63,7 +61,6 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseEmptyState
-import dev.ipf.whitenoise.ui.components.WhiteNoiseFilledTonalButton
 import dev.ipf.whitenoise.ui.components.WhiteNoiseLazyColumn as LazyColumn
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
@@ -85,8 +82,6 @@ fun DeveloperToolsScreen(
     messageDeleteScenario: dev.ipf.whitenoise.model.MessageDeleteScenario = dev.ipf.whitenoise.model.MessageDeleteScenario.Success,
     onMessageDeleteScenario: (dev.ipf.whitenoise.model.MessageDeleteScenario) -> Unit = {},
     messageForwardScenario: dev.ipf.whitenoise.model.MessageForwardScenario = dev.ipf.whitenoise.model.MessageForwardScenario.Success,
-    recentMediaAccess: dev.ipf.whitenoise.model.RecentMediaAccess = dev.ipf.whitenoise.model.RecentMediaAccess.Full,
-    onRecentMediaAccess: (dev.ipf.whitenoise.model.RecentMediaAccess) -> Unit = {},
     attachmentTransferScenario: dev.ipf.whitenoise.model.AttachmentTransferScenario = dev.ipf.whitenoise.model.AttachmentTransferScenario.Success,
     onAttachmentTransferScenario: (dev.ipf.whitenoise.model.AttachmentTransferScenario) -> Unit = {},
     downloadExampleControls: @Composable SettingsGroupScope.() -> Unit = {},
@@ -128,7 +123,6 @@ fun DeveloperToolsScreen(
     var historyOpen by remember { mutableStateOf(false) }
     var editOpen by remember { mutableStateOf(false) }
     var deleteOpen by remember { mutableStateOf(false) }
-    var recentOpen by remember { mutableStateOf(false) }
     var transferOpen by remember { mutableStateOf(false) }
     var photoEditorOpen by remember { mutableStateOf(false) }
     val speech = dev.ipf.whitenoise.ui.conversation.LocalReadAloudController.current
@@ -152,8 +146,6 @@ fun DeveloperToolsScreen(
         attachmentAccessScenario, { it.developerLabel }, onAttachmentAccessScenario, { attachmentAccessOpen = false })
     if (photoEditorOpen) ScenarioChoiceDialog(stringResource(R.string.developer_photo_editor), dev.ipf.whitenoise.model.PhotoEditorScenario.entries,
         photoEditorScenario, { it.developerLabel }, onPhotoEditorScenario, { photoEditorOpen = false })
-    if (recentOpen) ScenarioChoiceDialog(stringResource(R.string.developer_recent_media_access), dev.ipf.whitenoise.model.RecentMediaAccess.entries,
-        recentMediaAccess, { it.name }, onRecentMediaAccess, { recentOpen = false })
     if (transferOpen) ScenarioChoiceDialog(stringResource(R.string.developer_attachment_transfer), dev.ipf.whitenoise.model.AttachmentTransferScenario.entries,
         attachmentTransferScenario, { it.developerLabel }, onAttachmentTransferScenario, { transferOpen = false })
     var forwardOpen by remember { mutableStateOf(false) }
@@ -320,9 +312,6 @@ fun DeveloperToolsScreen(
                         }
                         row {
                             SettingsLink(stringResource(R.string.developer_message_deletion_outcomes), messageDeleteScenario.developerLabel, { deleteOpen = true })
-                        }
-                        row {
-                            SettingsLink(stringResource(R.string.developer_recent_media_access), recentMediaAccess.name, { recentOpen = true })
                         }
                         row {
                             SettingsLink(stringResource(R.string.developer_attachment_transfer_outcomes), attachmentTransferScenario.developerLabel, { transferOpen = true })

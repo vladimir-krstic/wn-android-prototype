@@ -1,7 +1,9 @@
 # Codebase hardening audit
 
-Status: Completed repository-wide audit run on 2026-08-31 on
-`codex/overnight-hardening-20260831`; user visual acceptance remains separate.
+This report contains dated engineering reviews. The latest cleanup is recorded
+under [2026-09-06](#2026-09-06-repository-cleanup). The sections before it retain
+the completed 2026-08-31 audit on `codex/overnight-hardening-20260831`, including
+its historical device evidence. User visual acceptance remains separate.
 
 This report tracks evidence, bounded fixes, verification, and intentionally
 deferred work. A finding is not considered resolved until its implementation
@@ -114,3 +116,90 @@ decision even when device inspection passes.
 - Design-sensitive Expressive `ListItem` migration deferred under H-003b.
 - Large cohesive UI-file extraction remains evidence-driven under H-007;
   line count alone is not a safe refactor boundary.
+
+## 2026-09-06 repository cleanup
+
+The user authorized repository-wide cleanup across code, architecture, tests,
+resources, build configuration, scripts, and Markdown. This run started with
+existing user changes. A file/hash snapshot of the 684-file starting workspace
+was saved outside the repository before editing; cleanup was compared with that
+snapshot rather than attributing the entire Git diff to this work. No commit,
+remote change, publication, device interaction, or emulator execution was made.
+
+### Review coverage
+
+| Area | Review and evidence |
+| --- | --- |
+| Source and ownership | Repository-wide declaration/reference and import scans, followed by focused reads of model projections, app/profile ownership, operation controllers, navigation, media preparation, speech lifecycle, and consumers of removed code. Current source contains 192 production Kotlin files. |
+| Tests | Reviewed regression coverage around changed behavior. The current suite has 100 host Kotlin test files and 64 instrumentation test files; instrumentation execution remains a separate device gate. |
+| Resources and build | Checked manifests, version catalog usage, dependency configuration, resource references, locale parity, generated dependency notices, and build outputs. Compatibility pins and runtime boundaries are preserved. |
+| Scripts and assets | Reviewed both preparation/verification scripts; added six locale-checker regression tests. All 15 bundled font hashes and four license hashes match their provenance manifest. Required media, fonts, legal notices, and historical inspection assets are retained. |
+| Documentation | Inventoried all 98 remaining Markdown files, checked local file/anchor references, and reconciled active guidance, README, handoff, capability records, and affected briefs. The screen index covers all 48 briefs. Historical evidence remains dated and separate from current acceptance. |
+
+### Implemented cleanup and hardening
+
+| Change | Reason and validation |
+| --- | --- |
+| Retired attachment surfaces | Removed the uncalled device-contact picker/preview and app-owned recent-media sheet after the accepted native attachment-menu replacement. Removed the ineffective recent-media developer setting and its state plumbing. Shared-contact payload/export support and active photo-quality controls remain. Three UI tests that only reached retired surfaces were removed. |
+| Obsolete rendering and image adapters | Removed the unused inline-message renderer and conversation-image wrapper. MessageDocumentUi remains the active rich-text renderer. Image import tests now exercise DraftPhotoProcessor, including image size, orientation, and invalid input, instead of an unused wrapper. |
+| Profile switcher ownership | Moved the active switcher projection and its tests from Settings to Chats. Removed the obsolete Settings-only presentation model and replaced its three tests with current empty/single/missing-active-profile switcher cases. |
+| Validation duplication | Removed the uncalled VerifiedNostrAddress validator and its two tests. The actual profile-settings validation policy and its regression coverage remain authoritative. |
+| Resources and dependencies | Removed 18 obsolete keys consistently from the source and all four translations, unused imports, and three unused tooling catalog aliases. Removed the unused Compose tooling-preview implementation dependency. No dependency version was changed. |
+| Search, ordering, and retention | Normalize search queries once, cache immutable date formatters, calculate timestamps once per sorted candidate, use lookup sets/maps for selection and pin ordering, and avoid intermediate expiry/deadline lists. A new global-search regression preserves date filtering and stable ordering when separate chats share message IDs. Existing folder/transcript/retention tests remain. These are reduced repeated operations, not measured device performance claims. |
+| Compose state and metrics | Use primitive numeric state for three hot UI values, observe LocalResources/LocalConfiguration for configuration-sensitive message metrics, and correct an optional Modifier parameter position. Use the already-tested SpeechAudioPolicy at actual focus-request call sites. No geometry or focus policy was redesigned. |
+| Bitmap ownership | Decoded, oriented, and scaled avatar bitmaps share a finally cleanup path, including exceptional and cancelled preparation. Cancellation continues to propagate and stale-result guards remain. Platform image regression tests compile; device execution was not performed. |
+| Wiped-profile notification data | Reconciliation now removes request identities and retained reply payloads for removed profiles. Retained sign-out still preserves deduplication. Two new state regressions verify both branches and prevent stale key collisions or duplicate sends after re-entry. |
+| Locale checker | Detect duplicate resource keys and plural quantities in addition to missing/extra resources, argument-token parity, and required locale plural categories. The script can be imported by six stdlib regression tests. Python output is ignored by Git. |
+| Documentation structure | Rewrote README and handoff around current setup, ownership, integrations, commands, and remaining checks; indexed every screen brief; consolidated duplicated parity/polish reports; corrected stale source paths and workstation-specific links; marked superseded speech/attachment/profile records. Preserved canonical AGENTS.md and the existing CLAUDE.md symlink to it. |
+| Completed prompts | Removed the completed android-app-parity-goal-prompt.md and implementation-agent-prompt.md, including active links. No temporary goal or checklist Markdown file was created for this run. This audit is durable evidence, not a future execution prompt. |
+
+The Compose changes follow the official
+[runtime state API](https://developer.android.com/reference/kotlin/androidx/compose/runtime/package-summary.html)
+and [Android composition-local implementation](https://android.googlesource.com/platform/frameworks/support/+/HEAD/compose/ui/ui/src/androidMain/kotlin/androidx/compose/ui/platform/AndroidCompositionLocals.android.kt).
+No new platform capability, service layer, persistence, networking, or visual
+redesign was introduced. Accepted in-memory developer/recovery scenarios remain;
+tests-only reachability alone was not treated as proof that a product rule was junk.
+
+### Verification
+
+Baseline: 917 passing host unit tests, 1,742 translatable source resources, and
+21 lint findings (including informational hints). The final clean verification
+command is:
+
+```sh
+python3 -m unittest discover -s scripts -p 'test_*.py'
+./scripts/verify_locale_resources.py
+./gradlew clean testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest assembleRelease
+```
+
+- Clean Gradle gate passed in 3m18s: all 141 tasks executed.
+- 918 Kotlin unit tests passed across 100 suites; zero failures, errors, or skips.
+  The net change from 917 is three new regressions and removal of two tests for
+  the unused validator; the switcher test replacements retain their test count.
+- Six Python locale-checker tests passed.
+- 1,724 translatable source resources verified across all four complete
+  translation catalogs; 18 obsolete keys were removed from all five catalogs.
+- Lint: zero errors and nine warnings, down from 21 findings. The remaining
+  findings are one VectorRaster warning and eight dependency-version notices.
+- Debug app, instrumentation-test APK, and unsigned release APK assembled;
+  release dependency-notice generation and release vital lint passed.
+- All local Markdown file/anchor references resolve and the screen index covers
+  all 48 briefs. `git diff --check` passes.
+- No instrumentation tests or device/visual checks were executed in this run.
+
+### Retained limits
+
+Dependency-update notices remain subject to the approved compatibility pins.
+The existing ic_forward vector's pre-API-24 even-odd raster warning remains
+visible; changing the asset requires a suitable compatibility and visual check.
+Design-sensitive deprecated Material ListItem usages remain for a separately
+validated migration. Existing Compose test-rule deprecations also remain: the
+v2 dispatcher changes synchronization behavior and should be migrated with device
+execution. No new lint suppression was introduced.
+
+The clean host gate does not verify actual recognition, media decoding/playback,
+system pickers, device lifecycle behavior, accessibility interaction, or visual
+acceptance. Current device checks remain in the handoff and relevant briefs.
+The August 31 device results above remain historical. Large cohesive screen and
+state files were reviewed for concrete boundaries; speculative module/service
+extraction was deliberately avoided.

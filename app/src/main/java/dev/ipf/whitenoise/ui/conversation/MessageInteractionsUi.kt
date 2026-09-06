@@ -3,7 +3,6 @@ package dev.ipf.whitenoise.ui.conversation
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,18 +98,14 @@ import dev.ipf.whitenoise.ui.components.WhiteNoisePickerItem
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatMessage
-import dev.ipf.whitenoise.model.ComposerAvailability
 import dev.ipf.whitenoise.model.EmojiCategory
 import dev.ipf.whitenoise.model.EmojiSection
 import dev.ipf.whitenoise.model.MessageAction
-import dev.ipf.whitenoise.model.MessageActionPolicy
 import dev.ipf.whitenoise.model.MessageDeletionScope
 import dev.ipf.whitenoise.model.MessageForwarding
-import androidx.compose.runtime.saveable.rememberSaveable
 import dev.ipf.whitenoise.model.MessageDeliveryState
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ReactionCatalog
-import dev.ipf.whitenoise.model.composerAvailability
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
 import dev.ipf.whitenoise.ui.components.SignalEmoji

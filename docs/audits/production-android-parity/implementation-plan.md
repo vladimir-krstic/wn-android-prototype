@@ -1,5 +1,13 @@
 # Ordered implementation plan
 
+This is the completed B01–B32 implementation record. Detailed batch proposals,
+permissions, source-drift notes, and test counts below retain their historical
+context. They do not create an active goal or authorize commits/device work.
+Later approved behavior is maintained in [screen briefs](../../screens/README.md).
+Native voice search and live dictation supersede the initial B07/B17 acquisition
+limits; voice-note recording remains deterministic.
+
+
 The order follows state ownership and user dependencies. A later batch may be selected early only when all named dependencies already exist. The user authorized one goal for all 32 batches on 2026-09-04, executed as bounded batches with just-in-time briefs. Commit each completed, verified batch as `B01: <description>` using its batch number. No duration estimates are inferred.
 
 ## Implementation progress
@@ -64,7 +72,7 @@ The order follows state ownership and user dependencies. A later batch may be se
 | **B14** | Location sharing state flow | C058 | B11 | Implemented; host verified; real location/map integration remains outside Q06 scope |
 | **B15** | Read Aloud transport and source navigation | C061, C062 | B08 | Implemented; host verified |
 | **B16** | Read Aloud preferences and auto-read | C063, C064, C065, C066 | B15 | Implemented; host verified; real services remain outside Q06 |
-| **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Implemented; host verified; real microphone/recognition remains outside Q06 scope |
+| **B17** | Dictation and production voice-note interaction | C067, C068, C069, C070 | B11 | Implemented; host verified; native dictation subsequently approved; voice notes remain deterministic |
 | **B18** | Group setup image and authoritative roster states | C072, C073, C074 | B03, B11 | Implemented; host verified |
 | **B19** | Administration transfer, disband and transcript export | C076, C077, C078, C079 | B18 | Implemented; host verified |
 | **B20** | Disappearing-message timers and expiry | C081, C082, C083 | B09, B18 | Implemented; host verified; Q03 resolved |
@@ -205,7 +213,7 @@ Capabilities: C038, C039, C040, C041. Dependencies: B08.
 
 **Implementation:** Add edit draft, nonblank save, cancel, pending/failed retry/discard, edited marker and timestamped original/revisions; project latest accepted text into replies/search/copy/speech. Prototype expands composer but lacks full message reader and per-chat Collapse long messages. Preserve draft/selection/reply during expand/collapse; reader shares actions and markdown. Add selection with Copy and speech from selected passage; preserve source offsets and accessibility. Whole-message Copy alone is insufficient. Prototype inline markup covers a subset. Add structured headings, lists, quotes, code and links as supported by production parse/render model; keep authored text for copy and speech.
 
-**Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/InlineMessageMarkup.kt`, `app/src/main/java/dev/ipf/whitenoise/model/MessageInteractionModels.kt`, `app/src/main/java/dev/ipf/whitenoise/state/AppViewModel.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationComposer.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationScreen.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/InlineMessageText.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageInteractionsUi.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/TimelineMessageContent.kt`.
+**Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/InlineMessageMarkup.kt`, `app/src/main/java/dev/ipf/whitenoise/model/MessageInteractionModels.kt`, `app/src/main/java/dev/ipf/whitenoise/state/AppViewModel.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationComposer.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationScreen.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageDocumentUi.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageInteractionsUi.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/TimelineMessageContent.kt`.
 
 **Fixture/state work:** Add profile/chat-owned immutable states for each named eligibility, progress, cancellation, success, partial, unavailable and failure result. Use a fixed clock/IDs where time or asynchronous ownership matters. Expose ordinary user copy only through resources; keep fixture controls developer-only.
 
@@ -299,7 +307,7 @@ Capabilities: C061, C062. Dependencies: B08.
 
 **Implementation:** Add pause/resume/stop, previous/next sentence/message, progress, lazy history edges and return to owning message across routes/profile changes. Map authored/markdown source offsets to current spoken passage; add accessible seek/read-from-here and resume-follow without mandatory gestures.
 
-**Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/navigation/AppRoute.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationScreen.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/InlineMessageText.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/TimelineMessageContent.kt`.
+**Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/navigation/AppRoute.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/ConversationScreen.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageDocumentUi.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/TimelineMessageContent.kt`.
 
 **Fixture/state work:** Add profile/chat-owned immutable states for each named eligibility, progress, cancellation, success, partial, unavailable and failure result. Use a fixed clock/IDs where time or asynchronous ownership matters. Expose ordinary user copy only through resources; keep fixture controls developer-only.
 
@@ -574,7 +582,7 @@ Capabilities: C114, C115. Dependencies: B09, B13.
 
 **Implementation:** Complete encoded npub/nprofile mention/URI resolution and in-app profile presentation, including member versus non-member styling and unavailable/retry, using deterministic identity data. B09 preserves their authored source and existing named-person links; no external handler should claim identity taps. Typed fixtures for supported note/article/image/video/document/event kinds, loading/not-found/invalid/unavailable/retry; preserve authored reference and Copy. No relay/network resolution. Reuse rich reader and native local-video viewer for event content, loaded metadata and retry states; remote video remains a local fixture.
 
-**Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/ChatModels.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/InlineMessageText.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/MediaViewer.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/TimelineMessageContent.kt`.
+**Likely prototype files:** `app/src/main/java/dev/ipf/whitenoise/model/ChatModels.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/MessageDocumentUi.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/MediaViewer.kt`, `app/src/main/java/dev/ipf/whitenoise/ui/conversation/TimelineMessageContent.kt`.
 
 **Fixture/state work:** Add profile/chat-owned immutable states for each named eligibility, progress, cancellation, success, partial, unavailable and failure result. Use a fixed clock/IDs where time or asynchronous ownership matters. Expose ordinary user copy only through resources; keep fixture controls developer-only.
 
