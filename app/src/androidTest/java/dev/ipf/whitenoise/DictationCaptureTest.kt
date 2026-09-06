@@ -3,6 +3,9 @@ package dev.ipf.whitenoise
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.*
@@ -51,7 +54,10 @@ class DictationCaptureTest {
         rule.onNodeWithContentDescription("Add Attachment").performClick()
         rule.onNodeWithText("Dictation", substring = false).assertDoesNotExist()
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        val idle = rule.onNodeWithTag("conversation.composer.surface").fetchSemanticsNode().boundsInRoot
         startThroughComposer()
+        val dictation = rule.onNodeWithTag("conversation.composer.surface").fetchSemanticsNode().boundsInRoot
+        assertTrue(dictation.width > idle.width)
         rule.onNodeWithText("External speech recognition").assertDoesNotExist()
         rule.onNodeWithText("Message", substring = false).assertDoesNotExist()
         rule.onNodeWithText("Cancel", substring = false).assertDoesNotExist()
@@ -59,22 +65,60 @@ class DictationCaptureTest {
         rule.onNodeWithTag("conversation.voice").assertDoesNotExist()
         rule.onNodeWithTag("dictation.listening").assertExists()
         rule.onNodeWithTag("dictation.pause").assertExists()
-        rule.onNodeWithContentDescription("Cancel").performClick()
+        val pause = rule.onNodeWithTag("dictation.pause").fetchSemanticsNode().boundsInRoot
+        val listening = rule.onNodeWithTag("dictation.listening").fetchSemanticsNode().boundsInRoot
+        assertTrue(pause.right <= listening.left)
+        rule.onNodeWithContentDescription("Cancel").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.attachment.add").assertDoesNotExist()
+        rule.onNodeWithTag("dictation.pause").performClick()
+        rule.onNodeWithContentDescription("Cancel").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.attachment.add").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Resume dictation").assertIsEnabled()
+        assertEquals(dictation.width, rule.onNodeWithTag("conversation.composer.surface").fetchSemanticsNode().boundsInRoot.width, 1f)
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         rule.runOnIdle { assertNull(capture.inlineDictation); assertNull(capture.lease) }
         rule.onNodeWithTag("conversation.voice").assertExists()
     }
     @Test fun pauseEditSelectionAndResumeInsertDirectlyInTheSameEditor() {
         show(); startThroughComposer(); recognize()
         val editor = rule.onNodeWithTag("conversation.composer.editor")
-        editor.assertTextEquals("Hello world")
+        editor.assertTextEquals("Hello world" + DictationDots)
         rule.onNodeWithTag("dictation.pause").performClick()
         editor.performTextReplacement("Hello dear world")
         editor.performTextInputSelection(TextRange(6, 10))
         startThroughComposer(); recognize("bright")
-        editor.assertTextEquals("Hello bright world")
-        rule.onNodeWithContentDescription("Cancel").performClick()
+        editor.assertTextEquals("Hello bright" + DictationDots + " world")
+        rule.onNodeWithTag("dictation.pause").performClick()
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         editor.assertTextEquals("Hello bright world")
         rule.runOnIdle { assertTrue(sent.isEmpty()); assertNull(capture.lease) }
+    }
+    private fun displayedEditorText(): String {
+        val layouts = mutableListOf<TextLayoutResult>()
+        rule.onNodeWithTag("conversation.composer.editor")
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        return layouts.single().layoutInput.text.text
+    }
+    @Test fun animatedIndicatorFollowsTheInsertionPointAndNeverEntersTheDraft() {
+        show(); startThroughComposer()
+        assertEquals(DictationDots, displayedEditorText())
+        rule.onNodeWithTag("conversation.composer.editor").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Transcribing…"))
+        recognize()
+        assertEquals("Hello world" + DictationDots, displayedEditorText())
+        rule.onNodeWithTag("dictation.pause").performClick()
+        assertEquals("Hello world", displayedEditorText())
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performTextInputSelection(TextRange(6))
+        startThroughComposer()
+        assertEquals("Hello " + DictationDots + "world", displayedEditorText())
+        recognize("dear")
+        assertEquals("Hello dear " + DictationDots + "world", displayedEditorText())
+        rule.runOnIdle { assertEquals("Hello dear world", profile.chats.single().draftText) }
+        rule.onNodeWithTag("dictation.pause").performClick()
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        editor.assertTextEquals("Hello dear world")
+        rule.runOnIdle { assertNull(capture.inlineDictation); assertTrue(sent.isEmpty()) }
     }
     @Test fun movingTheCursorPausesRecognitionAndLateResultsCannotOverwriteEdits() {
         show(); startThroughComposer(); recognize()
@@ -101,6 +145,26 @@ class DictationCaptureTest {
         rule.onNodeWithTag("conversation.composer.editor").assertTextEquals("Hello world")
         rule.onNodeWithContentDescription("Resume dictation").assertIsEnabled()
         rule.runOnIdle { assertNull(capture.lease); assertFalse(capture.inlineDictation!!.capturing) }
+    }
+    @Test fun emptyRecognitionNeverShowsNoSpeechFeedbackAndPauseStillWorks() {
+        show(); startThroughComposer()
+        rule.runOnIdle {
+            repeat(20) {
+                val id = capture.inlineDictation!!.id
+                capture.inlineReady(owner, id)
+                capture.inlineRecognitionError(owner, id, DictationFailure.NoSpeech)
+            }
+            assertTrue(capture.inlineDictation!!.capturing)
+            assertNull(capture.inlineDictation!!.failure)
+        }
+        rule.mainClock.advanceTimeBy(120_000)
+        rule.onNodeWithTag("dictation.error").assertDoesNotExist()
+        rule.onNodeWithText("No speech was recognized.").assertDoesNotExist()
+        rule.onNodeWithTag("dictation.pause").performClick()
+        rule.onNodeWithContentDescription("Resume dictation").assertIsEnabled()
+        rule.onNodeWithContentDescription("Cancel").assertDoesNotExist()
+        rule.onNodeWithTag("dictation.error").assertDoesNotExist()
+        rule.runOnIdle { assertEquals("", profile.chats.single().draftText); assertNull(capture.lease) }
     }
     @Test fun permanentDenialShowsInlineAndroidSettingsRecovery() {
         show(); startThroughComposer()

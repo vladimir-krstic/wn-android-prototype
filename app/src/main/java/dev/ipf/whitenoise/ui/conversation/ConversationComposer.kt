@@ -17,6 +17,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -157,15 +158,10 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -246,23 +242,6 @@ private val ComposerVoiceStateSaver: Saver<ComposerVoiceState, Any> = listSaver(
         }
     },
 )
-
-private class MentionVisualTransformation(
-    private val ranges: List<IntRange>,
-    private val contentColor: Color,
-) : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        val styled = AnnotatedString.Builder(text)
-        ranges.filter { it.first >= 0 && it.last < text.length }.forEach { range ->
-            styled.addStyle(
-                SpanStyle(color = contentColor),
-                range.first,
-                range.last + 1,
-            )
-        }
-        return TransformedText(styled.toAnnotatedString(), OffsetMapping.Identity)
-    }
-}
 
 internal fun mentionRanges(text: String, mentionNames: List<String>): List<IntRange> {
     val regex = mentionNames
@@ -349,9 +328,8 @@ private fun ComposerLeadingAction(
     menuItems: List<WhiteNoiseMenuItem>,
     onCancelVoice: () -> Unit,
     integratedProgress: Float = 0f,
-    onCancelDictation: (() -> Unit)? = null,
 ) {
-    val showsCancel = voiceState is ComposerVoiceState.Review || onCancelDictation != null
+    val showsCancel = voiceState is ComposerVoiceState.Review
     val isAddAction = voiceState == ComposerVoiceState.Idle && !showsCancel
     val containerColor = when {
         !isAddAction -> MaterialTheme.colorScheme.surfaceContainerHigh
@@ -374,9 +352,7 @@ private fun ComposerLeadingAction(
         ) {
             IconButton(
                 onClick = {
-                    if (onCancelDictation != null) {
-                        onCancelDictation()
-                    } else if (voiceState is ComposerVoiceState.Review) {
+                    if (voiceState is ComposerVoiceState.Review) {
                         onCancelVoice()
                     } else {
                         onMenuExpandedChange(true)
@@ -848,7 +824,8 @@ fun FullConversationComposer(
             isExpanded = expanded
             isSettlingExpansion = true
             try {
-                if (!expanded) {
+                // A multiline draft already owns its full width; collapse only its height.
+                if (!expanded && !latestAutomaticallyWide) {
                     widthProgress.animateTo(0f, morphSpec)
                     if (expansionProgress.value > 0f) toolbarProgress.snapTo(0f)
                     else toolbarProgress.animateTo(0f, morphSpec)
@@ -914,7 +891,7 @@ fun FullConversationComposer(
                 expansionJob?.cancel()
                 expansionJob = coroutineScope.launch {
                     expansionProgress.stop()
-                    if (translationY > 0f) {
+                    if (translationY > 0f && !latestAutomaticallyWide) {
                         widthProgress.animateTo(0f, morphSpec)
                         toolbarProgress.snapTo(0f)
                     }
@@ -924,7 +901,7 @@ fun FullConversationComposer(
             },
             onDrag = { startProgress, translationY ->
                 requestedDragProgress = ComposerExpansionPolicy.clampProgress(startProgress - (translationY / travelPx))
-                if (translationY < 0f || (widthProgress.value == 0f && toolbarProgress.value == 0f)) {
+                if (translationY < 0f || latestAutomaticallyWide || (widthProgress.value == 0f && toolbarProgress.value == 0f)) {
                     coroutineScope.launch { expansionProgress.snapTo(requestedDragProgress) }
                 }
             },
@@ -982,7 +959,7 @@ fun FullConversationComposer(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = if (voiceState is ComposerVoiceState.Recording) 0.dp else
+                        .padding(start = if (voiceState is ComposerVoiceState.Recording || inlineDictation != null) 0.dp else
                             (48.dp + WhiteNoiseSpacing.Related) * (1f - presentedWidthProgress))
                         .heightIn(min = 48.dp)
                         .then(if (usesFlexibleLayout) Modifier.fillMaxHeight() else Modifier)
@@ -1140,11 +1117,10 @@ fun FullConversationComposer(
                         }
                     }
                 }
-                if (voiceState !is ComposerVoiceState.Recording) {
+                if (voiceState !is ComposerVoiceState.Recording && inlineDictation == null) {
                     Box(Modifier.align(Alignment.BottomStart)) {
                         ComposerLeadingAction(
                             integratedProgress = presentedWidthProgress,
-                            onCancelDictation = if (inlineDictation != null) ({ capture?.endInline(captureOwner) }) else null,
                             voiceState = voiceState,
                             menuExpanded = attachmentMenuOpen,
                             onMenuExpandedChange = { attachmentMenuOpen = it },
@@ -1334,10 +1310,30 @@ private fun ComposerTextInput(
     val mentionBackground = MaterialTheme.colorScheme.outlineVariant
     val mentionContent = MaterialTheme.colorScheme.onSurface
     val highlightedMentions = remember(text, mentionNames) { mentionRanges(text, mentionNames) }
-    val mentionTransformation = remember(highlightedMentions, mentionContent) {
-        MentionVisualTransformation(highlightedMentions, mentionContent)
+    val dictating = dictationSession?.capturing == true
+    val indicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val indicatorAlphas = if (dictating) {
+        val animation = rememberInfiniteTransition(label = "dictation dots")
+        List(3) { dot ->
+            val alpha by animation.animateFloat(
+                initialValue = 0.3f, targetValue = 0.3f,
+                animationSpec = infiniteRepeatable(keyframes {
+                    durationMillis = 1_200
+                    0.3f at dot * 160
+                    1f at dot * 160 + 240
+                    0.3f at dot * 160 + 560
+                }), label = "dictation dot $dot",
+            )
+            alpha
+        }
+    } else listOf(1f, 1f, 1f)
+    val indicatorCursor = value.selection.end.takeIf { dictating }
+    val textTransformation = remember(highlightedMentions, mentionContent, indicatorCursor, indicatorColor, indicatorAlphas) {
+        ComposerTextTransformation(highlightedMentions, mentionContent, indicatorCursor, indicatorColor, indicatorAlphas)
     }
-    var mentionLayout by remember { mutableStateOf<Pair<String, TextLayoutResult>?>(null) }
+    val displayedMentions = textTransformation.highlightRanges(text.length)
+    val dictationDescription = stringResource(R.string.transcribing)
+    var mentionLayout by remember(text, indicatorCursor) { mutableStateOf<TextLayoutResult?>(null) }
     ComposerEditorLayout(
         modifier = modifier.fillMaxWidth().heightIn(min = 48.dp)
             .then(if (expanded) Modifier.fillMaxHeight() else Modifier),
@@ -1357,6 +1353,7 @@ private fun ComposerTextInput(
                 .heightIn(min = 48.dp)
                 .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
                 .testTag("conversation.composer.editor")
+                .semantics { if (dictating) stateDescription = dictationDescription }
                 .onPreviewKeyEvent { event ->
                     when (ComposerEnterPolicy.decide(enterKeyBehavior,
                         isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter,
@@ -1380,8 +1377,8 @@ private fun ComposerTextInput(
             minLines = 1,
             maxLines = if (expanded) Int.MAX_VALUE else ComposerExpansionPolicy.compactLineLimit(hasAttachments),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            visualTransformation = mentionTransformation,
-            onTextLayout = { mentionLayout = text to it },
+            visualTransformation = textTransformation,
+            onTextLayout = { mentionLayout = it },
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier
@@ -1404,11 +1401,9 @@ private fun ComposerTextInput(
                                 .testTag("conversation.composer.mentionHighlight"),
                         ) {
                             mentionLayout
-                                ?.takeIf { it.first == text }
-                                ?.second
                                 ?.drawRoundedTextHighlights(
                                     drawScope = this,
-                                    ranges = highlightedMentions,
+                                    ranges = displayedMentions,
                                     color = mentionBackground,
                                 )
                         }
@@ -1422,13 +1417,13 @@ private fun ComposerTextInput(
                 val pulse = rememberInfiniteTransition(label = "dictation microphone")
                 val alpha by pulse.animateFloat(1f, 0.45f,
                     animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "listening pulse")
-                Box(Modifier.size(48.dp).testTag("dictation.listening"), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.dictation_listening),
-                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp).alpha(alpha))
-                }
                 IconButton(onClick = onDictation, modifier = Modifier.size(48.dp).testTag("dictation.pause")) {
                     Icon(painterResource(R.drawable.ic_pause), stringResource(R.string.pause),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                }
+                Box(Modifier.size(48.dp).testTag("dictation.listening"), contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.dictation_listening),
+                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp).alpha(alpha))
                 }
             } else if (recording == null) {
                 IconButton(

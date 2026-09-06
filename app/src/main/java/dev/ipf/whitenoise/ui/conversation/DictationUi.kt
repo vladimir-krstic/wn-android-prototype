@@ -56,7 +56,9 @@ internal fun DictationOriginHost(profile: Profile, chat: Chat) {
     InlineDictationPlatform(controller, owner)
     val inline = controller.inlineDictation?.takeIf { it.owner == owner }
     LaunchedEffect(inline?.id, inline?.capturing) { if (inline?.capturing == true) speech?.pause() }
-    androidx.activity.compose.BackHandler(enabled = inline?.capturing == true) { controller.pauseInline(owner) }
+    androidx.activity.compose.BackHandler(enabled = inline != null) {
+        if (inline?.capturing == true) controller.pauseInline(owner) else controller.endInline(owner)
+    }
     val attempt = controller.attempts[owner] ?: return
     var open by rememberSaveable(owner.profileId, owner.chatId, attempt.id) { mutableStateOf(true) }
     LaunchedEffect(controller.presentationRevision) { if (controller.presentationOwner == owner) open = true }
@@ -99,7 +101,7 @@ internal fun DictationOriginHost(profile: Profile, chat: Chat) {
                     }), Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("dictation.status"))
                     if (attempt.phase != DictationPhase.Listening) LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
-                attempt.failure?.let { Text(stringResource(dictationFailureString(it)), color = MaterialTheme.colorScheme.error) }
+                attempt.failure?.takeUnless { it == DictationFailure.NoSpeech }?.let { Text(stringResource(dictationFailureString(it)), color = MaterialTheme.colorScheme.error) }
                 if (attempt.phase == DictationPhase.Review && attempt.reviewReason != DictationReviewReason.RecognitionFailure)
                     Text(stringResource(R.string.dictation_review_detail))
                 if (attempt.retainedText.isNotBlank()) SelectionContainer {
@@ -138,7 +140,8 @@ internal fun DictationOriginHost(profile: Profile, chat: Chat) {
 @Composable
 internal fun InlineDictationError(owner: ComposerCaptureOwner) {
     val controller = LocalComposerCapture.current ?: return
-    val failure = controller.inlineDictation?.takeIf { it.owner == owner }?.failure ?: return
+    val failure = controller.inlineDictation?.takeIf { it.owner == owner }?.failure
+        ?.takeUnless { it == DictationFailure.NoSpeech } ?: return
     val context = LocalContext.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = WhiteNoiseSpacing.Related),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

@@ -44,6 +44,7 @@ internal fun InlineDictationPlatform(controller: ComposerCaptureController, owne
     }
     LaunchedEffect(session?.id, session?.capturing) {
         if (session?.capturing == true) {
+            kotlinx.coroutines.delay(session.retryDelayMillis)
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 permittedId = session.id
             } else {
@@ -62,10 +63,13 @@ internal fun InlineDictationPlatform(controller: ComposerCaptureController, owne
         if (session?.capturing != true || permittedId != session.id) return@DisposableEffect onDispose { }
         val id = session.id
         var disposed = false
+        var terminal = false
         var recognizer: SpeechRecognizer? = null
         fun fail(error: DictationFailure) { if (!disposed) controller.inlineFailure(owner, id, error) }
         fun result(bundle: Bundle?, final: Boolean) {
-            if (!disposed) controller.inlineResult(owner, id,
+            if (disposed || terminal) return
+            terminal = final
+            controller.inlineResult(owner, id,
                 bundle?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty(), final)
         }
         try {
@@ -75,19 +79,23 @@ internal fun InlineDictationPlatform(controller: ComposerCaptureController, owne
                 recognizer = speech
                 speech.apply {
                     speech.setRecognitionListener(object : RecognitionListener {
-                        override fun onReadyForSpeech(params: Bundle?) { if (!disposed) controller.inlineReady(owner, id) }
+                        override fun onReadyForSpeech(params: Bundle?) { if (!disposed && !terminal) controller.inlineReady(owner, id) }
                         override fun onBeginningOfSpeech() = Unit
                         override fun onRmsChanged(rmsdB: Float) = Unit
                         override fun onBufferReceived(buffer: ByteArray?) = Unit
                         override fun onEndOfSpeech() = Unit
-                        override fun onError(error: Int) = fail(when (error) {
-                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> DictationFailure.PermissionDenied
-                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> DictationFailure.ServiceBusy
-                            SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> DictationFailure.NoSpeech
-                            SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> DictationFailure.Network
-                            SpeechRecognizer.ERROR_AUDIO -> DictationFailure.MicrophoneBusy
-                            else -> DictationFailure.Unknown
-                        })
+                        override fun onError(error: Int) {
+                            if (disposed || terminal) return
+                            terminal = true
+                            controller.inlineRecognitionError(owner, id, when (error) {
+                                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> DictationFailure.PermissionDenied
+                                SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> DictationFailure.ServiceBusy
+                                SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> DictationFailure.NoSpeech
+                                SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> DictationFailure.Network
+                                SpeechRecognizer.ERROR_AUDIO -> DictationFailure.MicrophoneBusy
+                                else -> DictationFailure.Unknown
+                            })
+                        }
                         override fun onResults(results: Bundle?) = result(results, final = true)
                         override fun onPartialResults(partialResults: Bundle?) = result(partialResults, final = false)
                         override fun onEvent(eventType: Int, params: Bundle?) = Unit

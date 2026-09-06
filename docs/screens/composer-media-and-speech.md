@@ -487,3 +487,136 @@ passed with 917 unit tests, no failures/errors/skips, zero lint errors
 change additionally passed `./gradlew lintDebug assembleDebug assembleDebugAndroidTest`.
 Interaction tests compile only. No device recognition, installation or visual
 inspection was performed.
+
+## 2026-09-06 — dictation silence and control order
+
+Latest user direction: do not show a transcription failure as soon as speech
+stops. Allow five seconds without newly transcribed text. If this Start/Resume
+has produced any partial or final transcript, pause quietly and keep it editable;
+otherwise show the existing “No speech was recognized.” error. Pre-existing draft
+text does not count as recognition. Fresh Start/Resume begins a new window after
+recognizer readiness; permission and initial preparation do not consume it.
+
+The controller uses a monotonic clock and carries the inactivity deadline and
+recognized-text flag across provider utterances. Revised nonblank text resets
+the window; repeated or blank partials do not. Empty final results, no-match,
+speech-timeout and generic provider failures retry within the same window, with
+a 250 ms retry delay to avoid a tight service restart loop. Partial text becomes
+the next insertion anchor on retry. Explicit permission, network, microphone and
+service failures retain their specific recovery. Terminal provider callbacks are
+accepted once; stale callbacks and timers cannot affect a replacement request.
+
+Place the standard 48 dp Pause action before the 48 dp animated-microphone slot
+in logical layout order, preserving native RTL mirroring, labels and tap targets.
+The editor, X, explicit Send and lifecycle/ownership behavior remain as above.
+
+Official source review: [RecognitionListener](https://developer.android.com/reference/android/speech/RecognitionListener)
+distinguishes end-of-speech, final results and errors. [RecognizerIntent](https://developer.android.com/reference/android/speech/RecognizerIntent#EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS)
+warns that provider silence extras may be ignored, so the five-second contract
+is enforced by the app instead of relying on an intent extra.
+
+Acceptance: no immediate error for a pause after text; no-speech feedback only
+at the five-second boundary for an empty attempt; retained partials/finals;
+fresh resume and stale-callback protection; Pause precedes the animated mic.
+Seven new controller regressions exercise timing and recovery with a fake clock.
+The existing Compose entry regression now asserts the control order.
+Device recognition and visual acceptance remain pending.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 925 unit tests and zero failures/errors/skips. Both APKs assembled
+and lint passed. Six repository script tests and locale-resource verification
+also passed. Instrumentation coverage was compiled only; no device installation,
+recognizer execution or visual inspection was performed.
+
+## 2026-09-06 — continuous dictation and cursor indicator
+
+Latest correction supersedes automatic pausing in the silence revision above.
+Silence and ordinary provider endpoints keep dictation active until explicit
+Pause/X, editing or selection movement, lifecycle/ownership exit, or an actual
+capability failure. After five seconds with no recognized text, retain the inline
+no-speech feedback while continuing to listen; the next nonblank result clears
+it. Successful dictation never acquires a silence error. Preserve the current
+Pause-before-microphone order.
+
+Show three softly staggered animated dots immediately after the current editor
+insertion point throughout active dictation, including between utterances. They
+are display-only and must never enter draft, clipboard or sent message text.
+Use the native text layout and offset mapping so wrapping, scrolling, font scale,
+RTL and insertion into existing text stay aligned. Preserve mention styling and
+native editing; expose a stable localized Transcribing state rather than
+announcing animation frames. A cursor-owned indicator requires this small custom
+text decoration because a separate progress component cannot follow the caret.
+Pause and X remove it. Use Compose animation so system motion scaling applies.
+
+Official sources: [VisualTransformation](https://developer.android.com/reference/kotlin/androidx/compose/ui/text/input/VisualTransformation),
+[OffsetMapping](https://developer.android.com/reference/kotlin/androidx/compose/ui/text/input/OffsetMapping),
+and [Compose value animations](https://developer.android.com/develop/ui/compose/animation/value-based).
+Acceptance covers long pauses followed by more speech, retained empty-attempt
+feedback with continued capture, dots at empty/middle/end insertion positions,
+unmodified draft text, and removal on Pause/edit/exit. Device checks remain pending.
+
+Implementation: `ComposerCaptureController` retains capture across silence and
+clears empty-attempt feedback on speech. `ComposerTextTransformation` adds the
+three display-only dots and maps native text offsets/mention backgrounds;
+`ConversationComposer` supplies staggered Compose alpha animations and the
+localized Transcribing state. Standard transformed-text semantics and selection
+handling remain with the native editor.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 929 unit tests, zero failures/errors/skips, zero lint errors (nine
+warnings), and both APKs assembled. The final cursor-space assertion correction
+also passed `./gradlew assembleDebugAndroidTest`. Instrumentation coverage was
+compiled only. No device recognition, installation or visual inspection occurred;
+continuous live-provider behavior and visual acceptance remain pending.
+
+## 2026-09-06 — multiline collapse keeps full width
+
+Latest explicit direction supersedes the width-first collapse for drafts with
+four or more compact-width visual lines. Once automatically wide, pulling down
+or using Collapse/Back changes only the composer height; the full-width editor,
+integrated Add and bottom action row stay in place throughout drag and settling.
+Use the existing compact-width line measurement for entered and wrapped lines,
+so the expanded editor's reflow cannot change eligibility. One-to-three-line
+manual expansion retains its staged width-then-height collapse.
+
+Apply the same eligibility to drag preparation, direct height tracking, and the
+shared settle path. Preserve cancellation, reversal, native spring motion,
+keyboard, selection, insets, RTL and the existing text editor. No spacing or
+component changes are needed. Acceptance requires constant surface/editor width
+on every sampled collapse frame for explicit four-line and soft-wrapped drafts,
+with the original content-height destination and short-draft sequence preserved.
+Official source checked: [Compose value animations](https://developer.android.com/develop/ui/compose/animation/value-based).
+Device motion and visual acceptance remain pending.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 929 unit tests, zero failures/errors/skips, and both APKs assembled.
+Lint passed with zero errors and nine warnings. Two new frame-sampled Compose
+regressions compiled; the existing short-draft animation test remains in place.
+No device/emulator execution or visual inspection was performed.
+
+## 2026-09-06 — dictation has no X or no-speech feedback
+
+Latest user direction removes the redundant leading X from active and paused
+dictation and completely disables no-speech feedback, superseding the five-second
+rules above. Keep Pause/Resume, editable text and explicit Send. No replacement
+leading control is shown in dictation; the capsule uses the vacated leading
+space. Back pauses active capture; Back from paused dictation returns to the
+ordinary composer while retaining the draft, so attachment actions remain
+reachable without a visible exit button. Actual voice-note review is distinct
+and retains its existing discard action.
+
+Remove the empty-capture timer and its clock/state entirely. Empty results and
+provider no-match/speech-timeout callbacks silently continue listening with the
+existing retry delay; no duration of silence creates an error or ends capture.
+Other capability failures retain recovery. Suppress no-speech copy at the
+shared dictation UI boundary as well. Cursor dots, microphone, ownership,
+multiline width, editing and lifecycle behavior otherwise remain as accepted.
+Official callback contract: [RecognitionListener](https://developer.android.com/reference/android/speech/RecognitionListener).
+Acceptance includes repeated empty/provider-timeout outcomes, no error text,
+no X/leading slot before and after Pause, retained text, Resume and Back exit.
+
+Host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 927 unit tests, zero failures/errors/skips, zero lint errors (nine
+warnings), and both APKs assembled. Six endpoint/retention cases replace eight
+superseded timer cases. Updated Compose regressions compile only. No device
+recognition, installation or visual inspection was performed.

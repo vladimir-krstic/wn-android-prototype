@@ -162,7 +162,27 @@ class ComposerCaptureController(
         activeInline(owner, id)?.let { inlineDictation = it.copy(phase = InlineDictationPhase.Listening) }
     }
 
+    fun inlineRecognitionError(owner: ComposerCaptureOwner, id: Long, failure: DictationFailure) {
+        if (failure == DictationFailure.NoSpeech || failure == DictationFailure.Unknown) {
+            continueInline(owner, id, retryDelayMillis = 250)
+        } else inlineFailure(owner, id, failure)
+    }
+
+    private fun continueInline(owner: ComposerCaptureOwner, id: Long, retryDelayMillis: Long = 0) {
+        val live = activeInline(owner, id) ?: return
+        val base = snapshot(owner, live.cursor) ?: run { pauseInline(owner); return }
+        val next = InlineDictationSession(++nextId, owner, base,
+            failure = live.failure,
+            retryDelayMillis = retryDelayMillis)
+        inlineDictation = next
+        lease = ComposerCaptureLease(owner, next.id, ComposerCaptureMode.Dictation)
+    }
+
     fun inlineFailure(owner: ComposerCaptureOwner, id: Long, failure: DictationFailure) {
+        if (failure == DictationFailure.NoSpeech) {
+            continueInline(owner, id, retryDelayMillis = 250)
+            return
+        }
         val live = activeInline(owner, id) ?: return
         pauseInline(owner)
         inlineDictation = live.copy(phase = InlineDictationPhase.Paused, failure = failure)
@@ -171,7 +191,7 @@ class ComposerCaptureController(
     fun inlineResult(owner: ComposerCaptureOwner, id: Long, recognized: String, final: Boolean) {
         val live = activeInline(owner, id) ?: return
         if (recognized.isBlank()) {
-            if (final) pauseInline(owner)
+            if (final) continueInline(owner, id, retryDelayMillis = 250)
             return
         }
         // Android partial callbacks revise one utterance; replace it from its original selection.
@@ -182,14 +202,12 @@ class ComposerCaptureController(
         if (inlineDictation?.let { it.id == id && it.owner == owner && it.capturing } != true ||
             visible != owner || !available(owner) ||
             lease != ComposerCaptureLease(owner, id, ComposerCaptureMode.Dictation)) return
-        inlineDictation = live.copy(text = result.text, cursor = result.cursor)
+        inlineDictation = live.copy(text = result.text, cursor = result.cursor,
+            failure = null)
         insertion = DictationInsertion(++nextId, owner, result)
         if (final) {
             // The provider ended an utterance. Continue only inside this explicit active session.
-            val base = snapshot(owner, result.cursor) ?: run { pauseInline(owner); return }
-            val next = InlineDictationSession(++nextId, owner, base)
-            inlineDictation = next
-            lease = ComposerCaptureLease(owner, next.id, ComposerCaptureMode.Dictation)
+            continueInline(owner, id)
         }
     }
 

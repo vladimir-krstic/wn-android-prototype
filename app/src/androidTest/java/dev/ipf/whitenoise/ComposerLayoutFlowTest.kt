@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
@@ -21,10 +22,10 @@ import org.junit.runner.RunWith
 class ComposerLayoutFlowTest {
     @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
 
-    private fun show() {
+    private fun show(initialText: String = "") {
         val profile = ProfileFixtures.marmota
         val chat = mutableStateOf(profile.chats.first { it.id == "fiatjaf" }.copy(
-            draftText = "", draftAttachments = emptyList(), draftReplyMessageId = null,
+            draftText = initialText, draftAttachments = emptyList(), draftReplyMessageId = null,
         ))
         rule.setContent {
             WhiteNoiseTheme {
@@ -75,6 +76,62 @@ class ComposerLayoutFlowTest {
         rule.mainClock.advanceTimeBy(2_000)
         assertEquals(wide.width, bounds().width, 1f)
         editor.assertIsFocused().assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange(2, 14)))
+    }
+
+    private fun assertWideFrame(expectedWidth: Float) {
+        val surface = bounds()
+        val editor = rule.onNodeWithTag("conversation.composer.editor").fetchSemanticsNode().boundsInRoot
+        val add = rule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode().boundsInRoot
+        assertEquals(expectedWidth, surface.width, 1f)
+        assertEquals(surface.width, editor.width, 1f)
+        assertEquals(surface.left, add.left, 1f)
+    }
+
+    @Test fun fourLineCollapseActionOnlyChangesHeightOnEveryFrame() {
+        show("One\nTwo\nThree\nFour")
+        val compact = bounds()
+        action("Expand Message")
+        val expanded = bounds()
+        assertTrue(expanded.height > compact.height)
+        assertEquals(compact.width, expanded.width, 1f)
+        rule.mainClock.autoAdvance = false
+        action("Collapse Message")
+        repeat(100) {
+            rule.mainClock.advanceTimeBy(16)
+            assertWideFrame(compact.width)
+        }
+        assertEquals(compact.height, bounds().height, 2f)
+        rule.mainClock.autoAdvance = true
+    }
+
+    @Test fun wrappedDraftPullTracksHeightWithoutNarrowingDuringDragOrSettling() {
+        show("A naturally wrapped message without line breaks. ".repeat(8))
+        val compact = bounds()
+        action("Expand Message")
+        val expanded = bounds()
+        assertTrue(expanded.height > compact.height)
+        rule.mainClock.autoAdvance = false
+        // Inject at fixed root coordinates so layout movement does not move the drag origin.
+        val start = Offset(expanded.center.x, expanded.top + 8f)
+        rule.onRoot().performTouchInput {
+            down(start)
+            moveTo(start + Offset(0f, (expanded.height - compact.height) * 0.25f), delayMillis = 100)
+        }
+        repeat(20) {
+            rule.mainClock.advanceTimeBy(16)
+            assertWideFrame(compact.width)
+        }
+        assertTrue(bounds().height < expanded.height - 2f)
+        rule.onRoot().performTouchInput {
+            moveTo(start + Offset(0f, (expanded.height - compact.height) * 0.8f), delayMillis = 100)
+            up()
+        }
+        repeat(100) {
+            rule.mainClock.advanceTimeBy(16)
+            assertWideFrame(compact.width)
+        }
+        assertEquals(compact.height, bounds().height, 2f)
+        rule.mainClock.autoAdvance = true
     }
 
     @Test fun manualExpansionGrowsHeightBeforeWidthAndReversesOnCollapse() {

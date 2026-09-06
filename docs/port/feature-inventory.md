@@ -603,3 +603,41 @@ passed with 917 unit tests, no failures/errors/skips, zero lint errors
 change additionally passed `./gradlew lintDebug assembleDebug assembleDebugAndroidTest`.
 Interaction tests compile only. No device recognition, installation or visual
 inspection was performed.
+
+2026-09-06 dictation silence correction: the controller now carries a monotonic
+five-second inactivity window across provider utterances. Empty/generic endpoints
+retry within that window; captured partial/final text leads to a quiet pause,
+while an empty Start/Resume shows no-speech feedback. Permission/preparation time
+is excluded. Old request callbacks/timers cannot overwrite a replacement. Pause
+now precedes the animated microphone. Seven new fake-clock controller tests pass,
+and the Compose entry regression checks the new order (compiled only).
+Full host validation and device limits are recorded in the composer brief.
+
+2026-09-06 continuous-dictation follow-up supersedes the automatic silence pause
+above. Silence now retains the active lease; no-speech feedback after five empty
+seconds is nonterminal and subsequent speech clears it. The editor shows three
+animated display-only dots at its insertion point, with native offset mapping,
+wrapping and mention styling. Controller tests cover multi-minute pauses and
+continued speech after repeated empty callbacks. Transformation tests cover empty,
+middle/end, RTL and emoji/newline offsets and split mention styling. The Compose
+regression checks indicator placement, raw draft preservation and Pause/X removal.
+See the latest composer brief for the final host gate and device-testing limits.
+
+2026-09-06 multiline collapse correction: `ConversationComposer` now skips width
+and toolbar contraction during downward drag and Collapse/Back settling whenever
+the draft still qualifies for automatic full width. Height tracks the drag
+without waiting for narrowing. `ComposerLayoutFlowTest` adds per-frame width,
+editor and Add-position assertions for four entered lines and a wrapped draft,
+including active dragging and the final content-height destination. The existing
+short-draft staged-animation regression remains. Device motion acceptance is
+pending; host validation is recorded in the latest composer brief.
+
+2026-09-06 dictation cleanup: active and paused dictation omit the X and external
+leading slot. Pause/Resume retain draft text; Back from paused dictation restores
+the ordinary composer. `ComposerCaptureController` and `InlineDictationPlatform`
+remove the silence timer/clock/state and silently retry empty/no-speech callbacks.
+Both dictation UI error paths suppress no-speech copy. Controller regressions now
+cover repeated empty and generic endpoints, retained partials, explicit Pause and
+stale callbacks; Compose coverage checks no X/slot, no error, Resume and Back exit.
+These replace the superseded five-second timer expectations. Final host results
+and device limits are recorded in the latest composer brief.

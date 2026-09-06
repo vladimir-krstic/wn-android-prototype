@@ -187,6 +187,77 @@ class ComposerCaptureControllerTest {
         c.inlineResult(owner, resumed, "again", false)
         assertEquals("Hello world again", current.chats.single().draftText)
     }
+    @Test fun emptyProviderEndpointsNeverShowFailureOrStopListening() {
+        setup(); var id = inline(); c.inlineReady(owner, id)
+        repeat(50) {
+            if (it % 2 == 0) c.inlineRecognitionError(owner, id, DictationFailure.NoSpeech)
+            else c.inlineResult(owner, id, "  ", final = true)
+            val next = c.inlineDictation!!.id
+            assertNotEquals(id, next)
+            id = next; c.inlineReady(owner, id)
+            assertNull(c.inlineDictation!!.failure)
+            assertTrue(c.inlineDictation!!.capturing); assertNotNull(c.lease)
+            assertEquals("Hello", current.chats.single().draftText)
+        }
+        c.inlineResult(owner, id, "finally", final = false)
+        assertEquals("Hello finally", current.chats.single().draftText)
+        assertNull(c.inlineDictation!!.failure); assertTrue(c.inlineDictation!!.capturing)
+        assertTrue(sends.isEmpty())
+    }
+    @Test fun noSpeechFailureEntryAlsoContinuesSilently() {
+        setup(); val id = inline(); c.inlineReady(owner, id)
+        c.inlineFailure(owner, id, DictationFailure.NoSpeech)
+        assertNotEquals(id, c.inlineDictation!!.id)
+        assertNull(c.inlineDictation!!.failure); assertTrue(c.inlineDictation!!.capturing)
+        assertNotNull(c.lease)
+    }
+    @Test fun silenceAfterFinalTextKeepsListeningAcrossTheNextUtterance() {
+        setup(); val id = inline(); c.inlineReady(owner, id)
+        c.inlineResult(owner, id, "world", final = true)
+        var next = c.inlineDictation!!.id
+        repeat(10) {
+            c.inlineReady(owner, next)
+            c.inlineRecognitionError(owner, next, DictationFailure.NoSpeech)
+            next = c.inlineDictation!!.id
+            assertTrue(c.inlineDictation!!.capturing); assertNull(c.inlineDictation!!.failure)
+            assertEquals("Hello world", current.chats.single().draftText)
+        }
+        c.inlineResult(owner, next, "again", final = true)
+        assertEquals("Hello world again", current.chats.single().draftText)
+        assertNotNull(c.lease); assertTrue(sends.isEmpty())
+    }
+    @Test fun genericProviderErrorRetainsPartialsAndRejectsLateCallbacks() {
+        setup(); val id = inline(); c.inlineReady(owner, id)
+        c.inlineResult(owner, id, "world", final = false)
+        c.inlineRecognitionError(owner, id, DictationFailure.Unknown)
+        val next = c.inlineDictation!!.id
+        assertNull(c.inlineDictation!!.failure); assertTrue(c.inlineDictation!!.capturing)
+        c.inlineResult(owner, id, "late", final = true)
+        c.inlineFailure(owner, id, DictationFailure.NoSpeech)
+        assertEquals(next, c.inlineDictation!!.id)
+        assertEquals("Hello world", current.chats.single().draftText)
+    }
+    @Test fun genericEmptyProviderErrorsRetryWithoutNoSpeechFeedback() {
+        setup(); var id = inline()
+        repeat(10) {
+            c.inlineReady(owner, id)
+            c.inlineRecognitionError(owner, id, DictationFailure.Unknown)
+            id = c.inlineDictation!!.id
+            assertNull(c.inlineDictation!!.failure); assertTrue(c.inlineDictation!!.capturing)
+        }
+        assertEquals("Hello", current.chats.single().draftText)
+    }
+    @Test fun pauseAndResumeRejectOldEmptyCallbacks() {
+        setup(); val id = inline(); c.inlineReady(owner, id)
+        c.inlineResult(owner, id, "world", final = false); c.pauseInline(owner)
+        c.inlineRecognitionError(owner, id, DictationFailure.NoSpeech)
+        assertFalse(c.inlineDictation!!.capturing); assertNull(c.lease)
+        val resumed = inline(11); c.inlineReady(owner, resumed)
+        c.inlineRecognitionError(owner, id, DictationFailure.NoSpeech)
+        assertEquals(resumed, c.inlineDictation!!.id); assertTrue(c.inlineDictation!!.capturing)
+        assertNull(c.inlineDictation!!.failure)
+        assertEquals("Hello world", current.chats.single().draftText)
+    }
     @Test fun inlineAndVoiceCannotHoldMicrophoneAtTheSameTime() {
         setup(); assertTrue(c.acquireVoice(owner, 100))
         assertFalse(c.beginInline(owner, "Hello", 5, 5))

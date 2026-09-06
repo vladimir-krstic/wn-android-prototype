@@ -137,6 +137,7 @@ data class InlineDictationSession(
     val cursor: Int = base.selectionEnd,
     val phase: InlineDictationPhase = InlineDictationPhase.Preparing,
     val failure: DictationFailure? = null,
+    val retryDelayMillis: Long = 0,
 ) {
     val capturing: Boolean get() = phase != InlineDictationPhase.Paused
 }

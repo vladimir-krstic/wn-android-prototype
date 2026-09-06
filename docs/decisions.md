@@ -4492,3 +4492,42 @@ this mode and show a pulsing red mic with Pause. Keep profile/chat/request captu
 ownership and release/destroy recognition on pause or lifecycle exit. No backend
 or app network permission is added. See the composer brief for current behavior,
 platform sources, recovery and verification limits.
+
+## Dictation waits five seconds and puts Pause first — 2026-09-06
+
+Explicit user correction: ordinary pauses must not immediately produce a
+transcription error. After five seconds without new transcription, pause quietly
+if this Start/Resume captured text; show no-speech feedback only if it captured
+nothing. Carry this rule across provider utterances and retain the editable draft.
+Place Pause before the animated mic in logical layout order. See the composer
+brief for timing, provider recovery and verification evidence.
+
+## Dictation stays active and shows dots at the cursor — 2026-09-06
+
+Latest user direction supersedes the automatic silence pause above. Keep listening
+through pauses and ordinary provider endpoints. Five seconds without any captured
+text may show no-speech feedback but must not stop capture; later speech clears
+it. Retain explicit Pause/X and editing, lifecycle and capability-error exits.
+Display three animated dots immediately after the current insertion point using
+the editor's native text layout. They are display-only, never draft or message
+content. Preserve the approved Pause-before-microphone order. See the composer
+brief for implementation and validation evidence.
+
+## Multiline composer collapse only reduces height — 2026-09-06
+
+Latest explicit correction: a draft with four or more compact-width visual lines
+keeps its full-width editor and integrated bottom controls while manually
+collapsing. Skip width contraction in both downward drag and shared Collapse/Back
+settling. Height follows the drag immediately. The existing compact-width
+measurement remains authoritative for wrapped/entered lines; short drafts retain
+their staged collapse. See the composer brief for regression evidence.
+
+## Dictation omits X and all no-speech feedback — 2026-09-06
+
+Explicit user correction removes X from active/paused dictation and disables
+no-speech feedback at every duration. Remove its leading control/slot; retain
+Pause/Resume and Send. Back pauses active capture and leaves paused dictation
+without discarding text, restoring the ordinary composer. No-speech/empty
+provider results continue silently; remove the app silence timer and tracking
+state. Other capability recovery and actual voice-note review remain distinct.
+This supersedes every earlier five-second no-speech rule. See the composer brief.

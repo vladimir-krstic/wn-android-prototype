@@ -109,6 +109,8 @@ choice row rather than nesting settings-row padding inside dialog padding.
   an above-anchor provider because Material's stock 48 dp window-edge margin
   otherwise detaches them from their triggers. Their groups retain Material's
   default menu shadow elevation so they separate from content behind them.
+  Active and paused dictation omit the leading X and its reserved external
+  slot; the capsule uses that space while Pause/Resume retain 48 dp targets.
   Idle waveform artwork is 24 dp inside a 48 dp target.
   Live/review waveforms use 2 dp bars, 2 dp gaps, and a 24 dp visual height.
   Stop is a red 20 dp square and Send is a 20 dp upward arrow inside separate
