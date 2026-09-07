@@ -2,6 +2,7 @@
 
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -144,7 +145,7 @@ internal fun ProfileImageActions(
     DisposableEffect(ownerId) { onDispose { generation++; job?.cancel(); onBusyChanged(false) } }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box {
-            if (isBanner) FilledTonalButton(onClick = { menu = true }, enabled = enabled && !busy) {
+            if (isBanner) FilledTonalButton(onClick = { menu = true }, enabled = enabled && !busy, border = amoledOutlineBorder(enabled && !busy)) {
                 Text(stringResource(if (image == null) R.string.profile_add_banner else R.string.profile_change_banner))
             } else AvatarPhotoButton(hasPhoto = image != null && image != ProfileAvatar.Monogram, onClick = { menu = true }, enabled = enabled && !busy)
             WhiteNoiseDropdownMenu(expanded = menu, onDismissRequest = { menu = false }, items = buildList {

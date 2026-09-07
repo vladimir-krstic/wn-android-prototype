@@ -73,3 +73,10 @@ for pinned evidence and [the parity ledger](../port/feature-inventory.md) for st
 - [Developer and destructive flows](developer-and-destructive-flows.md)
 - [Help, About and open source licenses](help-about-and-licenses.md)
 - [Distribution-gated app updates](distribution-gated-app-updates.md)
+
+- [Pinned messages](pinned-messages.md) — message pinning, browsing and exact-history navigation (#17).
+- [Message translation](message-translation.md) — manual translation, original toggle and profile/chat automatic translation controls (#23).
+
+- [Jump to date](jump-to-date.md) — calendar navigation from conversation search (#18).
+
+- [Files and media from main search](global-files-and-media.md) — browse attachments across the current account (#19).

@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -99,7 +100,7 @@ internal fun LocationPickerDialog(session: LocationSession, onEvent: (LocationEv
                         Text(stringResource(R.string.location_coordinate_help), style = MaterialTheme.typography.bodyMedium)
                         LocationCoordinateField(session.latitude, true, !locating, { onEvent(LocationEvent.Latitude(it)) })
                         LocationCoordinateField(session.longitude, false, !locating, { onEvent(LocationEvent.Longitude(it)) })
-                        FilledTonalButton({ onEvent(LocationEvent.Locate) }, enabled = !locating, modifier = Modifier.fillMaxWidth().testTag("location.current")) {
+                        FilledTonalButton({ onEvent(LocationEvent.Locate) }, enabled = !locating, modifier = Modifier.fillMaxWidth().testTag("location.current"), border = amoledOutlineBorder(!locating)) {
                             Icon(painterResource(R.drawable.ic_location_on), null)
                             Spacer(Modifier.width(WhiteNoiseSpacing.Related))
                             Text(stringResource(if (locating) R.string.location_finding else R.string.location_use_current))
@@ -156,7 +157,7 @@ private fun LocationCoordinateField(value: String, latitude: Boolean, enabled: B
 
 @Composable
 internal fun LocationPointSummary(point: SharedLocation) {
-    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+    Surface(border = amoledOutlineBorder(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
         Row(Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
             Icon(painterResource(R.drawable.ic_location_on), null)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
@@ -177,6 +178,7 @@ internal fun LocationMessageCard(point: SharedLocation, modifier: Modifier = Mod
     fun open() { result = onOpenMap?.invoke(point) ?: openLocationMap(context, point) }
     fun copy(text: String) { (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(clipboardLabel, text)); copied = true }
     Surface(modifier.fillMaxWidth().testTag("location.message").clickable(role = Role.Button, onClickLabel = stringResource(R.string.location_open_maps), onClick = ::open),
+        border = amoledOutlineBorder(),
         shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(Modifier.padding(WhiteNoiseSpacing.Related), horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related), verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(R.drawable.ic_location_on), null)

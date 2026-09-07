@@ -97,6 +97,9 @@ sealed interface AppRoute {
     data class ConversationNotifications(val chatId: String) : AppRoute
 
     @Serializable
+    data class ChatDownloads(val profileId: String, val chatId: String) : AppRoute
+
+    @Serializable
     data object Appearance : AppRoute
 
     @Serializable
@@ -104,6 +107,9 @@ sealed interface AppRoute {
 
     @Serializable
     data class ChatBubbleColors(val chatId: String? = null) : AppRoute
+
+    @Serializable
+    data object Translation : AppRoute
 
     @Serializable
     data object ReadAloud : AppRoute

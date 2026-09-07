@@ -117,23 +117,19 @@ fun NotificationsScreen(
                         SettingsSwitch(
                             title = stringResource(R.string.ui_native_push),
                             checked = NotificationControls.pushEnabled(settings,notificationsAllowed,environment.push),
-                            enabled = localNotificationsEnabled && environment.push == PushAvailability.Available,
+                            enabled = localNotificationsEnabled && environment.push == PushAvailability.Available &&
+                                controller?.pushRetry == null && controller?.work?.takeIf { it.isPushPreference }?.running != true,
                             onCheckedChange = {
                                 if (controller != null) controller.request(NotificationChange.Delivery(NotificationDelivery.Push,it),expectedProfileId = profile.id)
                                 else onChange(settings.copy(nativePushNotifications = it))
                             },
-                            subtitle = when {
-                                !notificationsAllowed -> stringResource(R.string.notification_allow_first)
-                                !settings.localNotifications -> stringResource(R.string.notification_local_first)
-                                environment.push == PushAvailability.BuildNotConfigured -> stringResource(R.string.notification_push_build)
-                                environment.push == PushAvailability.PlayServicesMissing -> stringResource(R.string.notification_push_services)
-                                environment.push == PushAvailability.ProviderNotInitialized -> stringResource(R.string.notification_push_provider)
-                                else -> stringResource(R.string.notification_push_detail)
-                            },
+                            subtitle = if (localNotificationsEnabled && environment.push == PushAvailability.Available)
+                                stringResource(R.string.notification_push_detail) else null,
                         )
                     }
                 }
             }
+            item { PushAvailabilityFeedback(profile, controller, notificationsAllowed) }
             if (controller != null) {
                 item { SettingsGroup {
                     row {
@@ -267,6 +263,7 @@ fun AppearanceScreen(
                             SettingsChoice(
                                 title = stringResource(preference.labelResource()),
                                 selected = settings.appearance == preference,
+                                subtitle = if (preference == AppearancePreference.AmoledOutline) stringResource(R.string.appearance_amoled_outline_detail) else null,
                                 highlightSelected = false,
                                 onClick = { onChange(settings.copy(appearance = preference)) },
                             )
@@ -284,12 +281,15 @@ fun AppearanceScreen(
                     row {
                         SettingsLink(
                             title = stringResource(R.string.action_color),
+                            enabled = settings.appearance != AppearancePreference.AmoledOutline,
+                            subtitle = if (settings.appearance == AppearancePreference.AmoledOutline) stringResource(R.string.appearance_outline_colors_fixed) else null,
                             onClick = onActionColor,
                         )
                     }
                     row {
                         SettingsLink(
                             title = stringResource(R.string.chat_bubble_colors),
+                            enabled = settings.appearance != AppearancePreference.AmoledOutline,
                             onClick = onBubbleColors,
                         )
                     }
@@ -376,6 +376,7 @@ private fun AppearancePreference.labelResource(): Int = when (this) {
     AppearancePreference.Light -> R.string.theme_light
     AppearancePreference.Dark -> R.string.theme_dark
     AppearancePreference.Amoled -> R.string.appearance_amoled
+    AppearancePreference.AmoledOutline -> R.string.appearance_amoled_outline
 }
 
 @Composable

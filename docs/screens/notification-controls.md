@@ -32,6 +32,50 @@ route-window drift remains for the later/final audit.
 
 ## Behavior and ownership
 
+2026-09-06 user-approved #14 follow-up: Native push availability and recoverable
+errors stay inline on Notifications. Add an explicit setup-failed capability;
+Provider not initialized and Setup failed offer Retry. Build configuration and
+missing/incompatible Google Play services retain cause-specific explanations
+without a retry that cannot fix them. Explanations remain readable outside the
+disabled switch. Available/off is an enabled off switch, distinct from unavailable.
+
+Capability retry uses a separate profile-owned request, preserving the stored
+push preference. Show progress and disable push while retrying; completion makes
+the deterministic capability available, without claiming registration/delivery.
+Duplicate retry, newer environment choices, route departure, permission loss,
+profile changes and erase invalidate stale requests. Push preference save errors
+also use inline progress/Retry/Cancel instead of the generic work modal. Retain
+the persistent-connection fallback explanation whenever push is unavailable or
+an enablement attempt fails. Other notification operations keep existing UI.
+Reuse native text/progress/buttons and the current host driver; no real provider,
+Play Services check, networking or notification registration is added.
+
+Implementation: `PushAvailability.SetupFailed` is available in the existing
+Developer Tools environment picker. `NotificationController.pushRetry` owns
+capability recovery independently from preference work; the lifecycle-aware
+host advances it and excludes push preference work from the generic modal.
+`PushAvailabilityFeedback` renders readable inline reasons, progress, error
+semantics, useful Retry/Cancel actions and fallback copy. Available/off retains
+an enabled switch. Cause/progress/fallback copy covers all five resource locales.
+Three new `NotificationStateTest` cases cover both stored preference values,
+overlap rejection, newer environments, route/permission/profile invalidation and
+unrecoverable states. Two new plus one extended interaction cases compile for
+cause copy, recovery, available-off, inline save failure and absence of a modal.
+
+Validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 951 unit tests, zero failures/errors/skips, lint and both APKs.
+Current-build device execution and visual acceptance remain pending.
+
+2026-09-06 presentation follow-up: user removed the inline push Cancel action.
+Status, fallback text and Retry now sit in the shared white-equivalent Settings
+container with 16 dp inner padding and 8 dp related spacing. Progress sits below
+the text inside that container with 8 dp vertical clearance. Native theme/AMOLED
+surface treatment remains shared; route departure still invalidates pending work.
+Existing push interaction coverage now asserts Cancel is absent during saving
+and after failure. This supersedes the inline Retry/Cancel presentation above.
+Validation: lint, debug app assembly and instrumentation-test APK compilation
+pass. No device/visual inspection was performed for this presentation change.
+
 Local notification and push changes have pending, accepted and failed/retry states.
 Push availability requires configured build, Google Play services and initialized
 provider; each missing dependency is observable without adding those integrations.

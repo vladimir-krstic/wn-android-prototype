@@ -38,10 +38,10 @@ internal class ConversationHistoryUiState(window: Set<String>, observed: Set<Str
         request = HistoryRequest(++generation, operation, scenario)
         readyTarget = null
     }
-    fun target(chat: Chat, id: String, scenario: HistoryScenario, offset: Int = 0, highlight: Boolean = true) {
-        val next = HistoryRequest(++generation, HistoryOperation.Target, scenario, id, scrollOffset = offset, highlight = highlight)
+    fun target(chat: Chat, id: String, scenario: HistoryScenario, offset: Int = 0, highlight: Boolean = true, dateJump: Boolean = false) {
+        val next = HistoryRequest(++generation, HistoryOperation.Target, scenario, id, scrollOffset = offset, highlight = highlight, dateJump = dateJump)
         readyTarget = null
-        if (id in windowIds && ConversationHistory.target(chat, id) != null && scenario == HistoryScenario.Success) {
+        if (id in windowIds && ConversationHistory.target(chat, id, includeEvents = dateJump) != null && scenario == HistoryScenario.Success) {
             request = null; readyTarget = next
         } else request = next
     }
@@ -54,7 +54,7 @@ internal class ConversationHistoryUiState(window: Set<String>, observed: Set<Str
             return
         }
         if (expected.operation == HistoryOperation.Target) {
-            val ids = expected.targetId?.let { ConversationHistory.target(chat, it) }
+            val ids = expected.targetId?.let { ConversationHistory.target(chat, it, includeEvents = expected.dateJump) }
             if (ids == null) request = expected.copy(phase = HistoryPhase.Unavailable)
             else { windowIds = ids; request = null; readyTarget = expected }
         } else {

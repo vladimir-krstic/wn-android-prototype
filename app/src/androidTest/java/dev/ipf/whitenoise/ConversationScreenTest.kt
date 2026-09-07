@@ -489,9 +489,7 @@ class ConversationScreenTest {
         composeRule.onNodeWithTag("conversation.forward.message")
             .assertIsDisplayed()
             .assertHeightIsEqualTo(48.dp)
-        composeRule.onNodeWithTag("conversation.forward.submit")
-            .assertWidthIsEqualTo(48.dp)
-            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithTag("conversation.forward.submit").assertDoesNotExist()
         val destinationBounds = composeRule.onNodeWithTag("conversation.forward.destinations")
             .fetchSemanticsNode().boundsInRoot
         val composerBounds = composeRule.onNodeWithTag("conversation.forward.composer")
@@ -1424,6 +1422,25 @@ class ConversationScreenTest {
     }
 
     @Test
+    fun overflowingFocusedMenuScrollsToScreenEdgeAndLastActionClearsSystemNavigation() {
+        setConversation("maya-chen")
+        composeRule.onNodeWithTag("conversation.timeline")
+            .performScrollToNode(hasTestTag("conversation.message.maya-shared-photo"))
+        composeRule.onNodeWithTag("conversation.message.maya-shared-photo")
+            .performSemanticsAction(SemanticsActions.OnLongClick)
+        val overlay = composeRule.onNodeWithTag("message.actions.overlay").fetchSemanticsNode().boundsInRoot
+        val scroll = composeRule.onNodeWithTag("message.actions.scroll")
+        assertTrue(scroll.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].maxValue() > 0f)
+        assertTrue(abs(scroll.fetchSemanticsNode().boundsInRoot.bottom - overlay.bottom) < 1.5f)
+        scroll.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 10_000f) }
+        composeRule.onNodeWithText("Delete").assertIsDisplayed()
+        val menu = composeRule.onNodeWithTag("message.actions.menu", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val systemBottom = ViewCompat.getRootWindowInsets(composeRule.activity.window.decorView)
+            ?.getInsets(WindowInsetsCompat.Type.systemBars())?.bottom ?: 0
+        assertTrue(menu.bottom <= overlay.bottom - systemBottom)
+    }
+
+    @Test
     fun reactionOverlapAndFocusedGapSurviveTwoHundredPercentType() {
         val profile = ProfileFixtures.marmota
         val chat = profile.chats.first { it.id == "catalog-direct-reactions" }
@@ -1729,7 +1746,7 @@ class ConversationScreenTest {
         composeRule.onNodeWithTag("conversation.message.fiatjaf-8")
             .performSemanticsAction(SemanticsActions.OnLongClick)
         composeRule.onNodeWithText("Forward").performClick()
-        composeRule.onNodeWithText("Choose chats or folders.").assertIsDisplayed()
+        composeRule.onNodeWithText("Choose chats.").assertIsDisplayed()
         composeRule.onNodeWithText("Search Chats").assertIsDisplayed()
     }
 

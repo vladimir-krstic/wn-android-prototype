@@ -6,6 +6,58 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NotificationStateTest {
+    @Test fun capabilityRetryPreservesPreferenceAndRejectsOverlappingAttempts() {
+        listOf(PushAvailability.ProviderNotInitialized, PushAvailability.SetupFailed).forEach { cause ->
+            listOf(false, true).forEach { preference ->
+                val vm = model(); val controller = vm.notificationControls; val owner = vm.uiState.activeProfileId!!
+                vm.updateProfileSettings(vm.uiState.activeProfile!!.settings.copy(nativePushNotifications = preference))
+                controller.chooseEnvironment(NotificationEnvironment(push = cause))
+                val before = vm.uiState.activeProfile!!.settings
+                val retry = controller.retryPushCapability(owner)!!
+                assertNull(controller.retryPushCapability(owner))
+                assertNull(controller.request(NotificationChange.Delivery(NotificationDelivery.Push, true)))
+                assertEquals(cause, controller.environment.push)
+                controller.advancePushCapability(retry)
+                assertEquals(PushAvailability.Available, controller.environment.push)
+                assertEquals(before, vm.uiState.activeProfile!!.settings)
+                assertNull(controller.pushRetry)
+                controller.advancePushCapability(retry)
+                assertEquals(before, vm.uiState.activeProfile!!.settings)
+            }
+        }
+    }
+    @Test fun capabilityRetryCannotReplaceNewerEnvironmentOrSurviveRouteAndPermissionChanges() {
+        val vm = model(); val c = vm.notificationControls; val owner = vm.uiState.activeProfileId!!
+        c.chooseEnvironment(NotificationEnvironment(push = PushAvailability.SetupFailed))
+        val old = c.retryPushCapability(owner)!!
+        c.chooseEnvironment(NotificationEnvironment(push = PushAvailability.BuildNotConfigured))
+        c.advancePushCapability(old)
+        assertEquals(PushAvailability.BuildNotConfigured, c.environment.push)
+        c.chooseEnvironment(NotificationEnvironment(push = PushAvailability.SetupFailed))
+        c.observeRoute("notifications")
+        val routeRetry = c.retryPushCapability(owner)!!
+        c.observeRoute("profile"); c.advancePushCapability(routeRetry)
+        assertEquals(PushAvailability.SetupFailed, c.environment.push)
+        val permissionRetry = c.retryPushCapability(owner)!!
+        c.observePermission(false); c.advancePushCapability(permissionRetry)
+        assertNull(c.pushRetry)
+        assertEquals(PushAvailability.SetupFailed, c.environment.push)
+        assertNull(c.retryPushCapability(owner))
+    }
+    @Test fun unrecoverableCapabilitiesAndWrongProfileCannotStartRetry() {
+        val vm = model(); val c = vm.notificationControls; val owner = vm.uiState.activeProfileId!!
+        listOf(PushAvailability.Available, PushAvailability.BuildNotConfigured, PushAvailability.PlayServicesMissing).forEach {
+            c.chooseEnvironment(NotificationEnvironment(push = it)); assertNull(c.retryPushCapability(owner))
+        }
+        c.chooseEnvironment(NotificationEnvironment(push = PushAvailability.SetupFailed))
+        assertNull(c.retryPushCapability("other"))
+        val pending = c.retryPushCapability(owner)!!
+        vm.completeSignIn(OnboardingOrigin.AddProfile)
+        c.advancePushCapability(pending)
+        assertNull(c.pushRetry)
+        assertEquals(NotificationEnvironment(), c.environment)
+        assertNull(c.retryPushCapability(owner))
+    }
     private fun model() = AppViewModel().apply { completeSignIn(OnboardingOrigin.Initial); setDeveloperToolsEnabled(true) }
     private fun group(vm: AppViewModel) = vm.createGroup("Notifications","",ProfileAvatar.Monogram,emptyList())!!
     private fun step(vm: AppViewModel) { vm.notificationControls.work!!.let { vm.notificationControls.advance(it.id,it.attempt) } }

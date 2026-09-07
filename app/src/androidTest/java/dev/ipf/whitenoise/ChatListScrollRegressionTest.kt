@@ -156,7 +156,7 @@ class ChatListScrollRegressionTest {
         }
     }
 
-    @Test fun singleAndMultilineRowsKeepNativeMinimumHeightsAndPreviewStatusAlignment() {
+    @Test fun singleAndMultilineRowsUseReducedPaddingAndKeepPreviewStatusAlignment() {
         val single = plain.copy(id = "single", unreadCount = 3)
         val multi = plain.copy(id = "multi", preview = "First line\nSecond line", deliveryState = ChatDeliveryState.Failed)
         rule.setContent {
@@ -168,7 +168,7 @@ class ChatListScrollRegressionTest {
                 }
             }
         }
-        for ((chat, height) in listOf(single to 72f, multi to 88f)) {
+        for ((chat, height) in listOf(single to 68f, multi to 84f)) {
             val row = rule.onNodeWithTag("chat.row.${chat.id}").fetchSemanticsNode().boundsInRoot
             val preview = rule.onNodeWithTag("chat.preview.${chat.id}", true).fetchSemanticsNode().boundsInRoot
             val status = rule.onNodeWithTag("chat.status.${chat.id}", true).fetchSemanticsNode().boundsInRoot

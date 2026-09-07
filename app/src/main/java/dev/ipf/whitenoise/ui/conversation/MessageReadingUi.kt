@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -42,6 +43,8 @@ import java.util.Locale
 internal data class MessageReadingActions(
     val collapse: Boolean = true,
     val canWrite: Boolean = true,
+    val selectingTextId: String? = null,
+    val dismissTextSelection: () -> Unit = {},
     val open: (String) -> Unit = {},
     val history: (String) -> Unit = {},
     val retry: (String) -> Unit = {},
@@ -126,7 +129,7 @@ internal fun MessageEditHistoryDialog(message: ChatMessage, onDismiss: () -> Uni
                 rows.forEach { (label, text, time) ->
                     Text(label, style = MaterialTheme.typography.titleMedium)
                     Text(revisionTime(time), style = MaterialTheme.typography.labelMedium)
-                    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Surface(border = amoledOutlineBorder(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                         SelectionContainer { Text(text, Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin)) }
                     }
                 }
@@ -151,14 +154,14 @@ internal fun MessageReaderDialog(profile: Profile, chat: Chat, message: ChatMess
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
     fun leave() { if (selection.selectedTexts.isNotEmpty()) selection.clear() else onDismiss() }
-    fun speak() { selectedMessagePassage(message.text, selection.selectedTexts)?.let { readAloud.speakPassage(profile, chat, message.id, it) } }
+    fun speak() { selectedMessagePassage(message.text, selection.selectedTexts)?.let { readAloud.startDisplayedMessage(profile, chat, message, selection = it) } }
     fun fromHere() { selectedMessagePassage(message.text, selection.selectedTexts)?.let {
-        readAloud.startConversation(profile, chat, message.id, sourceOffset = it.sourceStart); selection.clear()
+        readAloud.startDisplayedMessage(profile, chat, message, sourceOffset = it.sourceStart); selection.clear()
     } }
     LaunchedEffect(selection.selectedTexts.isNotEmpty()) { if (selection.selectedTexts.isNotEmpty()) readAloud.follow(false) }
     LaunchedEffect(message.text) { selection.clear() }
     if (chooser) SpeechSentenceChooser(message, onRead = { offset ->
-        chooser = false; selection.clear(); readAloud.startConversation(profile, chat, message.id, sourceOffset = offset)
+        chooser = false; selection.clear(); readAloud.startDisplayedMessage(profile, chat, message, sourceOffset = offset)
     }, onDismiss = { chooser = false })
     LaunchedEffect(Unit) { if (initialSelection) { repeat(2) { withFrameNanos { } }; selection.extendSelectionByWord() } }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, decorFitsSystemWindows = false)) {
@@ -171,7 +174,7 @@ internal fun MessageReaderDialog(profile: Profile, chat: Chat, message: ChatMess
             } }, navigationIcon = { IconButton(onClick = ::leave) { Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.back)) } }, actions = {
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.message_actions)) }
-                    val actions = MessageActionPolicy.available(message, profile.id, speech, chat.composerAvailability(profile) == ComposerAvailability.Available, inReader = true)
+                    val actions = MessageActionPolicy.available(message, profile.id, speech, chat.composerAvailability(profile) == ComposerAvailability.Available, inReader = true, canPin = dev.ipf.whitenoise.model.MessagePins.canManage(chat, profile.id), pinned = message.id in chat.pinnedMessageIds)
                         .filterNot { it == MessageAction.OpenMessage || it == MessageAction.Select }
                     WhiteNoiseDropdownMenu(expanded = menu, onDismissRequest = { menu = false }, items = actions.map { action ->
                         WhiteNoiseMenuItem(label = actionLabel(action), icon = actionIcon(action), onClick = {

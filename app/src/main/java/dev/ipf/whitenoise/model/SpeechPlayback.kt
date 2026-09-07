@@ -65,7 +65,7 @@ object SpeechDocuments {
     }
 }
 
-data class SpeechItem(val id: String, val authored: String, val plain: Boolean = false)
+data class SpeechItem(val id: String, val authored: String, val plain: Boolean = false, val originalAuthored: String? = null)
 data class SpeechPrepared(val item: SpeechItem, val sentences: List<SourceText>)
 data class SpeechOwner(val profileId: String, val chatId: String?, val attachmentRequestId: String? = null)
 enum class SpeechPhase { Speaking, Paused, Loading, EdgeError, EngineError, Unavailable, Completed }
@@ -210,5 +210,5 @@ object SpeechOwnership {
     fun items(chat: Chat): List<SpeechItem> = chat.timeline.filterIsInstance<ChatTimelineEntry.Message>()
         .map { it.message }.filter(::eligible).map { SpeechItem(it.id, it.text) }
     fun owns(profile: Profile?, target: SpeechReturnTarget): Boolean = profile?.id == target.owner.profileId &&
-        profile.chats.firstOrNull { it.id == target.owner.chatId }?.let(::items)?.any { it == target.message } == true
+        profile.chats.firstOrNull { it.id == target.owner.chatId }?.let(::items)?.any { it.id == target.message.id && it.authored == (target.message.originalAuthored ?: target.message.authored) } == true
 }

@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import dev.ipf.whitenoise.ui.theme.amoledOutline
+import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
 
 /**
  * Ordinary app-owned Material dialog.
@@ -51,7 +53,7 @@ fun WhiteNoiseAlertDialog(
         MaterialAlertDialog(
             onDismissRequest = onDismissRequest,
             confirmButton = confirmButton,
-            modifier = modifier,
+            modifier = modifier.amoledOutline(MaterialTheme.shapes.extraLarge),
             dismissButton = dismissButton,
             icon = icon,
             title = title,
@@ -133,7 +135,7 @@ fun WhiteNoiseDialogChoiceRow(
 @Composable
 fun Modifier.whiteNoiseDialogSelection(selected: Boolean): Modifier =
     clip(MaterialTheme.shapes.large)
-        .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent)
+        .background(if (selected) outlineSelectionColor(MaterialTheme.colorScheme.surfaceContainerHigh) else Color.Transparent)
 
 /** Dialog-owned insets, consistent label spacing and a single checkbox accessibility target. */
 @Composable

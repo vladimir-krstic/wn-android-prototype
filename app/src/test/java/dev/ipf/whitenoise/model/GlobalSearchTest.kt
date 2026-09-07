@@ -72,6 +72,62 @@ class GlobalSearchTest {
         assertEquals(setOf(GlobalSearchContent.Text, GlobalSearchContent.Links), GlobalSearch.content(message("link", "[Map](https://example.com)")))
         assertEquals(setOf(GlobalSearchContent.Text), GlobalSearch.content(message("text")))
     }
+    @Test fun folderUnionIntersectsChatTypeAndExistingMessageFiltersWithoutDuplicateResults() {
+        val x = chat("x", message("xa"), message("xb", author = "b"))
+        val y = chat("y", message("ya")).copy(kind = ChatKind.Direct("a"))
+        val z = chat("z", message("za"))
+        val owner = profile(x, y, z).copy(chatFolders = listOf(
+            ChatFolder("one", "One", setOf("x", "y")), ChatFolder("two", "Two", setOf("x", "z")),
+        ))
+        val filters = GlobalSearchFilters(folderIds = setOf("one", "two"), chatTypes = setOf(GlobalSearchChatType.Groups),
+            senderIds = setOf("a"), date = GlobalSearchDate.Today, content = setOf(GlobalSearchContent.Text))
+        assertEquals(setOf("xa", "za"), ids(owner, filters = filters))
+        assertEquals(2, GlobalSearch.results(owner, "", filters).messages.size)
+        assertEquals(setOf("xa"), ids(owner, filters = filters.copy(chatIds = setOf("x"))))
+        assertEquals(setOf("ya"), ids(owner, filters = filters.copy(chatTypes = setOf(GlobalSearchChatType.Direct))))
+        assertEquals(setOf("xa", "ya", "za"), ids(owner, filters = filters.copy(chatTypes = GlobalSearchChatType.entries.toSet())))
+        assertEquals(setOf("x", "z"), GlobalSearch.results(owner, "", GlobalSearchFilters(
+            folderIds = filters.folderIds, chatTypes = filters.chatTypes)).chats.map { it.id }.toSet())
+    }
+    @Test fun folderScopeUsesLiveRulesAndExplicitMembershipIncludingArchivedChats() {
+        val group = chat("g", message("group"))
+        val direct = chat("d", message("direct")).copy(kind = ChatKind.Direct("a"))
+        val archived = chat("a", message("archived")).copy(isArchived = true)
+        val folder = ChatFolder("custom", "Custom", setOf("d"), rule = ChatFolderRule(groupsOnly = true, includeMuted = true))
+        val owner = profile(group, direct, archived).copy(chatFolders = ChatFolders.defaults + folder)
+        assertEquals(setOf("group", "direct"), ids(owner, filters = GlobalSearchFilters(folderIds = setOf("custom"))))
+        assertEquals(setOf("archived"), ids(owner, filters = GlobalSearchFilters(folderIds = setOf("system:archived"))))
+        val changed = owner.copy(chats = listOf(group.copy(isArchived = true), direct, archived))
+        assertEquals(setOf("direct"), ids(changed, filters = GlobalSearchFilters(folderIds = setOf("custom"))))
+        assertEquals(setOf("group", "archived"), ids(changed, filters = GlobalSearchFilters(folderIds = setOf("system:archived"))))
+    }
+    @Test fun emptyUnknownAndConflictingFoldersNeverFallBackToAllChats() {
+        val owner = profile(chat("g", message("group"))).copy(chatFolders = ChatFolders.defaults + ChatFolder("empty", "Empty"))
+        listOf("empty", "missing").forEach { id ->
+            val filters = GlobalSearchFilters(folderIds = setOf(id))
+            assertTrue(filters.active)
+            val result = GlobalSearch.results(owner, "", filters)
+            assertTrue(result.chats.isEmpty()); assertTrue(result.messages.isEmpty())
+        }
+        assertTrue(ids(owner, filters = GlobalSearchFilters(folderIds = setOf("system:groups"),
+            chatTypes = setOf(GlobalSearchChatType.Direct))).isEmpty())
+    }
+    @Test fun scopeChangesPruneIncompatibleChatSelectionsAndFolderRenameKeepsIdentity() {
+        val owner = profile(chat("g", message("group")), chat("d", message("direct")).copy(kind = ChatKind.Direct("a")))
+            .copy(chatFolders = listOf(ChatFolder("f", "Original", setOf("g"))))
+        val selected = GlobalSearchFilters(chatIds = setOf("g", "d"), folderIds = setOf("f"), senderIds = setOf("a"))
+        val filtered = selected.reconcile(owner)
+        assertEquals(setOf("g"), filtered.chatIds)
+        val renamed = owner.copy(chatFolders = listOf(owner.chatFolders.single().copy(name = "Renamed")))
+        assertEquals(filtered, filtered.reconcile(renamed))
+        val direct = filtered.copy(chatTypes = setOf(GlobalSearchChatType.Direct)).reconcile(owner)
+        assertTrue(direct.chatIds.isEmpty())
+        assertEquals(setOf("f"), direct.folderIds)
+        assertTrue(direct.scopedChats(owner).isEmpty())
+        val removed = filtered.reconcile(owner.copy(chatFolders = emptyList()))
+        assertTrue(removed.folderIds.isEmpty()); assertEquals(setOf("g"), removed.chatIds)
+        assertEquals(setOf("a"), removed.senderIds)
+    }
     @Test fun contentSelectionsUnionThenIntersectDateAndQuery() {
         val photo = MessageAttachment("p", MessageAttachmentKind.Photo, "Trailhead photo")
         val profile = profile(chat("x", message("image", "", attachments = listOf(photo)), message("link", "trailhead https://example.com"),

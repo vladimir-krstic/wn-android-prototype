@@ -225,3 +225,81 @@ explicit destination selection. Device execution remains pending.
 Host gate `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
 passed: 909 unit tests, zero failures/errors/skips, zero lint errors, both APKs.
 The geometry regression is compiled only; device visual acceptance is pending.
+
+
+## 2026-09-07 — Admin-transfer member picker (#24)
+
+User-selected follow-up: retain the shared avatar/search member picker and fill
+its missing-profile and long-list navigation gaps. GroupLifecyclePanel always
+supplies an avatar, using the existing monogram placeholder and localized
+“Member” label when the directory has no matching person. Every row retains the
+same 48 dp decorative avatar slot and existing explicit confirmation boundary.
+
+The shared picker gains an opt-in “Jump to letter” tonal pill, enabled only for
+administration selection. Sort those rows using the current locale's Collator
+with stable ID ties. With at least eight filtered rows and more than one initial,
+the pill opens the existing native Material dropdown with available initials.
+Selecting an initial scrolls directly to its first filtered row; it does not
+select a person or start a transfer. Search rebuilds the initial index and
+returns to the top; short/empty results omit the control. Initials preserve
+Unicode character boundaries and locale-sensitive case rather than assuming
+A–Z. The existing list state restores scroll position across recreation. Other
+picker callers retain their ordering and presentation.
+
+There was no existing shared fast-scroll component to reuse. The native menu
+provides accessible full-size targets, keyboard/TalkBack activation and standard
+Back/outside dismissal without custom tiny alphabet-rail gestures. The pill
+uses native padding/shape/typography, the shared 16 dp outer margin and 8 dp
+label/chevron relationship, neutral semantic colors and AMOLED Outline border.
+Native menu scrolling handles long alphabets and large text. This implements
+quick navigation as a letter-jump menu; visual acceptance remains with the user.
+
+For visual review: choose Marmota, open “Group - Sole Admin”, tap its title for
+Group Info, scroll to “Leave Group” (or “Transfer administration”). Its roster
+now contains 21 eligible members, with photos, monograms and a missing-directory
+“Member” row. Try Jump to letter → T, search “Member”, and cancel after selecting
+a member to exercise confirmation without leaving. Check Light/Dark themes.
+
+`EntityPickerIndexTest` covers sorting/duplicate identities, filtered offsets,
+Turkish case, combining characters, non-Latin names and empty results.
+`GroupLifecycleInteractionTest` adds long-roster letter navigation, search,
+fallback and cancellation coverage. The UI test is compiled only.
+Official source checked: [Compose menus](https://developer.android.com/develop/ui/compose/components/menu).
+
+Validation: the app and instrumentation-test APKs assemble successfully. All
+three EntityPickerIndexTest cases pass (standalone JVM and the Gradle unit run);
+script tests, locale verification and changed-file whitespace checks pass. The
+combined unit run reached 1,016 tests with one unrelated failure: the Maya history
+expectation has not yet incorporated the three new translation examples being
+added in the parallel task. No device installation or execution was performed.
+
+Standalone lint completed with two unrelated NewApi errors at TranslationUi.kt:27
+(Configuration.locales and LocaleList.get on minSdk 23). The picker uses
+ConfigurationCompat and has no reported lint errors. The translation task owns
+those ongoing changes; the full project gate is not claimed green.
+
+## 2026-09-07 — #25 admin-change history
+
+Transfer administration and Transfer and leave append a standard timeline Event
+when each role change commits: “Maya Chen is now an admin.” followed by
+“Marmota is no longer an admin.” Names come from the owning profile's directory
+and account; a missing target profile uses “Member”. Named wording is meaningful
+to both the departing member and remaining members. Existing event presentation,
+timeline ordering and read-only history after leaving are reused.
+
+The grant is recorded immediately even if step-down or leave subsequently fails.
+Failed stages add nothing, and stage retries/stale callbacks cannot repeat a
+successful event. Role and event state commit together in the owning local chat;
+other chats and accounts remain independent within the in-memory prototype.
+
+`GroupAdministrationEventTest` covers accepted ordering, failures, retries,
+duplicate callbacks, retained history, account/chat isolation and missing names.
+`GroupLifecycleInteractionTest` covers the resulting history in departed and
+remaining-member conversation views; the latter projects the same accepted
+history into an active-member view, without claiming network synchronization.
+Device execution and visual acceptance are pending.
+
+Validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 1,046 unit tests and no failures/errors/skips, including all five
+admin-event regressions. Script tests, locale verification and whitespace checks
+also pass. The two member-perspective UI regressions are compiled only.

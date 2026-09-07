@@ -411,3 +411,24 @@ sign-out with remaining profiles requests the main sheet once on Chats.
 Refinement host validation: full Gradle gate passed with 909 unit tests, zero lint
 errors and both APKs; final sign-out UI regression compiled separately. Device
 inspection remains pending. See the latest parity-ledger entry for scope.
+
+## 2026-09-06 — Tighter chat-list row spacing
+
+Reduce chat-row outer vertical content padding from 10 dp to 8 dp per side.
+The user requested approximately 25% less space, then explicitly required round
+integer values; 8 dp follows the shared grid. Keep the existing inner text
+minimum, so the previous 72/88 dp row minima become 68/84 dp instead of absorbing
+the space reduction. Selection-only outer padding remains 4 dp. Preserve the
+52 dp avatar, type sizes, baselines,
+preview line limits, horizontal geometry, native click/menu behavior and 48 dp
+minimum targets. Larger text remains free to grow the row. This is a scoped,
+user-approved density exception; other lists retain their existing metrics.
+
+This is a spacing-only change; product state and copy remain unchanged.
+Official source checked: [Compose accessibility defaults](https://developer.android.com/develop/ui/compose/accessibility/api-defaults).
+Device visual acceptance remains pending.
+
+Final rounded-value host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 927 unit tests, no failures/errors/skips, zero lint errors (nine
+warnings), and both APKs assembled. The existing row-height/alignment regression
+was updated and compiled only. No device or emulator inspection was performed.

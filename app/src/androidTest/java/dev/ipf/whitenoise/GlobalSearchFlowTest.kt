@@ -45,6 +45,26 @@ class GlobalSearchFlowTest {
         rule.onNodeWithTag("global.filterMenu").assertDoesNotExist()
     }
 
+    @Test fun messageResultUsesFullBubbleAndOneSourceAction() {
+        val body = "Trailhead tomorrow\n" + "Keep the complete message. ".repeat(12) + "Last line stays visible."
+        val original = message("original", text = "Meet at the north entrance")
+        val reply = message("reply", author = "me", text = body).copy(replyToMessageId = original.id)
+        val chat = profile.chats.first().copy(timeline = listOf(ChatTimelineEntry.Message(original), ChatTimelineEntry.Message(reply)))
+        val owner = profile.copy(chats = listOf(chat))
+        val result = GlobalSearch.results(owner, "Trailhead", GlobalSearchFilters(content = setOf(GlobalSearchContent.Text))).messages.single()
+        var opened = false
+        rule.setContent { WhiteNoiseTheme { GlobalMessageRow(owner, result, "Trailhead") { opened = true } } }
+        val row = rule.onNodeWithTag("global.message.a.reply")
+        row.assertContentDescriptionContains(body, substring = true)
+        row.assertContentDescriptionContains("Meet at the north entrance", substring = true)
+        row.assertContentDescriptionContains("First Chat", substring = true)
+        row.assertContentDescriptionContains("10:00", substring = true)
+        row.assertHasClickAction()
+        rule.onAllNodes(hasClickAction()).assertCountEquals(1)
+        row.performClick()
+        rule.runOnIdle { assertTrue(opened) }
+    }
+
     @Test fun headerFilterMenuShowsActiveStateAndClearsWithoutClosingSearch() {
         rule.setContent { WhiteNoiseTheme { SearchScreen() } }
         search("Trailhead")
@@ -73,6 +93,9 @@ class GlobalSearchFlowTest {
         rule.onNodeWithTag("global.filterSearch").performTextInput(chat.title)
         rule.onNodeWithTag("global.choice.${chat.id}").performClick().assertIsOn()
         rule.onNodeWithText("Done").performClick()
+        openFilters("Chat type")
+        rule.onNodeWithTag("global.type.${if (chat.isGroup) "Groups" else "Direct"}").performClick()
+        rule.onNodeWithText("Done").performClick()
         val tag = "global.message.${chat.id}.${target.id}"
         rule.onNodeWithTag("chats.list").performScrollToNode(hasTestTag(tag)); rule.onNodeWithTag(tag).performClick()
         rule.runOnIdle {
@@ -84,6 +107,8 @@ class GlobalSearchFlowTest {
         rule.onNodeWithTag("chats.list").performScrollToNode(hasTestTag("global.filters"))
         rule.onNodeWithTag("global.filters").performScrollToNode(hasContentDescription("Remove filter: Chat: ${chat.title}"))
         rule.onNodeWithContentDescription("Remove filter: Chat: ${chat.title}").assertExists()
+        rule.onNodeWithTag("global.filters").performScrollToNode(hasContentDescription("Remove filter: ${if (chat.isGroup) "Groups" else "Direct chats"}"))
+        rule.onNodeWithContentDescription("Remove filter: ${if (chat.isGroup) "Groups" else "Direct chats"}").assertExists()
     }
     @Test fun multipleChatAndSenderChoicesHaveCheckboxSemanticsAndRemovableChips() {
         rule.setContent { WhiteNoiseTheme { SearchScreen() } }
@@ -107,13 +132,71 @@ class GlobalSearchFlowTest {
         restore.setContent { WhiteNoiseTheme { SearchScreen(owner) } }
         search("Trailhead"); openFilters("Content")
         rule.onNodeWithTag("global.content.Text").performClick(); rule.onNodeWithText("Done").performClick()
+        openFilters("Folders")
+        rule.onNodeWithTag("global.folder.system:groups").performClick().assertIsOn()
+        rule.onNodeWithText("Done").performClick()
+        openFilters("Chat type")
+        rule.onNodeWithTag("global.type.Groups").performClick().assertIsOn()
+        rule.onNodeWithText("Done").performClick()
         restore.emulateSavedInstanceStateRestore()
         rule.onNodeWithTag("chats.searchField").assertTextContains("Trailhead")
         rule.onNodeWithTag("global.filters").performScrollToNode(hasContentDescription("Remove filter: Text"))
         rule.onNodeWithContentDescription("Remove filter: Text").assertExists()
+        openFilters("Folders")
+        rule.onNodeWithTag("global.folder.system:groups").assertIsOn()
+        rule.onNodeWithText("Done").performClick()
+        openFilters("Chat type")
+        rule.onNodeWithTag("global.type.Groups").assertIsOn()
+        rule.onNodeWithText("Done").performClick()
         rule.runOnIdle { owner = profile.copy(id = "other") }
         rule.onNodeWithTag("chats.searchField").assertDoesNotExist()
         search(""); rule.onNodeWithText("Clear All").assertDoesNotExist()
+    }
+    @Test fun folderAndTypeChoicesNarrowResultsAndPruneIncompatibleChatSelections() {
+        val owner = profile.copy(chatFolders = listOf(
+            ChatFolder("work", "Work", setOf("a", "b")), ChatFolder("friends", "Friends", setOf("b")),
+        ))
+        rule.setContent { WhiteNoiseTheme { SearchScreen(owner) } }
+        search("Trailhead"); openFilters("Chats")
+        rule.onNodeWithTag("global.choice.a").performClick()
+        rule.onNodeWithText("Done").performClick()
+        openFilters("Folders")
+        rule.onNodeWithTag("global.folder.work").performClick().assertIsOn()
+        rule.onNodeWithTag("global.folder.friends").performClick().assertIsOn()
+        rule.onNodeWithText("Done").performClick()
+        openFilters("Chat type")
+        rule.onNodeWithTag("global.type.Groups").performClick().assertIsOn()
+        rule.onNodeWithText("Done").performClick()
+        openFilters("Chats")
+        rule.onNodeWithTag("global.choice.a").assertDoesNotExist()
+        rule.onNodeWithTag("global.choice.b").assertIsOff()
+        rule.onNodeWithText("Done").performClick()
+        rule.onNodeWithTag("chats.list").performScrollToNode(hasTestTag("global.message.b.b1"))
+        rule.onNodeWithTag("global.message.b.b1").assertExists()
+        rule.onNodeWithTag("global.message.a.a1").assertDoesNotExist()
+        rule.onNodeWithTag("chats.list").performScrollToNode(hasTestTag("global.filters"))
+        rule.onNodeWithTag("global.filters").performScrollToNode(hasContentDescription("Remove filter: Groups"))
+        rule.onNodeWithContentDescription("Remove filter: Groups").performClick()
+        rule.onNodeWithTag("global.filters").performScrollToNode(hasText("Clear All"))
+        rule.onNodeWithText("Clear All").performClick()
+        rule.onNodeWithTag("global.filterButton").assertIsNotSelected()
+        rule.onNodeWithTag("chats.searchField").assertTextContains("Trailhead")
+    }
+    @Test fun emptyFolderStaysSelectedAndDeletedFolderClearsItsChip() {
+        var owner by mutableStateOf(profile.copy(chatFolders = listOf(ChatFolder("empty", "Empty"))))
+        rule.setContent { WhiteNoiseTheme { SearchScreen(owner) } }
+        search("Trailhead"); openFilters("Folders")
+        rule.onNodeWithTag("global.folder.empty").performClick()
+        rule.onNodeWithText("Done").performClick()
+        rule.onNodeWithText("No matches").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Remove filter: Folder: Empty").assertExists()
+        rule.runOnIdle { owner = owner.copy(chatFolders = listOf(ChatFolder("empty", "Renamed"))) }
+        rule.onNodeWithContentDescription("Remove filter: Folder: Renamed").assertExists()
+        rule.onNodeWithText("No matches").assertIsDisplayed()
+        rule.runOnIdle { owner = owner.copy(chatFolders = emptyList()) }
+        rule.onNodeWithTag("global.filters").assertDoesNotExist()
+        openFilters("Folders")
+        rule.onNodeWithText("No folders").assertIsDisplayed()
     }
     @Test fun removedChatsReconcileFilterAndEmptyContentQueryHasUsefulNoMatches() {
         var owner by mutableStateOf(profile)
@@ -122,7 +205,8 @@ class GlobalSearchFlowTest {
         rule.runOnIdle { owner = profile.copy(chats = profile.chats.drop(1)) }
         rule.onNodeWithText("Clear All").assertDoesNotExist()
         openFilters("Content"); rule.onNodeWithTag("global.content.ImagesVideo").performClick(); rule.onNodeWithText("Done").performClick()
-        rule.onNodeWithText("No matches").assertIsDisplayed()
+        rule.waitUntil(3_000) { rule.onAllNodesWithText("No files or media found").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText("No files or media found").assertIsDisplayed()
         rule.onNodeWithText("Try another search or remove a filter.").assertIsDisplayed()
     }
     @Test fun nativeCustomRangeCannotApplyBeforeSelectionAndCancelLeavesFiltersUntouched() {

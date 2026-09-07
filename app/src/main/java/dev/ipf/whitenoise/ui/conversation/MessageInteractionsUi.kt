@@ -1,5 +1,8 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
@@ -40,6 +43,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -128,8 +133,11 @@ internal fun actionLabel(action: MessageAction): String = stringResource(
         MessageAction.Share -> R.string.attachment_share
         MessageAction.SaveAttachments -> R.string.save_attachments
         MessageAction.Forward -> R.string.forward
+        MessageAction.Pin -> R.string.message_pin
+        MessageAction.Unpin -> R.string.message_unpin
         MessageAction.Copy -> R.string.copy
         MessageAction.CopyMarkdown -> R.string.message_copy_markdown
+        MessageAction.Translate -> R.string.translation_translate
         MessageAction.ReadAloud -> R.string.read_aloud
         MessageAction.StopReading -> R.string.stop_reading
         MessageAction.Transcribe -> R.string.transcribe
@@ -154,8 +162,11 @@ internal fun actionIcon(action: MessageAction): Int = when (action) {
     MessageAction.Share -> R.drawable.ic_share
     MessageAction.SaveAttachments -> R.drawable.ic_download
     MessageAction.Forward -> R.drawable.ic_forward
+    MessageAction.Pin -> R.drawable.ic_push_pin
+    MessageAction.Unpin -> R.drawable.ic_unpin
     MessageAction.Copy -> R.drawable.ic_content_copy
     MessageAction.CopyMarkdown -> R.drawable.ic_content_copy
+    MessageAction.Translate -> R.drawable.ic_translate
     MessageAction.ReadAloud -> R.drawable.ic_volume_up
     MessageAction.StopReading -> R.drawable.ic_stop
     MessageAction.Transcribe -> R.drawable.ic_description
@@ -429,7 +440,7 @@ private fun EmojiCategoryBar(
                             modifier = Modifier.size(36.dp),
                             shape = CircleShape,
                             color = if (isSelected) {
-                                MaterialTheme.colorScheme.surfaceContainerHighest
+                                outlineSelectionColor(MaterialTheme.colorScheme.surfaceContainerHighest)
                             } else {
                                 Color.Transparent
                             },
@@ -512,6 +523,7 @@ internal fun ConfigureReactionsSheet(
                             modifier = Modifier.size(56.dp).semantics {
                                 contentDescription = description
                             },
+                            border = amoledOutlineBorder(),
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ) {
@@ -567,6 +579,7 @@ internal fun ForwardMessagesSheet(
     var selected by rememberSaveable(profile.id, destination.id, stateSaver = androidx.compose.runtime.saveable.listSaver<Set<String>, String>(save = { it.toList() }, restore = { it.toSet() })) { mutableStateOf(emptySet<String>()) }
     var accompanyingMessage by rememberSaveable(profile.id) { mutableStateOf("") }
     var profileChoice by remember { mutableStateOf(false) }
+    var folderChoice by rememberSaveable(profile.id, destination.id) { mutableStateOf(false) }
     var startFailed by remember { mutableStateOf(false) }
     fun submit() {
         startFailed = if (onForwardToProfile != null) !onForwardToProfile(destination.id, selected.toList(), accompanyingMessage)
@@ -584,7 +597,7 @@ internal fun ForwardMessagesSheet(
         .only(WindowInsetsSides.Bottom)
         .asPaddingValues()
         .calculateBottomPadding()
-    val bottomContentPadding = with(density) { bottomOverlayHeightPx.toDp() } +
+    val bottomContentPadding = with(density) { (if (allowsAccompanyingMessage || selected.isNotEmpty()) bottomOverlayHeightPx else 0).toDp() } +
         WhiteNoiseSpacing.CompactScreenMargin +
         WhiteNoiseSpacing.Related +
         maxOf(bottomSafePadding, WhiteNoiseSpacing.Section)
@@ -602,7 +615,7 @@ internal fun ForwardMessagesSheet(
     val chats = destination.chats.filter {
         (destination.id != profile.id || it.id != sourceChatId) && (query.isBlank() || it.title.contains(query, ignoreCase = true))
     }
-    val folders = destination.chatFolders.filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+    val folders = destination.chatFolders
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -613,7 +626,17 @@ internal fun ForwardMessagesSheet(
             )
         },
     ) {
-        Box(
+        androidx.activity.compose.BackHandler(enabled = folderChoice) { folderChoice = false }
+        if (folderChoice) {
+            ForwardFoldersPage(
+                profile = destination,
+                sourceProfileId = profile.id,
+                sourceChatId = sourceChatId,
+                initialSelected = selected,
+                onBack = { folderChoice = false },
+                onDone = { selected = it; folderChoice = false },
+            )
+        } else Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.88f)
@@ -629,8 +652,36 @@ internal fun ForwardMessagesSheet(
                 ) {
                     Column {
                         WhiteNoiseSheetHeader(stringResource(R.string.forward))
-                        if (destinationProfiles.size > 1) TextButton(onClick = { profileChoice = true }, modifier = Modifier.testTag("conversation.forward.profile")) {
-                            Text(stringResource(R.string.batch_forward_from, destination.name))
+                        if (destinationProfiles.size > 1) FilledTonalButton(
+                            onClick = { profileChoice = true },
+                            modifier = Modifier
+                                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related)
+                                .testTag("conversation.forward.profile"),
+                            shape = CircleShape,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = WhiteNoiseSpacing.Related),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            ),
+                            border = amoledOutlineBorder(),
+                        ) {
+                            ProfileAvatar(
+                                name = destination.name,
+                                avatar = destination.avatar,
+                                modifier = Modifier.size(32.dp),
+                                contentDescription = null,
+                            )
+                            Spacer(Modifier.size(WhiteNoiseSpacing.Related))
+                            Text(
+                                stringResource(R.string.batch_forward_from, destination.name),
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            Spacer(Modifier.size(WhiteNoiseSpacing.Related))
+                            Icon(
+                                painterResource(R.drawable.ic_expand_more),
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                            )
                         }
                         if (startFailed) Text(stringResource(R.string.batch_forward_start_failed), color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin))
@@ -689,10 +740,15 @@ internal fun ForwardMessagesSheet(
                                     bottom = bottomContentPadding,
                                 ),
                             ) {
-                                if (folders.isNotEmpty()) item { Text(stringResource(R.string.batch_folders), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = WhiteNoiseSpacing.Related)) }
-                                itemsIndexed(folders, key = { _, folder -> "folder:${folder.id}" }) { _, folder ->
-                                    val members = MessageForwarding.folderMembers(destination, profile.id, sourceChatId, folder)
-                                    ForwardFolderChoice(folder, members, selected) { selected = MessageForwarding.toggleFolder(selected, members) }
+                                if (folders.isNotEmpty()) item(key = "choose-folders") {
+                                    ListItem(
+                                        onClick = { folderChoice = true },
+                                        shapes = WhiteNoiseListItemDefaults.segmentedShapes(index = 0, count = 1),
+                                        leadingContent = { Icon(painterResource(R.drawable.ic_folder), contentDescription = null) },
+                                        trailingContent = { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null) },
+                                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                                        modifier = Modifier.testTag("conversation.forward.chooseFolders"),
+                                    ) { Text(stringResource(R.string.forward_choose_folders)) }
                                     Spacer(Modifier.height(WhiteNoiseSpacing.Related))
                                 }
                                 if (chats.isNotEmpty()) item { Text(stringResource(R.string.batch_chats), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = WhiteNoiseSpacing.Related)) }
@@ -792,7 +848,7 @@ internal fun ForwardMessagesSheet(
                                     .navigationBarsPadding()
                                     .onSizeChanged { bottomOverlayHeightPx = it.height },
                             )
-                        } else {
+                        } else if (selected.isNotEmpty()) {
                             WhiteNoiseButton(
                                 onClick = { submit() },
                                 enabled = selected.isNotEmpty(),
@@ -863,7 +919,7 @@ private fun ForwardMessageComposer(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 14.dp, top = 12.dp, bottom = 12.dp),
+                            .padding(start = 14.dp, end = if (enabled) 0.dp else 14.dp, top = 12.dp, bottom = 12.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (value.isEmpty()) {
@@ -877,7 +933,7 @@ private fun ForwardMessageComposer(
                     }
                 },
             )
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            if (enabled) Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 IconButton(
                     onClick = onForward,
                     enabled = enabled,
@@ -885,13 +941,18 @@ private fun ForwardMessageComposer(
                 ) {
                     Surface(
                         modifier = Modifier.size(32.dp),
+                        border = amoledOutlineBorder(enabled),
                         shape = CircleShape,
-                        color = if (enabled) {
+                        color = if (isAmoledOutline()) {
+                            MaterialTheme.colorScheme.surface
+                        } else if (enabled) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.surfaceContainerHighest
                         },
-                        contentColor = if (enabled) {
+                        contentColor = if (isAmoledOutline()) {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f)
+                        } else if (enabled) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -1037,7 +1098,7 @@ internal fun SearchResultsBottomBar(
     } else {
         pluralStringResource(R.plurals.match_position, count, current + 1, count)
     }
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
@@ -1047,45 +1108,43 @@ internal fun SearchResultsBottomBar(
                 horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                 vertical = WhiteNoiseSpacing.Related,
             ),
-        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
-        verticalAlignment = Alignment.CenterVertically,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shadowElevation = 6.dp,
     ) {
-        FilledTonalIconButton(
-            onClick = onOlder,
-            enabled = count > 0 && current < count - 1,
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.Related),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painterResource(R.drawable.ic_arrow_up),
-                contentDescription = stringResource(R.string.previous_match),
-            )
-        }
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .testTag("conversation.searchCount")
-                .semantics { liveRegion = LiveRegionMode.Polite },
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ) {
+            IconButton(
+                onClick = onOlder,
+                enabled = count > 0 && current < count - 1,
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_arrow_up),
+                    contentDescription = stringResource(R.string.previous_match),
+                )
+            }
             Text(
                 countLabel,
-                modifier = Modifier.padding(
-                    horizontal = WhiteNoiseSpacing.CompactScreenMargin,
-                    vertical = 10.dp,
-                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("conversation.searchCount")
+                    .semantics { liveRegion = LiveRegionMode.Polite }
+                    .padding(vertical = 10.dp),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelLarge,
             )
-        }
-        FilledTonalIconButton(
-            onClick = onNewer,
-            enabled = count > 0 && current > 0,
-        ) {
-            Icon(
-                painterResource(R.drawable.ic_arrow_down),
-                contentDescription = stringResource(R.string.next_match),
-            )
+            IconButton(
+                onClick = onNewer,
+                enabled = count > 0 && current > 0,
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_arrow_down),
+                    contentDescription = stringResource(R.string.next_match),
+                )
+            }
         }
     }
 }
@@ -1137,6 +1196,7 @@ fun MessageDetailsScreen(
             ) {
                 item {
                     Surface(
+                        border = amoledOutlineBorder(),
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ) {
@@ -1161,6 +1221,7 @@ fun MessageDetailsScreen(
                     item {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
+                            border = amoledOutlineBorder(),
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
@@ -1217,6 +1278,7 @@ fun MessageDetailsScreen(
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
+                        border = amoledOutlineBorder(),
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                     ) {

@@ -4531,3 +4531,204 @@ without discarding text, restoring the ordinary composer. No-speech/empty
 provider results continue silently; remove the app silence timer and tracking
 state. Other capability recovery and actual voice-note review remain distinct.
 This supersedes every earlier five-second no-speech rule. See the composer brief.
+
+## Chat spacing density trial — 2026-09-06
+
+User requested approximately 30% less space between bubble groups and 25% less
+chat-list spacing, then explicitly required round integer values. Use 12 dp
+for the cluster break (was 16 dp) and 8 dp chat-row vertical padding per side
+(was 10 dp). Both follow the shared spacing grid. Keep selection-only outer
+padding at 4 dp. Preserve inner content minima so rows shorten to 68/84 dp;
+avatars, type, same-author spacing, horizontal layout, dates and interactions
+remain unchanged. Device visual acceptance is pending.
+
+## Separate AMOLED Outline theme — 2026-09-06
+
+The user approved **AMOLED Outline** as an additional profile-owned appearance:
+pure-black resting surfaces, 1 dp white outlines and white/neutral text. Keep
+existing AMOLED and the other themes. Ignore custom action/global/per-chat
+bubble colors in this fixed monochrome variant, disable its color editing with
+an explanation, and preserve saved values for other themes. Keep Material
+feedback, semantic errors, selected/disabled states, media and native system
+surfaces. Shared component styling supplies borders without changing metrics
+or interactions. See the appearance brief for source evidence and acceptance.
+
+## Message text selection stays in the bubble — 2026-09-06
+
+The user accepted the reduced spacing and chose to keep timestamps outside
+message bubbles: putting them inside would enlarge containers and lose useful
+white space. Select text now selects a passage inside the existing bubble,
+using Compose SelectionContainer/SelectionState and the standard Android text
+context menu. It does not open the full reader. Native handles own dragging;
+the selected bubble suspends its action hold and reply swipe. Selection is
+limited to that message’s text, ends before conversation Back, and is invalidated
+when its source changes or its profile/chat leaves the foreground. Read more
+retains the dedicated reader. See the message-editing-and-reading brief for
+implementation and verification.
+
+
+## Forwarded message attribution — 2026-09-06
+
+The user selected WhatsApp's basic bubble treatment: a small mirrored arrow and
+“Forwarded” above the content. Forwarding an own original message adds no label;
+forwarding someone else's content does, and subsequent forwards retain it. The
+new sender owns the message without exposing original sender or source identity.
+This is a local boolean, without a forwarding counter or protocol contract.
+The label uses the bubble's readable text color across themes, remains outside
+native passage selection and copied text, and is omitted on deleted messages.
+Maya Chen contains two ordinary examples at the end of the history. See
+[message moderation and forwarding](screens/message-moderation-and-forwarding.md)
+for implementation and verification.
+
+
+## Forwarding picker and success feedback — 2026-09-06
+
+The user moved folder bulk selection behind a dedicated Folders page entered from
+one picker row. Done applies provisional selections; Back returns without changing
+recipients. Hide Forward until at least one recipient is selected. Keep the media
+caption available with no disabled send icon. A completed forward uses a short
+native Android toast and clears its operation UI; progress and failed-send recovery
+remain actionable. The user also requested gray Forwarded attribution, with a
+4.5:1 minimum against the actual bubble. See the forwarding brief for evidence.
+
+
+## Readable message context previews — 2026-09-07
+
+The user approved five-line text excerpts with ellipsis, proportional media
+reduction and scrolling full-size menu actions. Scale only media to 75%; retain
+normal caption, attribution and metadata typography and native action targets.
+Complex documents use a readable excerpt while every action keeps the full source.
+The preview and action list share the edge-to-edge scroll area. This supersedes
+whole-message scaling to 320 dp. See the message-interactions-and-search brief.
+
+
+## Forwarding progress feedback — 2026-09-07
+
+The user requested native toast feedback for in-progress forwarding. Show one
+“Forwarding…” toast when starting or manually retrying, then “Forwarded” on success.
+Keep chat geometry unchanged during preparation/upload/send; do not expose a
+persistent progress bar or Details. Failed outcomes retain recovery. Toasts do
+not own or interrupt the operation and do not repeat for each destination.
+
+## 2026-09-07 — Message pins
+
+The latest user-provided Signal screenshots supersede the first #17 presentation:
+remove the toolbar pin shortcut, full-screen pin destination, and arrow controls.
+Use a full-width gray strip with sender/text, leading vertical pagination and tap
+to cycle. The strip's pin icon opens Unpin, Go to message, View all messages in
+that order. View all opens an in-chat bottom sheet. Pin order, profile/chat
+ownership, permissions, and exact-target history recovery remain unchanged.
+Pins last until unpinned; no numeric limit or timed expiry was selected.
+
+
+### Pin bubble list and group administration — 2026-09-07 follow-up
+
+User direction removes pressed/ripple fill from the cycling strip preview;
+keyboard focus remains visible. View all messages now presents original chat
+bubbles, including media, complete text and timestamps, with source-jump behavior.
+All group pin/unpin mutations require active admin status. This supersedes the
+fixture Everyone option; direct chats retain pinning for either participant.
+
+## 2026-09-07 — Calendar jump inside chat search
+
+Issue #18 uses a calendar icon beside the conversation search field. The user
+selected this entry point instead of an additional chat overflow action. Use
+the native Material date picker, bounded by earliest available history and the
+existing fixed prototype today. Jump to the first message or system event on or
+after the selected day; empty days move forward, with newest-entry fallback.
+Successful jumps exit search and retain the target/draft; Cancel preserves search.
+Reuse bounded history target loading and recovery. See `screens/jump-to-date.md`.
+
+## 2026-09-07 — Account attachments inside main search
+
+The user selected the main chat-list search as the entry for #19. Photos & videos,
+Files and Audio browse all current-account attachments without requiring text,
+using existing chat/folder/sender/date filters. Each result card opens its source
+message directly; Back restores the same search and scroll. Chat title/time sit
+inside the card, with read-only chat document/voice previews for files and audio.
+Attachment opening/playback remains in chat. Ordinary Links remain in message
+search. See `screens/global-files-and-media.md`.
+
+## 2026-09-07 — Regular search results use conversation bubbles
+
+The user requested actual full message bubbles for regular filtered search,
+separate from the dedicated files/audio/media browser. Reuse the transcript
+renderer with search highlighting, normal metadata and no text collapse. Each
+result opens its source message; existing Back restoration remains.
+
+
+## Forwarding profile selector — 2026-09-07
+
+The user requested a pill with an avatar for the existing “Send as” action (#21).
+Use a native Material tonal button with selected-profile avatar, visible sending
+identity and dropdown chevron. Keep the existing explicit profile-picker sheet
+and recipient reset behavior; this does not switch the active profile. See the
+[forwarding brief](screens/message-moderation-and-forwarding.md) for composition,
+accessibility and validation evidence.
+
+## 2026-09-07 — Composer writing tools
+
+User-approved #22 entry: Writing tools in the + menu for the whole draft and in
+native text selection for a passage. Use one operation/preview sheet with explicit
+Apply/Discard. Preserve the original until Apply, never send, and invalidate
+results on draft/selection/owner changes. Only deterministic local examples and
+developer-only provider/download/disclosure outcomes are in scope. See
+[Writing tools](screens/writing-tools.md).
+
+
+## Continuous composer motion — 2026-09-07
+
+The user's recording and request for smooth expansion/collapse supersede the
+staged geometry recorded on 2026-09-05. Height, width and toolbar integration
+move together; downward dragging follows the finger immediately using stable
+screen coordinates. Preserve the 2026-09-06 multiline full-width rule. Collapse
+uses current draft height, including edits during expansion, and spring reversal
+retains current motion. See the [composer brief](screens/composer-media-and-speech.md)
+for implementation and validation evidence.
+
+
+## Admin-transfer member picker — 2026-09-07
+
+For #24 the user requested missing-avatar fallback and quick navigation for the
+existing searchable member picker. Use the shared monogram avatar when profile
+data is missing. Add an opt-in locale-aware letter-jump menu to this picker,
+using native tonal-button and menu behavior. Choosing a letter only scrolls;
+member selection still opens the existing confirmation. Extend the existing
+“Group - Sole Admin” roster so the user can inspect long-list and fallback states.
+See the [administration brief](screens/group-administration-and-transcript.md).
+
+### Message translation — 2026-09-07
+
+User approved #23: per-message Translate with a remembered target, an in-bubble
+original/translation toggle, and opt-in profile defaults plus per-chat overrides.
+Use deterministic local phrases and provider-state examples, with originals
+authoritative and bounded transient results. See [message translation](screens/message-translation.md).
+
+### Translation presentation refinement — 2026-09-07
+
+User requested direct language action rows with chevrons, an original-text preview
+and detected language at the top, and Show original inside Translate. Bubbles
+retain compact gray language metadata only, using a centered icon for direction.
+Progress/error/retry controls remain in the sheet. The chat has no automatic
+translation failure banner. Same-language manual and automatic requests are
+blocked; restoring a stored rendition does not submit another request.
+
+
+### Bubble-color preview and explicit Save — 2026-09-07
+
+User direction on #28 replaces bubble pickers' Apply actions with immediate
+local preview and one screen-level Save. Presets, sliders, valid hex and Reset
+all edit an unsaved draft; Back leaves saved settings unchanged. Keep the example
+bubbles visible with a native sticky header and use the shared pinned Save
+button. This supersedes immediate commit for bubble colors in WN-ANDROID-0146;
+action-color editing retains its current behavior. See the
+[appearance brief](screens/appearance-typography-and-input.md).
+
+### Action-color Save and contained reset — 2026-09-07
+
+Latest screenshot feedback extends the explicit Save pattern to Action color.
+Preview locally, commit with one pinned Save, and leave saved state unchanged on
+Back. Place full-width outlined Reset to default inside the picker block and the
+supporting text immediately below it. This supersedes the earlier Action-color
+Apply exception; both color screens share the same continuous picker behavior.
+See the [appearance brief](screens/appearance-typography-and-input.md).

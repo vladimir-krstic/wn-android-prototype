@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
+import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -160,7 +162,7 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
                 }
             }
         },
-        modifier = Modifier.fillMaxWidth().testTag("chat.row.${chat.id}")
+        modifier = Modifier.fillMaxWidth().amoledOutline(WhiteNoiseListItemDefaults.shapes().shape).testTag("chat.row.${chat.id}")
             .semantics { customActions = actions; selected = highlighted; role = if (selecting) Role.Checkbox else Role.Button
                 if (selecting) toggleableState = if (checked) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off },
         // The anchor's outer inset plus this inner padding keep artwork on the shared
@@ -168,12 +170,12 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
         contentPadding = PaddingValues(
             start = ChatRowHorizontalInset,
             end = ChatRowHorizontalInset,
-            top = ListItemDefaults.ContentPadding.calculateTopPadding(),
-            bottom = ListItemDefaults.ContentPadding.calculateBottomPadding(),
+            top = WhiteNoiseSpacing.ChatRowVerticalPadding,
+            bottom = WhiteNoiseSpacing.ChatRowVerticalPadding,
         ),
         shapes = WhiteNoiseListItemDefaults.shapes(),
         colors = ListItemDefaults.colors(
-            containerColor = if (highlighted) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
+            containerColor = if (highlighted) outlineSelectionColor(MaterialTheme.colorScheme.surfaceContainerHigh) else MaterialTheme.colorScheme.surface,
         ),
     )
 }
@@ -182,7 +184,7 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
  * Keep the text region in one ListItem content slot. Material alpha25's supporting-slot
  * baseline query can place an unplaced Row/Box subtree during lazy reuse (RectList crash
  * on Compose UI 1.12.0). Only direct Text baselines are read here, never a container's.
- * Native ListItem still owns interaction, padding, avatar spacing, shape and alignment.
+ * Native ListItem still owns interaction, avatar spacing, shape and alignment.
  */
 @Composable
 private fun ChatRowTextLayout(
@@ -219,8 +221,8 @@ private fun ChatRowTextLayout(
         val width = if (constraints.hasBoundedWidth) constraints.maxWidth else constraints.constrainWidth(
             maxOf(name.width + iconGap + icons.width + trailingGap + time.width, message.width + badgeSpace),
         )
-        // Match alpha25 ListTokens' two-/three-line minima. Padding and vertical alignment
-        // remain native; text can grow beyond these minima at any font or display scale.
+        // Preserve the original inner text minima; the rounded density reduction
+        // belongs to outer padding. Text can still grow at any font or display scale.
         val minimumHeight = if (message[FirstBaseline] != message[LastBaseline]) 88.dp else 72.dp
         val contentMinimum = (minimumHeight - padding.calculateTopPadding() - padding.calculateBottomPadding()).roundToPx()
         val height = constraints.constrainHeight(maxOf(textHeight, contentMinimum))

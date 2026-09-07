@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.outlineButtonColors
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.SystemClock
@@ -125,7 +127,7 @@ internal fun AppLockScreen(controller: AppLockController, onLeaveApp: () -> Unit
                     Text(stringResource(if (controller.phase == AppLockPhase.Evaluating) R.string.app_unlock_checking else R.string.app_unlock_progress),
                         modifier = Modifier.padding(top = WhiteNoiseSpacing.Related).semantics { liveRegion = LiveRegionMode.Polite })
                     if (controller.phase == AppLockPhase.Authenticating) TextButton(onClick = controller::cancel) { Text(stringResource(R.string.cancel)) }
-                } else Button(onClick = { controller.requestUnlock() },enabled = controller.foreground,modifier = Modifier.testTag("app.unlock")) {
+                } else Button(onClick = { controller.requestUnlock() },enabled = controller.foreground,modifier = Modifier.testTag("app.unlock"), border = amoledOutlineBorder(controller.foreground), colors = outlineButtonColors()) {
                     Text(stringResource(R.string.app_unlock))
                 }
             }

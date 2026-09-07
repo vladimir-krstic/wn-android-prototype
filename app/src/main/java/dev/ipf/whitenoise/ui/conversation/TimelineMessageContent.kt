@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.model.bytesAvailable
 
 import android.content.Context
@@ -32,8 +34,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -90,12 +94,14 @@ internal fun TimelineAttachmentContent(
         verticalArrangement = Arrangement.spacedBy(ConversationMessageMetrics.RichContentSpacing),
     ) {
         if (visualAttachments.isNotEmpty()) {
-            TimelineMediaGrid(
-                messageId = messageId,
-                attachments = visualAttachments,
-                onClick = onOpenMedia,
-                searchQuery = searchQuery,
-            )
+            FocusedMediaPreview {
+                TimelineMediaGrid(
+                    messageId = messageId,
+                    attachments = visualAttachments,
+                    onClick = onOpenMedia,
+                    searchQuery = searchQuery,
+                )
+            }
         }
         if (messageId != null) attachments.filter { it.transfer != null && it.transfer.phase != dev.ipf.whitenoise.model.AttachmentTransferPhase.Available }.forEach { attachment ->
             AttachmentTransferControls(messageId, attachment)
@@ -359,13 +365,13 @@ private fun MediaTile(
 private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean, searchQuery: String) {
     val uriHandler = LocalUriHandler.current
     val destination = attachment.externalUri?.takeIf { attachment.isAvailable }
-    val container = if (outgoing) {
+    val container = if (outgoing && !isAmoledOutline()) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
     } else {
         MaterialTheme.colorScheme.surfaceContainer
     }
-    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-    val secondaryContent = if (outgoing) {
+    val content = if (outgoing && !isAmoledOutline()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val secondaryContent = if (outgoing && !isAmoledOutline()) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
@@ -382,6 +388,7 @@ private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean, se
                     Modifier
                 },
             ),
+        border = amoledOutlineBorder(),
         shape = ConversationRichContentShape,
         color = container,
         contentColor = content,
@@ -429,6 +436,24 @@ private fun LinkMessageCard(attachment: MessageAttachment, outgoing: Boolean, se
     }
 }
 
+/** The result card owns navigation; its attachment preview has no separate actions. */
+@Composable
+internal fun TimelineLibraryAttachmentPreview(attachment: MessageAttachment, audio: Boolean) {
+    if (audio) {
+        Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+            if (attachment.kind != MessageAttachmentKind.Voice && attachment.label.isNotBlank()) {
+                Text(attachment.label, style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            VoiceMessageCard(attachment, outgoing = false, transcript = null, transcriptVisible = false, preview = true)
+        }
+    } else {
+        DocumentOrContactCard(attachment.copy(label = attachment.label.ifBlank { stringResource(R.string.library_files) }),
+            outgoing = false, searchQuery = "", people = emptyList(),
+            onOpenPerson = null, messageId = null, preview = true)
+    }
+}
+
 @Composable
 private fun DocumentOrContactCard(
     attachment: MessageAttachment,
@@ -437,6 +462,7 @@ private fun DocumentOrContactCard(
     people: List<Person>,
     onOpenPerson: ((String) -> Unit)?,
     messageId: String?,
+    preview: Boolean = false,
 ) {
     val context = LocalContext.current
     val attachmentAccess = LocalAttachmentAccess.current
@@ -449,6 +475,7 @@ private fun DocumentOrContactCard(
     val person = attachment.contactPersonId?.let { id -> people.firstOrNull { it.id == id } }
     val canOpenPerson = attachment.kind == MessageAttachmentKind.Contact && person != null && onOpenPerson != null
     val openAction: (() -> Unit)? = when {
+        preview -> null
         canOpenPerson -> ({ onOpenPerson(person.id) })
         attachment.kind == MessageAttachmentKind.File && attachmentAccess.open != null -> ({ attachmentAccess.open.invoke(messageId, attachment) })
         canOpenFile -> ({
@@ -460,24 +487,25 @@ private fun DocumentOrContactCard(
         })
         else -> null
     }
-    val container = if (outgoing) {
+    val container = if (outgoing && !isAmoledOutline()) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
     } else {
         MaterialTheme.colorScheme.surfaceContainer
     }
-    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val content = if (outgoing && !isAmoledOutline()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("conversation.attachment.${attachment.id}")
             .clip(ConversationRichContentShape)
             .then(if (openAction != null) Modifier.clickable(onClick = openAction) else Modifier),
+        border = if (preview) null else amoledOutlineBorder(),
         shape = ConversationRichContentShape,
-        color = container,
+        color = if (preview) Color.Transparent else container,
         contentColor = content,
     ) {
         Row(
-            Modifier.padding(ConversationMessageMetrics.RichComponentInset),
+            Modifier.padding(if (preview) 0.dp else ConversationMessageMetrics.RichComponentInset),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
         ) {
@@ -500,7 +528,7 @@ private fun DocumentOrContactCard(
                 SearchHighlightedText(
                     text = person?.displayName ?: attachment.label.removePrefix("Contact: "),
                     query = searchQuery,
-                    maxLines = 1,
+                    maxLines = if (preview) 2 else 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
@@ -557,8 +585,9 @@ private fun VoiceMessageCard(
     outgoing: Boolean,
     transcript: String?,
     transcriptVisible: Boolean,
+    preview: Boolean = false,
 ) {
-    val duration = attachment.durationSeconds?.coerceAtLeast(1) ?: 8
+    val duration = attachment.durationSeconds?.coerceAtLeast(1) ?: if (preview) 0 else 8
     var isPlaying by remember(attachment.id) { mutableStateOf(false) }
     var progress by remember(attachment.id) { mutableFloatStateOf(0f) }
     LaunchedEffect(isPlaying) {
@@ -572,13 +601,13 @@ private fun VoiceMessageCard(
             isPlaying = false
         }
     }
-    val container = if (outgoing) {
+    val container = if (outgoing && !isAmoledOutline()) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
     } else {
         MaterialTheme.colorScheme.surfaceContainer
     }
-    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-    val secondaryContent = if (outgoing) {
+    val content = if (outgoing && !isAmoledOutline()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val secondaryContent = if (outgoing && !isAmoledOutline()) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
@@ -587,39 +616,47 @@ private fun VoiceMessageCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("conversation.attachment.${attachment.id}"),
+        border = if (preview) null else amoledOutlineBorder(),
         shape = ConversationRichContentShape,
-        color = container,
+        color = if (preview) Color.Transparent else container,
         contentColor = content,
     ) {
         Column(
-            Modifier.padding(ConversationMessageMetrics.RichComponentInset),
+            Modifier.padding(if (preview) 0.dp else ConversationMessageMetrics.RichComponentInset),
             verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
             ) {
-                FilledTonalIconButton(
-                    onClick = { isPlaying = !isPlaying },
-                    modifier = Modifier.testTag("conversation.voice.play.${attachment.id}"),
-                ) {
-                    Icon(
-                        painter = painterResource(
-                            if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow,
-                        ),
-                        contentDescription = stringResource(
-                            if (isPlaying) R.string.pause else R.string.play,
-                        ),
-                    )
+                if (preview) {
+                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
+                        Icon(painterResource(R.drawable.ic_play_arrow), stringResource(R.string.library_audio), Modifier.padding(12.dp).size(24.dp))
+                    }
+                } else {
+                    FilledTonalIconButton(
+                        onClick = { isPlaying = !isPlaying },
+                        modifier = Modifier.testTag("conversation.voice.play.${attachment.id}"),
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow,
+                            ),
+                            contentDescription = stringResource(
+                                if (isPlaying) R.string.pause else R.string.play,
+                            ),
+                        )
+                    }
                 }
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier.weight(1f),
-                    color = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f).then(if (preview) Modifier.clearAndSetSemantics {} else Modifier),
+                    color = if (outgoing && !isAmoledOutline()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
                     trackColor = content.copy(alpha = 0.24f),
                     drawStopIndicator = {},
                 )
-                Text(
+                if (!preview || duration > 0) Text(
                     formatMessageDuration(
                         if (progress > 0f) (duration * (1f - progress)).roundToInt() else duration,
                     ),
@@ -630,8 +667,9 @@ private fun VoiceMessageCard(
             if (transcriptVisible && transcript != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
+                    border = if (preview) null else amoledOutlineBorder(),
                     shape = MaterialTheme.shapes.small,
-                    color = if (outgoing) {
+                    color = if (outgoing && !isAmoledOutline()) {
                         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
                     } else {
                         MaterialTheme.colorScheme.surfaceContainerHigh
@@ -644,7 +682,9 @@ private fun VoiceMessageCard(
                             style = MaterialTheme.typography.labelMedium,
                             color = secondaryContent,
                         )
-                        Text(transcript, style = MaterialTheme.typography.bodyMedium)
+                        Text(transcript, style = MaterialTheme.typography.bodyMedium,
+                            maxLines = if (LocalFocusedMessagePreview.current) FocusedPreviewTextLines else Int.MAX_VALUE,
+                            overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

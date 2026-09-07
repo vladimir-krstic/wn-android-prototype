@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.onboarding
 
+import dev.ipf.whitenoise.ui.theme.outlineButtonColors
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -192,6 +194,8 @@ internal fun AvatarWebImagePickerContent(
                     modifier = Modifier.padding(
                         end = WhiteNoiseSpacing.CompactScreenMargin - MaterialTopAppBarEndInset,
                     ),
+                    border = amoledOutlineBorder(activeChoice != null),
+                    colors = outlineButtonColors(),
                 ) {
                     Text(stringResource(R.string.done), maxLines = 1)
                 }
@@ -278,6 +282,7 @@ private fun WebImageModeButtons(mode: WebImageMode, onModeChange: (WebImageMode)
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 ),
+                border = amoledOutlineBorder(),
             ) {
                 Icon(
                     painter = painterResource(if (isSearch) R.drawable.ic_search else R.drawable.ic_link),

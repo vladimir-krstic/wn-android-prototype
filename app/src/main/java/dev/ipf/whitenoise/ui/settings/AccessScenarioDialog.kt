@@ -40,6 +40,8 @@ internal val AccessScenario.developerLabel: String
         AccessScenario.AmberProofCancelled -> "Amber proof cancelled"
         AccessScenario.AmberProofRejected -> "Amber proof rejected"
         AccessScenario.AmberMismatch -> "Amber identity mismatch"
+        AccessScenario.AmberTimeout -> "Amber timeout"
+        AccessScenario.AmberInvalidResponse -> "Amber invalid response"
     }
 
 @Composable

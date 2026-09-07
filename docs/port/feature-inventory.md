@@ -1,5 +1,51 @@
 # Android parity feature inventory
 
+2026-09-06 push feedback presentation: removed Cancel and placed status, text,
+Retry and progress in the shared white-equivalent Settings container. Inner
+padding is 16 dp; progress follows the text with shared 8 dp spacing/clearance.
+Lint, app assembly and updated UI-test APK compilation pass. Device/visual
+acceptance remains pending; see the [notification brief](../screens/notification-controls.md).
+
+2026-09-06 native push recovery: readable inline capability reasons now sit
+outside the disabled switch. Provider/setup failures expose owned Retry and
+progress; build/Play Services causes do not suggest an ineffective retry.
+Capability recovery preserves the stored preference and rejects stale/overlapping
+requests. Push preference work uses inline progress/error/retry instead of a
+modal, with the persistent-connection fallback retained. Three new state tests
+pass; two new plus one extended UI cases compile. Full host gate passes 951
+unit tests, zero failures/errors/skips, lint and both APKs. Device/visual
+acceptance remains pending. See the
+[notification brief](../screens/notification-controls.md#behavior-and-ownership).
+
+2026-09-06 per-chat downloads: Chat/Group Info now opens Automatic downloads.
+Each media type inherits current profile rules or owns explicit network rules;
+resolved summaries distinguish Profile default, Custom and Never. Reset clears
+only the current chat's overrides. Canonical download admission uses those rules
+and retains profile pause, unknown-network and accepted-work behavior. Six new
+model/state tests pass and four UI/navigation cases compile. Full host gate:
+948 unit tests with zero failures/errors/skips, lint and both APKs. Device/visual
+acceptance remains pending. See the
+[download brief](../screens/downloads-and-media-quality.md#parity-contract).
+
+2026-09-06 Amber error scenarios: Developer Tools now offers timeout and invalid
+response. Both show normal sign-in feedback with Try Again and Cancel, preserve
+profiles on failure/cancel, and use fresh owned requests on retry. Existing
+initial/Add Profile routes and external-key ownership remain. Two new state
+tests plus extended failure coverage pass; two sign-in UI recovery cases compile.
+Full host gate: 942 unit tests, zero failures/errors/skips, lint and both APKs.
+No device execution was requested. See the
+[access brief](../screens/access-and-recovery.md#product-behavior).
+
+2026-09-06 global-search filters: Folders and Chat type (Direct chats/Groups)
+now join the existing filter menu. Stable folder IDs resolve through live system/
+custom membership rules; multiple choices union within categories and intersect
+across them. Visible removable chips, scoped chat choices, incompatible-ID cleanup,
+saved state and profile isolation share the existing search flow. Four new model
+tests pass, and two new plus two extended UI cases compile. The full host gate
+passes 940 unit tests with zero failures/errors/skips, lint and both APKs.
+Device/visual acceptance remains pending. See the
+[search brief](../screens/global-search.md#2026-09-06--folder-and-chat-type-filters).
+
 This is the durable ledger for the Android port. It describes the accepted
 iOS product surface captured on 2026-08-15; it does not predesign Android
 screens.
@@ -641,3 +687,298 @@ cover repeated empty and generic endpoints, retained partials, explicit Pause an
 stale callbacks; Compose coverage checks no X/slot, no error, Resume and Back exit.
 These replace the superseded five-second timer expectations. Final host results
 and device limits are recorded in the latest composer brief.
+
+2026-09-06 chat-density trial: after the user's whole-number correction,
+`ConversationScreen` uses a shared 12 dp cluster break (was 16 dp); `ChatListRow`
+uses 8 dp vertical content padding (was 10 dp) and retains inner content minima
+and larger-text growth. Shared UI metrics and both screen briefs record the
+final values. The existing row-height and preview/status-alignment regression
+expects 68/84 dp row minima. Host results are recorded in the screen briefs;
+no device inspection is claimed.
+
+### Authorized appearance extension: AMOLED Outline — 2026-09-06
+
+The additional appearance choice is wired through profile settings, palette,
+shared outlined components, conversation bubbles/accessories and fixed-color
+editing policy. Existing AMOLED, saved color overrides and semantic states are
+retained. `AmoledOutlineTest` covers palette, border, contrast, selection
+resolution and override isolation; `AppearanceInputInteractionTest` adds the
+switch/disabled-customization/restoration case. See the appearance brief for
+host results and the still-pending device/visual acceptance. The pinned parity
+baseline is unchanged.
+
+
+2026-09-06 in-bubble text selection: Select text keeps the original conversation
+and selects only that message’s text with native handles and the standard
+Copy/Select all menu. Source changes, deletion and foreground/profile/chat exit
+invalidate selection; Back exits selection before composer/navigation behavior.
+External timestamps retain the user-approved layout. Evidence:
+[message selection brief](../screens/message-editing-and-reading.md#2026-09-06--selection-inside-message-bubbles),
+ConversationScreen, InlineMessageSelection, AgentOperationUi and the updated
+MessageEditingReadingFlowTest. The full host gate
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 932 unit tests, zero failures/errors/skips, lint and both APKs.
+Native-copy and selection UI cases compile only; no device/visual inspection
+was requested or performed. Issue #3 remains open for hands-on acceptance.
+
+2026-09-06 selection contrast: native highlight and handle colors now resolve
+against each bubble, its text and the conversation canvas. Host tests verify
+3:1 handle/highlight and 4.5:1 selected-text contrast for default sent, received
+and agent surfaces across all five appearance choices. Custom preset/neutral
+bubbles preserve readable selected text, with best available distinction for
+midtone backgrounds. See the [contrast evidence](../screens/message-editing-and-reading.md#selection-contrast-across-themes).
+The full host gate passed with 936 unit tests, zero failures/errors/skips, lint
+and both APKs. Device visual acceptance remains pending.
+
+
+2026-09-06 #16 forwarding attribution extends C045: deterministic `isForwarded`
+state survives destination copies and media-frame forwarding, with the own-original
+exception and continued attribution on subsequent forwards. Shared bubble rendering
+adds an accessible localized arrow/Forwarded label above content, excludes it from
+copied/selected body text, and hides it on tombstones. Maya Chen includes incoming
+text and outgoing photo examples. Evidence: `MessageBatchModels`,
+`ForwardedMessageLabel`, `ConversationScreen`, `ConversationFixtures`,
+`ForwardedMessageTest`, `MessageBatchStateTest`, and `ForwardedMessageFlowTest`.
+The final README host gate passes 955 unit tests, lint and both APKs; the three
+new Compose cases compiled only. Current-build device and visual acceptance remain
+pending.
+
+
+2026-09-06 forwarding polish: folder bulk selection moves to a separate picker
+page with provisional changes, Done and Back. Submit is absent with zero selected
+chats, including the media send action. Completed operations clear after one native
+short toast; failures retain recovery. Attribution uses gray constrained to 4.5:1
+contrast across themes and custom colors. Evidence: `ForwardFoldersPage`,
+`ForwardMessagesSheet`, `MessageOperationsHost`, `ForwardedLabelColorTest`, and
+updated `MessageBatchFlowTest`/`ConversationScreenTest`. The full gate passed 957
+unit tests, lint and both APKs; the final UI-only follow-up passed lint and both
+APKs. Compose cases compiled only; device and visual acceptance remain pending.
+
+
+2026-09-07 focused-action overflow: the scroll viewport reaches the physical
+bottom edge, with navigation clearance moved into trailing scroll content.
+`ConversationScreen` and its new overflow regression retain safely reachable
+last actions. Preview scaling is unchanged. Lint and both APKs pass; the UI
+regression compiled only. No device inspection or visual acceptance claimed.
+
+
+2026-09-07 focused-preview readability: full-message shrinking is replaced by
+normal-size five-line ellipsized text and 75% media-only scaling. Captions,
+attribution, metadata and commands remain unscaled; Copy/Forward/Edit retain the
+full source. `FocusedMessagePreviewTextTest`, `FocusedMessagePreviewTest` and
+`MessageEditingReadingFlowTest` cover projection, large type, RTL media and complete
+copy behavior. The full host gate passed 959 unit tests, lint and both APKs;
+the final UI-test follow-up passed lint and test APK compilation. No device/visual
+acceptance claimed.
+
+
+2026-09-07 forwarding progress presentation: in-progress operations now use one
+native short start toast and preserve full chat height, followed by the existing
+completion toast. Revision updates do not enqueue more toasts; failure recovery is
+retained. Evidence: `MessageOperationsHost`, localized `forward_starting`, and
+updated `MessageBatchFlowTest`. Lint and both APKs pass, including the final
+UI-test follow-up. Device/visual acceptance remains pending.
+
+## Message pinning — issue #17, 2026-09-07
+
+`MessagePins.kt` and `AppViewModel.setMessagePinned` provide ordered, profile/chat
+owned pins with live source projection, deleted/unavailable statuses and fixture
+permissions. `MessageActionPolicy` exposes Pin/Unpin. The latest Signal screenshot
+follow-up uses `PinnedMessagesUi.kt` for a full-width sender/text strip, leading
+pagination, tap-to-cycle and a native Unpin / Go to message / View all messages
+menu. View all opens an in-chat sheet with original transcript bubbles, full
+text, media and metadata; the old toolbar shortcut and typed pin
+page were removed. Exact source targeting reuses the existing history controller.
+Maya Chen has two pins; every group now requires admin status for pin/unpin,
+while members retain browsing. The cycling preview has no tap fill.
+
+Full-bubble/admin-only host gate passed: 968 unit tests, lint, app and test APK
+assembly. Eight pin UI regressions compile; no device execution or visual
+acceptance claimed. See `docs/screens/pinned-messages.md`.
+
+## Calendar navigation — issue #18, 2026-09-07
+
+`ConversationDates.kt` resolves civil dates across available messages and system
+events, using receipt/creation timestamps or the established fixed fixture
+calendar. The native `ConversationDatePicker` opens from the chat search calendar
+button. Empty days seek forward; a day after the last entry falls back to that
+entry. Cancel preserves search; successful navigation exits search and keeps the
+target/draft, with a brief accessible date highlight. Existing bounded history
+target loading handles errors, unavailable sources, retry and cancellation.
+
+Host gate passed: 979 unit tests (11 date/index/request regressions), lint, app and
+test APK assembly. Four compiled Compose regressions cover search/calendar access,
+cancel, event navigation, empty state and restoration. Device execution and
+visual acceptance remain pending. See [Jump to date](../screens/jump-to-date.md).
+
+### 2026-09-07 — Transparent conversation search controls
+
+`ConversationScreen` now extends the transcript behind the search controls.
+Measured bottom-slot clearance is inside the scroll content, with IME insets
+handled once; the arrows and matches capsule retain their tonal containers.
+The full-width blank cutoff is removed. Host gate passed: 979 unit tests, lint,
+app and test APK assembly. No device or visual verification claimed.
+
+### Unified search pill — 2026-09-07 follow-up
+
+`SearchResultsBottomBar` joins the arrows and centered match count inside one
+full-width gray Material capsule with a 6 dp shadow. The user correction restores
+the original secondaryContainer/onSecondaryContainer colors and removes the
+outline in every theme. End arrows use native IconButtons; the canvas around
+the capsule remains transparent. Corrected host gate passes: 979 unit tests,
+lint and both APK assemblies. No device or visual check claimed.
+
+## Account files and media — issue #19, 2026-09-07
+
+`GlobalAttachments` expands the existing typed global-search projection into
+profile/chat/message/attachment/frame identities. Main search exposes Photos &
+videos, Files, Audio and All attachments without requiring text. The browser
+uses adaptive image/video tiles, full-width file/audio rows, localized date
+headings and existing chat/folder/sender/date filters. Each tonal result card
+contains its chat title/time and opens the exact message on tap; Back restores
+search/filter/scroll state. File/audio previews reuse chat layouts without nested
+actions. File and audio results use one container with compact localized
+“From: chat · time” metadata; previews have no nested fill or outline. Voice
+notes omit the redundant type heading while named audio files retain filenames.
+Photo/video tiles omit visible titles, retaining descriptions for accessibility
+and search, source chat/time and unavailable status. All attachment types share
+the same small, wrapping “From: chat · time” metadata text and color. Live deletion/expiry
+drops results, and profile changes reset browsing.
+
+Loading, empty, unavailable, partial/error and retry are explicit; developer
+scenarios provide one-shot partial/failure outcomes. All ordinary links remain
+in the existing message-search filter. No backend, second persistent index or
+network browsing was added. Full host gate passes: 991 unit tests, lint and both
+APK assemblies. Eight new UI regressions compile; no device or visual acceptance
+is claimed. See [Files and media from main search](../screens/global-files-and-media.md).
+
+## Regular message-search bubbles — 2026-09-07
+
+GlobalMessageRow now uses ReadOnlyMessageBubble, the shared conversation renderer
+also used by pinned results. Regular search shows full formatted messages, reply
+previews, attachments, reactions and timestamps with source chat/day context.
+A single navigation target opens the exact message; existing Back restoration
+remains. Dedicated attachment browser cards are unchanged. Host gate passes:
+991 unit tests, lint and app/test APK assembly. The full-message/source-action
+regression and existing search navigation regressions compile; no device run or
+visual acceptance is claimed. See [Global search](../screens/global-search.md).
+
+
+2026-09-07 #21 presentation follow-up: the shared forwarding profile action in
+`MessageInteractionsUi.kt` now shows the chosen avatar and “Send as” name inside
+a Material pill with a dropdown chevron, 12 dp horizontal content padding and
+secondaryContainer/onSecondaryContainer colors. The existing destination chooser and
+profile-isolation behavior remain. This is presentation evidence only; #21 is
+not marked complete and current-build device/visual acceptance remains pending.
+See [forwarding brief](../screens/message-moderation-and-forwarding.md).
+
+2026-09-07 #22 writing-tools implementation: the composer + menu processes the
+whole draft; the native text-selection menu processes a selected passage.
+`WritingTools.kt`, `WritingToolsUi.kt` and `ConversationComposer.kt` provide
+Proofread, Rewrite and Summarize previews with explicit Apply/Discard, draft
+revision and owner checks, preserved selection/context and no automatic send.
+Developer scenarios cover unavailable, download, timeout, refusal, over-limit
+and external-provider disclosure states. All transformations and recovery states
+are deterministic local examples; no model runtime, download or network provider
+is connected. Host validation passed: 1,013 unit tests, lint and app/test APK
+assembly. Eight UI regressions compiled without device execution. Product and
+visual acceptance remain pending; #22 remains open. See
+[Writing tools](../screens/writing-tools.md).
+
+2026-09-07 #22 presentation follow-up: WritingToolsUi shows a five-line operation
+input preview and native icon/list actions without scope helper text. Results fit
+their content and share one divided comparison container; original text is muted
+and the shared callout reports no change or the type of suggestion. All five
+locales include the result notes. Host build, unit tests, lint and test APK
+assembly passed; current-build hands-on acceptance remains pending.
+
+2026-09-07 #22 accepted by the user. Writing tools now appears last in the
+composer + menu; the text-selection entry remains after the standard actions.
+The full host gate passed after the ordering change. Replied and closed #22 at
+the user's request. This completes the agreed local prototype flow; no production
+AI provider or device test execution is implied.
+
+2026-09-07 #23 message translation implemented as an agreed local extension.
+`MessageTranslation.kt`, `TranslationController.kt`, `TranslationUi.kt` and
+`TranslationSettings.kt` supply manual language selection, original/translation
+toggle, profile defaults, chat overrides and bounded automatic work. The
+conversation renderer, clipboard/selection and reader use the displayed
+rendition; speech retains original-source ownership. Original timeline data is
+unchanged. Developer states cover missing packs, offline unavailability,
+unsupported/uncertain languages, timeout and errors. Maya's chat includes fixed
+Spanish examples. Host gate passes with 1,038 unit tests, lint, app/test APKs and
+locale verification. Six UI tests compile only. No real translation engine,
+network, model download or persistence was added. #23 remains open for user
+acceptance. See [Message translation](../screens/message-translation.md).
+
+2026-09-07 translation settings width follow-up: removed the duplicate outer
+horizontal inset by using SettingsList, so SettingsGroup supplies the same
+single 16 dp margin as other settings screens. The full host gate passed.
+No device inspection was performed for this presentation change.
+
+2026-09-07 #23 translation refinement: source preview/detection and direct
+chevron language actions replace the manual radio picker. Translate contains
+Show original / Show translation and progress/recovery; bubbles contain only
+compact gray metadata with a centered arrow. Chat failure notices were removed
+per user direction. Manual and automatic requests reject a detected source
+matching the target; existing renditions restore without another request. The
+full host gate passed (1,046 unit tests, lint and app/test APKs), with updated
+navigation tests compiled only. Current revision awaits user inspection.
+
+
+2026-09-07 composer motion follow-up: `ConversationComposer.kt` replaces serial
+width/toolbar/height stages with shared geometric progress, tracks drag movement
+in root coordinates, and rebases compact height after expanded text edits.
+`ComposerLayoutFlowTest` adds coordinated-motion, drag-tracking, edited-endpoint
+and interruption coverage while preserving multiline width checks. The supplied
+video was inspected; updated-build device motion/visual acceptance remains pending.
+See [composer brief](../screens/composer-media-and-speech.md).
+
+
+2026-09-07 #24 admin picker follow-up: GroupLifecycleUi supplies a monogram for
+missing directory profiles; WhiteNoiseEntityPickerSheet offers opt-in sorted
+letter navigation for long rosters using the shared native menu. The existing
+sole-admin example now covers 21 eligible members and a missing-profile row.
+Index unit tests and a compiled interaction regression cover navigation/filtering
+and safe cancellation. Issue closure and device/visual acceptance remain pending.
+See [administration brief](../screens/group-administration-and-transcript.md).
+
+2026-09-07 #25 admin history follow-up: AppViewModel atomically appends named
+standard timeline events for accepted transfer grants and self step-downs.
+Failures append nothing; retries preserve each accepted event once, including
+after leaving. GroupAdministrationEventTest covers ordering, partial failures,
+retries, isolation and missing-directory fallback. GroupLifecycleInteractionTest
+adds departing/remaining-member presentation coverage using the same local
+history. Device execution and visual acceptance remain pending; see the
+[administration brief](../screens/group-administration-and-transcript.md).
+
+
+2026-09-07 #28 bubble-color follow-up: AppearanceColorScreens uses saveable local
+drafts for immediate bubble/swatch preview, with a native sticky preview and one
+pinned Save for both message colors. Reset is staged; invalid hex blocks Save;
+Back writes nothing. BubbleColorEditingTest adds compiled Light/Dark preview,
+HSV, Save, recreation, invalid-input and ownership regressions; the existing
+per-chat test now verifies explicit save/reset and global isolation. Device
+execution and visual acceptance remain pending. See the
+[appearance brief](../screens/appearance-typography-and-input.md).
+
+2026-09-07 composer refinement: ConversationComposer now exposes the shared emoji
+picker from a leading smiley, inserts at the current selection, and hides voice
+recording on any nonempty draft while retaining dictation. ComposerLayoutFlowTest
+covers selection insertion, picker Back, action visibility and adjusted layout
+bounds. Host validation is recorded in the composer brief; device acceptance of
+this refinement remains pending.
+
+2026-09-07 Action-color follow-up: ActionColorEditor previews the draft accent
+locally and saves once, matching the bubble editor. Outlined Reset is inside the
+picker block; supporting copy follows the block. Shared Apply is removed.
+ActionColorEditingTest and AppearanceInputInteractionTest compile coverage for
+live preview, Save, staged reset, invalid hex, Back and Reset containment. Device
+inspection remains pending; see the [appearance brief](../screens/appearance-typography-and-input.md).
+
+2026-09-07 composer recovery: action visibility now depends on active capture,
+not existence of a paused inline session. Add and empty-draft voice return after
+pause/edit; expanded emoji stays beside Add. DictationCaptureTest adds the
+live-dictation → edit → wide draft → clear regression and 40/28 dp spacing
+assertions. Host validation is recorded in the composer brief; device acceptance
+remains pending.

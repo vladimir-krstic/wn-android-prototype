@@ -348,6 +348,7 @@ fun WhiteNoiseNavHost(
                 onOpenSearchPerson = { person -> uiState.activeProfileId?.let { owner ->
                     appViewModel.acceptDiscoveredPerson(owner, person)?.let { navController.navigate(AppRoute.PersonProfile(it)) }
                 } },
+                onLibraryScenario = { appViewModel.consumeGlobalLibraryScenario(appViewModel.uiState.activeProfileId.orEmpty()) },
                 peopleScenario = appViewModel.peopleSearchScenario,
                 onVoiceScenario = { uiState.activeProfileId?.let(appViewModel::consumeGlobalVoiceScenario) ?: dev.ipf.whitenoise.model.GlobalVoiceScenario.Unavailable },
                 onMarkUnread = appViewModel::markChatUnread,
@@ -395,6 +396,7 @@ fun WhiteNoiseNavHost(
                 onNotifications = { navController.navigate(AppRoute.Notifications) },
                 onAppearance = { navController.navigate(AppRoute.Appearance) },
                 onReadAloud = { navController.navigate(AppRoute.ReadAloud) },
+                onTranslation = { navController.navigate(AppRoute.Translation) },
                 onDictation = { navController.navigate(AppRoute.Dictation) },
                 onPrivacy = { navController.navigate(AppRoute.PrivacySecurity) },
                 onDataUsage = { navController.navigate(AppRoute.DataUsage) },
@@ -419,6 +421,12 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.AiAgents> {
             uiState.activeProfile?.let { profile ->
                 AiAgentsScreen(profile, onBack = { navController.popBackStack() })
+            }
+        }
+        composable<AppRoute.Translation> {
+            uiState.activeProfile?.let { profile ->
+                dev.ipf.whitenoise.ui.settings.TranslationSettingsScreen(profile,
+                    onChange = { appViewModel.updateTranslationPreferences(profile.id, it) }, onBack = { navController.popBackStack() })
             }
         }
         composable<AppRoute.ReadAloud> {
@@ -486,6 +494,17 @@ fun WhiteNoiseNavHost(
                     if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.updateProfileSettings(it)
                 })
             }
+        }
+        composable<AppRoute.ChatDownloads> { entry ->
+            val route = entry.toRoute<AppRoute.ChatDownloads>()
+            val profile = uiState.activeProfile?.takeIf { it.id == route.profileId }
+            val chat = profile?.chats?.firstOrNull { it.id == route.chatId }
+            if (profile != null && chat != null) dev.ipf.whitenoise.ui.settings.ChatDownloadScreen(
+                profile, chat, onBack = { navController.popBackStack() },
+                onInheritance = { type, inherit -> appViewModel.setChatDownloadInheritance(profile.id, chat.id, type, inherit) },
+                onNetwork = { type, network, enabled -> appViewModel.setChatDownloadNetwork(profile.id, chat.id, type, network, enabled) },
+                onReset = { appViewModel.resetChatDownloads(profile.id, chat.id) },
+            ) else LaunchedEffect(route) { navController.popBackStack() }
         }
         composable<AppRoute.Appearance> {
             uiState.activeProfile?.let { profile ->
@@ -694,6 +713,12 @@ fun WhiteNoiseNavHost(
                     attachmentAccessScenario = appViewModel.nextAttachmentAccessScenario,
                     onAttachmentAccessScenario = appViewModel::selectAttachmentAccessScenario,
                     onMessageForwardScenario = appViewModel::selectMessageForwardScenario,
+                    translationScenario = appViewModel.nextTranslationScenario,
+                    onTranslationScenario = appViewModel::selectTranslationScenario,
+                    writingScenario = appViewModel.nextWritingScenario,
+                    onWritingScenario = appViewModel::selectWritingScenario,
+                    libraryScenario = appViewModel.nextGlobalLibraryScenario,
+                    onLibraryScenario = appViewModel::selectGlobalLibraryScenario,
                     globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
                     onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
                     chatBatchScenario = appViewModel.nextChatBatchScenario,
@@ -858,7 +883,8 @@ fun WhiteNoiseNavHost(
                 val profile = uiState.activeProfile ?: return@let
                 val searchRequest by entry.savedStateHandle.getStateFlow("conversationSearchRequest", 0L).collectAsState()
                 androidx.compose.runtime.key(profile.id, chat.id) {
-                androidx.compose.runtime.CompositionLocalProvider(dev.ipf.whitenoise.ui.conversation.LocalAttachmentEnvironment provides
+                androidx.compose.runtime.CompositionLocalProvider(dev.ipf.whitenoise.ui.conversation.LocalWritingScenario provides { appViewModel.consumeWritingScenario(profile.id) },
+                    dev.ipf.whitenoise.ui.conversation.LocalAttachmentEnvironment provides
                     dev.ipf.whitenoise.ui.conversation.AttachmentEnvironment(
                         locationSession = appViewModel.locationSession?.takeIf { it.profileId == profile.id && it.chatId == chat.id },
                         openLocation = { appViewModel.openLocation(profile.id, chat.id) },
@@ -878,6 +904,8 @@ fun WhiteNoiseNavHost(
                     nextScenario = { appViewModel.consumeAttachmentAccessScenario(profile.id) },
                     onPerson = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) }) {
                 ConversationScreen(
+                    onTranslationPreferences = { appViewModel.updateTranslationPreferences(profile.id, it) },
+                    onTranslationScenario = { appViewModel.consumeTranslationScenario(profile.id) },
                     profile = profile,
                     chat = chat,
                     onBack = { navController.popBackStack() },
@@ -910,6 +938,7 @@ fun WhiteNoiseNavHost(
                         navController.navigate(AppRoute.MessageDetails(chat.id, messageId))
                     },
                     onOpenChatInfo = { navController.navigate(AppRoute.ChatInfo(chat.id)) },
+                    onSetMessagePinned = { id, pinned -> appViewModel.setMessagePinned(profile.id, chat.id, id, pinned) },
                     onOpenPersonProfile = { personId ->
                         navController.navigate(AppRoute.PersonProfile(personId, chat.id))
                     },
@@ -951,6 +980,7 @@ fun WhiteNoiseNavHost(
             if (profile != null && chat == null) LaunchedEffect(route.chatId) { navController.popBackStack<AppRoute.SignedIn>(inclusive = false) }
             if (profile != null && chat != null) {
                 ChatInfoScreen(
+                    onTranslationPreferences = { appViewModel.updateTranslationPreferences(profile.id, it) },
                     profile = profile,
                     chat = chat,
                     onBack = { navController.popBackStack() },
@@ -974,6 +1004,7 @@ fun WhiteNoiseNavHost(
                     onAddPeople = { navController.navigate(AppRoute.AddGroupMembers(chat.id)) },
                     onMute = { appViewModel.notificationControls.request(dev.ipf.whitenoise.state.NotificationChange.Mute(it),chat.id,profile.id) },
                     onNotifications = { navController.navigate(AppRoute.ConversationNotifications(chat.id)) },
+                    onDownloads = { navController.navigate(AppRoute.ChatDownloads(profile.id, chat.id)) },
                     onBubbleColors = { navController.navigate(AppRoute.ChatBubbleColors(chat.id)) },
                     onDisappearing = { appViewModel.setChatDisappearing(chat.id, it) },
                     onArchive = { appViewModel.setChatArchived(chat.id, !chat.isArchived) },

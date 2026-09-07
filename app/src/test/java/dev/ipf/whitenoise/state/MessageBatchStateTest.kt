@@ -140,6 +140,7 @@ class MessageBatchStateTest {
         val target=vm.openOrCreateDirectChat("fiatjaf", requestedChatId=sourceId)!!;vm.selectProfile(owner)
         assertTrue(vm.beginMessageForward(owner,sourceId,ids,destination,listOf(target)));assertEquals(owner,vm.owner());vm.finishForward()
         assertEquals(1,vm.copies(target,destination).size);assertEquals(destination,vm.copies(target,destination).single().authorId)
+        assertFalse(vm.copies(target,destination).single().isForwarded)
         assertTrue(vm.uiState.activeProfile!!.chats.firstOrNull { it.id==target }?.timeline?.none { "-forward-" in it.id }!=false)
     }
     @Test fun profileSwitchCannotReplayForwardAfterReturningToSource() {
@@ -155,8 +156,31 @@ class MessageBatchStateTest {
         val media=ConversationMediaProjection.items(chat,p).first { it.key.messageId=="MED-04" && it.key.attachmentId=="MED-04-photo-2" }
         val payload=MessageForwarding.payload(p,chat,setOf(media.message.id),media.key,"  A new caption  ")!!.single()
         assertEquals("A new caption",payload.text);assertEquals(MessageAttachmentKind.Photo,payload.attachments.single().kind);assertEquals(listOf(media.image),payload.attachments.single().images)
-        val copy=MessageForwarding.copyForDestination(payload.copy(editHistory=MessageEditHistory("Original",1,emptyList())),99,chat,p.id,0,3,700)
+        val copy=MessageForwarding.copyForDestination(payload.copy(editHistory=MessageEditHistory("Original",1,emptyList())),99,chat,p.id,0,3,700,p.id)
         assertNull(copy.editHistory);assertNull(copy.expiresAtMillis);assertNull(copy.replyToMessageId);assertTrue(copy.reactions.isEmpty());assertNotEquals(payload.attachments.single().id,copy.attachments.single().id)
+        assertEquals(payload.isForwarded || payload.authorId != p.id, copy.isForwarded)
+    }
+    @Test fun forwardedAttributionSurvivesStagedSendReforwardAndMediaFrameForward() {
+        val vm = model()
+        val source = vm.chat(sourceId)!!.timeline.filterIsInstance<ChatTimelineEntry.Message>()
+            .first { it.message.authorId != vm.owner() && !it.message.isDeleted }.message
+        assertTrue(vm.forwardMessages(sourceId, setOf(source.id), listOf("maya-chen")))
+        val first = vm.copies("maya-chen").single()
+        assertTrue(first.isForwarded)
+        assertEquals(vm.owner(), first.authorId)
+        assertFalse(vm.message(sourceId, source.id)!!.isForwarded)
+        assertTrue(vm.forwardMessages("maya-chen", setOf(first.id), listOf("theo-grant")))
+        assertTrue(vm.copies("theo-grant").single().isForwarded)
+        val media = ConversationMediaProjection.items(vm.chat("maya-chen")!!, vm.uiState.activeProfile!!)
+            .first { it.key.messageId == "maya-shared-photo" }
+        assertTrue(vm.forwardMediaFrame("maya-chen", media.key, listOf(sourceId), "A new caption"))
+        val photo = vm.copies(sourceId).single()
+        assertTrue(photo.isForwarded)
+        assertEquals("A new caption", photo.text)
+        assertEquals(listOf(media.image), photo.attachments.single().images)
+        assertTrue(vm.deleteMessages(sourceId, setOf(photo.id), MessageDeletionScope.ForEveryone))
+        assertTrue(vm.message(sourceId, photo.id)!!.isDeleted)
+        assertFalse(vm.forwardMessages(sourceId, setOf(photo.id), listOf("maya-chen")))
     }
     @Test fun mediaPreparationAndUploadFailureRetainCompletedDestinationOnRetry() {
         val vm=model();val owner=vm.owner();val source="catalog-media-gallery"

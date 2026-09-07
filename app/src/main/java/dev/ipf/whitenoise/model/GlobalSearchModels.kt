@@ -12,6 +12,7 @@ import java.util.Locale
 
 enum class GlobalSearchContent { Text, Links, ImagesVideo, VoiceAudio, Files, AnyAttachment }
 enum class GlobalSearchDate { AnyTime, Today, Last7Days, Last30Days, Custom }
+enum class GlobalSearchChatType { Direct, Groups }
 data class SearchDateBounds(val startInclusive: Long, val endExclusive: Long) {
     operator fun contains(timestamp: Long) = timestamp >= startInclusive && timestamp < endExclusive
 }
@@ -19,14 +20,29 @@ data class GlobalSearchFilters(
     val chatIds: Set<String> = emptySet(), val senderIds: Set<String> = emptySet(),
     val date: GlobalSearchDate = GlobalSearchDate.AnyTime, val fromDay: Long? = null, val toDay: Long? = null,
     val content: Set<GlobalSearchContent> = emptySet(),
+    val folderIds: Set<String> = emptySet(),
+    val chatTypes: Set<GlobalSearchChatType> = emptySet(),
 ) {
-    val active get() = chatIds.isNotEmpty() || messageOnly
+    val active get() = chatIds.isNotEmpty() || folderIds.isNotEmpty() || chatTypes.isNotEmpty() || messageOnly
     val messageOnly get() = senderIds.isNotEmpty() || date != GlobalSearchDate.AnyTime || content.isNotEmpty()
     val valid get() = date != GlobalSearchDate.Custom || (fromDay != null && toDay != null && fromDay <= toDay)
-    fun reconcile(profile: Profile) = copy(
-        chatIds = chatIds.intersect(profile.chats.map { it.id }.toSet()),
-        senderIds = senderIds.intersect(GlobalSearch.senders(profile).map { it.first }.toSet()),
-    )
+    /** Folder/type scope also supplies the chat picker, so it cannot retain hidden incompatible IDs. */
+    fun scopedChats(profile: Profile): List<Chat> {
+        val folderChats = if (folderIds.isEmpty()) null else profile.chatFolders
+            .filter { it.id in folderIds }
+            .flatMap { ChatFolders.rows(profile.chats, it) }.map { it.id }.toSet()
+        return profile.chats.filter { chat ->
+            (folderChats == null || chat.id in folderChats) &&
+                (chatTypes.isEmpty() || (if (chat.isGroup) GlobalSearchChatType.Groups else GlobalSearchChatType.Direct) in chatTypes)
+        }
+    }
+    fun reconcile(profile: Profile): GlobalSearchFilters {
+        val existing = copy(folderIds = folderIds.intersect(profile.chatFolders.map { it.id }.toSet()))
+        return existing.copy(
+            chatIds = chatIds.intersect(existing.scopedChats(profile).map { it.id }.toSet()),
+            senderIds = senderIds.intersect(GlobalSearch.senders(profile).map { it.first }.toSet()),
+        )
+    }
     fun bounds(today: LocalDate = GlobalSearchClock.today, zone: ZoneId = GlobalSearchClock.zone): SearchDateBounds? {
         if (!valid || date == GlobalSearchDate.AnyTime) return null
         val start = when (date) {
@@ -78,7 +94,6 @@ object GlobalSearch {
     const val voicePhrase = "trailhead"
     private val whitespace = Regex("\\s+")
     private val link = Regex("(?i)(https?://|www\\.)\\S+")
-    private val audioFile = Regex("(?i)\\.(mp3|m4a|wav|ogg|opus|aac|flac)(?:$|[?#])")
     fun identifierIntent(query: String): Boolean = ProfileLinks.identifierIntent(query)
     fun people(profile: Profile, query: String, scenario: PeopleSearchScenario): PeopleSearchResult {
         val normalized = ProfileLinks.normalizeRecipient(query)
@@ -98,7 +113,7 @@ object GlobalSearch {
         message.attachments.forEach { attachment -> when (attachment.kind) {
             MessageAttachmentKind.Photo, MessageAttachmentKind.Photos, MessageAttachmentKind.Video, MessageAttachmentKind.Gif -> add(GlobalSearchContent.ImagesVideo)
             MessageAttachmentKind.Voice -> add(GlobalSearchContent.VoiceAudio)
-            MessageAttachmentKind.File -> if (audioFile.containsMatchIn(attachment.label) || audioFile.containsMatchIn(attachment.externalUri.orEmpty())) add(GlobalSearchContent.VoiceAudio) else add(GlobalSearchContent.Files)
+            MessageAttachmentKind.File -> if (SharedContentProjection.isAudio(attachment)) add(GlobalSearchContent.VoiceAudio) else add(GlobalSearchContent.Files)
             else -> Unit
         } }
     }
@@ -131,7 +146,7 @@ object GlobalSearch {
         if (!filters.valid) return GlobalSearchResults(emptyList(), emptyList())
         if (needle.isEmpty() && !filters.active) return GlobalSearchResults(emptyList(), emptyList())
         val normalizedNeedle = needle.normalizedSearchText()
-        val scoped = profile.chats.filter { filters.chatIds.isEmpty() || it.id in filters.chatIds }
+        val scoped = filters.scopedChats(profile).filter { filters.chatIds.isEmpty() || it.id in filters.chatIds }
         val chats = if (filters.messageOnly) emptyList() else scoped.filter { needle.isEmpty() ||
             listOf(it.title, it.displayPreview, if (it.isGroup) it.description else "").any { text -> normalize(text).normalizedSearchText().contains(normalizedNeedle) }
         }.sortedWith(ChatOrganization.order)
@@ -147,7 +162,7 @@ object GlobalSearch {
                     if (bounds != null && timestamp != null && timestamp !in bounds) return@mapNotNull null
                     if (filters.content.isNotEmpty() && content(message).none { it in filters.content }) return@mapNotNull null
                     val text = body(message)
-                    if (text.isBlank() || (needle.isNotEmpty() && !text.contains(needle, true))) return@mapNotNull null
+                    if ((text.isBlank() && message.attachments.isEmpty()) || (needle.isNotEmpty() && !text.contains(needle, true))) return@mapNotNull null
                     val result = GlobalMessageResult(
                         chat.id, chat.title, message, senderName(profile, message.authorId), snippet(text, needle),
                     )

@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 
 import android.content.ClipData
@@ -113,7 +115,7 @@ private fun DocumentBlocks(blocks: List<DocumentBlock>, people: List<Person>, on
                     }.copy(fontWeight = FontWeight.SemiBold)
                     DocumentText(block.runs, people, onPerson, onLink, annotate, Modifier.semantics { heading() }, style)
                 }
-                is DocumentBlock.Code -> Surface(color = LocalContentColor.current.copy(alpha = 0.08f), shape = MaterialTheme.shapes.small) {
+                is DocumentBlock.Code -> Surface(color = if (isAmoledOutline()) MaterialTheme.colorScheme.surface else LocalContentColor.current.copy(alpha = 0.08f), border = amoledOutlineBorder(), shape = MaterialTheme.shapes.small) {
                     Column(Modifier.padding(WhiteNoiseSpacing.Related)) {
                         if (block.language.isNotBlank()) DisableSelection { Text(block.language, style = MaterialTheme.typography.labelSmall) }
                         DocumentText(listOf(DocumentRun(block.source, DocumentStyle(code = true))), people, onPerson, onLink, annotate,

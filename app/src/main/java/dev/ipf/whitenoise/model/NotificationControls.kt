@@ -17,7 +17,10 @@ enum class NotificationCategory(val channelId: String, val overridable: Boolean 
     }
 }
 
-enum class PushAvailability { Available, BuildNotConfigured, PlayServicesMissing, ProviderNotInitialized }
+enum class PushAvailability {
+    Available, BuildNotConfigured, PlayServicesMissing, ProviderNotInitialized, SetupFailed;
+    val canRetry get() = this == ProviderNotInitialized || this == SetupFailed
+}
 enum class AndroidVibrationOverride { None, Off, Custom, Short, Double, Long }
 data class NotificationEnvironment(
     val push: PushAvailability = PushAvailability.Available,

@@ -3,6 +3,7 @@ package dev.ipf.whitenoise.ui.conversation
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.triStateToggleable
@@ -56,12 +57,40 @@ internal fun MessageOperationsHost(profile: Profile?, forward: MessageForwardOpe
         }
     }
     var details by rememberSaveable(profile?.id,forward?.id) { mutableStateOf(false) }
-    CompositionLocalProvider(LocalMessageOperationCover provides details) {
+    val completed = forward?.phase == MessageForwardPhase.Completed
+    val running = forward?.isRunning == true
+    val showStatus = forward != null && !completed && !running
+    val context = LocalContext.current
+    val successText = stringResource(R.string.forward_success)
+    val startingText = stringResource(R.string.forward_starting)
+    var notifiedId by rememberSaveable(profile?.id) { mutableStateOf<Long?>(null) }
+    var notifiedStart by rememberSaveable(profile?.id) { mutableStateOf<String?>(null) }
+    var activeToast by remember { mutableStateOf<Toast?>(null) }
+    DisposableEffect(profile?.id) {
+        onDispose { activeToast?.cancel(); activeToast = null }
+    }
+    LaunchedEffect(profile?.id, forward?.id, forward?.manualRetries, completed, running, lifecycle) {
+        if (forward != null && (completed || running)) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            val startKey = "${forward.id}:${forward.manualRetries}"
+            val toastText = when {
+                completed && notifiedId != forward.id -> { notifiedId = forward.id; successText }
+                running && notifiedStart != startKey -> { notifiedStart = startKey; startingText }
+                else -> null
+            }
+            if (toastText != null) {
+                activeToast?.cancel()
+                activeToast = Toast.makeText(context, toastText, Toast.LENGTH_SHORT).also { it.show() }
+            }
+            if (completed) onDismiss(forward.id)
+            kotlinx.coroutines.awaitCancellation()
+        }
+        if (showStatus) activeToast?.cancel()
+    }
+    CompositionLocalProvider(LocalMessageOperationCover provides (details && showStatus)) {
         Column(modifier.fillMaxSize()) {
-            content(Modifier.weight(1f).then(if(forward!=null) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)) else Modifier))
-            if(forward!=null) Surface(color=MaterialTheme.colorScheme.surfaceContainerHigh) {
+            content(Modifier.weight(1f).then(if(showStatus) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)) else Modifier))
+            if(forward!=null && showStatus) Surface(color=MaterialTheme.colorScheme.surfaceContainerHigh) {
                 Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("message.forward.status")) {
-                    if(forward.isRunning) LinearProgressIndicator(progress={forward.progress},modifier=Modifier.fillMaxWidth())
                     FlowRow(Modifier.fillMaxWidth().padding(horizontal=WhiteNoiseSpacing.CompactScreenMargin),
                         horizontalArrangement=Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                         Text(forwardSummary(forward),Modifier.weight(1f).padding(vertical=WhiteNoiseSpacing.Related)
@@ -72,7 +101,7 @@ internal fun MessageOperationsHost(profile: Profile?, forward: MessageForwardOpe
                 }
             }
         }
-        if(details&&forward!=null) ModalBottomSheet(onDismissRequest={details=false}) {
+        if(details&&forward!=null && showStatus) ModalBottomSheet(onDismissRequest={details=false}) {
             WhiteNoiseSheetHeader(stringResource(R.string.batch_forward_title))
             Column(Modifier.fillMaxWidth().heightIn(max=560.dp)
                 .verticalScroll(rememberScrollState()).padding(WhiteNoiseSpacing.CompactScreenMargin).testTag("message.forward.details"),

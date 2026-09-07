@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
 import android.content.ActivityNotFoundException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
@@ -62,6 +64,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.key
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -137,6 +140,7 @@ fun ChatsScreen(
     onOpenSearchPerson: (Person) -> Unit = {},
     peopleScenario: PeopleSearchScenario = PeopleSearchScenario.Success,
     onVoiceScenario: () -> GlobalVoiceScenario = { GlobalVoiceScenario.Device },
+    onLibraryScenario: () -> dev.ipf.whitenoise.model.GlobalLibraryScenario = { dev.ipf.whitenoise.model.GlobalLibraryScenario.Ready },
     onFolders: () -> Unit = {},
     onMovePin: (String, Int) -> Unit = { _, _ -> },
     onCreateFolder: (String) -> String? = { null },
@@ -202,7 +206,7 @@ fun ChatsScreen(
     }
     val hasLookupFeedback = lookupPending || people?.status in setOf(PeopleSearchStatus.AddressNotFound, PeopleSearchStatus.Unavailable, PeopleSearchStatus.Partial) ||
         (people?.status == PeopleSearchStatus.InvalidIdentifier && GlobalSearch.identifierIntent(query))
-    LaunchedEffect(profile?.id, profile?.chats) {
+    LaunchedEffect(profile?.id, profile?.chats, profile?.chatFolders) {
         profile?.let { searchFilters = searchFilters.reconcile(it) }
     }
     LaunchedEffect(profile?.id, query, lookupRetried, showPeople) {
@@ -342,6 +346,7 @@ fun ChatsScreen(
                     label = "Chats search mode",
                 ) { searching ->
                     if (searching) {
+                        Column {
                         ChatsSearchTopBar(
                             query = query,
                             onQueryChange = { query = it },
@@ -359,6 +364,11 @@ fun ChatsScreen(
                             onFilterCategory = { searchFilterCategory = it },
                             onClearFilters = { searchFilters = GlobalSearchFilters() },
                         )
+                        GlobalAttachmentModes(searchFilters) {
+                            focusManager.clearFocus(); keyboardController?.hide()
+                            searchFilters = it
+                        }
+                        }
                     } else {
                         Column {
                             ChatsTopBar(
@@ -413,9 +423,9 @@ fun ChatsScreen(
                     val canCreate = !profile?.chatRelayUrls.isNullOrEmpty()
                     FloatingActionButton(
                         onClick = { menuTarget = null; if (canCreate) onNewMessage() else onProfileRelays() },
-                        modifier = Modifier.padding(end = paneInset).testTag("chats.newMessage"),
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.padding(end = paneInset).amoledOutline(androidx.compose.material3.FloatingActionButtonDefaults.shape).testTag("chats.newMessage"),
+                        containerColor = if (isAmoledOutline()) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary,
+                        contentColor = if (isAmoledOutline()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
                     ) {
                         Icon(
                             painterResource(if (canCreate) R.drawable.ic_edit else R.drawable.ic_warning),
@@ -436,7 +446,21 @@ fun ChatsScreen(
                 )
                 .consumeWindowInsets(contentPadding),
         ) {
-            LazyColumn(
+            if (isSearching && !selecting && profile != null && dev.ipf.whitenoise.model.GlobalAttachments.browsing(searchFilters)) {
+                Column(Modifier.fillMaxSize()) {
+                    GlobalSearchFilterBar(profile, searchFilters, onChange = { searchFilters = it.reconcile(profile) })
+                    key(profile.id, query, searchFilters) {
+                        GlobalAttachmentBrowser(profile, query, searchFilters, globalResults ?: dev.ipf.whitenoise.model.GlobalSearchResults(emptyList(), emptyList()),
+                            bottomPadding = contentPadding.calculateBottomPadding(), nextScenario = onLibraryScenario,
+                            onGoToMessage = { chatId, messageId ->
+                                focusManager.clearFocus(); keyboardController?.hide()
+                                if (!onOpenSearchMessage(chatId, messageId)) coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(resources.getString(R.string.global_message_unavailable))
+                                }
+                            })
+                    }
+                }
+            } else LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().testTag("chats.list"),
                 contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() +
@@ -444,7 +468,7 @@ fun ChatsScreen(
                     else 56.dp + WhiteNoiseSpacing.CompactScreenMargin * 2),
             ) {
                 if (isSearching && !selecting && profile != null && searchFilters.active) item(key = "search-filters") {
-                    GlobalSearchFilterBar(profile, searchFilters, onChange = { searchFilters = it })
+                    GlobalSearchFilterBar(profile, searchFilters, onChange = { searchFilters = it.reconcile(profile) })
                 }
                 profile?.let { owner ->
                     item(key = "connection") { ChatConnectionBanner(owner, onRetryConnection, onProfileRelays) }
@@ -485,12 +509,12 @@ fun ChatsScreen(
                     val messages = globalResults?.messages.orEmpty()
                     if (messages.isNotEmpty()) item(key = "messages-heading") { GlobalSearchHeading(stringResource(R.string.global_messages)) }
                     items(messages, key = { "message:${it.chatId}:${it.message.id}" }) { result ->
-                        GlobalMessageRow(result, query) {
+                        profile?.let { owner -> GlobalMessageRow(owner, result, query) {
                             focusManager.clearFocus(); keyboardController?.hide()
                             if (!onOpenSearchMessage(result.chatId, result.message.id)) coroutineScope.launch {
                                 snackbarHostState.showSnackbar(resources.getString(R.string.global_message_unavailable))
                             }
-                        }
+                        } }
                     }
                     if (people != null) {
                         if (people.people.isNotEmpty() || hasLookupFeedback) item(key = "people-heading") { GlobalSearchHeading(stringResource(R.string.folder_people)) }
@@ -507,7 +531,7 @@ fun ChatsScreen(
     }
     searchFilterCategory?.let { category ->
         if (profile != null) GlobalSearchFilterPicker(profile, category, searchFilters,
-            onChange = { searchFilters = it }, onDismiss = { searchFilterCategory = null })
+            onChange = { searchFilters = it.reconcile(profile) }, onDismiss = { searchFilterCategory = null })
     }
     voiceRequest?.takeIf { it.scenario != GlobalVoiceScenario.Device }?.let { request ->
         GlobalVoiceDialog(request, onComplete = { completed ->

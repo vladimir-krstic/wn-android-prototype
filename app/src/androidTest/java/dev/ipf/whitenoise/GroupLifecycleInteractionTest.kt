@@ -34,6 +34,28 @@ class GroupLifecycleInteractionTest {
         } }
     }
     private fun step(owner: GroupOwner) = rule.runOnIdle { vm.groupLifecycle.work[owner]!!.let { vm.groupLifecycle.advance(owner, it.id, it.stage) } }
+    private fun showTransferredHistory(asRemainingMember: Boolean) {
+        val owner = group()
+        val originalProfile = profile
+        assertTrue(vm.groupLifecycle.begin(owner, GroupLifecycleAction.Transfer, "maya-chen", thenLeave = true))
+        repeat(3) {
+            vm.groupLifecycle.work[owner]!!.let { vm.groupLifecycle.advance(owner, it.id, it.stage) }
+        }
+        val leftChat = vm.chat(owner.chatId)!!
+        // The prototype has local account state; project the accepted history into
+        // a remaining member's view without inventing cross-account delivery.
+        val viewer = if (asRemainingMember) originalProfile.copy(id = "maya-chen", name = "Maya Chen") else originalProfile
+        val history = if (asRemainingMember) leftChat.copy(membership = ChatMembership.Active) else leftChat
+        rule.setContent { WhiteNoiseTheme {
+            ConversationScreen(profile = viewer, chat = history, onBack = {}, onSend = { false },
+                onRetry = {}, onAcceptInvitation = {}, onDeclineInvitation = {})
+        } }
+        rule.onNodeWithTag("conversation.timeline").performScrollToNode(hasText("Maya Chen is now an admin."))
+        rule.onNodeWithText("Maya Chen is now an admin.").assertIsDisplayed()
+        rule.onNodeWithText("${originalProfile.name} is no longer an admin.").assertExists()
+    }
+    @Test fun leavingMemberCanReadAcceptedAdminChangeInHistory() = showTransferredHistory(asRemainingMember = false)
+    @Test fun remainingMemberSeesNamedAdminChangeInSameTimelinePresentation() = showTransferredHistory(asRemainingMember = true)
     @Test fun transferRequiresPickingMemberAndExplicitConfirmation() {
         val owner = group(); show(owner)
         rule.onNodeWithText("Transfer administration").performClick()
@@ -41,6 +63,23 @@ class GroupLifecycleInteractionTest {
         rule.onNodeWithText("Maya Chen will become an admin, and you’ll become a member.").assertExists()
         rule.onNodeWithText("Cancel").performClick()
         rule.runOnIdle { assertNull(vm.groupLifecycle.work[owner]); assertEquals(1, vm.chat(owner.chatId)!!.members.count { it.role == GroupRole.Admin }) }
+    }
+    @Test fun longSoleAdminPickerJumpsSearchesAndRetainsFallbackWithoutTransferring() {
+        val owner = GroupOwner(profile.id, "catalog-group-sole-admin")
+        show(owner)
+        rule.onNodeWithText("Leave Group").performScrollTo().performClick()
+        rule.onNodeWithTag("entity.jump").performClick()
+        rule.onNodeWithTag("entity.jump.T").performScrollTo().performClick()
+        rule.onNodeWithText("Theo Grant").assertIsDisplayed()
+        rule.onNodeWithTag("entity.search").performTextInput("Member")
+        rule.onNodeWithTag("entity.jump").assertDoesNotExist()
+        rule.onNodeWithTag("entity.choice.avatar.member-profile-pending", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithTag("entity.choice.member-profile-pending").performClick()
+        rule.onNodeWithText("Cancel").performClick()
+        rule.runOnIdle {
+            assertNull(vm.groupLifecycle.work[owner])
+            assertTrue(vm.chat(owner.chatId)!!.isSoleAdmin(profile.id))
+        }
     }
     @Test fun partialTransferExplainsAcceptedGrantAndOffersStageRetry() {
         val owner = group(); vm.groupLifecycle.choose(GroupLifecycleScenario.StepDownFailure)

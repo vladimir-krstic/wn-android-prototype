@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -37,7 +38,7 @@ internal fun MessageFactsSection(profile: Profile, message: ChatMessage) {
         MessageFactStatus.Failed -> R.string.not_delivered
         MessageFactStatus.Streaming -> R.string.message_streaming
     })
-    Surface(Modifier.fillMaxWidth().testTag("message.facts"), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+    Surface(Modifier.fillMaxWidth().testTag("message.facts"), border = amoledOutlineBorder(), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Column {
             FactRow(stringResource(R.string.message_status), status)
             FactRow(stringResource(when (facts.timeKind) {

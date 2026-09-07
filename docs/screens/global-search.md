@@ -1,5 +1,50 @@
 # Global search — B07
 
+## 2026-09-06 — folder and chat-type filters
+
+User-selected extension to #11: add Folders and Chat type to the existing search
+filter menu. Folders uses existing profile-owned system/custom folders and their
+live membership rules. Chat type offers Direct chats and Groups. Multiple choices
+within each category are OR; categories intersect with chat, sender, date and
+content selections. Every selection has a removable chip and Clear All resets
+all categories. Folder/type filtering applies to chat and message results;
+People stays hidden while filters are active.
+
+Reuse the existing scrollable checkbox dialog for folders and chat types, native
+InputChips, and the existing chat picker. Limit the chat picker to the chosen
+folder/type scope and remove incompatible selected chat IDs when scope changes.
+Conflicting folder/type combinations remain visible and show the existing No
+matches recovery. Empty folders remain selectable, never silently search all
+chats. Save stable IDs and enum values; reconcile renamed/deleted folders and
+live rule changes, reset on profile change, preserve on result navigation/Back.
+
+Keep existing metrics, semantic colors, native checkbox roles, focus, dismissal
+and scroll behavior. No new platform integration or dependencies. Official
+[chips](https://developer.android.com/develop/ui/compose/components/chip) and
+[dialogs](https://developer.android.com/develop/ui/compose/components/dialog)
+guidance checked 2026-09-06. Validate model intersections, live folder membership,
+stale IDs and compiled filter/restoration/navigation UI cases; device and visual
+acceptance remain separate.
+
+Implementation: `GlobalSearchFilters` now owns folder IDs and chat types;
+`scopedChats` reuses `ChatFolders.rows` for live membership, and reconciliation
+removes deleted folders and incompatible chat IDs. `GlobalSearchUi` supplies the
+two categories, checkbox dialogs, chips and extended saved state. `ChatsScreen`
+reconciles both user changes and folder updates. Labels are present in English,
+Russian, Turkish, Simplified Chinese and Traditional Chinese.
+
+Four new `GlobalSearchTest` cases cover union/intersection, duplicate prevention,
+custom/system folder rules, archived/live membership, empty/conflicting scope,
+rename and deletion. Two new `GlobalSearchFlowTest` cases cover scoped choices,
+checkbox semantics, chips, clearing and folder lifecycle; existing restoration/
+profile-reset and exact-navigation/Back cases now include the new categories.
+UI cases compile only; no device testing was requested.
+
+Validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 940 unit tests, zero failures/errors/skips, lint and both APKs.
+The first gate identified four missing translations; adding the supported locale
+labels resolved them. Current-build device/visual acceptance remains pending.
+
 Selected 2026-09-04 under the all-batches goal. C031–C034. Implemented and
 host-verified; device/visual acceptance remains pending. B08 now implements
 unloaded-history recovery inside a chat; see [its brief](conversation-history-and-reading.md).
@@ -10,7 +55,7 @@ Expand the existing Chats search field into grouped Chats, Messages and People
 results across the active profile, including archived/ended history. Chat title,
 preview and group-description matches open the chat normally and retain the
 accepted case/diacritic folding. Authored message text/attachment labels and
-shareable link destinations produce a centered snippet and open the exact message;
+shareable link destinations produce full chat-bubble results and open the exact message;
 deleted messages and system events never match. People results reuse discovery
 and supported public-key/profile-link/address resolution with loading, invalid,
 unresolved, unavailable and retry outcomes. Unknown profiles have a readable
@@ -217,3 +262,33 @@ query and exercise clearing before a new recording. Existing stale-query,
 profile, cancellation, retry and recreation coverage remains. Host validation
 is recorded in the parity ledger; UI tests compile only, with device/visual
 and actual microphone verification still pending.
+
+
+## 2026-09-07 — Full bubbles in regular message results
+
+User-approved refinement: regular message results, including chat, folder, sender,
+date, Text and Links filters, use the actual conversation bubble renderer instead
+of three-line snippets. Preserve complete formatted text, search highlighting,
+reply previews, attachments, reactions, outgoing/incoming colors and alignment,
+and the normal timestamp below the bubble. Show sender/chat context and day above
+each result. Long messages remain full length; there is no search-only collapse.
+
+Use 16 dp horizontal result margins and 8 dp vertical spacing. Each result is one
+native clickable navigation target over a read-only bubble. Nested links, player
+controls and conversation actions belong to the opened conversation; accessibility
+announces full message/source context and exposes only the source navigation action.
+Back retains the existing query/filter/list state. Dedicated Photos & videos,
+Files and Audio browser modes retain their separate card layouts.
+
+The renderer is shared with pinned messages; its default query remains empty there.
+ConversationProjection resolves replies against the source chat. The implementation
+adds no new search projection or filtering rules. Official semantics guidance:
+https://developer.android.com/develop/ui/compose/accessibility/merging-clearing
+
+Validation: full-result accessibility/source-action regression added; existing
+exact-message navigation and filter restoration regression retained. Host gate:
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`.
+Device testing and visual acceptance are not claimed.
+
+Host gate passed: 991 unit tests, lint and both APK assemblies. UI regressions
+compile; they were not executed on a device.

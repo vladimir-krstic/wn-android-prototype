@@ -137,9 +137,10 @@ enum class SharedMediaFilter { All, Images, Videos }
 data class SharedContentMonth(val key: java.time.YearMonth, val items: List<SharedContentItem>)
 
 object SharedContentProjection {
+    private val audioUri = Regex("(?i)\\.(mp3|m4a|wav|ogg|opus|aac|flac)$")
     fun isAudio(attachment: MessageAttachment): Boolean = attachment.kind == MessageAttachmentKind.Voice ||
         (attachment.kind == MessageAttachmentKind.File && (TextAttachments.normalizedMime(attachment.mimeType).startsWith("audio/") ||
-            TextAttachments.safeName(attachment.label).substringAfterLast('.', "").lowercase(java.util.Locale.ROOT) in setOf("mp3", "m4a", "wav", "ogg", "opus", "aac", "flac")))
+            TextAttachments.safeName(attachment.label).substringAfterLast('.', "").lowercase(java.util.Locale.ROOT) in setOf("mp3", "m4a", "wav", "ogg", "opus", "aac", "flac") || audioUri.containsMatchIn(attachment.externalUri.orEmpty())))
     fun timestamp(message: ChatMessage) = message.createdAtMillis ?: GlobalSearchClock.timestamp(message)
     fun items(chat: Chat, profile: Profile, category: SharedContentCategory): List<SharedContentItem> =
         chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().map { it.message }

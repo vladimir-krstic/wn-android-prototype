@@ -2,6 +2,7 @@
 
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextAlign
@@ -64,6 +65,7 @@ internal fun ChatSelectionBottomBar(selected: List<Chat>, onSelectAll: () -> Uni
         }
         Surface(
             modifier = Modifier.weight(1f).testTag("chats.selectionCount").semantics { liveRegion = LiveRegionMode.Polite },
+            border = amoledOutlineBorder(),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -76,7 +78,7 @@ internal fun ChatSelectionBottomBar(selected: List<Chat>, onSelectAll: () -> Uni
             )
         }
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-            FilledTonalButton(onClick = onSelectAll) {
+            FilledTonalButton(onClick = onSelectAll, border = amoledOutlineBorder()) {
                 Text(stringResource(R.string.chat_select_all), textAlign = TextAlign.Center)
             }
         }

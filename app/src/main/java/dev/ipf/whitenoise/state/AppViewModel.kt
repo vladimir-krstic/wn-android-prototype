@@ -407,7 +407,26 @@ class AppViewModel(
                 if (owner.profileId !in uiState.signedInProfileIds || current == null ||
                     (stage != GroupLifecycleStage.Converge && owner.profileId != uiState.activeProfileId) ||
                     !GroupLifecyclePolicy.permits(current, owner.profileId, stage, target)) false else {
-                    val next = GroupLifecyclePolicy.apply(current, owner.profileId, stage, target, convergenceFailed)
+                    val updated = GroupLifecyclePolicy.apply(current, owner.profileId, stage, target, convergenceFailed)
+                    val sourceProfile = uiState.profiles.first { it.id == owner.profileId }
+                    val eventText = when (stage) {
+                        GroupLifecycleStage.Grant -> {
+                            val name = sourceProfile.people.firstOrNull { it.id == target }?.displayName
+                                ?.takeIf { it.isNotBlank() } ?: "Member"
+                            "$name is now an admin."
+                        }
+                        GroupLifecycleStage.StepDown -> "${sourceProfile.name} is no longer an admin."
+                        else -> null
+                    }
+                    // Record each accepted role change atomically, even if a later stage fails.
+                    // Named copy remains meaningful when viewing the history as another member.
+                    val next = if (updated != null && eventText != null) {
+                        val (day, minute) = nextTimelinePosition(current)
+                        updated.copy(timeline = updated.timeline + ChatTimelineEntry.Event(
+                            id = "${owner.chatId}-role-${createdChatSequence++}",
+                            text = eventText, dayOrdinal = day, dayLabel = "Today", minuteOfDay = minute,
+                        ))
+                    } else updated
                     uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != owner.profileId) profile else
                         profile.copy(chats = profile.chats.mapNotNull { if (it.id == owner.chatId) next else it },
                             chatFolders = if (next == null) profile.chatFolders.map { it.copy(chatIds = it.chatIds - owner.chatId) } else profile.chatFolders) })
@@ -701,6 +720,12 @@ class AppViewModel(
     fun updateSpeechPreferences(profileId: String, reduce: (dev.ipf.whitenoise.model.SpeechPreferences) -> dev.ipf.whitenoise.model.SpeechPreferences) {
         updateActiveProfile { profile ->
             if (profile.id != profileId) profile else profile.copy(settings = profile.settings.copy(speech = reduce(profile.settings.speech)))
+        }
+    }
+
+    fun updateTranslationPreferences(profileId: String, preferences: dev.ipf.whitenoise.model.TranslationPreferences) {
+        updateActiveProfile { profile ->
+            if (profile.id != profileId) profile else profile.copy(settings = profile.settings.copy(translation = preferences))
         }
     }
 
@@ -998,6 +1023,11 @@ class AppViewModel(
         profileExitAttempt = null
         profileExitReport = null
         nextProfileExitScenario = ProfileExitScenario.Success
+        nextWritingScenario = dev.ipf.whitenoise.model.WritingScenario.Ready
+        writingScenarioOwner = null
+        nextTranslationScenario = dev.ipf.whitenoise.model.TranslationScenario.Ready
+        translationScenarioOwner = null
+        nextGlobalLibraryScenario = dev.ipf.whitenoise.model.GlobalLibraryScenario.Ready
         peopleSearchScenario = PeopleSearchScenario.Success
         groupContactScenario = GroupContactScenario.Success
         nextCreatedChatUnavailable = false
@@ -1220,6 +1250,61 @@ class AppViewModel(
         val id = "$profileId-folder-${createdChatSequence++}"
         updateActiveProfile { it.copy(chatFolders = it.chatFolders + ChatFolder(id, name.trim())) }
         return id
+    }
+
+    private var writingScenarioOwner: String? = null
+    var nextWritingScenario by mutableStateOf(dev.ipf.whitenoise.model.WritingScenario.Ready)
+        private set
+    fun selectWritingScenario(value: dev.ipf.whitenoise.model.WritingScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) {
+            writingScenarioOwner = uiState.activeProfileId
+            nextWritingScenario = value
+        }
+    }
+    fun consumeWritingScenario(profileId: String): dev.ipf.whitenoise.model.WritingScenario {
+        if (uiState.activeProfileId != profileId) return dev.ipf.whitenoise.model.WritingScenario.Unavailable
+        val value = nextWritingScenario.takeIf { writingScenarioOwner == profileId && uiState.activeProfile?.developerTools?.isEnabled == true }
+            ?: dev.ipf.whitenoise.model.WritingScenario.Ready
+        nextWritingScenario = dev.ipf.whitenoise.model.WritingScenario.Ready
+        writingScenarioOwner = null
+        return value
+    }
+
+    private var translationScenarioOwner: String? = null
+    var nextTranslationScenario by mutableStateOf(dev.ipf.whitenoise.model.TranslationScenario.Ready)
+        private set
+    fun selectTranslationScenario(value: dev.ipf.whitenoise.model.TranslationScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) {
+            translationScenarioOwner = uiState.activeProfileId
+            nextTranslationScenario = value
+        }
+    }
+    fun consumeTranslationScenario(profileId: String): dev.ipf.whitenoise.model.TranslationScenario {
+        if (uiState.activeProfileId != profileId) return dev.ipf.whitenoise.model.TranslationScenario.Unavailable
+        val value = nextTranslationScenario.takeIf { translationScenarioOwner == profileId && uiState.activeProfile?.developerTools?.isEnabled == true }
+            ?: dev.ipf.whitenoise.model.TranslationScenario.Ready
+        nextTranslationScenario = dev.ipf.whitenoise.model.TranslationScenario.Ready
+        translationScenarioOwner = null
+        return value
+    }
+
+    private var globalLibraryScenarioOwner: String? = null
+    var nextGlobalLibraryScenario by mutableStateOf(dev.ipf.whitenoise.model.GlobalLibraryScenario.Ready)
+        private set
+
+    fun selectGlobalLibraryScenario(value: dev.ipf.whitenoise.model.GlobalLibraryScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) {
+            globalLibraryScenarioOwner = uiState.activeProfileId
+            nextGlobalLibraryScenario = value
+        }
+    }
+    fun consumeGlobalLibraryScenario(profileId: String): dev.ipf.whitenoise.model.GlobalLibraryScenario {
+        if (uiState.activeProfileId != profileId) return dev.ipf.whitenoise.model.GlobalLibraryScenario.Failed
+        val outcome = nextGlobalLibraryScenario.takeIf { globalLibraryScenarioOwner == profileId && uiState.activeProfile?.developerTools?.isEnabled == true }
+            ?: dev.ipf.whitenoise.model.GlobalLibraryScenario.Ready
+        nextGlobalLibraryScenario = dev.ipf.whitenoise.model.GlobalLibraryScenario.Ready
+        globalLibraryScenarioOwner = null
+        return outcome
     }
 
     var nextGlobalVoiceScenario by mutableStateOf(GlobalVoiceScenario.Device)
@@ -1692,6 +1777,15 @@ class AppViewModel(
         if (uiState.activeProfile?.developerTools?.isEnabled == true) nextMessageEditScenario = scenario
     }
 
+    fun setMessagePinned(profileId: String, chatId: String, messageId: String, pinned: Boolean): Boolean {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId } ?: return false
+        val current = chat(chatId) ?: return false
+        val next = dev.ipf.whitenoise.model.MessagePins.setPinned(current, profileId, messageId, pinned)
+        if (next == current) return false
+        mutateChat(chatId) { next }
+        return true
+    }
+
     fun setCollapseLongMessages(profileId: String, chatId: String, collapse: Boolean) {
         if (uiState.activeProfileId == profileId) mutateChat(chatId) { it.copy(collapseLongMessages = collapse) }
     }
@@ -1987,6 +2081,26 @@ class AppViewModel(
         ) }
     }
 
+    fun setChatDownloadInheritance(profileId: String, chatId: String, type: dev.ipf.whitenoise.model.DownloadMediaType, inherit: Boolean) {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId && it.id in uiState.signedInProfileIds } ?: return
+        mutateChat(chatId) { chat -> chat.copy(downloadOverrides = chat.downloadOverrides.inherit(type, inherit, profile.settings.downloadMatrix)) }
+    }
+
+    fun setChatDownloadNetwork(profileId: String, chatId: String, type: dev.ipf.whitenoise.model.DownloadMediaType,
+        network: dev.ipf.whitenoise.model.DownloadNetwork, enabled: Boolean) {
+        val profile = uiState.activeProfile?.takeIf { it.id == profileId && it.id in uiState.signedInProfileIds } ?: return
+        mutateChat(chatId) { chat ->
+            // An event from a dismissed custom picker cannot recreate an override after reset.
+            if (chat.downloadOverrides.inherits(type)) chat else chat.copy(
+                downloadOverrides = chat.downloadOverrides.change(type, network, enabled, profile.settings.downloadMatrix))
+        }
+    }
+
+    fun resetChatDownloads(profileId: String, chatId: String) {
+        if (uiState.activeProfileId != profileId || profileId !in uiState.signedInProfileIds) return
+        mutateChat(chatId) { it.copy(downloadOverrides = dev.ipf.whitenoise.model.ChatDownloadOverrides()) }
+    }
+
     /** Eligibility is checked once at admission. Tightening rules never revokes accepted work. */
     fun admitAutomaticDownloads(profileId: String) {
         val profile = uiState.activeProfile?.takeIf { it.id == profileId && it.id in uiState.signedInProfileIds } ?: return
@@ -1999,7 +2113,7 @@ class AppViewModel(
                 val type = attachment.downloadMediaType
                 val transfer = attachment.transfer
                 if (type == null || transfer?.direction != AttachmentTransferDirection.Download ||
-                    !current.settings.downloadMatrix.allows(type, conditions)) attachment
+                    !chat.downloadOverrides.allows(type, conditions, current.settings.downloadMatrix)) attachment
                 else attachment.copy(transfer = transfer.admitAutomatically())
             }))
         }) }) }
@@ -2361,7 +2475,7 @@ class AppViewModel(
                     target.copy(phase = MessageForwardTargetPhase.Failed, failure = MessageForwardFailure.Send)
                 else {
                     val (day, minute) = nextTimelinePosition(targetChat!!)
-                    val copy = MessageForwarding.copyForDestination(operation.messages[target.sent], operation.id, targetChat, destination.id, target.sent, day, minute)
+                    val copy = MessageForwarding.copyForDestination(operation.messages[target.sent], operation.id, targetChat, destination.id, target.sent, day, minute, operation.sourceProfileId)
                         .copy(retention = null, expiresAtMillis = null, createdAtMillis = retention.nowMillis)
                         .let { MessageRetentionPolicy.capture(it, targetChat.disappearingDuration, retention.nowMillis, received = false) }
                     uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != destination.id) profile else profile.copy(chats = profile.chats.map { chat ->

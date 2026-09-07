@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.compose.ui.res.stringResource
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,6 +95,12 @@ fun DeveloperToolsScreen(
     attachmentAccessScenario: dev.ipf.whitenoise.model.AttachmentAccessScenario = dev.ipf.whitenoise.model.AttachmentAccessScenario.Success,
     onAttachmentAccessScenario: (dev.ipf.whitenoise.model.AttachmentAccessScenario) -> Unit = {},
     onMessageForwardScenario: (dev.ipf.whitenoise.model.MessageForwardScenario) -> Unit = {},
+    translationScenario: dev.ipf.whitenoise.model.TranslationScenario = dev.ipf.whitenoise.model.TranslationScenario.Ready,
+    onTranslationScenario: (dev.ipf.whitenoise.model.TranslationScenario) -> Unit = {},
+    writingScenario: dev.ipf.whitenoise.model.WritingScenario = dev.ipf.whitenoise.model.WritingScenario.Ready,
+    onWritingScenario: (dev.ipf.whitenoise.model.WritingScenario) -> Unit = {},
+    libraryScenario: dev.ipf.whitenoise.model.GlobalLibraryScenario = dev.ipf.whitenoise.model.GlobalLibraryScenario.Ready,
+    onLibraryScenario: (dev.ipf.whitenoise.model.GlobalLibraryScenario) -> Unit = {},
     globalVoiceScenario: dev.ipf.whitenoise.model.GlobalVoiceScenario = dev.ipf.whitenoise.model.GlobalVoiceScenario.Success,
     onGlobalVoiceScenario: (dev.ipf.whitenoise.model.GlobalVoiceScenario) -> Unit = {},
     chatBatchScenario: dev.ipf.whitenoise.model.ChatBatchScenario = dev.ipf.whitenoise.model.ChatBatchScenario.Success,
@@ -157,6 +164,15 @@ fun DeveloperToolsScreen(
         messageEditScenario, { it.developerLabel }, onMessageEditScenario, { editOpen = false })
     if (historyOpen) ScenarioChoiceDialog(stringResource(R.string.developer_conversation_history), dev.ipf.whitenoise.model.HistoryScenario.entries,
         historyScenario, { it.developerLabel }, onHistoryScenario, { historyOpen = false })
+    var translationOpen by remember { mutableStateOf(false) }
+    if (translationOpen) ScenarioChoiceDialog(stringResource(R.string.translation_title), dev.ipf.whitenoise.model.TranslationScenario.entries,
+        translationScenario, { it.developerLabel }, onTranslationScenario, { translationOpen = false })
+    var writingOpen by remember { mutableStateOf(false) }
+    if (writingOpen) ScenarioChoiceDialog(stringResource(R.string.developer_writing), dev.ipf.whitenoise.model.WritingScenario.entries,
+        writingScenario, { it.developerLabel }, onWritingScenario, { writingOpen = false })
+    var libraryOpen by remember { mutableStateOf(false) }
+    if (libraryOpen) ScenarioChoiceDialog(stringResource(R.string.developer_library), dev.ipf.whitenoise.model.GlobalLibraryScenario.entries,
+        libraryScenario, { it.developerLabel }, onLibraryScenario, { libraryOpen = false })
     var globalVoiceOpen by remember { mutableStateOf(false) }
     if (globalVoiceOpen) ScenarioChoiceDialog(stringResource(R.string.developer_voice_search), dev.ipf.whitenoise.model.GlobalVoiceScenario.entries,
         globalVoiceScenario, { it.developerLabel }, onGlobalVoiceScenario, { globalVoiceOpen = false })
@@ -330,6 +346,15 @@ fun DeveloperToolsScreen(
                         }
                         row {
                             SettingsLink(stringResource(R.string.developer_message_forwarding_outcomes), messageForwardScenario.developerLabel, { forwardOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_writing), writingScenario.developerLabel, { writingOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.translation_title), translationScenario.developerLabel, { translationOpen = true })
+                        }
+                        row {
+                            SettingsLink(stringResource(R.string.developer_library), libraryScenario.developerLabel, { libraryOpen = true })
                         }
                         row {
                             SettingsLink(stringResource(R.string.developer_voice_search_scenarios), globalVoiceScenario.developerLabel, { globalVoiceOpen = true })
@@ -679,6 +704,7 @@ fun DiagnosticsScreen(
                     .fillMaxWidth()
                     .weight(1f),
                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                border = amoledOutlineBorder(),
                 shape = MaterialTheme.shapes.large,
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

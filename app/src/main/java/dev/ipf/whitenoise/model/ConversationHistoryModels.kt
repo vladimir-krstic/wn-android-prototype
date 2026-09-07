@@ -15,7 +15,7 @@ enum class HistoryScenario(val developerLabel: String) {
 enum class HistoryPhase { Loading, Failed, Unavailable }
 data class HistoryRequest(val id: Long, val operation: HistoryOperation, val scenario: HistoryScenario,
     val targetId: String? = null, val phase: HistoryPhase = HistoryPhase.Loading,
-    val scrollOffset: Int = 0, val highlight: Boolean = true)
+    val scrollOffset: Int = 0, val highlight: Boolean = true, val dateJump: Boolean = false)
 
 /** Stable entry IDs describe the loaded UI window; the authoritative local history stays intact. */
 object ConversationHistory {
@@ -40,8 +40,8 @@ object ConversationHistory {
         }
         return (ids + page.map { it.id }).intersect(entries.mapTo(hashSetOf()) { it.id })
     }
-    fun target(chat: Chat, id: String): Set<String>? {
-        val index = ConversationProjection.orderedEntries(chat).indexOfFirst { it is ChatTimelineEntry.Message && it.id == id && !it.message.isDeleted }
+    fun target(chat: Chat, id: String, includeEvents: Boolean = false): Set<String>? {
+        val index = ConversationProjection.orderedEntries(chat).indexOfFirst { it.id == id && ((it is ChatTimelineEntry.Message && !it.message.isDeleted) || (includeEvents && it is ChatTimelineEntry.Event)) }
         if (index < 0) return null
         val start = (index - pageSize / 2).coerceIn(0, (ConversationProjection.orderedEntries(chat).size - pageSize).coerceAtLeast(0))
         return ConversationProjection.orderedEntries(chat).subList(start, (start + pageSize).coerceAtMost(ConversationProjection.orderedEntries(chat).size)).mapTo(linkedSetOf()) { it.id }

@@ -202,6 +202,22 @@ internal class ReadAloudController {
             sourceOffset, Locale.getDefault(), limit(), selection = selection) ?: return
         begin(next)
     }
+    /** A displayed translation keeps source ownership while speaking only that rendition. */
+    fun startDisplayedMessage(profile: Profile, chat: Chat, message: ChatMessage, sourceOffset: Int = 0, selection: MessagePassage? = null) {
+        val latestProfile = this.profile?.invoke() ?: profile.takeIf { this.profile == null } ?: return
+        if (!ready || latestProfile.id != profile.id) return
+        val latestChat = latestProfile.chats.firstOrNull { it.id == chat.id } ?: chat.takeIf { this.profile == null } ?: return
+        val original = SpeechOwnership.items(latestChat).firstOrNull { it.id == message.id } ?: return
+        val expected = SpeechOwnership.items(chat).firstOrNull { it.id == message.id } ?: return
+        if (original.authored != expected.authored) return
+        if (original.authored == message.text) {
+            startConversation(profile, chat, message.id, sourceOffset, selection); return
+        }
+        val item = SpeechItem(message.id, message.text, originalAuthored = original.authored)
+        val next = SpeechSession.create(++nextSession, SpeechOwner(profile.id, chat.id), listOf(item), message.id,
+            sourceOffset, Locale.getDefault(), limit(), selection = selection) ?: return
+        begin(next)
+    }
     /** Text files have already been decoded/rendered; never interpret their plain payload as Markdown again. */
     fun toggle(messageId: String, text: String) {
         if (activeMessageId == messageId) { stop(); return }

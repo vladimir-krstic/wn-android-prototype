@@ -24,6 +24,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
 
 object WhiteNoiseButtonDefaults {
     /** Exact Material medium-button metrics; matches a 56 dp single-line text field. */
@@ -46,7 +48,14 @@ fun WhiteNoiseButton(
         "A loading primary button needs a visible progress label."
     }
     val inProgressDescription = stringResource(R.string.wn_in_progress)
-    val colors = if (loading) {
+    val colors = if (isAmoledOutline()) {
+        ButtonDefaults.outlinedButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            disabledContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (loading) 1f else 0.38f),
+        )
+    } else if (loading) {
         ButtonDefaults.buttonColors(
             disabledContainerColor = MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -66,6 +75,7 @@ fun WhiteNoiseButton(
             },
         enabled = enabled && !loading,
         colors = colors,
+        border = amoledOutlineBorder(enabled || loading),
         contentPadding = WhiteNoiseButtonDefaults.TaskContentPadding,
     ) {
         if (loading) {
@@ -111,6 +121,7 @@ fun WhiteNoiseFilledTonalButton(
         onClick = onClick,
         modifier = modifier.heightIn(min = WhiteNoiseButtonDefaults.TaskHeight),
         enabled = enabled,
+        border = amoledOutlineBorder(enabled),
         contentPadding = WhiteNoiseButtonDefaults.TaskContentPadding,
         content = content,
     )

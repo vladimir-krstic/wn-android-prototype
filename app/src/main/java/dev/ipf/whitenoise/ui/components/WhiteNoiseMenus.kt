@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.components
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Column
@@ -83,6 +84,7 @@ fun WhiteNoiseDropdownMenu(
     ) {
         DropdownMenuGroup(
             shapes = MenuDefaults.groupShapes(),
+            border = amoledOutlineBorder(),
             modifier = modifier,
             shadowElevation = shadowElevation,
         ) {
@@ -115,6 +117,7 @@ fun WhiteNoiseMenuGroup(
 ) {
     DropdownMenuGroup(
         shapes = MenuDefaults.groupShapes(),
+        border = amoledOutlineBorder(),
         modifier = modifier,
         shadowElevation = shadowElevation,
     ) {

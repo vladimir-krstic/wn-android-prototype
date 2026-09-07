@@ -131,8 +131,9 @@ object MessageForwarding {
             label = if (media.attachment.kind == MessageAttachmentKind.Photos) "Photo" else media.attachment.label, images = listOfNotNull(media.image))
         return listOf(media.message.copy(text = caption.trim(), attachments = listOf(attachment)))
     }
-    fun copyForDestination(source: ChatMessage, operationId: Long, target: Chat, profileId: String, index: Int, day: Int, minute: Int): ChatMessage =
+    fun copyForDestination(source: ChatMessage, operationId: Long, target: Chat, profileId: String, index: Int, day: Int, minute: Int, sourceProfileId: String): ChatMessage =
         source.copy(id = "${target.id}-forward-$operationId-$index", authorId = profileId, dayOrdinal = day,
+            isForwarded = source.isForwarded || source.authorId != sourceProfileId,
             dayLabel = "Today", minuteOfDay = minute, timeLabel = "Now", replyToMessageId = null, reactions = emptyList(),
             deliveryState = MessageDeliveryState.Sent, deletionState = MessageDeletionState.None,
             editHistory = null, editAttempt = null, createdAtMillis = null, receivedAtMillis = null, expiresAtMillis = null,

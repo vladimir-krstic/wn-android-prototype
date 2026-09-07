@@ -2,6 +2,9 @@
 
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
+import dev.ipf.whitenoise.ui.theme.amoledOutline
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
@@ -182,7 +185,7 @@ internal fun SettingsGroup(
                 if (row.native) {
                     row.content()
                 } else {
-                    Surface(color = containerColor, shape = shapes.shape) {
+                    Surface(color = containerColor, border = amoledOutlineBorder(), shape = shapes.shape) {
                         Column(Modifier.fillMaxWidth()) { row.content() }
                     }
                 }
@@ -208,6 +211,7 @@ internal fun SettingsLink(
     value: String? = null,
     enabled: Boolean = true,
     destructive: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     val headlineColor = when {
         !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
@@ -229,7 +233,7 @@ internal fun SettingsLink(
             containerColor = LocalSettingsRowColor.current,
             disabledContainerColor = LocalSettingsRowColor.current,
         ),
-        modifier = Modifier.fillMaxWidth().semantics { role = Role.Button },
+        modifier = modifier.fillMaxWidth().amoledOutline(settingsRowShapes().shape, enabled).semantics { role = Role.Button },
     )
 }
 
@@ -267,7 +271,7 @@ internal fun SettingsSwitch(
             disabledContainerColor = LocalSettingsRowColor.current,
             selectedContainerColor = LocalSettingsRowColor.current,
         ),
-        modifier = Modifier.fillMaxWidth().semantics { role = Role.Switch },
+        modifier = Modifier.fillMaxWidth().amoledOutline(settingsRowShapes().shape, enabled).semantics { role = Role.Switch },
     )
 }
 
@@ -312,9 +316,9 @@ internal fun SettingsChoice(
         colors = ListItemDefaults.colors(
             containerColor = LocalSettingsRowColor.current,
             disabledContainerColor = LocalSettingsRowColor.current,
-            selectedContainerColor = if (highlightSelected) MaterialTheme.colorScheme.surfaceContainerHigh else LocalSettingsRowColor.current,
+            selectedContainerColor = if (highlightSelected) outlineSelectionColor(MaterialTheme.colorScheme.surfaceContainerHigh) else LocalSettingsRowColor.current,
         ),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().amoledOutline(settingsRowShapes().shape, enabled),
     )
 }
 
@@ -350,7 +354,7 @@ internal fun SettingsAction(
         },
         leadingContent = leading,
         colors = ListItemDefaults.colors(containerColor = LocalSettingsRowColor.current, disabledContainerColor = LocalSettingsRowColor.current),
-        modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
+        modifier = modifier.fillMaxWidth().amoledOutline(settingsRowShapes().shape, enabled).semantics { role = Role.Button },
     )
 }
 
@@ -361,7 +365,7 @@ internal fun SettingsValue(
     modifier: Modifier = Modifier,
 ) {
     ListItem(
-        modifier = modifier,
+        modifier = modifier.amoledOutline(settingsRowShapes().shape),
         shapes = settingsRowShapes(),
         content = { Text(title) },
         supportingContent = {

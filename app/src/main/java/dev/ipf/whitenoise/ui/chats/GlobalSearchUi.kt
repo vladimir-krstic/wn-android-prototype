@@ -4,6 +4,7 @@ package dev.ipf.whitenoise.ui.chats
 
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -31,7 +32,7 @@ import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDialogChoiceRow
 import dev.ipf.whitenoise.ui.components.ProfileAvatar
-import dev.ipf.whitenoise.ui.conversation.SearchHighlightedText
+import dev.ipf.whitenoise.ui.conversation.ReadOnlyMessageBubble
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -40,14 +41,22 @@ import kotlinx.coroutines.delay
 
 internal val GlobalSearchFilterSaver = listSaver<GlobalSearchFilters, Any>(
     save = { listOf(ArrayList(it.chatIds), ArrayList(it.senderIds), it.date.name, it.fromDay ?: Long.MIN_VALUE,
-        it.toDay ?: Long.MIN_VALUE, ArrayList(it.content.map { kind -> kind.name })) },
+        it.toDay ?: Long.MIN_VALUE, ArrayList(it.content.map { kind -> kind.name }),
+        ArrayList(it.folderIds), ArrayList(it.chatTypes.map { kind -> kind.name })) },
     restore = { saved ->
         @Suppress("UNCHECKED_CAST")
         GlobalSearchFilters((saved[0] as List<String>).toSet(), (saved[1] as List<String>).toSet(), GlobalSearchDate.valueOf(saved[2] as String),
             (saved[3] as Long).takeUnless { it == Long.MIN_VALUE }, (saved[4] as Long).takeUnless { it == Long.MIN_VALUE },
-            (saved[5] as List<String>).map { GlobalSearchContent.valueOf(it) }.toSet())
+            (saved[5] as List<String>).map { GlobalSearchContent.valueOf(it) }.toSet(),
+            (saved.getOrNull(6) as? List<String>).orEmpty().toSet(),
+            (saved.getOrNull(7) as? List<String>).orEmpty().map { GlobalSearchChatType.valueOf(it) }.toSet())
     },
 )
+
+internal val GlobalSearchChatType.labelResource get() = when (this) {
+    GlobalSearchChatType.Direct -> R.string.global_direct_chats
+    GlobalSearchChatType.Groups -> R.string.global_groups
+}
 
 internal val GlobalSearchContent.labelResource get() = when (this) {
     GlobalSearchContent.Text -> R.string.global_content_text
@@ -74,6 +83,10 @@ private fun searchDateLabel(filters: GlobalSearchFilters): String = if (filters.
 @Composable
 internal fun GlobalSearchFilterBar(profile: Profile, filters: GlobalSearchFilters, onChange: (GlobalSearchFilters) -> Unit) {
     val chips = buildList<Pair<String, () -> Unit>> {
+        filters.folderIds.forEach { id -> profile.chatFolders.firstOrNull { it.id == id }?.let { folder ->
+            add(stringResource(R.string.global_folder_filter, folder.name) to { onChange(filters.copy(folderIds = filters.folderIds - id)) })
+        } }
+        filters.chatTypes.forEach { kind -> add(stringResource(kind.labelResource) to { onChange(filters.copy(chatTypes = filters.chatTypes - kind)) }) }
         filters.chatIds.forEach { id -> profile.chats.firstOrNull { it.id == id }?.let { chat ->
             add(stringResource(R.string.global_chat_filter, chat.title) to { onChange(filters.copy(chatIds = filters.chatIds - id)) })
         } }
@@ -103,6 +116,8 @@ internal fun GlobalSearchFilterMenu(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("global.filterMenu"),
         items = listOf(
+            Triple("folders", R.string.chat_folders, filters.folderIds.isNotEmpty()),
+            Triple("types", R.string.global_chat_type, filters.chatTypes.isNotEmpty()),
             Triple("chats", R.string.global_chats, filters.chatIds.isNotEmpty()),
             Triple("senders", R.string.global_senders, filters.senderIds.isNotEmpty()),
             Triple("dates", R.string.global_dates, filters.date != GlobalSearchDate.AnyTime),
@@ -126,7 +141,7 @@ internal fun GlobalSearchFilterPicker(profile: Profile, category: String, filter
         val selected = if (isChats) filters.chatIds else filters.senderIds
         WhiteNoiseEntityPickerSheet(
             title = stringResource(if (isChats) R.string.global_chats else R.string.global_senders),
-            items = if (isChats) profile.chats.map { WhiteNoisePickerItem(it.id, it.title, it.avatar) }
+            items = if (isChats) filters.scopedChats(profile).map { WhiteNoisePickerItem(it.id, it.title, it.avatar) }
                 else GlobalSearch.senders(profile).map { (id, name) ->
                     WhiteNoisePickerItem(id, name, if (id == profile.id) profile.avatar else profile.people.firstOrNull { it.id == id }?.avatar)
                 },
@@ -139,10 +154,23 @@ internal fun GlobalSearchFilterPicker(profile: Profile, category: String, filter
             searchTag = "global.filterSearch", rowTagPrefix = "global.choice",
         )
     } else AlertDialog(onDismissRequest = onDismiss,
-        title = { Text(stringResource(when (category) { "chats" -> R.string.global_chats; "senders" -> R.string.global_senders; "dates" -> R.string.global_dates; "content" -> R.string.global_content; else -> R.string.global_filters })) },
+        title = { Text(stringResource(when (category) { "folders" -> R.string.chat_folders; "types" -> R.string.global_chat_type; "chats" -> R.string.global_chats; "senders" -> R.string.global_senders; "dates" -> R.string.global_dates; "content" -> R.string.global_content; else -> R.string.global_filters })) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 when (category) {
+                    "folders" -> {
+                        if (profile.chatFolders.isEmpty()) Text(stringResource(R.string.folder_none))
+                        profile.chatFolders.forEach { folder ->
+                            SearchCheckRow(folder.name, folder.id in filters.folderIds, "global.folder.${folder.id}") {
+                                onChange(filters.copy(folderIds = if (folder.id in filters.folderIds) filters.folderIds - folder.id else filters.folderIds + folder.id))
+                            }
+                        }
+                    }
+                    "types" -> GlobalSearchChatType.entries.forEach { kind ->
+                        SearchCheckRow(stringResource(kind.labelResource), kind in filters.chatTypes, "global.type.${kind.name}") {
+                            onChange(filters.copy(chatTypes = if (kind in filters.chatTypes) filters.chatTypes - kind else filters.chatTypes + kind))
+                        }
+                    }
                     "dates" -> GlobalSearchDate.entries.forEach { date ->
                         WhiteNoiseDialogChoiceRow(stringResource(date.labelResource), filters.date == date, onClick = {
                             if (date == GlobalSearchDate.Custom) custom = true
@@ -187,13 +215,31 @@ internal fun GlobalDateRangeDialog(filters: GlobalSearchFilters, onDismiss: () -
 }
 
 @Composable
-internal fun GlobalMessageRow(result: GlobalMessageResult, query: String, onOpen: () -> Unit) {
-    ListItem(shapes = WhiteNoiseListItemDefaults.shapes(), onClick = onOpen, modifier = Modifier.testTag("global.message.${result.chatId}.${result.message.id}")) {
-        Column(verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-            Text(stringResource(R.string.global_message_context, result.sender, result.chatTitle), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            SearchHighlightedText(result.snippet, GlobalSearch.normalize(query), style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            Text("${result.message.dayLabel} · ${result.message.timeLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+internal fun GlobalMessageRow(profile: Profile, result: GlobalMessageResult, query: String, onOpen: () -> Unit) {
+    val chat = profile.chats.firstOrNull { it.id == result.chatId } ?: return
+    val item = remember(chat, result.message.id) {
+        ConversationProjection.items(chat, setOf(result.message.id))
+            .filterIsInstance<ConversationItem.MessageItem>().singleOrNull()
+    } ?: return
+    val context = stringResource(R.string.global_message_context, result.sender, result.chatTitle)
+    val description = listOf(context, item.resolvedReply?.plainVisibleText(profile.id).orEmpty(),
+        item.message.plainVisibleText(profile.id), item.message.attachments.joinToString { it.label },
+        item.message.dayLabel, item.message.timeLabel).filter { it.isNotBlank() }.joinToString(", ")
+    Box(Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin,
+        vertical = WhiteNoiseSpacing.Related)) {
+        Column(Modifier.fillMaxWidth().clearAndSetSemantics {},
+            verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+            Column {
+                Text(context, style = MaterialTheme.typography.titleSmall)
+                Text(item.message.dayLabel, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            ReadOnlyMessageBubble(profile, chat, item, searchQuery = GlobalSearch.normalize(query))
         }
+        // One native navigation target also intercepts links and attachment controls in the preview.
+        Box(Modifier.matchParentSize().testTag("global.message.${result.chatId}.${result.message.id}")
+            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.go_to_message), onClick = onOpen)
+            .semantics { contentDescription = description })
     }
 }
 

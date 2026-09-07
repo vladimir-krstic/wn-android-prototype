@@ -3,6 +3,7 @@ package dev.ipf.whitenoise
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -68,16 +69,36 @@ class DictationCaptureTest {
         val pause = rule.onNodeWithTag("dictation.pause").fetchSemanticsNode().boundsInRoot
         val listening = rule.onNodeWithTag("dictation.listening").fetchSemanticsNode().boundsInRoot
         assertTrue(pause.right <= listening.left)
+        assertEquals(with(rule.density) { 28.dp.toPx() }, listening.center.x - pause.center.x, 1f)
         rule.onNodeWithContentDescription("Cancel").assertDoesNotExist()
         rule.onNodeWithTag("conversation.attachment.add").assertDoesNotExist()
         rule.onNodeWithTag("dictation.pause").performClick()
         rule.onNodeWithContentDescription("Cancel").assertDoesNotExist()
-        rule.onNodeWithTag("conversation.attachment.add").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.attachment.add").assertExists()
+        rule.onNodeWithTag("conversation.voice").assertExists()
         rule.onNodeWithContentDescription("Resume dictation").assertIsEnabled()
-        assertEquals(dictation.width, rule.onNodeWithTag("conversation.composer.surface").fetchSemanticsNode().boundsInRoot.width, 1f)
+        assertEquals(idle.width, rule.onNodeWithTag("conversation.composer.surface").fetchSemanticsNode().boundsInRoot.width, 1f)
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         rule.runOnIdle { assertNull(capture.inlineDictation); assertNull(capture.lease) }
         rule.onNodeWithTag("conversation.voice").assertExists()
+    }
+    @Test fun editingAfterDictationRestoresAddInWideComposerAndVoiceWhenCleared() {
+        show(); startThroughComposer(); recognize()
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performTextReplacement("One\nTwo\nThree\nFour")
+        rule.runOnIdle { assertFalse(capture.inlineDictation!!.capturing); assertNull(capture.lease) }
+        val add = rule.onNodeWithTag("conversation.attachment.add").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val emoji = rule.onNodeWithTag("conversation.composer.emoji").fetchSemanticsNode().boundsInRoot
+        val mic = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
+        assertEquals(with(rule.density) { 32.dp.toPx() }, emoji.center.x - add.center.x, 1f)
+        assertEquals(mic.bottom, emoji.bottom, 1f)
+        rule.onNodeWithTag("conversation.voice").assertDoesNotExist()
+        editor.performTextReplacement("")
+        rule.onNodeWithTag("conversation.attachment.add").assertIsDisplayed()
+        val voice = rule.onNodeWithTag("conversation.voice").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val idleMic = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
+        assertEquals(with(rule.density) { 40.dp.toPx() }, voice.center.x - idleMic.center.x, 1f)
+        rule.onNodeWithText("Message", substring = false).assertExists()
     }
     @Test fun pauseEditSelectionAndResumeInsertDirectlyInTheSameEditor() {
         show(); startThroughComposer(); recognize()

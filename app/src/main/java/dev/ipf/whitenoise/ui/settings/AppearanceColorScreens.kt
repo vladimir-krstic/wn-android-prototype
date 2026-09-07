@@ -1,5 +1,7 @@
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.outlineButtonColors
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import dev.ipf.whitenoise.ui.components.WhiteNoiseButton
+import dev.ipf.whitenoise.ui.components.WhiteNoiseOutlinedButton
+import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
+import dev.ipf.whitenoise.ui.theme.whiteNoiseColorScheme
+import dev.ipf.whitenoise.ui.theme.withActionColor
 import dev.ipf.whitenoise.ui.components.WhiteNoiseDropdownMenu
 import dev.ipf.whitenoise.ui.components.WhiteNoiseMenuItem
 import androidx.compose.material3.Icon
@@ -26,8 +32,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +60,6 @@ import dev.ipf.whitenoise.model.ChatBubbleColorOverrides
 import dev.ipf.whitenoise.model.HsvColor
 import dev.ipf.whitenoise.model.Profile
 import dev.ipf.whitenoise.model.ProfileSettings
-import dev.ipf.whitenoise.model.ThemeColorOverrides
 import dev.ipf.whitenoise.ui.theme.LocalDefaultMessageBubbleColors
 import dev.ipf.whitenoise.ui.theme.colorFromOpaqueArgb
 
@@ -66,46 +71,91 @@ fun ActionColorScreen(
 ) {
     val settings = profile.settings
     val theme = AppearanceColorTheme.resolve(settings.appearance, isSystemInDarkTheme())
+    if (!theme.supportsCustomColors) {
+        OutlineColorNotice(stringResource(R.string.action_color), onBack)
+        return
+    }
     val selected = settings.colors.forTheme(theme).actionArgb
-    SettingsScaffold(title = stringResource(R.string.action_color), onBack = onBack) {
-        SettingsList {
-            item {
-                SettingsGroup {
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth().padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(stringResource(R.string.color_preview), style = MaterialTheme.typography.titleMedium)
-                            Button(onClick = {}) { Text(stringResource(R.string.color_preview_action)) }
+    key(profile.id, theme, selected) {
+        ActionColorEditor(profile, theme, onBack, onChange)
+    }
+}
+
+@Composable
+private fun ActionColorEditor(
+    profile: Profile,
+    theme: AppearanceColorTheme,
+    onBack: () -> Unit,
+    onChange: (ProfileSettings) -> Unit,
+) {
+    val settings = profile.settings
+    val initial = settings.colors.forTheme(theme).actionArgb
+    var draft by rememberSaveable { mutableStateOf(initial) }
+    var valid by rememberSaveable { mutableStateOf(true) }
+    var reset by rememberSaveable { mutableStateOf(false) }
+    var resetRevision by rememberSaveable { mutableStateOf(0) }
+    val base = whiteNoiseColorScheme(settings.appearance, isSystemInDarkTheme())
+    // Only this screen sees the trial accent; Save commits to the owning theme.
+    MaterialTheme(colorScheme = withActionColor(base, draft)) {
+        SettingsScaffold(
+            title = stringResource(R.string.action_color), onBack = onBack,
+            bottomBar = {
+                SettingsBottomAction {
+                    WhiteNoiseButton(
+                        onClick = {
+                            onChange(settings.copy(colors = settings.colors.updateTheme(theme) { it.copy(actionArgb = draft) }))
+                            onBack()
+                        },
+                        enabled = valid && draft != initial,
+                        modifier = Modifier.fillMaxWidth().testTag("action_color.save"),
+                    ) { Text(stringResource(R.string.save)) }
+                }
+            },
+        ) {
+            SettingsList {
+                stickyHeader {
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                        SettingsGroup {
+                            item {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.FormField),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(stringResource(R.string.color_preview), style = MaterialTheme.typography.titleMedium)
+                                    Button(onClick = {}, border = amoledOutlineBorder(), colors = outlineButtonColors(),
+                                        modifier = Modifier.testTag("action_color.preview")) { Text(stringResource(R.string.color_preview_action)) }
+                                }
+                            }
                         }
                     }
                 }
-            }
-
-            item {
-                SettingsGroup {
-                    item {
-                        FullSpectrumColorPicker(
-                            selectedArgb = selected,
-                            fallbackArgb = colorLong(MaterialTheme.colorScheme.primary),
-                            onColorSelected = { color ->
-                                onChange(settings.copy(colors = settings.colors.updateTheme(theme) { it.copy(actionArgb = color) }))
-                            },
-                            modifier = Modifier.padding(16.dp),
-                        )
+                item {
+                    SettingsGroup {
+                        item {
+                            Column(
+                                Modifier.padding(WhiteNoiseSpacing.FormField).testTag("action_color.controls"),
+                                verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.FormField),
+                            ) {
+                                key(resetRevision) {
+                                    FullSpectrumColorPicker(
+                                        selectedArgb = if (reset) null else initial,
+                                        fallbackArgb = colorLong(base.primary),
+                                        onColorSelected = { draft = it },
+                                        onValidityChanged = { valid = it },
+                                    )
+                                }
+                                WhiteNoiseOutlinedButton(
+                                    onClick = { draft = null; valid = true; reset = true; resetRevision++ },
+                                    enabled = draft != null || !valid,
+                                    modifier = Modifier.fillMaxWidth().testTag("action_color.reset"),
+                                ) { Text(stringResource(R.string.reset_to_default)) }
+                            }
+                        }
                     }
                 }
+                item { SettingsExplainer(stringResource(R.string.action_color_detail, theme.label())) }
             }
-            item {
-                TextButton(
-                    onClick = { onChange(settings.copy(colors = settings.colors.updateTheme(theme) { it.copy(actionArgb = null) })) },
-                    enabled = selected != null,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.reset_to_default)) }
-            }
-            item { SettingsExplainer(stringResource(R.string.action_color_detail, theme.label())) }
         }
     }
 }
@@ -120,16 +170,44 @@ fun ChatBubbleColorsScreen(
 ) {
     val settings = profile.settings
     val theme = AppearanceColorTheme.resolve(settings.appearance, isSystemInDarkTheme())
-    val global = settings.colors.forTheme(theme)
-    val mineSelected = chat?.bubbleColors?.mineArgb ?: global.mineBubbleArgb
-    val otherSelected = chat?.bubbleColors?.otherArgb ?: global.otherBubbleArgb
-    val defaults = LocalDefaultMessageBubbleColors.current
-    fun updateGlobal(transform: (ThemeColorOverrides) -> ThemeColorOverrides) {
-        onProfileChange(settings.copy(colors = settings.colors.updateTheme(theme, transform)))
+    if (!theme.supportsCustomColors) {
+        OutlineColorNotice(stringResource(R.string.chat_bubble_colors), onBack)
+        return
     }
-    var menuOpen by remember(profile.id, chat?.id) { mutableStateOf(false) }
-    val canReset = if (chat == null) global.mineBubbleArgb != null || global.otherBubbleArgb != null
-        else chat.bubbleColors.mineArgb != null || chat.bubbleColors.otherArgb != null
+    val global = settings.colors.forTheme(theme)
+    // Source changes start a fresh editor; local previews never mutate these inputs.
+    key(profile.id, chat?.id, theme, global, chat?.bubbleColors) {
+        ChatBubbleColorEditor(profile, chat, theme, onBack, onProfileChange, onChatChange)
+    }
+}
+
+@Composable
+private fun ChatBubbleColorEditor(
+    profile: Profile,
+    chat: Chat?,
+    theme: AppearanceColorTheme,
+    onBack: () -> Unit,
+    onProfileChange: (ProfileSettings) -> Unit,
+    onChatChange: (ChatBubbleColorOverrides) -> Unit,
+) {
+    val settings = profile.settings
+    val global = settings.colors.forTheme(theme)
+    val initialMine = if (chat == null) global.mineBubbleArgb else chat.bubbleColors.mineArgb
+    val initialOther = if (chat == null) global.otherBubbleArgb else chat.bubbleColors.otherArgb
+    var mine by rememberSaveable { mutableStateOf(initialMine) }
+    var other by rememberSaveable { mutableStateOf(initialOther) }
+    var reset by rememberSaveable { mutableStateOf(false) }
+    var resetRevision by rememberSaveable { mutableStateOf(0) }
+    var mineValid by rememberSaveable { mutableStateOf(true) }
+    var otherValid by rememberSaveable { mutableStateOf(true) }
+    val defaults = LocalDefaultMessageBubbleColors.current
+    val inheritedMine = if (chat == null) null else global.mineBubbleArgb
+    val inheritedOther = if (chat == null) null else global.otherBubbleArgb
+    val mineSelected = (if (reset) null else initialMine) ?: inheritedMine
+    val otherSelected = (if (reset) null else initialOther) ?: inheritedOther
+    var menuOpen by remember { mutableStateOf(false) }
+    val canReset = mine != null || other != null || !mineValid || !otherValid
+    val changed = mine != initialMine || other != initialOther
     SettingsScaffold(
         title = stringResource(R.string.chat_bubble_colors), onBack = onBack,
         topBarActions = {
@@ -145,23 +223,40 @@ fun ChatBubbleColorsScreen(
                         enabled = canReset,
                         onClick = {
                             menuOpen = false
-                            if (chat == null) updateGlobal { it.copy(mineBubbleArgb = null, otherBubbleArgb = null) }
-                            else onChatChange(ChatBubbleColorOverrides())
+                            mine = null; other = null
+                            mineValid = true; otherValid = true
+                            reset = true; resetRevision++
                         },
                     )),
                 )
             }
         },
+        bottomBar = {
+            SettingsBottomAction {
+                WhiteNoiseButton(
+                    onClick = {
+                        if (chat == null) onProfileChange(settings.copy(colors = settings.colors.updateTheme(theme) {
+                            it.copy(mineBubbleArgb = mine, otherBubbleArgb = other)
+                        })) else onChatChange(ChatBubbleColorOverrides(mineArgb = mine, otherArgb = other))
+                        onBack()
+                    },
+                    enabled = changed && mineValid && otherValid,
+                    modifier = Modifier.fillMaxWidth().testTag("bubble_colors.save"),
+                ) { Text(stringResource(R.string.save)) }
+            }
+        },
     ) {
         SettingsList {
-            item {
-                SettingsGroup {
-                    item {
-                        BubblePreview(
-                            mineArgb = AppearanceColorPolicy.effectiveBubble(chat?.bubbleColors?.mineArgb, global.mineBubbleArgb),
-                            otherArgb = AppearanceColorPolicy.effectiveBubble(chat?.bubbleColors?.otherArgb, global.otherBubbleArgb),
-                            modifier = Modifier.padding(16.dp),
-                        )
+            stickyHeader {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    SettingsGroup {
+                        item {
+                            BubblePreview(
+                                mineArgb = mine ?: inheritedMine,
+                                otherArgb = other ?: inheritedOther,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -169,15 +264,15 @@ fun ChatBubbleColorsScreen(
             item {
                 SettingsGroup {
                     item {
-                        FullSpectrumColorPicker(
-                            selectedArgb = mineSelected,
-                            fallbackArgb = colorLong(defaults.mineContainer),
-                            onColorSelected = { color ->
-                                if (chat == null) updateGlobal { it.copy(mineBubbleArgb = color) }
-                                else onChatChange(chat.bubbleColors.copy(mineArgb = color))
-                            },
-                            modifier = Modifier.padding(16.dp),
-                        )
+                        key(resetRevision) {
+                            FullSpectrumColorPicker(
+                                selectedArgb = mineSelected,
+                                fallbackArgb = colorLong(defaults.mineContainer),
+                                onColorSelected = { mine = it },
+                                onValidityChanged = { mineValid = it },
+                                modifier = Modifier.padding(16.dp).testTag("bubble_colors.mine.picker"),
+                            )
+                        }
                     }
                 }
             }
@@ -185,15 +280,15 @@ fun ChatBubbleColorsScreen(
             item {
                 SettingsGroup {
                     item {
-                        FullSpectrumColorPicker(
-                            selectedArgb = otherSelected,
-                            fallbackArgb = colorLong(defaults.otherContainer),
-                            onColorSelected = { color ->
-                                if (chat == null) updateGlobal { it.copy(otherBubbleArgb = color) }
-                                else onChatChange(chat.bubbleColors.copy(otherArgb = color))
-                            },
-                            modifier = Modifier.padding(16.dp),
-                        )
+                        key(resetRevision) {
+                            FullSpectrumColorPicker(
+                                selectedArgb = otherSelected,
+                                fallbackArgb = colorLong(defaults.otherContainer),
+                                onColorSelected = { other = it },
+                                onValidityChanged = { otherValid = it },
+                                modifier = Modifier.padding(16.dp).testTag("bubble_colors.other.picker"),
+                            )
+                        }
                     }
                 }
             }
@@ -223,21 +318,28 @@ private fun BubblePreview(
             text = stringResource(R.string.bubble_preview_other),
             container = otherColors.first,
             content = otherColors.second,
-            modifier = Modifier.align(Alignment.Start),
+            modifier = Modifier.align(Alignment.Start).testTag("bubble_colors.other.preview"),
         )
         PreviewBubble(
             text = stringResource(R.string.bubble_preview_mine),
             container = mineColors.first,
             content = mineColors.second,
-            modifier = Modifier.align(Alignment.End),
+            modifier = Modifier.align(Alignment.End).testTag("bubble_colors.mine.preview"),
         )
     }
 }
 
 @Composable
 private fun PreviewBubble(text: String, container: Color, content: Color, modifier: Modifier) {
-    Surface(modifier = modifier, color = container, contentColor = content, shape = MaterialTheme.shapes.large) {
+    Surface(modifier = modifier, color = container, contentColor = content, border = amoledOutlineBorder(), shape = MaterialTheme.shapes.large) {
         Text(text, Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+    }
+}
+
+@Composable
+private fun OutlineColorNotice(title: String, onBack: () -> Unit) {
+    SettingsScaffold(title = title, onBack = onBack) {
+        SettingsList { item { SettingsExplainer(stringResource(R.string.appearance_outline_colors_fixed)) } }
     }
 }
 
@@ -247,6 +349,7 @@ fun FullSpectrumColorPicker(
     fallbackArgb: Long,
     onColorSelected: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onValidityChanged: (Boolean) -> Unit = {},
 ) {
     val initial = selectedArgb ?: fallbackArgb
     val initialHsv = remember(initial) { AppearanceColorPolicy.toHsv(initial) }
@@ -257,8 +360,12 @@ fun FullSpectrumColorPicker(
     val parsedHex = AppearanceColorPolicy.parseHex(hex)
     val sliderArgb = AppearanceColorPolicy.fromHsv(HsvColor(hue, saturation, brightness))
     fun updateFromSliders(h: Float = hue, s: Float = saturation, v: Float = brightness) {
-        hex = AppearanceColorPolicy.formatHex(AppearanceColorPolicy.fromHsv(HsvColor(h, s, v)))
+        val color = AppearanceColorPolicy.fromHsv(HsvColor(h, s, v))
+        hex = AppearanceColorPolicy.formatHex(color)
+        onValidityChanged(true)
+        onColorSelected(color)
     }
+    val swatchSelection = parsedHex
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FlowRow(
             Modifier.fillMaxWidth(),
@@ -271,25 +378,37 @@ fun FullSpectrumColorPicker(
                     Modifier.size(48.dp).clip(CircleShape)
                         .background(colorFromOpaqueArgb(argb), CircleShape)
                         .border(
-                            if (selectedArgb == argb) 3.dp else 1.dp,
-                            if (selectedArgb == argb) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                            if (swatchSelection == argb) 3.dp else 1.dp,
+                            if (swatchSelection == argb) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
                             CircleShape,
                         )
-                        .clickable { onColorSelected(argb) }
+                        .clickable {
+                            val hsv = AppearanceColorPolicy.toHsv(argb)
+                            hue = hsv.hue; saturation = hsv.saturation; brightness = hsv.value
+                            hex = AppearanceColorPolicy.formatHex(argb)
+                            onValidityChanged(true)
+                            onColorSelected(argb)
+                        }
                         .semantics {
                             role = Role.RadioButton
-                            selected = selectedArgb == argb
+                            selected = swatchSelection == argb
                             contentDescription = description
                         },
                 )
             }
         }
-        Text(stringResource(R.string.color_hue, hue.toInt()), style = MaterialTheme.typography.labelLarge)
-        Slider(value = hue, onValueChange = { hue = it; updateFromSliders(h = it) }, valueRange = 0f..359f)
-        Text(stringResource(R.string.color_saturation, (saturation * 100).toInt()), style = MaterialTheme.typography.labelLarge)
-        Slider(value = saturation, onValueChange = { saturation = it; updateFromSliders(s = it) })
-        Text(stringResource(R.string.color_brightness, (brightness * 100).toInt()), style = MaterialTheme.typography.labelLarge)
-        Slider(value = brightness, onValueChange = { brightness = it; updateFromSliders(v = it) })
+        val hueLabel = stringResource(R.string.color_hue, hue.toInt())
+        Text(hueLabel, style = MaterialTheme.typography.labelLarge)
+        Slider(value = hue, onValueChange = { hue = it; updateFromSliders(h = it) }, valueRange = 0f..359f,
+            modifier = Modifier.testTag("color.hue").semantics { contentDescription = hueLabel })
+        val saturationLabel = stringResource(R.string.color_saturation, (saturation * 100).toInt())
+        Text(saturationLabel, style = MaterialTheme.typography.labelLarge)
+        Slider(value = saturation, onValueChange = { saturation = it; updateFromSliders(s = it) },
+            modifier = Modifier.testTag("color.saturation").semantics { contentDescription = saturationLabel })
+        val brightnessLabel = stringResource(R.string.color_brightness, (brightness * 100).toInt())
+        Text(brightnessLabel, style = MaterialTheme.typography.labelLarge)
+        Slider(value = brightness, onValueChange = { brightness = it; updateFromSliders(v = it) },
+            modifier = Modifier.testTag("color.brightness").semantics { contentDescription = brightnessLabel })
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             val preview = parsedHex ?: sliderArgb
             Box(
@@ -300,7 +419,10 @@ fun FullSpectrumColorPicker(
                 value = hex,
                 onValueChange = { value ->
                     hex = value
-                    AppearanceColorPolicy.parseHex(value)?.let { color ->
+                    val parsed = AppearanceColorPolicy.parseHex(value)
+                    onValidityChanged(parsed != null)
+                    parsed?.let { color ->
+                        onColorSelected(color)
                         AppearanceColorPolicy.toHsv(color).let { hsv ->
                             hue = hsv.hue; saturation = hsv.saturation; brightness = hsv.value
                         }
@@ -313,11 +435,6 @@ fun FullSpectrumColorPicker(
                 modifier = Modifier.weight(1f),
             )
         }
-        WhiteNoiseButton(
-            onClick = { parsedHex?.let(onColorSelected) },
-            enabled = parsedHex != null,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.color_apply)) }
     }
 }
 
@@ -327,6 +444,7 @@ private fun AppearanceColorTheme.label(): String = stringResource(
         AppearanceColorTheme.Light -> R.string.theme_light
         AppearanceColorTheme.Dark -> R.string.theme_dark
         AppearanceColorTheme.Amoled -> R.string.appearance_amoled
+        AppearanceColorTheme.AmoledOutline -> R.string.appearance_amoled_outline
     },
 )
 

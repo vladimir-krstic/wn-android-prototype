@@ -212,6 +212,8 @@ class ConversationFixtureParityTest {
             "maya-10", "maya-10b", "maya-10c", "maya-10d", "maya-10e", "maya-11",
             "maya-12", "maya-12b", "maya-12c", "maya-12d",
             "maya-13", "maya-14", "maya-15", "maya-16", "maya-17",
+            "maya-shared-text", "maya-shared-photo",
+            "maya-translation-hello", "maya-translation-thanks", "maya-translation-tomorrow",
         )
         assertIds(
             "weekend-walks",

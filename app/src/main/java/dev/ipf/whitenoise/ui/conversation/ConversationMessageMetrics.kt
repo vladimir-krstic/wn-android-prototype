@@ -16,6 +16,7 @@ import dev.ipf.whitenoise.ui.components.drawableResource
 
 /** Shared geometry for rich content nested inside the 16 dp conversation bubble. */
 internal object ConversationMessageMetrics {
+    val ForwardedLabelGap = 4.dp
     val RichOuterInset = 6.dp
     val RichContentSpacing = 6.dp
     val RichTextHorizontalAdjustment = 6.dp

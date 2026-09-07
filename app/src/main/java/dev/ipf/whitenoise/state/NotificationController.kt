@@ -22,9 +22,13 @@ data class NotificationSnapshot(
 data class NotificationWork(
     val id: Long, val profileId: String, val chatId: String?, val change: NotificationChange,
     val before: NotificationSnapshot, val scenario: NotificationScenario, val failure: NotificationFailure? = null, val attempt: Int = 0,
-) { val running get() = failure == null }
+) {
+    val running get() = failure == null
+    val isPushPreference get() = (change as? NotificationChange.Delivery)?.kind == NotificationDelivery.Push
+}
 enum class VibrationPreviewPhase { Preparing, Playing, Complete, Unavailable }
 data class VibrationPreview(val id: Long, val owner: GroupOwner, val pattern: VibrationChoice, val phase: VibrationPreviewPhase)
+data class PushCapabilityRetry(val id: Long, val profileId: String, val before: PushAvailability)
 
 @Stable
 class NotificationController(
@@ -34,6 +38,7 @@ class NotificationController(
 ) {
     var work by mutableStateOf<NotificationWork?>(null); private set
     var preview by mutableStateOf<VibrationPreview?>(null); private set
+    var pushRetry by mutableStateOf<PushCapabilityRetry?>(null); private set
     var backgroundConnection by mutableStateOf(false); private set
     var environment by mutableStateOf(NotificationEnvironment()); private set
     var scenario by mutableStateOf(NotificationScenario.Success); private set
@@ -49,24 +54,43 @@ class NotificationController(
             c?.muteDuration, c?.mutedUntilMillis, c?.notifyFor, c?.vibration, c?.customNotificationCategories)
     }
     fun choose(value: NotificationScenario) { if (profile()?.developerTools?.isEnabled == true) { developerOwner = profile()?.id; scenario = value } }
-    fun chooseEnvironment(value: NotificationEnvironment) { if (profile()?.developerTools?.isEnabled == true) { developerOwner = profile()?.id; environment = value } }
-    fun observePermission(allowed: Boolean) { permissionAllowed = allowed }
+    fun chooseEnvironment(value: NotificationEnvironment) { if (profile()?.developerTools?.isEnabled == true) {
+        developerOwner = profile()?.id; pushRetry = null; environment = value
+    } }
+    fun observePermission(allowed: Boolean) { permissionAllowed = allowed; if (!allowed) pushRetry = null }
     fun observeRoute(value: String?) {
-        if (route != null && route != value) { work = null; preview = null }
+        if (route != null && route != value) { work = null; preview = null; pushRetry = null }
         route = value
     }
     fun reconcile() {
         val p = profile()
         if (developerOwner != null && (developerOwner != p?.id || p?.developerTools?.isEnabled != true)) {
-            developerOwner = null; environment = NotificationEnvironment(); scenario = NotificationScenario.Success
+            developerOwner = null; pushRetry = null; environment = NotificationEnvironment(); scenario = NotificationScenario.Success
         }
         work?.let { if (it.profileId != p?.id || snapshot(p,it.chatId) == null) work = null }
         preview?.let { if (it.owner.profileId != p?.id || p.chats.none { c -> c.id == it.owner.chatId }) preview = null }
+        pushRetry?.let { if (it.profileId != p?.id || !p.settings.localNotifications || !permissionAllowed || environment.push != it.before) pushRetry = null }
+    }
+    fun retryPushCapability(expectedProfileId: String): Long? {
+        reconcile(); val p = profile()?.takeIf { it.id == expectedProfileId } ?: return null
+        if (pushRetry != null || !permissionAllowed || !p.settings.localNotifications || !environment.push.canRetry || work?.running == true) return null
+        if (work?.isPushPreference == true) work = null
+        val id = ++sequence
+        pushRetry = PushCapabilityRetry(id, p.id, environment.push)
+        return id
+    }
+    fun advancePushCapability(id: Long) {
+        reconcile(); val pending = pushRetry?.takeIf { it.id == id } ?: return
+        if (profile()?.id != pending.profileId) return
+        environment = environment.copy(push = PushAvailability.Available)
+        pushRetry = null
     }
     fun request(change: NotificationChange, chatId: String? = null, expectedProfileId: String? = null): Long? {
         reconcile(); val p = profile() ?: return null
         if (expectedProfileId != null && expectedProfileId != p.id) return null
         if ((change is NotificationChange.Delivery) != (chatId == null)) return null
+        if (change is NotificationChange.Delivery && change.kind == NotificationDelivery.Push &&
+            (pushRetry != null || work?.takeIf { it.running }?.change == change)) return null
         val before = snapshot(p,chatId) ?: return null
         val id = ++sequence
         work = NotificationWork(id,p.id,chatId,change,before,scenario)
@@ -150,7 +174,7 @@ class NotificationController(
         })
     }
     fun eraseAppData() {
-        work = null; preview = null; backgroundConnection = false
+        work = null; preview = null; pushRetry = null; backgroundConnection = false
         environment = NotificationEnvironment(); scenario = NotificationScenario.Success; developerOwner = null; route = null
     }
     fun cancelPreview(owner: GroupOwner? = null) { if (owner == null || preview?.owner == owner) preview = null }

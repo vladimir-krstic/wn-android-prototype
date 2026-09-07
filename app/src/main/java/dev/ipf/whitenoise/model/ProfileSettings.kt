@@ -5,6 +5,7 @@ enum class AppearancePreference(val label: String) {
     Light("Light"),
     Dark("Dark"),
     Amoled("AMOLED"),
+    AmoledOutline("AMOLED Outline"),
 }
 
 enum class LanguagePreference(val label: String, val localeTag: String?) {
@@ -80,6 +81,7 @@ data class ProfileRelay(
 )
 
 data class ProfileSettings(
+    val translation: TranslationPreferences = TranslationPreferences(),
     val localNotifications: Boolean = true,
     val nativePushNotifications: Boolean = true,
     val notificationPreviewMode: NotificationPreviewMode = NotificationPreviewMode.Generic,

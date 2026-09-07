@@ -21,7 +21,7 @@ Attachments and the original send time remain unchanged.
 
 The full reader supports authored text, including long messages, captions and
 structured Markdown. The 2026-09-05 menu polish removes **Open message** from
-bubble actions; **Select text** and **Read more** retain reader access. **Collapse long messages** is a profile/chat-
+bubble actions; **Read more** retains reader access. **Collapse long messages** is a profile/chat-
 owned preference in Chat/Group Info, initially on. Long collapsed bubbles have
 an explicit **Read more** affordance; the reader shows the complete document.
 Its menu reuses eligible reply, reaction, copy, edit, history, selection, speech,
@@ -31,7 +31,19 @@ changes cannot leave another profile's text displayed. The existing full-height
 composer expansion retains text selection, draft, reply and attachments through
 expand/collapse and Back.
 
-**Select text** enters native passage selection. Native handles, keyboard and
+**Select text** enters native passage selection inside the original message
+bubble (user direction, 2026-09-06). It does not open the full reader. Android
+owns selection handles and the standard Copy/Select all context menu. Select
+only that message's authored text; exclude timestamps, sender labels, quoted
+messages, attachments and status controls. Keep the existing bubble width and
+external timestamps. Disable the selected bubble's action hold and reply swipe
+while native text selection owns gestures. Back clears selection before leaving
+the conversation; changing the source, deleting it or leaving its profile/chat
+invalidates selection. Read more still opens the complete reader, which retains
+its own selection and speech controls. Long collapsed messages expand their text
+in place for selection so Select all includes the full message.
+
+Native handles, keyboard and
 selection semantics own the range; **Copy** copies the selected passage and
 **Read Aloud** starts the existing speech controller at that source range.
 Repeated words, reversed selection, emoji and Markdown presentation must not
@@ -147,3 +159,56 @@ now governs the shared engine, pause/resume, sentence/message controls and
 source-aware seeking/following. Original copy/selection and file-reader source,
 dismissal and background boundaries remain. B15's 465-test host gate passes;
 15 new UI/platform cases compile without device execution.
+
+## 2026-09-06 — selection inside message bubbles
+
+`ConversationScreen` routes Select text to one source-bound bubble instead of
+MessageReaderDialog. `InlineMessageSelection` uses Foundation SelectionState to
+select the first word after layout, then leaves handles, range dragging and
+Copy/Select all to the native text context menu. The existing document renderer
+preserves Markdown formatting and source annotations. Metadata, quoted replies,
+attachments and message-status controls remain outside the selection container;
+agent cards select their summary without including status or progress text.
+
+Native selection clears on Back or focus release. The screen also invalidates
+it on edits, deletion, profile/chat departure or foreground exit, and suspends
+reply swipe, action holds, arrival-following and speech-following while selecting.
+Long collapsed text expands in place; Read more retains the full reader.
+
+`MessageEditingReadingFlowTest` now covers unchanged ordinary bubble dimensions,
+partial native Copy, native Select all over rendered Markdown, source edit/delete
+invalidation, and Back keeping the conversation and draft. These are compiled
+UI tests; device execution and visual acceptance remain pending.
+
+Official references checked 2026-09-06:
+[Compose text selection](https://developer.android.com/develop/ui/compose/text/user-interactions),
+[SelectionState](https://developer.android.com/reference/kotlin/androidx/compose/foundation/text/selection/SelectionState).
+The installed Foundation source confirms that programmatic word selection
+requests focus and opens the standard toolbar after layout. No dependency,
+permission, new product copy or system-surface customization was introduced.
+
+Validation: the full README Gradle host gate passed with 932 unit tests,
+zero failures/errors/skips, lint and both APKs. UI cases compiled only.
+
+### Selection contrast across themes
+
+User-reported black selection handles/highlights disappeared on black bubbles.
+Resolve native `LocalTextSelectionColors` from each actual bubble and its text,
+including custom colors, instead of the theme's primary action color. Handles
+must contrast against both the bubble and the surrounding conversation canvas.
+Default Light, Dark, System, AMOLED and AMOLED Outline sent/received/agent text
+target at least 3:1 for handles/highlight and 4.5:1 for selected text. Agent
+summaries use primary surface text while selected. Custom midtone colors retain
+4.5:1 selected-text contrast and the strongest available highlight when both
+targets cannot coexist without recoloring the text. Native handles, menu,
+selection behavior and geometry remain unchanged.
+
+Official API checked 2026-09-06:
+[TextSelectionColors](https://developer.android.com/reference/kotlin/androidx/compose/foundation/text/selection/TextSelectionColors).
+Host contrast tests cover all theme/direction pairs and custom preset/neutral
+colors. Device visual verification is separate from these measured color checks.
+
+Validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 936 unit tests, zero failures/errors/skips, lint and both APKs.
+The four new `MessageSelectionColorsTest` cases verify the contrast thresholds;
+device execution and visual acceptance remain pending.

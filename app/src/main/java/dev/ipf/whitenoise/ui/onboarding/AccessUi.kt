@@ -69,6 +69,8 @@ private fun AccessFailure.message(): Int = when (this) {
     AccessFailure.AmberCancelled -> R.string.access_amber_cancelled
     AccessFailure.AmberRejected -> R.string.access_amber_rejected
     AccessFailure.AmberMismatch -> R.string.access_amber_mismatch
+    AccessFailure.AmberTimeout -> R.string.access_amber_timeout
+    AccessFailure.AmberInvalidResponse -> R.string.access_amber_invalid_response
 }
 
 @Composable

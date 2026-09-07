@@ -109,20 +109,42 @@ class MessageEditingReadingFlowTest {
         rule.runOnIdle { assertFalse(vm.chat(chatId)!!.collapseLongMessages); assertTrue(vm.chat("maya-chen")!!.collapseLongMessages) }
         rule.onNodeWithText("Collapse long messages").assertIsOff()
     }
-    @Test fun nativePassageSelectionCopiesExactTextAndBackClearsSelectionBeforeClosingReader() {
-        val vm = model("First repeat and second repeat"); open(vm); action(vm, "Select text")
-        rule.waitUntil(4_000) { rule.onAllNodesWithTag("message.selection.copy").fetchSemanticsNodes().isNotEmpty() }
-        val text = rule.onNode(hasText("First repeat and second repeat") and hasAnyAncestor(hasTestTag("message.reader")))
+    @Test fun nativePassageSelectionStaysInBubbleCopiesExactTextAndBackStaysInChat() {
+        val vm = model("First repeat and second repeat"); open(vm)
+        val bubble = rule.onNodeWithTag("conversation.message.bubble.${vm.message().id}")
+        val before = bubble.fetchSemanticsNode().boundsInRoot
+        action(vm, "Select text")
+        rule.onNodeWithTag("message.reader").assertDoesNotExist()
+        rule.onNodeWithTag("message.inlineSelection.${vm.message().id}").assertExists()
+        val after = bubble.fetchSemanticsNode().boundsInRoot
+        assertEquals(before.width, after.width, 1f)
+        assertEquals(before.height, after.height, 1f)
+        val text = rule.onNode(hasText("First repeat and second repeat") and hasAnyAncestor(hasTestTag("message.inlineSelection.${vm.message().id}")))
         val layouts = mutableListOf<TextLayoutResult>()
         text.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
         text.performTouchInput { longClick(layouts.single().getBoundingBox(26).center) }
-        rule.onNodeWithTag("message.selection.copy").performClick()
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withText(android.R.string.copy))
+            .perform(androidx.test.espresso.action.ViewActions.click())
         rule.runOnIdle { assertEquals("repeat", clipboard()) }
-        rule.onNode(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("message.reader"))).performClick()
-        rule.onNodeWithTag("message.reader").assertExists()
-        rule.onNodeWithTag("message.selection.copy").assertDoesNotExist()
-        rule.onNode(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("message.reader"))).performClick()
+        action(vm, "Select text")
+        rule.runOnIdle { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithTag("message.inlineSelection.${vm.message().id}").assertDoesNotExist()
         rule.onNodeWithTag("message.reader").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.timeline").assertExists()
+        rule.runOnIdle { assertEquals("Keep this draft", vm.chat(chatId)!!.draftText) }
+    }
+    @Test fun shortenedContextPreviewStillCopiesTheEntireOriginalMessage() {
+        val body = (1..100).joinToString("\n") { "Line $it of the original message" }
+        val vm = model(body); open(vm)
+        rule.onNodeWithTag("conversation.message.${vm.message().id}")
+            .performSemanticsAction(SemanticsActions.OnLongClick)
+        rule.onNodeWithTag("message.actions.overlay").assertExists()
+        rule.onNodeWithText("Copy").performScrollTo().performClick()
+        rule.runOnIdle {
+            assertEquals(body, clipboard())
+            assertEquals(body, vm.message().text)
+        }
+        rule.onNodeWithTag("message.actions.overlay").assertDoesNotExist()
     }
     @Test fun namedMarkdownLinkShowsDestinationAndCopiesWithoutOpeningExternalHandler() {
         val opened = mutableListOf<String>()
@@ -135,16 +157,28 @@ class MessageEditingReadingFlowTest {
         rule.onNodeWithText("Copy link").performClick()
         rule.runOnIdle { assertEquals("https://example.org/actual", clipboard()); assertTrue(opened.isEmpty()) }
     }
-    @Test fun acceptedRevisionAndDeletedSourceInvalidateReaderSelectionAndContent() {
+    @Test fun acceptedRevisionAndDeletedSourceInvalidateInlineSelection() {
         val vm = model(); open(vm); action(vm, "Select text")
-        rule.waitUntil(4_000) { rule.onAllNodesWithTag("message.selection.copy").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("message.inlineSelection.${vm.message().id}").assertExists()
         rule.runOnIdle {
             vm.beginMessageEdit(vm.uiState.activeProfileId!!, chatId, vm.message().id, "Updated while reading")
             vm.advanceMessageEdit(vm.uiState.activeProfileId!!, chatId, vm.message().id, vm.message().editAttempt!!.id)
         }
-        rule.onNodeWithTag("message.selection.copy").assertDoesNotExist()
-        rule.onNode(hasText("Updated while reading") and hasAnyAncestor(hasTestTag("message.reader"))).assertExists()
+        rule.onNodeWithTag("message.inlineSelection.${vm.message().id}").assertDoesNotExist()
+        rule.onNode(hasText("Updated while reading") and hasAnyAncestor(hasTestTag("conversation.timeline"))).assertExists()
+        action(vm, "Select text")
         rule.runOnIdle { vm.deleteMessages(chatId, setOf(vm.message().id), MessageDeletionScope.ForEveryone) }
+        rule.onNodeWithTag("message.inlineSelection.${vm.message().id}").assertDoesNotExist()
+        rule.onNodeWithTag("message.reader").assertDoesNotExist()
+    }
+    @Test fun nativeSelectAllCopiesOnlyThisMessagesRenderedMarkdown() {
+        val vm = model("A **bold** word and a second paragraph.")
+        open(vm); action(vm, "Select text")
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withText(android.R.string.selectAll))
+            .perform(androidx.test.espresso.action.ViewActions.click())
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withText(android.R.string.copy))
+            .perform(androidx.test.espresso.action.ViewActions.click())
+        rule.runOnIdle { assertEquals("A bold word and a second paragraph.", clipboard()) }
         rule.onNodeWithTag("message.reader").assertDoesNotExist()
     }
     @Test fun fullComposerExpansionPreservesSelectionDraftAndReply() {

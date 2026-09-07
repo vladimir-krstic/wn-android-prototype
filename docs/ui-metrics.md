@@ -19,6 +19,9 @@ small details. White Noise maps that guidance to these shared tokens:
 | Separate content groups or an inline primary action after fields | 24 dp | `Section` |
 | Pinned bottom task-action inset | 16 dp | `PinnedActionInset` |
 
+Use whole-dp values for new spacing adjustments; round proportional reductions
+to the shared grid rather than introducing fractional dp values.
+
 Use `WhiteNoiseSpacing` from `ui/theme/WhiteNoiseSpacing.kt`; do not duplicate
 these values as screen-local magic numbers. Constrained/adaptive panes may add
 outer space at larger widths, but the compact margin remains 16 dp inside the
@@ -168,7 +171,8 @@ choice row rather than nesting settings-row padding inside dialog padding.
   the same active day at once.
 - Tail-free message bubbles use a 16 dp radius, 12 dp horizontal and 8 dp
   vertical content inset, and a compact-screen maximum width of 340 dp. Same-
-  author messages use a 2 dp vertical relationship; a new cluster uses 16 dp.
+  author messages use a 2 dp vertical relationship; a new cluster uses 12 dp
+  (`ConversationCluster`), reduced from 16 dp and rounded to the shared grid.
   Incoming group clusters reserve a 30 dp avatar and 6 dp avatar-to-message
   gap. Align the avatar's bottom to the bubble, excluding reactions and time;
   align the author label to the bubble's 12 dp content inset. Direct messages
@@ -509,8 +513,10 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   avatar-to-content gap (25% tighter than the former 16 dp baseline). An 8 dp
   outer anchor inset plus 8 dp inner horizontal padding preserves the 16 dp
   artwork/trailing-content margin in every state. Names are semibold; text
-  line height, vertical padding, ripple, and accessibility growth retain
-  Material's metrics. Preview has up to two lines. Timestamp aligns to the
+  line height, ripple, and accessibility growth retain Material's metrics.
+  Vertical content padding is 8 dp per side, reduced from the pinned native
+  10 dp and rounded to the shared grid. Selection-only outer padding remains
+  4 dp. Preview has up to two lines. Timestamp aligns to the
   name baseline; read/failure/invitation indicators align with preview content.
 - The single-line name and its mute/timer/ended-membership symbols form one
   leading group, with 4 dp gaps between them. Reserve an 8 dp minimum gap to
@@ -523,9 +529,11 @@ enlarge or reposition the system splash to imitate the Welcome composition.
   `ChatRowTextLayout`, inside the native `ListItem` content slot, rather than
   querying inherited baselines on a supporting `Row`/`Box`. Read baselines
   only from direct `Text` children and place children only in the placement
-  pass. Preserve alpha25's 72/88 dp two-/three-line minima (minus the native
-  outer padding inside this text region), `ListItemDefaults.verticalAlignment`
-  and unconstrained growth for larger text. The avatar gap, outer geometry,
+  pass. Preserve alpha25's inner text minima (72/88 dp minus its original
+  native outer padding), `ListItemDefaults.verticalAlignment`, and unconstrained
+  growth for larger text. With reduced outer padding, normal row minima become
+  68/84 dp; never scale the content itself or cancel the reduction by enlarging
+  the inner text minimum. The avatar gap, outer geometry,
   native interaction/shape and menu remain unchanged. This is a compatibility
   exception, not a new app-wide list component or arbitrary height system.
 - Custom pin badges are 20 dp with 14 dp artwork. Noninteractive inline state
@@ -932,5 +940,171 @@ each in a 48 dp target. On the fourth compact-width visual line, or manual text
 expansion, the capsule spans the available width inside the existing 16 dp outer
 margins. Add becomes an unfilled 24 dp icon at bottom-start in its 48 dp target;
 text spans the capsule above the action row with 14 dp horizontal and 12 dp
-vertical insets. Grow height before width; contract width before height. This
-supersedes the always-separate Add presentation for multiline/expanded text.
+vertical insets. Height, width and action-row integration now move together
+(2026-09-07 user motion correction), using one interruptible non-bouncy spring
+progress for manual expansion. Automatic multiline width/action-row changes
+also share one progress value. A multiline draft retains its wide baseline
+through manual collapse. This supersedes the staged height/width sequence and
+the always-separate Add presentation for multiline/expanded text.
+
+### AMOLED Outline variant — 2026-09-06
+
+The explicitly approved AMOLED Outline theme replaces resting tonal fills with
+black and a shared 1 dp white stroke on contained app surfaces. Retain existing
+component shapes, spacing, touch targets and motion. Disabled borders use the
+native 0.38 alpha relationship. Selected custom containers use a neutral white
+state layer at 0.16 alpha; native ripple and selected control marks remain.
+Form fields use the 1 dp resting outline and existing 2 dp focus/error ring.
+The original AMOLED theme and all other palettes keep their existing fills.
+
+
+## Forwarded message attribution
+
+The user-approved forwarding label uses the bubble's existing body alignment,
+Material `labelMedium` italic text, and neutral gray adjusted to at least 4.5:1
+contrast against the bubble. The
+existing mirrored forward vector is 16 dp; `ConversationMessageMetrics.ForwardedLabelGap`
+is 4 dp between arrow and label and between attribution and ordinary text. Rich
+bubbles retain their existing 6 dp section spacing and inner text alignment.
+
+
+Focused message overlays keep top safe-area clearance plus the shared 16 dp
+margin. An overflowing scroll viewport extends to the screen's bottom edge; the
+bottom safe-area inset plus 16 dp margin follows the existing 8 dp shadow gutter
+inside scroll content. This prevents an artificial clipping line above navigation
+while keeping the final action reachable above it.
+
+
+Focused message previews keep typography and controls unscaled. Text excerpts use
+five lines with native ellipsis. Only media artwork scales uniformly to 75%, and
+its bubble canvas follows that reported width; caption and metadata type stay at
+normal size. This supersedes the old whole-preview 320 dp scaling budget.
+
+## Pinned-message banner — 2026-09-07
+
+Latest screenshot direction supersedes the inset rounded banner and arrows.
+Use a rectangular full-width surfaceContainer strip flush below the header.
+Shared 8 dp preview insets/gaps, labelLarge sender, bodyMedium single-line preview,
+and a native 48 dp trailing pin menu target. Type grows the container at larger
+font sizes. The leading pagination rail is 2×32 dp with 2 dp segment gaps; up to
+five segments form a moving window for longer pin collections. Count remains in
+accessibility stateDescription. View all messages opens a Material bottom sheet
+with shared segmented list rows and independent native Unpin targets.
+
+
+The latest pin-list refinement replaces segmented summary rows with the actual
+conversation bubble renderer. Keep its normal sizes, sender alignment, content,
+and metadata; use shared 24 dp spacing between entries and 8 dp within an entry.
+The cycling strip preview has no tap fill/ripple by explicit user direction;
+keyboard focus uses a 1 dp outline. Its trailing pin button keeps native feedback.
+
+### Conversation search controls — 2026-09-07
+
+The existing 16 dp horizontal and 8 dp vertical control-row insets remain. Its
+background is transparent and the transcript extends behind the entire row.
+Measured control height is scrollable bottom clearance, not a fixed transcript
+cutoff. The viewport handles IME insets once; native arrows and the matches
+capsule retain their individual tonal containers and touch targets.
+
+### Unified search pill — 2026-09-07 follow-up
+
+Latest user direction joins arrows and count inside one full-width capsule,
+keeping 16 dp screen margins and 8 dp outer vertical clearance. Inside, use 8 dp
+horizontal inset with native 48 dp IconButton touch targets and a centered
+flexible count. The user correction retains 6 dp elevation, restores the original
+secondaryContainer/onSecondaryContainer gray fill, and removes the border in
+every theme. The canvas outside the capsule remains transparent.
+
+### Account files and media — 2026-09-07
+
+Main search uses native horizontal content chips and existing removable filter
+chips. Attachment results keep 16 dp screen margins and 8 dp tile/row gaps.
+Photos/videos use an adaptive 160 dp minimum column width so source chat and
+time metadata sit inside 16 dp card padding below a square preview. Date headings
+and file/audio rows span all columns. Clickable large-shape cards use
+surfaceContainerHigh with onSurface text and AMOLED outlines retained. File and
+audio content have no inner fill, outline or padding; source chat/time uses one
+wrapping bodySmall line. Photos/videos use that identical “From: chat · time”
+line, typography and color. Voice notes omit the redundant type heading. Each card owns one native
+touch target; file/audio previews contain no nested controls.
+The existing 680 dp adaptive content pane and Scaffold/IME inset ownership apply.
+
+### Regular message search results — 2026-09-07
+
+Full conversation bubbles replace snippets in regular message search. Keep 16 dp
+horizontal margins and 8 dp vertical result spacing; use the existing bubble
+width, padding, alignment and timestamp geometry. Source context/day sits above
+the bubble with an 8 dp gap. Dedicated attachment-browser cards are unchanged.
+
+
+### Forwarding profile selector — 2026-09-07
+
+The contextual “Send as” selector uses a Material FilledTonalButton capsule with
+user-approved 12 dp horizontal / 8 dp vertical content padding and native
+touch-target behavior. Use a 32 dp decorative profile
+avatar, 8 dp avatar/label/chevron gaps, the native button icon size, and the shared
+16 dp horizontal / 8 dp vertical outer insets. Allow the label to wrap and the
+button to grow at large font sizes. Use secondaryContainer/onSecondaryContainer
+for its secondary gray fill; AMOLED Outline keeps the standard theme border.
+
+### Writing tools preview — 2026-09-07
+
+Use the shared modal-sheet wrapper and 16 dp horizontal insets. Operation/status
+content and results wrap up to the existing picker 88% window-height cap, with a
+scrolling body and actions outside that body. The chooser input uses at most five
+lines with an ellipsis; native ListItem rows own icon/label alignment and spacing.
+Original/suggestion share one surfaceContainerHigh container with a horizontal
+divider, bodyLarge text and 16 dp content insets with 8/16 dp related spacing.
+Original uses onSurfaceVariant. Result notes use WhiteNoiseCallout. FlowRow allows
+native action buttons to wrap at larger text sizes.
+
+
+### Admin-transfer quick navigation — 2026-09-07
+
+Keep a 48 dp decorative avatar slot on every admin candidate, including a
+monogram fallback for missing profile data. With eight or more filtered candidates
+and multiple initials, show a native tonal “Jump to letter” pill aligned to the
+shared 16 dp end inset above the list. Use native button/menu metrics and an 8 dp
+label/chevron gap. Letter navigation uses the shared scrollable Material menu;
+no custom alphabet rail or reduced touch targets. Other picker surfaces opt out.
+
+### Translation controls — 2026-09-07
+
+Use 16 dp sheet/settings margins. Translation metadata uses bodySmall gray text,
+a centered 16 dp mirrored arrow, 4 dp horizontal gaps and 4 dp top separation;
+it contains no button or additional action padding. Resolve neutral gray against
+the actual bubble fill using the shared readable-label color helper. Sheet
+content scrolls below its heading with native chevron action rows. The source
+preview uses one surfaceContainerHigh container, 16 dp padding, an 8 dp gap to
+the detected-language label and a five-line ellipsis. Status/recovery callouts
+belong in the sheet, with no failure banner in the chat. Preserve large-font
+wrapping, RTL and native action feedback.
+
+### Composer emoji action — 2026-09-07
+
+A 24 dp smiley in a native 48 dp leading IconButton precedes the editor text in
+compact, multiline and expanded capsules. It replaces the editor's former 14 dp
+start inset; compact wrapping measurement reserves the button width. Dictation
+keeps its existing trailing target. Voice recording disappears on the first
+character, including whitespace.
+
+The subsequent user refinement places emoji on the bottom action baseline with
+the mic. In wide/expanded mode its 48 dp target follows Add; text regains the
+standard 14 dp horizontal inset and full editor width above the controls.
+
+User spacing trial: use 36 dp centers for idle dictation and waveform/Send, and
+28 dp centers for Add/emoji in the integrated toolbar. Retain glyph sizes and
+48 dp height. Trailing actions use 36 dp layout widths plus 6 dp at logical end;
+Add stays centered in its outer frame with an inset native button, and emoji
+animates from a 48 dp compact width to 28 dp. These supersede the previous 48 dp
+horizontal action spacing for this composer only.
+
+The latest composer revision supersedes the 36 dp trial: idle mic-to-wave/Send
+centers use 40 dp (40 dp layout widths with 4 dp logical end inset). Active
+pause-to-animated-mic centers use 28 dp (28 dp widths and 10 dp end inset).
+Only active dictation removes Add; paused dictation uses the ordinary composer
+layout, including the 28 dp Add/emoji relationship when expanded.
+
+Latest Add/emoji spacing: 32 dp centers, replacing the 28 dp trial. The integrated
+emoji target is 32 dp wide at logical x = 40 dp; Add's inset is 8 dp per side.
+Mic-to-wave/Send remains 40 dp; pause-to-animated-mic remains 28 dp.

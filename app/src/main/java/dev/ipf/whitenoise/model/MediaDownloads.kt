@@ -12,6 +12,21 @@ enum class DownloadNetwork(@param:StringRes val labelRes: Int) {
     Roaming(R.string.download_roaming), Metered(R.string.download_metered),
 }
 
+/** A missing media entry inherits; an explicit empty set means Never. */
+data class ChatDownloadOverrides(val media: Map<DownloadMediaType, Set<DownloadNetwork>> = emptyMap()) {
+    fun inherits(type: DownloadMediaType) = type !in media
+    fun networks(type: DownloadMediaType, defaults: MediaDownloadMatrix): Set<DownloadNetwork> =
+        media[type] ?: DownloadNetwork.entries.filter { defaults.allows(type, it) }.toSet()
+    fun inherit(type: DownloadMediaType, enabled: Boolean, defaults: MediaDownloadMatrix) =
+        copy(media = if (enabled) media - type else media + (type to networks(type, defaults)))
+    fun change(type: DownloadMediaType, network: DownloadNetwork, enabled: Boolean, defaults: MediaDownloadMatrix): ChatDownloadOverrides {
+        val current = networks(type, defaults)
+        return copy(media = media + (type to if (enabled) current + network else current - network))
+    }
+    fun allows(type: DownloadMediaType, conditions: Set<DownloadNetwork>, defaults: MediaDownloadMatrix): Boolean =
+        conditions.isNotEmpty() && networks(type, defaults).containsAll(conditions)
+}
+
 /** Conditions overlap: metered Wi-Fi must satisfy both cells, for example. */
 data class MediaDownloadMatrix(val enabled: Set<Pair<DownloadMediaType, DownloadNetwork>> = defaults) {
     fun allows(type: DownloadMediaType, network: DownloadNetwork) = type to network in enabled

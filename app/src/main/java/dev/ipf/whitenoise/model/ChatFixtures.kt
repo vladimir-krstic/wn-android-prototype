@@ -185,6 +185,11 @@ object ChatFixtures {
             members = members,
             description = groupDescriptionFor(chat.id).takeIf { chat.isGroup }.orEmpty(),
             timeline = ConversationFixtures.timelineFor(chat, profileId),
+            pinnedMessageIds = when (chat.id) {
+                "maya-chen" -> listOf("maya-shared-text", "maya-shared-photo")
+                "catalog-group-member" -> listOf("ROLE-02", "unavailable-pin")
+                else -> emptyList()
+            },
             draftText = composerSeed.text,
             draftAttachments = composerSeed.attachments,
             suppressedDraftLinkUrl = composerSeed.suppressedLinkUrl,
@@ -235,11 +240,14 @@ object ChatFixtures {
                 GroupMember("maya-chen", GroupRole.Admin),
                 GroupMember("elias-moreno", GroupRole.Member),
             )
-            "catalog-group-sole-admin" -> listOf(
-                GroupMember(profileId, GroupRole.Admin),
-                GroupMember("maya-chen", GroupRole.Member),
-                GroupMember("elias-moreno", GroupRole.Member),
-            )
+            // The existing sole-admin example also exercises a long transfer picker and
+            // a roster member whose public profile has not become available yet.
+            "catalog-group-sole-admin" -> listOf(GroupMember(profileId, GroupRole.Admin)) + listOf(
+                "maya-chen", "elias-moreno", "mina-park", "nora-bennett", "leo-martins",
+                "aisha-rahman", "radia-perlman", "david-chaum", "hal-finney", "theo-grant",
+                "tim", "jude", "sam", "owen", "remy", "iris", "noah", "avery-stone",
+                "identity-color-1", "identity-color-7", "member-profile-pending",
+            ).map { GroupMember(it, GroupRole.Member) }
             "weekend-walks" -> listOf(
                 GroupMember(profileId, GroupRole.Admin),
                 GroupMember("maya-chen", GroupRole.Member),

@@ -2,6 +2,8 @@
 
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.outlineButtonColors
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.model.ProfileLinks
 import dev.ipf.whitenoise.model.PeopleDiscovery
 import dev.ipf.whitenoise.model.Person
@@ -379,6 +381,8 @@ private fun ProfileFoundContent(
             modifier = Modifier
                 .padding(top = WhiteNoiseSpacing.Section)
                 .widthIn(min = 200.dp),
+            border = amoledOutlineBorder(),
+            colors = outlineButtonColors(),
         ) {
             Text(stringResource(R.string.done))
         }

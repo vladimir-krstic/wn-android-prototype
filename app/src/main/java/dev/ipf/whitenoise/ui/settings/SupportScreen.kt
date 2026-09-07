@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.compose.ui.res.stringResource
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -58,6 +59,7 @@ fun SupportScreen(
                                     modifier = Modifier.size(48.dp),
                                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                     contentColor = MaterialTheme.colorScheme.onSurface,
+                                    border = amoledOutlineBorder(),
                                     shape = CircleShape,
                                 ) {
                                     Icon(

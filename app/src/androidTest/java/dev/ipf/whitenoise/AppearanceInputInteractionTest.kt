@@ -64,6 +64,25 @@ class AppearanceInputInteractionTest {
         compose.onNodeWithText("System").performClick()
         compose.runOnIdle { assertEquals(AppFontFamily.System,profile.settings.fontFamily) }
     }
+    @Test fun outlineThemeDisablesCustomColorsAndPreservesThemWhenSwitchingBack() {
+        val saved = AppearanceColorPreferences(amoled = ThemeColorOverrides(actionArgb = 0xFFFFFF00))
+        profile = profile.copy(settings = profile.settings.copy(colors = saved))
+        compose.setContent {
+            WhiteNoiseTheme(appearance = profile.settings.appearance, colors = profile.settings.colors) {
+                AppearanceScreen(profile, {}, { profile = profile.copy(settings = it) }, {})
+            }
+        }
+        compose.onNodeWithText("AMOLED Outline").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Action color").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Chat bubble colors").performScrollTo().assertIsNotEnabled()
+        compose.runOnIdle {
+            assertEquals(AppearancePreference.AmoledOutline, profile.settings.appearance)
+            assertEquals(saved, profile.settings.colors)
+        }
+        compose.onNodeWithText("AMOLED").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Action color").performScrollTo().assertIsEnabled()
+        compose.runOnIdle { assertEquals(saved, profile.settings.colors) }
+    }
     @Test fun dismissingEnterChoiceIsInertAndSelectionIsImmediate() {
         compose.setContent { WhiteNoiseTheme { AppearanceScreen(profile,{}, { profile = profile.copy(settings = it) },{}) } }
         compose.onNodeWithText("Enter key behavior").performScrollTo().performClick()
@@ -107,9 +126,14 @@ class AppearanceInputInteractionTest {
         } }
         compose.onNodeWithText("Hex color").performScrollTo().performTextClearance()
         compose.onNodeWithText("Hex color").performTextInput("#336699")
-        compose.onNodeWithText("Apply color").performClick()
+        compose.runOnIdle { assertNull(profile.settings.colors.light.actionArgb) }
+        compose.onNodeWithText("Apply color").assertDoesNotExist()
+        compose.onNodeWithTag("action_color.save").performClick()
         compose.runOnIdle { assertEquals(0xFF336699L, profile.settings.colors.light.actionArgb) }
-        compose.onNodeWithText("Reset to default").performScrollTo().performClick()
+        compose.onNodeWithTag("action_color.reset").assert(hasAnyAncestor(hasTestTag("action_color.controls")))
+            .performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(0xFF336699L, profile.settings.colors.light.actionArgb) }
+        compose.onNodeWithTag("action_color.save").performClick()
         compose.runOnIdle { assertNull(profile.settings.colors.light.actionArgb) }
     }
     @Test fun chatBubbleOverrideDoesNotMutateGlobalColor() {
@@ -119,6 +143,8 @@ class AppearanceInputInteractionTest {
             ChatBubbleColorsScreen(profile,chat,{}, { profile = profile.copy(settings = it) }, { chat = chat.copy(bubbleColors = it) })
         } }
         compose.onNodeWithContentDescription("Color #B91C1C").performScrollTo().performClick()
+        compose.runOnIdle { assertNull(chat.bubbleColors.mineArgb) }
+        compose.onNodeWithTag("bubble_colors.save").performClick()
         compose.runOnIdle {
             assertEquals(0xFFB91C1CL, chat.bubbleColors.mineArgb)
             assertEquals(0xFF1D4ED8L, profile.settings.colors.light.mineBubbleArgb)
@@ -126,6 +152,8 @@ class AppearanceInputInteractionTest {
         compose.onNodeWithText("Reset to global colors").assertDoesNotExist()
         compose.onNodeWithTag("bubble_colors.menu").performClick()
         compose.onNodeWithText("Reset to global colors").performClick()
+        compose.runOnIdle { assertEquals(0xFFB91C1CL, chat.bubbleColors.mineArgb) }
+        compose.onNodeWithTag("bubble_colors.save").performClick()
         compose.runOnIdle { assertEquals(ChatBubbleColorOverrides(), chat.bubbleColors) }
         compose.onNodeWithText("Reset to global colors").assertDoesNotExist()
         compose.onNodeWithTag("bubble_colors.menu").performClick()

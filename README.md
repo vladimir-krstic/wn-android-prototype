@@ -113,3 +113,6 @@ Preserve bundled notices and provenance for [product images](docs/references/res
 [Signal emoji](docs/references/signal-emoji-assets.md), and
 [optional fonts](docs/references/font-assets.md). Font regeneration is an optional,
 separately documented preparation task; it is not required for an ordinary build.
+
+- [Composer writing tools](docs/screens/writing-tools.md)
+- [Message translation](docs/screens/message-translation.md)

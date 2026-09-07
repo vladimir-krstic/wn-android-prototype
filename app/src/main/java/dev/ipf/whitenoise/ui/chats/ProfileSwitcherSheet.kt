@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
@@ -121,6 +122,7 @@ fun ProfileSwitcherSheet(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                         ),
                         modifier = Modifier
+                            .amoledOutline(WhiteNoiseListItemDefaults.segmentedShapes(index, presentedProfiles.size).shape)
                             .testTag("profile_switcher.profile.${profile.id}")
                             .semantics(mergeDescendants = true) {
                                 selected = item.isActive

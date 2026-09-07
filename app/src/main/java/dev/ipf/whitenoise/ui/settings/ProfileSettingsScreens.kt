@@ -113,6 +113,7 @@ fun SettingsScreen(
     onDeveloperTools: () -> Unit,
     onSignOut: (dev.ipf.whitenoise.model.SignOutOptions) -> Unit,
     onReadAloud: () -> Unit = {},
+    onTranslation: () -> Unit = {},
     onDictation: () -> Unit = {},
     onAiAgents: () -> Unit = {},
     onHelp: () -> Unit = {},
@@ -195,6 +196,10 @@ fun SettingsScreen(
                             iconTag = "notifications",
                             onClick = onNotifications,
                         )
+                    }
+                    row {
+                        SettingsHubLink(title = stringResource(R.string.translation_title), icon = R.drawable.ic_translate,
+                            iconTag = "translation", onClick = onTranslation)
                     }
                     row {
                         SettingsHubLink(

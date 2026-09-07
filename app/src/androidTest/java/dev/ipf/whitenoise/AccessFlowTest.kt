@@ -118,4 +118,42 @@ class AccessFlowTest {
         rule.onNodeWithText("Export Private Key").assertDoesNotExist()
         rule.onNodeWithTag("profile_keys.private_key_value").assertDoesNotExist()
     }
+
+    @Test fun amberTimeoutOffersRetryOnTheSignInScreen() = amberFailureRecovery(
+        AccessScenario.AmberTimeout, "Amber didn’t respond. Try again.", retry = true,
+    )
+
+    @Test fun amberInvalidResponseOffersCancelOnTheSignInScreen() = amberFailureRecovery(
+        AccessScenario.AmberInvalidResponse, "Couldn’t complete sign-in with Amber. Try again.", retry = false,
+    )
+
+    private fun amberFailureRecovery(scenario: AccessScenario, message: String, retry: Boolean) {
+        val vm = AppViewModel(scenario)
+        vm.beginAmberSignIn(OnboardingOrigin.Initial)
+        val old = vm.accessAttempt!!
+        vm.advanceAccess(old.id, old.phase)
+        rule.setContent { WhiteNoiseTheme {
+            SignInScreen(
+                onBack = vm::cancelAccess, onScan = {}, privateKey = remember { TextFieldState() },
+                scannedPrivateKey = null, scannerUnavailable = false,
+                onScannedPrivateKeyConsumed = {}, onScannerUnavailableConsumed = {},
+                onSignIn = {}, onAmberSignIn = { vm.beginAmberSignIn(OnboardingOrigin.Initial) },
+                attempt = vm.accessAttempt, onRetry = vm::retryAccess,
+                onRecover = vm::confirmAccessRecovery, onCancel = vm::cancelAccess,
+            )
+        } }
+        rule.onNodeWithTag("access.failure").performScrollTo().assertTextEquals(message)
+        rule.onNodeWithText("Try Again").assertExists()
+        rule.onNodeWithText("Cancel").assertExists()
+        rule.onNodeWithText(if (retry) "Try Again" else "Cancel").performScrollTo().performClick()
+        rule.onNodeWithTag("access.failure").assertDoesNotExist()
+        rule.runOnIdle {
+            assertTrue(vm.uiState.profiles.isEmpty())
+            assertFalse(vm.advanceAccess(old.id, old.phase))
+            if (retry) {
+                assertEquals(AccessPhase.AmberIdentity, vm.accessAttempt!!.phase)
+                assertEquals(AccessScenario.Success, vm.accessAttempt!!.scenario)
+            } else assertNull(vm.accessAttempt)
+        }
+    }
 }

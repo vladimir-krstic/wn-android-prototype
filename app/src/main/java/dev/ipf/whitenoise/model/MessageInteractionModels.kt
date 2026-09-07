@@ -10,10 +10,13 @@ enum class MessageAction {
     SelectText,
     Reply,
     Forward,
+    Pin,
+    Unpin,
     Share,
     SaveAttachments,
     Copy,
     CopyMarkdown,
+    Translate,
     ReadAloud,
     StopReading,
     Transcribe,
@@ -48,6 +51,8 @@ object MessageActionPolicy {
         ),
         canWrite: Boolean = true,
         inReader: Boolean = false,
+        canPin: Boolean = false,
+        pinned: Boolean = false,
     ): List<MessageAction> {
         if (message.isDeleted) return listOf(MessageAction.Delete)
         val hasVoice = message.attachments.any { it.kind == MessageAttachmentKind.Voice }
@@ -67,6 +72,7 @@ object MessageActionPolicy {
             }
             add(MessageAction.Reply)
             add(MessageAction.Forward)
+            if (canPin && message.deliveryState == MessageDeliveryState.Sent) add(if (pinned) MessageAction.Unpin else MessageAction.Pin)
             if (inReader) add(MessageAction.Share)
             if (AttachmentExports.keys(message).isNotEmpty()) add(MessageAction.SaveAttachments)
             if (message.text.isNotBlank()) {
@@ -91,6 +97,7 @@ object MessageActionPolicy {
             ) {
                 add(if (speech.reading) MessageAction.StopReading else MessageAction.ReadAloud)
             }
+            if (TranslationExamples.eligible(message)) add(MessageAction.Translate)
             add(MessageAction.Select)
             add(MessageAction.Info)
             add(MessageAction.Delete)

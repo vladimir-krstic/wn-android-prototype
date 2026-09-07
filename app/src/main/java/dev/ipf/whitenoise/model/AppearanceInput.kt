@@ -51,7 +51,10 @@ enum class AppearanceColorTheme {
     Light,
     Dark,
     Amoled,
+    AmoledOutline,
     ;
+
+    val supportsCustomColors: Boolean get() = this != AmoledOutline
 
     companion object {
         fun resolve(appearance: AppearancePreference, systemDark: Boolean): AppearanceColorTheme = when (appearance) {
@@ -59,6 +62,7 @@ enum class AppearanceColorTheme {
             AppearancePreference.Light -> Light
             AppearancePreference.Dark -> Dark
             AppearancePreference.Amoled -> Amoled
+            AppearancePreference.AmoledOutline -> AmoledOutline
         }
     }
 }
@@ -78,6 +82,7 @@ data class AppearanceColorPreferences(
         AppearanceColorTheme.Light -> light
         AppearanceColorTheme.Dark -> dark
         AppearanceColorTheme.Amoled -> amoled
+        AppearanceColorTheme.AmoledOutline -> ThemeColorOverrides()
     }
 
     fun updateTheme(
@@ -87,6 +92,7 @@ data class AppearanceColorPreferences(
         AppearanceColorTheme.Light -> copy(light = transform(light))
         AppearanceColorTheme.Dark -> copy(dark = transform(dark))
         AppearanceColorTheme.Amoled -> copy(amoled = transform(amoled))
+        AppearanceColorTheme.AmoledOutline -> this
     }
 }
 
@@ -152,7 +158,9 @@ object AppearanceColorPolicy {
     fun effectiveBubble(
         chatOverride: Long?,
         globalOverride: Long?,
-    ): Long? = normalizeOpaqueArgb(chatOverride) ?: normalizeOpaqueArgb(globalOverride)
+        theme: AppearanceColorTheme? = null,
+    ): Long? = if (theme?.supportsCustomColors == false) null
+        else normalizeOpaqueArgb(chatOverride) ?: normalizeOpaqueArgb(globalOverride)
 
     fun contrastRatio(foregroundArgb: Long, backgroundArgb: Long): Double {
         val foreground = normalizeOpaqueArgb(foregroundArgb) ?: return 0.0

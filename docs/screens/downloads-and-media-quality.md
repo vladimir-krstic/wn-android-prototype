@@ -9,6 +9,44 @@ driver. No networking, background workers, permissions or real voice encoder.
 
 ## Parity contract
 
+2026-09-06 user-approved #13 extension: Chat/Group Info → Automatic downloads
+opens a profile/chat-owned settings route. Each media category inherits the live
+profile matrix until Use profile default is turned off. Turning it off starts
+from the current resolved rules; explicit empty rules mean Never. Turning it on
+removes that category's override. Reset download settings removes all overrides
+for this chat without changing profile defaults or other chats.
+
+Rows show Profile default or Custom with the resolved network list/Never. Reuse
+the existing scrollable media/network switch dialog and settings layout, with
+inherited network switches disabled. Native Back/Done keep immediate edits and
+close the dialog before the route. Picker state restores for the same owner and
+resets across owners. Missing chats/profiles close the route. Muting remains a
+notification policy; profile-wide download pause still wins. Offline/unknown
+examples admit no work, and accepted/manual work keeps the B27 contract.
+
+The canonical attachment admission gate must resolve these rules per chat, not
+just display overrides. Callbacks bind profile/chat IDs and mutate only the
+requested setting using current state. Add model, admission/isolation/reset tests
+and compiled UI tests for inheritance, restoration and navigation. No device
+testing is authorized. Current official
+[switch guidance](https://developer.android.com/develop/ui/compose/components/switch)
+checked 2026-09-06; existing dialog and shared-metrics decisions apply.
+
+Implementation evidence: `ChatDownloadOverrides` stores per-media rule sets on
+Chat. `ChatDownloadScreen` and the profile settings share network switches;
+ChatDownloads carries both owner IDs. AppViewModel applies targeted mutations
+and resolves overrides in automatic admission. A stale network toggle after
+reset cannot recreate a custom setting. Copy covers all five resource locales.
+Three model and three state tests pass for live inheritance, explicit Never,
+overlapping networks, admission/pause/offline, reset and isolation. Four compiled
+`ChatDownloadInteractionTest` cases cover resolved labels, disabled inheritance,
+restore/profile change, dark large RTL content, muted/paused explanation, and
+Chat/Group Info navigation including a wrong-profile route.
+
+The full host gate `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 948 unit tests, zero failures/errors/skips, lint and both APKs.
+Device execution and visual acceptance remain pending.
+
 - Photos, Videos, Audio and Files each offer Wi-Fi, Mobile data, Roaming and
   Metered network switches. Every matching condition must allow a download;
   an unknown/offline network admits nothing automatically. Accepted queued work

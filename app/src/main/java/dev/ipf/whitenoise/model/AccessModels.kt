@@ -16,7 +16,7 @@ enum class AccessPhase {
 enum class AccessFailure {
     Offline, SignIn, CreateProfile, SetupRetry, PublicationRetry, UnexpectedSetup,
     RecoveryPartial, RecoveryUnexpected, AmberUnavailable, AmberCancelled,
-    AmberRejected, AmberMismatch,
+    AmberRejected, AmberMismatch, AmberTimeout, AmberInvalidResponse,
 }
 
 /** One-shot, developer-only inputs. They describe outcomes, never contain credentials. */
@@ -24,7 +24,7 @@ enum class AccessScenario {
     Success, Offline, SignInFailure, SetupRetry, PublicationRetry, RecoveryConsent,
     RecoveryPartial, UnexpectedSetup, RecoveryUnexpected, AmberUnavailable,
     AmberIdentityCancelled, AmberIdentityRejected, AmberProofCancelled, AmberProofRejected,
-    AmberMismatch,
+    AmberMismatch, AmberTimeout, AmberInvalidResponse,
 }
 
 data class AccessAttempt(
@@ -54,6 +54,8 @@ data class AccessAttempt(
         if (scenario == AccessScenario.Offline) return failed(AccessFailure.Offline)
         if (usesAmber) {
             if (scenario == AccessScenario.AmberUnavailable) return failed(AccessFailure.AmberUnavailable)
+            if (scenario == AccessScenario.AmberTimeout) return failed(AccessFailure.AmberTimeout)
+            if (scenario == AccessScenario.AmberInvalidResponse) return failed(AccessFailure.AmberInvalidResponse)
             if (phase == AccessPhase.AmberIdentity) {
                 return when (scenario) {
                     AccessScenario.AmberIdentityCancelled -> failed(AccessFailure.AmberCancelled)

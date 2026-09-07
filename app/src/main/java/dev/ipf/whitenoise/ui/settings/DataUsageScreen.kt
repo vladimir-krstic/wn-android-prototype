@@ -72,16 +72,8 @@ fun DataUsageScreen(profile: Profile, onBack: () -> Unit, onChange: (ProfileSett
     picker?.let { type -> AlertDialog(onDismissRequest = { picker = null },
         title = { Text(stringResource(type.labelRes)) },
         text = { Column(Modifier.verticalScroll(rememberScrollState()).testTag("download.network.options")) {
-            DownloadNetwork.entries.forEach { network ->
-                val enabled = settings.downloadMatrix.allows(type, network)
-                Row(Modifier.fillMaxWidth().whiteNoiseDialogSelection(enabled).toggleable(enabled, role = Role.Switch,
-                    onValueChange = { onChange(settings.copy(downloadMatrix = settings.downloadMatrix.change(type, network, it))) })
-                    .testTag("download.network.${network.name}"),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-                    Text(stringResource(network.labelRes), Modifier.weight(1f))
-                    Switch(enabled, onCheckedChange = null)
-                }
+            DownloadNetworkOptions(DownloadNetwork.entries.filter { settings.downloadMatrix.allows(type, it) }.toSet()) { network, enabled ->
+                onChange(settings.copy(downloadMatrix = settings.downloadMatrix.change(type, network, enabled)))
             }
             Text(stringResource(R.string.download_rules_help))
         } }, confirmButton = { TextButton({ picker = null }) { Text(stringResource(R.string.download_done)) } }) }
@@ -95,6 +87,27 @@ fun DataUsageScreen(profile: Profile, onBack: () -> Unit, onChange: (ProfileSett
         confirmButton = { TextButton({ onPauseAutomatic(true); stopConfirmation = false }, Modifier.testTag("download.stop.confirm")) {
             Text(stringResource(R.string.download_stop)) } },
         dismissButton = { TextButton({ stopConfirmation = false }) { Text(stringResource(R.string.cancel)) } })
+}
+
+@Composable
+internal fun DownloadNetworkOptions(networks: Set<DownloadNetwork>, enabled: Boolean = true,
+    onChange: (DownloadNetwork, Boolean) -> Unit) {
+    DownloadNetwork.entries.forEach { network ->
+        DownloadSwitch(stringResource(network.labelRes), network in networks, "download.network.${network.name}", enabled) {
+            onChange(network, it)
+        }
+    }
+}
+
+@Composable
+internal fun DownloadSwitch(title: String, checked: Boolean, tag: String, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().whiteNoiseDialogSelection(checked && enabled)
+        .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange).testTag(tag),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+        Text(title, Modifier.weight(1f), color = LocalContentColor.current.let { if (enabled) it else it.copy(alpha = 0.38f) })
+        Switch(checked, onCheckedChange = null, enabled = enabled)
+    }
 }
 
 @Composable

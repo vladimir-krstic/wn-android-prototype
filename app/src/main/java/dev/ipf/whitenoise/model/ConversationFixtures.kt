@@ -536,6 +536,20 @@ object ConversationFixtures {
                     MessageReaction("😀", listOf(profileId, "maya-chen")),
                 ),
             ),
+            message(
+                "maya-shared-text", "maya-chen", 3, "Today", 550, "9:10 AM",
+                "The riverside path is open again. Meet at the west entrance at 9?",
+                isForwarded = true,
+            ),
+            message(
+                "maya-shared-photo", profileId, 3, "Today", 552, "9:12 AM",
+                "This is the entrance.",
+                attachments = listOf(photo("maya-shared-entrance", "Green leaves in sunlight", AvatarAsset.GardenClub)),
+                isForwarded = true,
+            ),
+            message("maya-translation-hello", "maya-chen", 3, "Today", 554, "9:14 AM", "Hola. ¿Cómo estás?"),
+            message("maya-translation-thanks", profileId, 3, "Today", 555, "9:15 AM", "Thank you!"),
+            message("maya-translation-tomorrow", "maya-chen", 3, "Today", 556, "9:16 AM", "**Hasta mañana.**"),
         )
     }
 
@@ -724,6 +738,7 @@ object ConversationFixtures {
         reactions: List<MessageReaction> = emptyList(),
         delivery: MessageDeliveryState = MessageDeliveryState.Sent,
         deletion: MessageDeletionState = MessageDeletionState.None,
+        isForwarded: Boolean = false,
     ) = ChatTimelineEntry.Message(
         ChatMessage(
             id = id,
@@ -738,6 +753,7 @@ object ConversationFixtures {
             reactions = reactions,
             deliveryState = delivery,
             deletionState = deletion,
+            isForwarded = isForwarded,
         ),
     )
 

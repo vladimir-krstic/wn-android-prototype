@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
 
 object WhiteNoiseTextFieldDefaults {
     /** Material's standard content inset for input, supporting text, and leading icon artwork. */
@@ -229,8 +230,8 @@ private fun whiteNoiseTextFieldColors(containerColor: Color): TextFieldColors {
         disabledContainerColor = scheme.surfaceContainerLow,
         errorContainerColor = resolvedContainerColor,
         focusedBorderColor = scheme.primary,
-        unfocusedBorderColor = Color.Transparent,
-        disabledBorderColor = Color.Transparent,
+        unfocusedBorderColor = if (isAmoledOutline()) scheme.outline else Color.Transparent,
+        disabledBorderColor = if (isAmoledOutline()) scheme.outline.copy(alpha = 0.38f) else Color.Transparent,
         errorBorderColor = scheme.error,
     )
 }
@@ -249,7 +250,7 @@ private fun WhiteNoiseTextFieldContainer(
         colors = colors,
         shape = MaterialTheme.shapes.extraLarge,
         focusedBorderThickness = WhiteNoiseTextFieldDefaults.StateRingWidth,
-        unfocusedBorderThickness = WhiteNoiseTextFieldDefaults.StateRingWidth,
+        unfocusedBorderThickness = if (isAmoledOutline() && !isError) 1.dp else WhiteNoiseTextFieldDefaults.StateRingWidth,
     )
 }
 

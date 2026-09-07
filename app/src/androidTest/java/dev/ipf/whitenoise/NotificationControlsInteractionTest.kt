@@ -30,7 +30,7 @@ class NotificationControlsInteractionTest {
     private fun scroll(text: String) { rule.onNodeWithTag("settings.list").performScrollToNode(hasText(text)) }
     private fun global() { rule.setContent { WhiteNoiseTheme { CompositionLocalProvider(LocalNotificationControls provides vm.notificationControls) {
         NotificationsScreen(vm.uiState.activeProfile!!,{},vm::updateProfileSettings,NotificationPermissionStatus.Allowed)
-        vm.notificationControls.work?.let { NotificationWorkDialog(vm.notificationControls,it) }
+        vm.notificationControls.work?.takeUnless { it.isPushPreference }?.let { NotificationWorkDialog(vm.notificationControls,it) }
     } } } }
     private fun conversation(chat: String, open: ((NotificationCategory,Boolean)->NotificationSettingsOpen)? = null) {
         rule.setContent { WhiteNoiseTheme {
@@ -48,9 +48,45 @@ class NotificationControlsInteractionTest {
         rule.onNodeWithText("Native push").assertIsNotEnabled()
     }
     @Test fun missingPushProviderShowsTheAvailabilityReason() {
+        vm.updateProfileSettings(vm.uiState.activeProfile!!.settings.copy(nativePushNotifications=false))
         vm.notificationControls.chooseEnvironment(NotificationEnvironment(push=PushAvailability.ProviderNotInitialized)); global()
         rule.onNodeWithText("Native push").assertIsNotEnabled().assertIsOff()
-        rule.onNodeWithText("The push provider isn’t available. Reopen White Noise to try again.").assertExists()
+        rule.onNodeWithText("The push provider isn’t ready. Try again.").assertExists()
+        rule.onNodeWithTag("notification.push.retry").performScrollTo().performClick()
+        rule.onNodeWithTag("notification.push.progress").assertExists()
+        rule.onNodeWithTag("notification.push.status").assertTextEquals("Checking native push…")
+        rule.onNodeWithTag("notification.push.retry").assertDoesNotExist()
+        rule.onNodeWithTag("notification.work").assertDoesNotExist()
+        rule.runOnIdle { vm.notificationControls.advancePushCapability(vm.notificationControls.pushRetry!!.id) }
+        rule.onNodeWithText("Native push").assertIsEnabled().assertIsOff()
+        rule.onNodeWithTag("notification.push.feedback").assertDoesNotExist()
+    }
+    @Test fun unrecoverablePushCausesExplainInlineWithoutAnUnhelpfulRetry() {
+        vm.notificationControls.chooseEnvironment(NotificationEnvironment(push=PushAvailability.BuildNotConfigured)); global()
+        rule.onNodeWithText("Native push").assertIsNotEnabled().assertIsOff()
+        rule.onNodeWithText("Native push isn’t configured in this build.").assertExists()
+        rule.onNodeWithTag("notification.push.retry").assertDoesNotExist()
+        rule.runOnIdle { vm.notificationControls.chooseEnvironment(NotificationEnvironment(push=PushAvailability.PlayServicesMissing)) }
+        rule.onNodeWithText("Google Play services is unavailable or needs an update.").assertExists()
+        rule.onNodeWithTag("notification.push.retry").assertDoesNotExist()
+        rule.onNodeWithTag("notification.work").assertDoesNotExist()
+    }
+    @Test fun pushEnableFailureAndRetryStayInlineAndPreserveCapability() {
+        vm.updateProfileSettings(vm.uiState.activeProfile!!.settings.copy(nativePushNotifications=false))
+        vm.notificationControls.choose(NotificationScenario.SaveFailure); global()
+        rule.onNodeWithText("Native push").assertIsEnabled().assertIsOff().performClick()
+        rule.onNodeWithText("Native push").assertIsNotEnabled()
+        rule.onNodeWithTag("notification.push.progress").assertExists()
+        rule.onNodeWithTag("notification.work").assertDoesNotExist()
+        rule.onNodeWithText("Cancel").assertDoesNotExist()
+        rule.runOnIdle { step() }
+        rule.onNodeWithTag("notification.push.status").assertTextContains("Your previous settings are unchanged.", substring=true)
+        rule.onNodeWithText("You can use Keep connected in the background to check for messages without native push.").assertExists()
+        rule.onNodeWithText("Cancel").assertDoesNotExist()
+        rule.onNodeWithTag("notification.push.retry").performScrollTo().performClick()
+        rule.runOnIdle { step(); assertEquals(PushAvailability.Available,vm.notificationControls.environment.push) }
+        rule.onNodeWithText("Native push").assertIsEnabled().assertIsOn()
+        rule.onNodeWithTag("notification.work").assertDoesNotExist()
     }
     @Test fun rejectedBackgroundStartKeepsAcceptedLocalEnableAndHasRetry() {
         vm.updateProfileSettings(vm.uiState.activeProfile!!.settings.copy(localNotifications=false,nativePushNotifications=false))

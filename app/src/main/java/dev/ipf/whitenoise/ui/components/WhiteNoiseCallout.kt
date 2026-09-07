@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.components
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -27,6 +28,7 @@ fun WhiteNoiseCallout(
         modifier = modifier.fillMaxWidth(),
         color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainer,
         contentColor = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        border = amoledOutlineBorder(),
         shape = MaterialTheme.shapes.large,
     ) {
         Row(Modifier.padding(WhiteNoiseSpacing.CompactScreenMargin),

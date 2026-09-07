@@ -11,7 +11,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.ipf.whitenoise.model.ProfileFixtures
 import dev.ipf.whitenoise.ui.conversation.ConversationScreen
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseTheme
-import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,6 +35,33 @@ class ComposerLayoutFlowTest {
     }
 
     private fun surface() = rule.onNodeWithTag("conversation.composer.surface")
+
+    @Test fun firstCharacterHidesVoiceAndKeepsEmojiAndDictation() {
+        show()
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        rule.onNodeWithTag("conversation.voice.icon", useUnmergedTree = true).assertExists()
+        editor.performClick().performTextInput(" ")
+        rule.onNodeWithTag("conversation.voice.icon", useUnmergedTree = true).assertDoesNotExist()
+        rule.onNodeWithTag("conversation.composer.emoji").assertIsDisplayed()
+        rule.onNodeWithTag("conversation.dictation.start").assertIsDisplayed()
+        editor.performTextReplacement("")
+        rule.onNodeWithTag("conversation.voice.icon", useUnmergedTree = true).assertExists()
+    }
+
+    @Test fun emojiReplacesSelectionAndBackKeepsDraft() {
+        show("Hello world!")
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performClick().performTextInputSelection(TextRange(6, 11))
+        rule.onNodeWithTag("conversation.composer.emoji").performClick()
+        val emoji = dev.ipf.whitenoise.model.ReactionCatalog.search("").first().emoji.first()
+        rule.onNodeWithTag("emoji.picker.item.recent.0").performClick()
+        editor.assertTextContains("Hello $emoji!")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange(6 + emoji.length)))
+        rule.onNodeWithTag("conversation.composer.emoji").performClick()
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithTag("emoji.picker").assertDoesNotExist()
+        editor.assertTextContains("Hello $emoji!")
+    }
     private fun bounds() = surface().fetchSemanticsNode().boundsInRoot
     private fun action(label: String) {
         val action = surface().fetchSemanticsNode().config[SemanticsActions.CustomActions].first { it.label == label }
@@ -54,7 +80,12 @@ class ComposerLayoutFlowTest {
         val dictation = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
         assertTrue(wide.width > narrow.width)
         assertEquals(add.left, wide.left, 1f)
+        val emoji = rule.onNodeWithTag("conversation.composer.emoji").fetchSemanticsNode().boundsInRoot
         assertEquals(wide.width, text.width, 1f)
+        assertEquals(dictation.bottom, emoji.bottom, 1f)
+        assertEquals(add.width * 32f / 48f, emoji.center.x - add.center.x, 1f)
+        val send = rule.onNodeWithTag("conversation.send.icon", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertEquals(add.width * 40f / 48f, send.center.x - dictation.center.x, 1f)
         assertTrue(text.bottom <= dictation.top + 1f)
         editor.assertIsFocused().assertTextContains("One\nTwo\nThree\nFour")
         rule.onNodeWithContentDescription("Add Attachment").performClick()
@@ -83,7 +114,10 @@ class ComposerLayoutFlowTest {
         val editor = rule.onNodeWithTag("conversation.composer.editor").fetchSemanticsNode().boundsInRoot
         val add = rule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode().boundsInRoot
         assertEquals(expectedWidth, surface.width, 1f)
+        val emoji = rule.onNodeWithTag("conversation.composer.emoji").fetchSemanticsNode().boundsInRoot
         assertEquals(surface.width, editor.width, 1f)
+        val dictation = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
+        assertEquals(dictation.bottom, emoji.bottom, 1f)
         assertEquals(surface.left, add.left, 1f)
     }
 
@@ -134,8 +168,8 @@ class ComposerLayoutFlowTest {
         rule.mainClock.autoAdvance = true
     }
 
-    @Test fun manualExpansionGrowsHeightBeforeWidthAndReversesOnCollapse() {
-        show()
+    @Test fun manualExpansionAndCollapseMoveWidthAndHeightTogether() {
+        show("Short draft")
         val narrow = bounds()
         rule.mainClock.autoAdvance = false
         action("Expand Message")
@@ -144,14 +178,83 @@ class ComposerLayoutFlowTest {
         }
         val wide = expansion.last()
         assertTrue(wide.width > narrow.width)
-        assertTrue(expansion.any { it.height > narrow.height + 2f && abs(it.width - narrow.width) <= 1f })
-        expansion.filter { it.width > narrow.width + 1f }.forEach { assertEquals(wide.height, it.height, 2f) }
+        assertTrue(expansion.take(10).any {
+            it.height > narrow.height + 2f && it.width > narrow.width + 2f
+        })
         action("Collapse Message")
         val contraction = buildList {
             repeat(100) { rule.mainClock.advanceTimeBy(16); add(bounds()) }
         }
-        contraction.filter { it.height < wide.height - 2f }.forEach { assertEquals(narrow.width, it.width, 1f) }
+        assertTrue(contraction.take(10).any {
+            it.height < wide.height - 2f && it.width < wide.width - 2f
+        })
+        contraction.zipWithNext().forEach { (before, after) ->
+            assertTrue("Collapse must not grow again at the intrinsic-size handoff", after.height <= before.height + 1f)
+        }
+        assertEquals(narrow.width, contraction.last().width, 1f)
         assertEquals(narrow.height, contraction.last().height, 2f)
+        rule.mainClock.autoAdvance = true
+    }
+
+    @Test fun shortDraftDownwardDragFollowsFingerWithoutWaitingForWidth() {
+        show("Short draft")
+        val compact = bounds()
+        action("Expand Message")
+        val expanded = bounds()
+        rule.mainClock.autoAdvance = false
+        val start = Offset(expanded.center.x, expanded.top + 8f)
+        val distance = (expanded.height - compact.height) * 0.25f
+        rule.onRoot().performTouchInput {
+            down(start)
+            moveTo(start + Offset(0f, distance), delayMillis = 100)
+        }
+        rule.mainClock.advanceTimeBy(32)
+        assertEquals(expanded.height - distance, bounds().height, 3f)
+        rule.onRoot().performTouchInput {
+            moveTo(start + Offset(0f, distance * 2f), delayMillis = 100)
+        }
+        rule.mainClock.advanceTimeBy(32)
+        assertEquals(expanded.height - distance * 2f, bounds().height, 3f)
+        rule.onRoot().performTouchInput { up() }
+        rule.mainClock.advanceTimeBy(2_000)
+        rule.mainClock.autoAdvance = true
+    }
+
+    @Test fun editingWhileExpandedCollapsesToCurrentDraftHeightWithoutFinalJump() {
+        show("One\nTwo\nThree\nFour")
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performClick()
+        val compact = bounds()
+        action("Expand Message")
+        editor.performTextReplacement("One\nTwo\nThree\nFour\nFive\nSix")
+        rule.mainClock.autoAdvance = false
+        action("Collapse Message")
+        val frames = buildList {
+            repeat(100) { rule.mainClock.advanceTimeBy(16); add(bounds()) }
+        }
+        frames.zipWithNext().forEach { (before, after) ->
+            assertTrue("Current draft height must be the initial collapse target", after.height <= before.height + 1f)
+        }
+        assertTrue(frames.last().height > compact.height)
+        editor.assertIsFocused().assertTextContains("One\nTwo\nThree\nFour\nFive\nSix")
+        rule.mainClock.autoAdvance = true
+    }
+
+    @Test fun reversingExpansionKeepsCurrentGeometryAndSelection() {
+        show("A short draft")
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performClick().performTextInputSelection(TextRange(2, 7))
+        val compact = bounds()
+        rule.mainClock.autoAdvance = false
+        action("Expand Message")
+        rule.mainClock.advanceTimeBy(96)
+        val interrupted = bounds()
+        assertTrue(interrupted.height > compact.height)
+        action("Collapse Message")
+        assertEquals(interrupted.height, bounds().height, 1f)
+        rule.mainClock.advanceTimeBy(2_000)
+        assertEquals(compact.height, bounds().height, 2f)
+        editor.assertIsFocused().assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange(2, 7)))
         rule.mainClock.autoAdvance = true
     }
 }

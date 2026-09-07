@@ -2,6 +2,7 @@
 
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import dev.ipf.whitenoise.model.*
 import dev.ipf.whitenoise.ui.conversation.LocalGroupWork
@@ -1284,7 +1285,7 @@ private fun PersonRow(
         selected != null && onClick != null -> ListItem(
             checked = selected,
             onCheckedChange = { onClick() },
-            modifier = modifier,
+            modifier = modifier.amoledOutline(shapes.shape),
             leadingContent = leading,
             trailingContent = trailing,
             supportingContent = supporting,
@@ -1294,7 +1295,7 @@ private fun PersonRow(
         )
         onClick != null -> ListItem(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier.amoledOutline(shapes.shape),
             leadingContent = leading,
             trailingContent = trailing,
             supportingContent = supporting,
@@ -1303,7 +1304,7 @@ private fun PersonRow(
             content = headline,
         )
         else -> ListItem(
-            modifier = modifier,
+            modifier = modifier.amoledOutline(shapes.shape),
             leadingContent = leading,
             trailingContent = trailing,
             supportingContent = supporting,
@@ -1328,7 +1329,7 @@ private fun NewMessageSearchField(
                 horizontal = WhiteNoiseSpacing.CompactScreenMargin,
                 vertical = WhiteNoiseSpacing.Related,
             )
-            .testTag("new_message.searchField"),
+            .amoledOutline(MaterialTheme.shapes.extraLarge).testTag("new_message.searchField"),
         placeholder = { Text(stringResource(R.string.name_or_npub)) },
         leadingIcon = {
             Icon(

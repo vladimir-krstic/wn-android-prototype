@@ -4,6 +4,38 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class MediaDownloadPolicyTest {
+    @Test fun chatOverridesFollowLiveDefaultsOnlyForInheritedMedia() {
+        val defaults = MediaDownloadMatrix()
+        val inherited = ChatDownloadOverrides()
+        val custom = inherited.inherit(DownloadMediaType.Photos, false, defaults)
+        val changed = defaults.change(DownloadMediaType.Photos, DownloadNetwork.Mobile, true)
+            .change(DownloadMediaType.Videos, DownloadNetwork.Wifi, true)
+        assertEquals(setOf(DownloadNetwork.Wifi, DownloadNetwork.Mobile), inherited.networks(DownloadMediaType.Photos, changed))
+        assertEquals(setOf(DownloadNetwork.Wifi), custom.networks(DownloadMediaType.Photos, changed))
+        assertEquals(setOf(DownloadNetwork.Wifi), custom.networks(DownloadMediaType.Videos, changed))
+        assertEquals(inherited, custom.inherit(DownloadMediaType.Photos, true, changed))
+    }
+    @Test fun explicitNeverIsDifferentFromInheritanceAndDoesNotChangeOtherMedia() {
+        val defaults = MediaDownloadMatrix()
+        val never = ChatDownloadOverrides().change(DownloadMediaType.Photos, DownloadNetwork.Wifi, false, defaults)
+        assertFalse(never.inherits(DownloadMediaType.Photos))
+        assertTrue(never.networks(DownloadMediaType.Photos, defaults).isEmpty())
+        assertFalse(never.allows(DownloadMediaType.Photos, setOf(DownloadNetwork.Wifi), defaults))
+        assertTrue(never.allows(DownloadMediaType.Audio, setOf(DownloadNetwork.Wifi), defaults))
+        assertEquals(MediaDownloadMatrix.defaults, defaults.enabled)
+    }
+    @Test fun customRulesRequireEveryNetworkConditionAndRejectUnknownNetworks() {
+        val defaults = MediaDownloadMatrix(emptySet())
+        DownloadMediaType.entries.forEach { type ->
+            val custom = ChatDownloadOverrides(mapOf(type to DownloadNetwork.entries.toSet()))
+            DownloadNetworkExample.entries.forEach { example ->
+                assertEquals(example.conditions.isNotEmpty(), custom.allows(type, example.conditions, defaults))
+                example.conditions.forEach { refused ->
+                    assertFalse(custom.change(type, refused, false, defaults).allows(type, example.conditions, defaults))
+                }
+            }
+        }
+    }
     @Test fun allSixteenCellsCanChangeWithoutChangingPeers() {
         DownloadMediaType.entries.forEach { type -> DownloadNetwork.entries.forEach { network ->
             val empty = MediaDownloadMatrix(emptySet())

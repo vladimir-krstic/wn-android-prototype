@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.components
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.graphics.BitmapFactory
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
@@ -106,6 +107,7 @@ fun AvatarPhotoButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
+        border = amoledOutlineBorder(enabled),
     ) {
         Text(stringResource(if (hasPhoto) R.string.change_photo else R.string.add_photo))
     }

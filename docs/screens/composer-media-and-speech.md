@@ -620,3 +620,115 @@ passed with 927 unit tests, zero failures/errors/skips, zero lint errors (nine
 warnings), and both APKs assembled. Six endpoint/retention cases replace eight
 superseded timer cases. Updated Compose regressions compile only. No device
 recognition, installation or visual inspection was performed.
+
+
+## 2026-09-07 — Continuous composer expansion and collapse
+
+The user supplied a recording showing short-draft growth and repeated collapsing
+with a perceptible stop between stages, and requested smooth continuous motion.
+This supersedes the earlier height-then-width / width-then-height choreography.
+Manual expansion now derives capsule width, action-row integration and height
+from the same progress. Automatic four-line widening uses one additional baseline
+progress for both width and toolbar; it stays wide during manual collapse.
+Retain the non-bouncy Compose spring (medium-low stiffness), with a 0.001 progress
+visibility threshold to avoid a several-pixel endpoint snap. Reversal starts at
+the current progress/velocity. Native motion scaling still applies.
+
+Dragging follows root-coordinate finger displacement immediately in either
+direction, without waiting for width contraction or launching a coroutine per
+pointer move. This also prevents the moving composer's local coordinates from
+feeding back into displacement and velocity. On release, hand the current drag
+position and velocity to the spring. Timeline travel observes the same progress.
+
+The compact destination adjusts for text-height changes made while expanded,
+retaining measured non-editor chrome instead of landing at the stale pre-edit
+height and jumping when intrinsic layout returns. Keep one editor, focus,
+selection, draft, current insets, 24 dp expanded top gap, existing Back ordering,
+voice behavior, and four-line full-width eligibility.
+
+`ComposerLayoutFlowTest` now checks concurrent dimensions in both directions,
+downward short-draft tracking at two root-coordinate positions, monotonic collapse
+after editing while expanded, and interrupted expansion preserving selection.
+Existing multiline per-frame width and drag tests remain. These tests require
+explicitly authorized device execution; compilation is host-side evidence only.
+The supplied recording was inspected; no current-build device inspection is claimed.
+
+Official source checked:
+[Compose value animations](https://developer.android.com/develop/ui/compose/animation/value-based).
+
+Validation: README host gate passed (`testDebugUnitTest lintDebug assembleDebug
+assembleDebugAndroidTest`): 1013 unit tests, 0 failures, 0 errors and
+0 skipped; lint and both APKs passed. Script tests and locale verification
+also passed. Motion regressions compiled only; current-build device verification
+remains pending.
+
+## 2026-09-07 — Composer emoji entry
+
+The user requested a leading emoji action inside the text capsule, before both
+placeholder and typed text. Reuse the shared searchable EmojiPickerSheet and
+Material smiley icon in a native 48 dp IconButton. Selection inserts at the
+current cursor or replaces the selected range, preserves the surrounding draft,
+and returns to typing; Back dismisses without editing or sending. The action
+stays before text in multiline and expanded layouts. Opening the picker pauses
+active dictation. Recording retains its dedicated waveform/Stop presentation.
+
+The voice-record action is visible only with an empty text draft (including no
+whitespace); sendable drafts show Send instead. Dictation remains available.
+Compact wrapping measurement includes the new leading action width. Existing
+layout assertions now include its width. Added navigation coverage for emoji
+insertion/selection, Back preservation and first-character voice visibility.
+Device inspection is not part of this request.
+
+Validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed. The new interaction tests compile; they were not run on a device.
+
+User alignment refinement: emoji stays bottom-aligned with dictation in every
+composer height. In the wide/expanded composer it joins the bottom action row
+after Add, leaving the text above full width. Its position follows the existing
+shared toolbar animation and uses logical start placement for RTL. Layout
+regressions assert bottom alignment and separation from Add.
+
+Alignment refinement validation: the full host gate passed (unit tests, lint,
+APK assembly and instrumentation-test compilation). No device run performed.
+
+Spacing trial requested by the user: mic-to-waveform/Send centers are now 36 dp;
+Add-to-emoji centers are 28 dp in the integrated bottom row. Icons retain their
+existing sizes and 48 dp vertical targets. The native controls use narrower
+horizontal layout bounds, with platform touch expansion, so their actual layout
+bounds do not overlap. Add keeps its original center and the trailing action
+keeps its original end inset. The existing toolbar progress animates the emoji
+width/position and Add inset together. Recording and active-dictation controls
+retain their existing layout.
+
+Native reference: https://developer.android.com/develop/ui/compose/accessibility/api-defaults
+(documents automatic touch expansion and recommends 48 dp layout bounds). The
+user explicitly requested the narrower horizontal spacing as a trial; this is a
+scoped exception, with visual/touch acceptance pending.
+
+Spacing trial validation: full host gate passed, including updated layout-test
+compilation. No device inspection was requested or performed.
+
+## 2026-09-07 — Paused dictation restores composer actions
+
+A paused inline session was incorrectly treated as active dictation for Add,
+voice visibility and emoji placement. Only active capture now hides Add and
+voice and reserves the full-width capture row. Pausing or editing returns the
+normal composer layout while keeping Resume dictation available. Clearing text
+restores the Message placeholder and voice action; wide/expanded editing retains
+Add with emoji beside it. Writing tools are available while dictation is paused.
+
+The user revised mic-to-wave/Send spacing to 40 dp centers and pause-to-animated
+mic spacing to 28 dp. Add-to-emoji remains 28 dp in the integrated row. Glyph
+sizes and vertical alignment stay unchanged. Regression coverage exercises
+editing a live dictation into a wide draft, clearing it, and both spacing states.
+
+Recovery validation: full host gate passed (unit tests, lint, debug APK and
+instrumentation-test APK compilation). The new navigation regression compiled;
+it was not run on a device.
+
+Final user spacing adjustment: integrated Add-to-emoji centers are 32 dp. Add's
+horizontal inset and emoji's width/position animate together, retaining the
+original Add center. Mic-to-wave/Send stays 40 dp; active pause-to-mic stays 28 dp.
+
+32 dp adjustment validation: full host gate passed; updated layout tests compile.
+No device inspection performed.

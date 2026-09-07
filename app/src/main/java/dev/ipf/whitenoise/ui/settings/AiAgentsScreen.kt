@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.settings
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
@@ -198,6 +199,7 @@ private fun AgentSetupSheet(
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth().testTag("ai_agents.prompt.$id"),
+                        border = amoledOutlineBorder(),
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLowest,
                     ) {

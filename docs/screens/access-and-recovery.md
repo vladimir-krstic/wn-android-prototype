@@ -10,6 +10,27 @@ validation and Welcome-only-two-actions criteria where retained profiles exist.
 
 ## Product behavior
 
+2026-09-06 user-approved #12 completion: add Amber timeout and invalid-response
+outcomes to the existing one-shot Developer Tools access scenarios. Both use the
+normal sign-in feedback with Try Again and Cancel, preserve initial/Add Profile
+ownership, and never activate a profile on failure. Retry starts a fresh successful
+request; cancelled or superseded completions remain invalid. Reuse the existing
+progress timing and Material error/action presentation; no real timer, external
+Amber request, response payload, key handling or new surface is introduced.
+Copy: “Amber didn’t respond. Try again.” and “Couldn’t complete sign-in with
+Amber. Try again.” Validate both origins, unchanged profile state, retry/cancel
+and stale callbacks; compile UI recovery tests without device execution.
+
+Implementation evidence: `AccessModels` includes AmberTimeout and
+AmberInvalidResponse, surfaced by `AccessScenarioDialog` and `AccessFeedback`.
+Both messages have English, Russian, Turkish and Chinese locale resources.
+`AccessStateTest` extends failure coverage and adds both-origin retry/cancel and
+stale-callback regressions. Two `AccessFlowTest` cases compile the error and
+recovery actions inside SignInScreen. The README host gate
+`./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passes with 942 unit tests, zero failures/errors/skips, lint and both APKs.
+Device execution and visual acceptance remain unclaimed.
+
 - Normalize surrounding whitespace and a `nostr:` prefix consistently for
   typed, pasted and scanned values. Recognize the 63-character lowercase
   nsec/npub shape and bounded encrypted-key shape without decoding or crypto.

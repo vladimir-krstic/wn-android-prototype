@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -141,7 +142,7 @@ private fun NostrEventCardSurface(
         color = Color.Transparent,
         contentColor = content,
         shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, content.copy(alpha = 0.28f)),
+        border = amoledOutlineBorder() ?: BorderStroke(1.dp, content.copy(alpha = 0.28f)),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("conversation.nostr_event.${reference.id}")

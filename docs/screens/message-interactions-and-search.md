@@ -495,3 +495,80 @@ selection and reader sharing. No action ordering or eligibility changes otherwis
 
 Menu-polish validation: `./gradlew testDebugUnitTest assembleDebug` passes
 with 898 unit tests; `git diff --check` passes. Device inspection was not run.
+
+
+## 2026-09-07 — Focused menu reaches the screen edge
+
+The user reported that the overflowing focused action menu stops above the bottom
+of the display. Its scroll viewport now extends to the physical bottom edge;
+navigation-bar clearance and the 16 dp margin belong to trailing scroll content,
+so the final action can still be scrolled safely above system navigation. Short
+menus retain bottom clearance. Top/cutout clearance and the existing 8 dp shadow
+gutters remain. This changes only the viewport and inset placement. The existing
+320 dp scaled source preview and scrolling action layout remain; alternate
+long-text preview treatment was discussed but has not been selected.
+
+Official source checked: [Compose insets](https://developer.android.com/develop/ui/compose/system/insets-ui).
+A Compose regression checks an overflowing photo menu reaches the window edge
+and its last action can scroll clear of system navigation. Lint, app assembly
+and instrumentation-test APK compilation pass. The regression compiled only;
+no device or emulator inspection was requested or performed.
+
+
+## 2026-09-07 — Readable focused previews
+
+The user approved a bounded text excerpt, proportional media reduction and
+normal-size scrolling menu actions. The overlay no longer scales the whole message
+into a 320 dp budget. A scoped `LocalFocusedMessagePreview` applies only while
+rendering its source preview. Message text/captions use normal Material bodyLarge
+at the user's font scale, with five lines and native end ellipsis. Single-paragraph
+bold/italic/code/strike/link styling remains visible without interactive links;
+multiblock documents use their readable plain-text projection. Source messages,
+copy/forward/edit commands, selection and the full reader remain unchanged.
+
+Photo/video/GIF/gallery artwork alone scales uniformly to 75%, preserving its
+existing crop/composition and reporting matching layout bounds. The rich bubble's
+canvas matches the reduced media width; captions, Forwarded attribution, quotes,
+author identity, timestamps and reactions remain unscaled. RTL uses the same real
+artwork bounds. Voice transcripts and agent summaries also use bounded lines in
+this preview. Menu targets retain native size and the edge-to-edge scroll viewport
+handles overflow, including large type or constrained windows. No nested scroll
+surface is introduced inside the preview.
+
+Evidence: `FocusedMessagePreview`, `MessageBubbleText`, `TimelineAttachmentContent`,
+`AgentOperationCard`. Model tests cover rich-text projection; Compose regressions
+cover five-line ellipsis at 200% type, proportional RTL media bounds and copying
+the complete original from a shortened context preview. The full README gate
+passed 959 unit tests, lint and both APKs; the final copy-regression follow-up passed
+lint and instrumentation-test APK compilation. UI cases compiled only; no device
+or emulator inspection was requested or performed.
+
+## 2026-09-07 — Search controls over the transcript
+
+User direction removes the full-width blank strip behind the previous/next
+buttons and matches capsule. The control row already has no background; the
+conversation now draws behind its Scaffold bottom slot. Only the native tonal
+buttons and count capsule paint their containers. The viewport handles the IME
+once; measured control clearance becomes lazy-list bottom content padding, so
+the last message can still scroll above the controls. Search selection, disabled
+states, native touch targets, Back, colors and copy remain unchanged.
+
+This uses Scaffold padding as scrolling-content clearance instead of a viewport
+cutoff, following [Material inset ownership](https://developer.android.com/develop/ui/compose/system/material-insets),
+checked 2026-09-07. Host gate passed: 979 unit tests, lint, app and test APK assembly. No device or visual verification claimed.
+
+### Unified search pill — 2026-09-07 follow-up
+
+The latest user screenshot supersedes the separate arrow circles/count capsule.
+Use one full-width rounded Material Surface within the existing 16 dp margins,
+with native unfilled IconButtons at either end and the count centered between.
+The user correction restores the original gray secondaryContainer and
+onSecondaryContainer pair, removes the outline in every theme, and retains
+the 6 dp Surface shadow. The full-width shape and chevrons remain.
+Native disabled icon states, focus and touch targets remain; the surrounding
+canvas stays transparent and the measured scrolling clearance still applies.
+
+The shared native elevation follows [Compose shadow guidance](https://developer.android.com/develop/ui/compose/graphics/draw/shadows),
+checked 2026-09-07. No custom shadow drawing or new motion. Host gate passed:
+The gray background/no-outline correction passes 979 unit tests, lint, app
+and test APK assembly. No device or visual verification claimed.

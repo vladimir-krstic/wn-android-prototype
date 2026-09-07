@@ -173,6 +173,8 @@ class AccessStateTest {
             AccessScenario.AmberProofCancelled to AccessFailure.AmberCancelled,
             AccessScenario.AmberProofRejected to AccessFailure.AmberRejected,
             AccessScenario.AmberMismatch to AccessFailure.AmberMismatch,
+            AccessScenario.AmberTimeout to AccessFailure.AmberTimeout,
+            AccessScenario.AmberInvalidResponse to AccessFailure.AmberInvalidResponse,
         )
         cases.forEach { (scenario, failure) ->
             val vm = AppViewModel(scenario)
@@ -181,6 +183,57 @@ class AccessStateTest {
             if (vm.accessAttempt!!.phase.isBusy) advance(vm)
             assertEquals(failure, vm.accessAttempt!!.failure)
             assertTrue(vm.uiState.profiles.isEmpty())
+        }
+    }
+
+    @Test
+    fun amberResponseFailuresPreserveBothOriginsAndRetryRejectsOldCompletions() {
+        listOf(AccessScenario.AmberTimeout, AccessScenario.AmberInvalidResponse).forEach { scenario ->
+            OnboardingOrigin.entries.forEach { origin ->
+                val vm = AppViewModel(scenario)
+                if (origin == OnboardingOrigin.AddProfile) vm.completeSignIn(OnboardingOrigin.Initial)
+                val before = vm.uiState
+                assertTrue(vm.beginAmberSignIn(origin))
+                val old = vm.accessAttempt!!
+                assertFalse(advance(vm))
+                assertEquals(AccessPhase.Failed, vm.accessAttempt!!.phase)
+                assertEquals(before, vm.uiState)
+                assertEquals(AccessScenario.Success, vm.nextAccessScenario)
+                vm.retryAccess(old.id)
+                val retry = vm.accessAttempt!!
+                assertNotEquals(old.id, retry.id)
+                assertEquals(origin, retry.origin)
+                assertEquals(old.ownerProfileId, retry.ownerProfileId)
+                assertFalse(vm.advanceAccess(old.id, old.phase))
+                assertFalse(vm.beginAmberSignIn(origin))
+                assertFalse(advance(vm))
+                assertTrue(advance(vm))
+                assertEquals(old.candidate.id, vm.uiState.activeProfileId)
+                assertEquals(ProfileSigningMode.Amber, vm.uiState.activeProfile!!.signingMode)
+                assertFalse(vm.advanceAccess(retry.id, AccessPhase.AmberProof))
+            }
+        }
+    }
+
+    @Test
+    fun cancellingAmberResponseFailuresLeavesProfilesUnchangedAndNextAttemptSucceeds() {
+        listOf(AccessScenario.AmberTimeout, AccessScenario.AmberInvalidResponse).forEach { scenario ->
+            OnboardingOrigin.entries.forEach { origin ->
+                val vm = AppViewModel(scenario)
+                if (origin == OnboardingOrigin.AddProfile) vm.completeSignIn(OnboardingOrigin.Initial)
+                val before = vm.uiState
+                vm.beginAmberSignIn(origin)
+                val old = vm.accessAttempt!!
+                advance(vm)
+                vm.cancelAccess()
+                vm.retryAccess(old.id)
+                assertNull(vm.accessAttempt)
+                assertFalse(vm.advanceAccess(old.id, old.phase))
+                assertEquals(before, vm.uiState)
+                assertTrue(vm.beginAmberSignIn(origin))
+                assertFalse(advance(vm))
+                assertTrue(advance(vm))
+            }
         }
     }
 

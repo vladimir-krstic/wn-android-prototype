@@ -170,10 +170,11 @@ internal fun GroupLifecyclePanel(profile: Profile, chat: Chat, onLeft: () -> Uni
         }.map { member ->
             val person = profile.people.firstOrNull { it.id == member.personId }
             WhiteNoisePickerItem(member.personId, person?.displayName ?: stringResource(R.string.group_member_fallback),
-                person?.avatar, enabled = admin && !busy)
+                person?.avatar ?: ProfileAvatar.Monogram, enabled = admin && !busy)
         },
         onSelect = { target = it; pick = false; confirm = GroupLifecycleAction.Transfer.name },
         onDismiss = { pick = false },
+        quickJump = true,
     )
     confirm?.let { raw ->
         val action = GroupLifecycleAction.valueOf(raw)

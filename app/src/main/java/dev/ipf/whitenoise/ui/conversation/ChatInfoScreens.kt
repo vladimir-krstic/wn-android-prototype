@@ -2,6 +2,8 @@
 
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import dev.ipf.whitenoise.model.*
 
@@ -131,8 +133,10 @@ fun ChatInfoScreen(
     onAddToFolder: (String) -> Boolean = { false },
     onCollapseLongMessages: (Boolean) -> Unit = {},
     onNotifications: (() -> Unit)? = null,
+    onTranslationPreferences: (dev.ipf.whitenoise.model.TranslationPreferences) -> Unit = {},
     onBubbleColors: () -> Unit = {},
     onAllMembers: () -> Unit = {},
+    onDownloads: (() -> Unit)? = null,
 ) {
     var folderPicker by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var folderFailed by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
@@ -330,12 +334,21 @@ fun ChatInfoScreen(
                         row {
                             dev.ipf.whitenoise.ui.settings.ChatAutoReadSetting(profile, chat)
                         }
+                        row {
+                            dev.ipf.whitenoise.ui.settings.ChatTranslationSetting(profile, chat, onTranslationPreferences)
+                        }
+                        if (onDownloads != null) row {
+                            dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.download_automatic), onClick = onDownloads,
+                                modifier = Modifier.testTag("chat.downloads"))
+                        }
                         if (onNotifications != null) {
                             row {
                                 dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.notification_sounds_title), onClick = onNotifications)
                             }
                             row {
-                                dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.chat_bubble_colors), onClick = onBubbleColors)
+                                dev.ipf.whitenoise.ui.settings.SettingsLink(stringResource(R.string.chat_bubble_colors), onClick = onBubbleColors,
+                                    enabled = !isAmoledOutline(),
+                                    subtitle = if (isAmoledOutline()) stringResource(R.string.appearance_outline_colors_fixed) else null)
                             }
                         }
                     }
@@ -556,6 +569,7 @@ private fun ChatInfoIdentity(chat: Chat, directPerson: Person?, onNameBottom: (F
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                border = amoledOutlineBorder(),
                 shape = MaterialTheme.shapes.extraLarge,
             ) {
                 Text(
@@ -747,6 +761,7 @@ private fun InfoGroup(content: @Composable ColumnScope.() -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = amoledOutlineBorder(),
         shape = MaterialTheme.shapes.large,
         content = { Column(content = content) },
     )

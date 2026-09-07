@@ -127,11 +127,35 @@ internal val WhiteNoiseAmoledColors = WhiteNoiseDarkColors.copy(
     surfaceTint = Color.Transparent,
 )
 
+/** Outline surfaces have no tonal fill; interaction state layers remain Material-owned. */
+internal val WhiteNoiseAmoledOutlineColors = WhiteNoiseAmoledColors.copy(
+    primary = Color.White,
+    onPrimary = Color.Black,
+    primaryContainer = Color.Black,
+    onPrimaryContainer = Color.White,
+    secondaryContainer = Color.Black,
+    onSecondaryContainer = Color.White,
+    tertiaryContainer = Color.Black,
+    onTertiaryContainer = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White,
+    surfaceVariant = Color.Black,
+    surfaceBright = Color.Black,
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color.Black,
+    surfaceContainer = Color.Black,
+    surfaceContainerHigh = Color.Black,
+    surfaceContainerHighest = Color.Black,
+    outline = Color.White,
+    outlineVariant = Color.White,
+)
+
 internal fun whiteNoiseColorScheme(appearance: AppearancePreference, systemDark: Boolean) = when (appearance) {
     AppearancePreference.System -> if (systemDark) WhiteNoiseDarkColors else WhiteNoiseLightColors
     AppearancePreference.Light -> WhiteNoiseLightColors
     AppearancePreference.Dark -> WhiteNoiseDarkColors
     AppearancePreference.Amoled -> WhiteNoiseAmoledColors
+    AppearancePreference.AmoledOutline -> WhiteNoiseAmoledOutlineColors
 }
 
 data class DefaultMessageBubbleColors(
@@ -145,6 +169,16 @@ val LocalAppearanceColorTheme = compositionLocalOf { AppearanceColorTheme.Light 
 val LocalDefaultMessageBubbleColors = compositionLocalOf {
     DefaultMessageBubbleColors(Color.Black, Color.White, Color.LightGray, Color.Black)
 }
+
+internal fun defaultMessageBubbleColors(
+    base: androidx.compose.material3.ColorScheme,
+    theme: AppearanceColorTheme,
+) = DefaultMessageBubbleColors(
+    mineContainer = if (theme == AppearanceColorTheme.AmoledOutline) base.surface else base.primary,
+    mineContent = if (theme == AppearanceColorTheme.AmoledOutline) base.onSurface else base.onPrimary,
+    otherContainer = base.surfaceContainerHigh,
+    otherContent = base.onSurface,
+)
 
 internal fun colorFromOpaqueArgb(argb: Long): Color = Color(argb)
 
@@ -173,12 +207,7 @@ fun WhiteNoiseTheme(
     val scheme = withActionColor(base, colors.forTheme(theme).actionArgb)
     CompositionLocalProvider(
         LocalAppearanceColorTheme provides theme,
-        LocalDefaultMessageBubbleColors provides DefaultMessageBubbleColors(
-            mineContainer = base.primary,
-            mineContent = base.onPrimary,
-            otherContainer = base.surfaceContainerHigh,
-            otherContent = base.onSurface,
-        ),
+        LocalDefaultMessageBubbleColors provides defaultMessageBubbleColors(base, theme),
     ) {
         MaterialTheme(
             colorScheme = scheme,

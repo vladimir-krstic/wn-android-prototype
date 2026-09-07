@@ -34,6 +34,7 @@ internal fun NotificationControlsHost(controller: NotificationController, route:
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val work = controller.work
     val preview = controller.preview
+    val pushRetry = controller.pushRetry
     SideEffect {
         controller.observeRoute(route)
         controller.observePermission(permission.status == NotificationPermissionStatus.Allowed)
@@ -50,8 +51,62 @@ internal fun NotificationControlsHost(controller: NotificationController, route:
             preview?.let { controller.advancePreview(it.id,it.phase) }
         }
     }
+    LaunchedEffect(pushRetry?.id, lifecycle) {
+        if (pushRetry != null) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(450); controller.advancePushCapability(pushRetry.id)
+        }
+    }
     CompositionLocalProvider(LocalNotificationControls provides controller) { content() }
-    work?.let { NotificationWorkDialog(controller,it) }
+    work?.takeUnless { it.isPushPreference }?.let { NotificationWorkDialog(controller,it) }
+}
+
+@Composable
+internal fun PushAvailabilityFeedback(profile: Profile, controller: NotificationController?, permission: Boolean) {
+    val availability = controller?.environment?.push ?: PushAvailability.Available
+    val work = controller?.work?.takeIf { it.profileId == profile.id && it.isPushPreference }
+    val retrying = controller?.pushRetry?.profileId == profile.id
+    val ready = permission && profile.settings.localNotifications
+    val status = when {
+        !permission -> R.string.notification_allow_first
+        !profile.settings.localNotifications -> R.string.notification_local_first
+        retrying -> R.string.notification_push_retrying
+        availability == PushAvailability.BuildNotConfigured -> R.string.notification_push_build
+        availability == PushAvailability.PlayServicesMissing -> R.string.notification_push_services
+        availability == PushAvailability.ProviderNotInitialized -> R.string.notification_push_provider
+        availability == PushAvailability.SetupFailed -> R.string.notification_push_setup_failed
+        work?.failure != null -> notificationFailureResource(work.failure)
+        work?.running == true -> R.string.notification_saving
+        else -> null
+    }
+    val showFallback = availability != PushAvailability.Available ||
+        (work?.failure != null && (work.change as? NotificationChange.Delivery)?.enabled == true)
+    if (status == null && !showFallback) return
+    SettingsGroup {
+        item {
+            Column(Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.CompactScreenMargin)
+                .testTag("notification.push.feedback"), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
+                status?.let { Text(stringResource(it), style = MaterialTheme.typography.bodyMedium,
+                    color = if (ready && !retrying && (availability == PushAvailability.SetupFailed ||
+                        (availability == PushAvailability.Available && work?.failure != null))) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("notification.push.status").semantics { liveRegion = LiveRegionMode.Polite }) }
+                if (showFallback) Text(stringResource(R.string.notification_push_fallback), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (retrying || work?.running == true) LinearProgressIndicator(Modifier.fillMaxWidth()
+                    .padding(vertical = WhiteNoiseSpacing.Related).testTag("notification.push.progress"))
+                if (controller != null && ready && !retrying) {
+                    if (availability.canRetry && work?.running != true) {
+                        TextButton(onClick = { controller.retryPushCapability(profile.id) }, Modifier.testTag("notification.push.retry")) {
+                            Text(stringResource(R.string.lifecycle_retry))
+                        }
+                    } else if (work != null && !work.running && availability == PushAvailability.Available) {
+                        TextButton(onClick = { controller.retry(work.id) },
+                            Modifier.testTag("notification.push.retry")) { Text(stringResource(R.string.lifecycle_retry)) }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

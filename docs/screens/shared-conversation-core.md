@@ -280,3 +280,21 @@ progress with profile/session guards. The operation host accounts for its bottom
 status strip once and retains side navigation-bar insets; opening forwarding details suppresses read acknowledgement
 behind that modal. Ordinary composer and history state remain independent.
 The clean gate passes 361 unit tests; device/visual acceptance remains pending.
+
+## 2026-09-06 — Tighter bubble-group spacing
+
+Reduce only the gap before a new message cluster from 16 dp to 12 dp, via
+shared `WhiteNoiseSpacing.ConversationCluster`. The user requested approximately
+30% less space, then explicitly required round integer values. Same-author 2 dp
+spacing, bubble padding, timestamps, author identity, date boundaries and context
+previews keep their current relationships. The final value follows the shared
+4/8 dp rhythm and applies to every ordinary conversation timeline.
+
+This is a spacing-only change; product state and copy remain unchanged.
+Official source checked: [Compose accessibility defaults](https://developer.android.com/develop/ui/compose/accessibility/api-defaults).
+Device visual acceptance remains pending.
+
+Final rounded-value host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`
+passed with 927 unit tests, no failures/errors/skips, zero lint errors (nine
+warnings), and both APKs assembled. The existing row-height/alignment regression
+was updated and compiled only. No device or emulator inspection was performed.

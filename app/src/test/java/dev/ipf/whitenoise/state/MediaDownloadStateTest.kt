@@ -6,6 +6,63 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class MediaDownloadStateTest {
+    @Test fun chatDownloadChangesAndResetKeepProfileDefaultsAndOtherChats() {
+        val vm = setup()
+        val profile = vm.uiState.activeProfile!!
+        val chatId = profile.chats.first().id
+        DownloadMediaType.entries.forEach { type ->
+            vm.setChatDownloadInheritance(profile.id, chatId, type, false)
+            vm.setChatDownloadNetwork(profile.id, chatId, type, DownloadNetwork.Mobile, true)
+        }
+        val changed = vm.uiState.activeProfile!!
+        assertEquals(profile.settings, changed.settings)
+        assertEquals(profile.chats.drop(1), changed.chats.drop(1))
+        assertEquals(4, changed.chats.first().downloadOverrides.media.size)
+        vm.resetChatDownloads(profile.id, chatId)
+        assertEquals(profile, vm.uiState.activeProfile)
+        vm.setChatDownloadNetwork(profile.id, chatId, DownloadMediaType.Photos, DownloadNetwork.Mobile, true)
+        assertEquals(profile, vm.uiState.activeProfile)
+    }
+    @Test fun admissionUsesEachChatOverrideAndStillHonorsPauseAndOffline() {
+        val vm = setup()
+        val profileId = vm.uiState.activeProfileId!!
+        vm.updateDataUsageSettings(profileId, vm.uiState.activeProfile!!.settings.copy(downloadMatrix = MediaDownloadMatrix(emptySet())))
+        val idle = targets(vm).filter { it.attachment.transfer!!.phase == AttachmentTransferPhase.Idle }
+        assertTrue(idle.isNotEmpty())
+        val target = idle.first()
+        val type = target.attachment.downloadMediaType!!
+        vm.setChatDownloadInheritance(profileId, target.chat, type, false)
+        vm.setChatDownloadNetwork(profileId, target.chat, type, DownloadNetwork.Wifi, true)
+        vm.chooseDownloadNetwork(DownloadNetworkExample.Offline)
+        vm.admitAutomaticDownloads(profileId)
+        idle.forEach { assertEquals(AttachmentTransferPhase.Idle, current(vm, it).phase) }
+        vm.chooseDownloadNetwork(DownloadNetworkExample.Wifi)
+        vm.pauseAutomaticDownloads(profileId, true)
+        vm.admitAutomaticDownloads(profileId)
+        idle.forEach { assertEquals(AttachmentTransferPhase.Idle, current(vm, it).phase) }
+        vm.pauseAutomaticDownloads(profileId, false)
+        vm.admitAutomaticDownloads(profileId)
+        idle.forEach { item ->
+            assertEquals(if (item.chat == target.chat && item.attachment.downloadMediaType == type) AttachmentTransferPhase.Queued
+                else AttachmentTransferPhase.Idle, current(vm, item).phase)
+        }
+        vm.resetChatDownloads(profileId, target.chat)
+        vm.admitAutomaticDownloads(profileId)
+        assertEquals(AttachmentTransferPhase.Queued, current(vm, target).phase)
+    }
+    @Test fun staleProfileAndMissingChatDownloadActionsCannotMutateSettings() {
+        val vm = setup()
+        val first = vm.uiState.activeProfile!!
+        vm.setChatDownloadInheritance(first.id, "missing", DownloadMediaType.Photos, false)
+        vm.resetChatDownloads(first.id, "missing")
+        assertEquals(first, vm.uiState.activeProfile)
+        vm.completeSignIn(OnboardingOrigin.AddProfile)
+        val before = vm.uiState
+        vm.setChatDownloadInheritance(first.id, first.chats.first().id, DownloadMediaType.Photos, false)
+        vm.setChatDownloadNetwork(first.id, first.chats.first().id, DownloadMediaType.Photos, DownloadNetwork.Mobile, true)
+        vm.resetChatDownloads(first.id, first.chats.first().id)
+        assertEquals(before, vm.uiState)
+    }
     private data class Target(val chat: String, val message: String, val attachment: MessageAttachment)
     private fun setup(): AppViewModel = AppViewModel().apply {
         completeSignIn(OnboardingOrigin.Initial); setDeveloperToolsEnabled(true); loadDownloadQueueExample()

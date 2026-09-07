@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
@@ -53,6 +54,7 @@ internal fun ConversationQuoteBlock(
 ) {
     Surface(
         modifier = modifier.testTag("$testTagPrefix.container"),
+        border = amoledOutlineBorder(),
         shape = shape,
         color = containerColor,
         contentColor = contentColor,

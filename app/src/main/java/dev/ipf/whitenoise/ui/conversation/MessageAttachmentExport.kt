@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
@@ -231,10 +232,10 @@ internal fun MessageAttachmentExportSheet(message: ChatMessage, sharing: Boolean
             shareOutcome?.let { Text(exportOutcomeLabel(it), Modifier.testTag("attachment.export.result")) }
             if (outcomes.values.any { it == AttachmentExportOutcome.Unavailable }) TextButton({ scope.launch { prepare() } }, enabled = !busy) { Text(stringResource(R.string.attachment_retry)) }
             if (sharing) FilledTonalButton({ if (prepared.size < keys.size) confirmPartial = true else share() },
-                enabled = !busy && (prepared.isNotEmpty() || sharedText.isNotBlank()), modifier = Modifier.fillMaxWidth().testTag("attachment.export.share")) { Text(stringResource(R.string.attachment_share)) }
+                enabled = !busy && (prepared.isNotEmpty() || sharedText.isNotBlank()), modifier = Modifier.fillMaxWidth().testTag("attachment.export.share"), border = amoledOutlineBorder(!busy && (prepared.isNotEmpty() || sharedText.isNotBlank()))) { Text(stringResource(R.string.attachment_share)) }
             else FilledTonalButton({ saveQueue = prepared.map { it.key }.filter { outcomes[it] != AttachmentExportOutcome.Saved } },
                 enabled = !busy && pendingSave == null && saveQueue.isEmpty() && prepared.any { outcomes[it.key] != AttachmentExportOutcome.Saved },
-                modifier = Modifier.fillMaxWidth().testTag("attachment.export.save")) { Text(stringResource(R.string.save_attachments)) }
+                modifier = Modifier.fillMaxWidth().testTag("attachment.export.save"), border = amoledOutlineBorder(!busy && pendingSave == null && saveQueue.isEmpty() && prepared.any { outcomes[it.key] != AttachmentExportOutcome.Saved })) { Text(stringResource(R.string.save_attachments)) }
         }
     }
     if (confirmPartial) AlertDialog(onDismissRequest = { confirmPartial = false }, title = { Text(stringResource(R.string.attachment_share)) },

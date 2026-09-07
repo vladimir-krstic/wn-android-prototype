@@ -2,6 +2,7 @@
 
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -172,12 +173,12 @@ internal fun SharedContentLibrary(content: List<SharedContentItem>, category: Sh
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LibraryAudioRow(item: SharedContentItem, state: LibraryAudioState, onPlay: () -> Unit, onSeek: (Long) -> Unit) {
+internal fun LibraryAudioRow(item: SharedContentItem, state: LibraryAudioState, onPlay: () -> Unit, onSeek: (Long) -> Unit) {
     val selected = state.key == item.id
     val loading = selected && state.phase == LibraryAudioPhase.Loading
     val failed = selected && state.phase == LibraryAudioPhase.Failed
     var seek by remember(item.id) { mutableStateOf<Float?>(null) }
-    Surface(shape = MaterialTheme.shapes.large,color = MaterialTheme.colorScheme.surfaceContainer) {
+    Surface(border = amoledOutlineBorder(), shape = MaterialTheme.shapes.large,color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(WhiteNoiseSpacing.Related)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onPlay,enabled = !loading,modifier = Modifier.testTag("shared.voice.play.${item.id}")) {

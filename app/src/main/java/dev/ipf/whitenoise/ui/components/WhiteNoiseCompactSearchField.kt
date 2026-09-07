@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.components
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.BasicTextField
@@ -95,6 +96,7 @@ internal fun WhiteNoiseCompactSearchField(
                 ),
                 container = {
                     TextFieldDefaults.Container(
+                        modifier = Modifier.amoledOutline(MaterialTheme.shapes.extraLarge),
                         enabled = true,
                         isError = false,
                         interactionSource = interactionSource,

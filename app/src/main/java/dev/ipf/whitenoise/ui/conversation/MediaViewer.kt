@@ -91,7 +91,7 @@ import kotlinx.coroutines.withContext
 internal fun ReadOnlyMediaViewer(
     selection: ConversationMediaSelection,
     onDismiss: () -> Unit,
-    onForward: (ConversationMediaItem) -> Unit,
+    onForward: ((ConversationMediaItem) -> Unit)?,
     onGoToMessage: (ConversationMediaItem) -> Unit,
 ) {
     if (selection.items.isEmpty()) return
@@ -353,7 +353,7 @@ internal fun ReadOnlyMediaViewer(
                             }
                         }
                     },
-                    onForward = { onForward(currentItem) },
+                    onForward = onForward?.let { forward -> { forward(currentItem) } },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .onSizeChanged { bottomChromeHeight = with(density) { it.height.toDp() } },
@@ -443,7 +443,7 @@ private fun MediaViewerTopChrome(
 @Composable
 private fun MediaViewerBottomChrome(
     onShare: () -> Unit,
-    onForward: () -> Unit,
+    onForward: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -470,7 +470,7 @@ private fun MediaViewerBottomChrome(
                     contentDescription = stringResource(R.string.share),
                 )
             }
-            IconButton(
+            if (onForward != null) IconButton(
                 onClick = onForward,
                 modifier = Modifier
                     .size(48.dp)

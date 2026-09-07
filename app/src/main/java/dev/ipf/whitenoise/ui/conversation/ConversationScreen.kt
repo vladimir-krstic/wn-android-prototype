@@ -1,5 +1,9 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
+import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
+import dev.ipf.whitenoise.ui.theme.isAmoledOutline
+import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.model.ConversationHistory
 import dev.ipf.whitenoise.model.ConversationReading
 import dev.ipf.whitenoise.model.HistoryOperation
@@ -45,6 +49,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +57,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -113,7 +119,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInRoot
@@ -140,6 +145,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
@@ -160,7 +166,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlin.math.roundToInt
-import kotlin.math.min
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.Chat
 import dev.ipf.whitenoise.model.ChatMessage
@@ -309,6 +314,7 @@ fun ConversationScreen(
     onForwardMedia: (ConversationMediaKey, List<String>, String) -> Boolean = { _, _, _ -> false },
     onOpenMessageDetails: (String) -> Unit = {},
     onOpenChatInfo: () -> Unit = {},
+    onSetMessagePinned: (String, Boolean) -> Boolean = { _, _ -> false },
     onOpenPersonProfile: (String) -> Unit = {},
     onRetryNostrEvent: (messageId: String, referenceId: String, revision: Int) -> Unit = { _, _, _ -> },
     onOpenDeveloperTools: (() -> Unit)? = null,
@@ -324,6 +330,8 @@ fun ConversationScreen(
     onRetryMessageEdit: (String) -> Unit = {},
     onDiscardMessageEdit: (String) -> Unit = {},
     onInterruptMessageEdits: () -> Unit = {},
+    onTranslationPreferences: (dev.ipf.whitenoise.model.TranslationPreferences) -> Unit = {},
+    onTranslationScenario: () -> dev.ipf.whitenoise.model.TranslationScenario = { dev.ipf.whitenoise.model.TranslationScenario.Ready },
 ) {
     DictationOriginHost(profile, chat)
     val retentionController = LocalRetention.current
@@ -391,6 +399,12 @@ fun ConversationScreen(
     var forwardMediaKey by remember { mutableStateOf<ConversationMediaKey?>(null) }
     var focusedMessageId by remember { mutableStateOf<String?>(null) }
     var highlightedMessageId by remember(chat.id) { mutableStateOf<String?>(null) }
+    var highlightedDateId by remember(chat.id) { mutableStateOf<String?>(null) }
+    var dateHighlightDescription by remember(chat.id) { mutableStateOf<String?>(null) }
+    var showJumpDate by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
+    var dateAnchorId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    val dateZoneId by rememberSaveable(profile.id, chat.id) { mutableStateOf(java.time.ZoneId.systemDefault().id) }
+    val dateIndex = remember(chat.timeline, dateZoneId) { dev.ipf.whitenoise.model.ConversationDates(chat, java.time.ZoneId.of(dateZoneId)) }
     var isSelecting by remember { mutableStateOf(false) }
     var selectedMessageIds by remember { mutableStateOf(emptySet<String>()) }
     var deleteMessageIds by remember { mutableStateOf<Set<String>?>(null) }
@@ -407,6 +421,8 @@ fun ConversationScreen(
     var exportMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var exportSharing by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var readerMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var selectingTextId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var selectingTextSource by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var historyMessageId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var readerStartsSelection by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var searchQuery by rememberSaveable(chat.id) { mutableStateOf("") }
@@ -427,6 +443,8 @@ fun ConversationScreen(
     var pushTimelineWithComposer by remember(chat.id) { mutableStateOf(false) }
     val messageBounds = remember(chat.id) { mutableStateMapOf<String, Rect>() }
     val context = LocalContext.current
+    val dateLocale = androidx.core.os.ConfigurationCompat.getLocales(androidx.compose.ui.platform.LocalConfiguration.current)[0]
+        ?: java.util.Locale.ROOT
     val readAloudController = rememberReadAloudController()
     val standaloneSpeechProfile = rememberUpdatedState(profile.copy(chats = profile.chats.filterNot { it.id == chat.id } + chat))
     if (LocalReadAloudController.current == null) androidx.compose.runtime.SideEffect {
@@ -452,6 +470,22 @@ fun ConversationScreen(
         composerAvailability == ComposerAvailability.Available
     val messages = remember(chat.timeline) {
         chat.timeline.filterIsInstance<ChatTimelineEntry.Message>().map(ChatTimelineEntry.Message::message)
+    }
+    val translations = remember(profile.id, chat.id) { TranslationController(profile.id, chat.id) }
+    var translationMessageId by remember(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var translationPendingGeneration by remember(profile.id, chat.id) { mutableStateOf<Long?>(null) }
+    var translationSource by remember(profile.id, chat.id) { mutableStateOf<ChatMessage?>(null) }
+    val translationVisibleIds by remember(items, listState) { derivedStateOf { listState.layoutInfo.visibleItemsInfo.mapNotNull { (items.getOrNull(it.index) as? ConversationItem.MessageItem)?.message?.id }.toSet() } }
+    SideEffect { translations.observe(messages.filter { it.id in history.windowIds }, profile.settings.translation, translationVisibleIds, onTranslationScenario) }
+    TranslationWork(translations)
+    fun displayedMessage(message: ChatMessage) = message.copy(text = if (isSearching) message.text else translations.text(message))
+    val readingText = speechSession?.current?.item
+    LaunchedEffect(readingText, translations.entries, isSearching) {
+        if (readingText != null && speechSession?.owner?.chatId == chat.id) {
+            messages.firstOrNull { it.id == readingText.id }?.let {
+                if (displayedMessage(it).text != readingText.authored) readAloudController.stop()
+            }
+        }
     }
     val selectedMessages = messages.filter { it.id in selectedMessageIds }
     ConversationHistoryScan(history, profile, chat, searchQuery.takeIf { isSearching }.orEmpty(), onHistoryScenario)
@@ -517,6 +551,24 @@ fun ConversationScreen(
         history.target(chat, messageId, onHistoryScenario(HistoryOperation.Target))
     }
 
+    var selectedPinId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
+    var showPinnedMessages by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
+    val pinnedMessages = dev.ipf.whitenoise.model.MessagePins.entries(chat)
+    val pinIndex = pinnedMessages.indexOfFirst { it.id == selectedPinId }.coerceAtLeast(0)
+    fun openPinnedMessage(messageId: String) {
+        isSearching = false
+        searchQuery = ""
+        pinnedSearchMessageId = null
+        isSelecting = false
+        selectedMessageIds = emptySet()
+        selectingTextId = null
+        focusedMessageId = null
+        selectedPinId = messageId
+        pendingInitialMessageId = null
+        initialViewportSettled = true
+        history.target(chat, messageId, onHistoryScenario(HistoryOperation.Target))
+    }
+
     fun resolvedVoiceTranscript(message: ChatMessage): String? =
         message.attachments.firstOrNull { it.kind == MessageAttachmentKind.Voice }?.transcript
             ?: localVoiceTranscripts[message.id]
@@ -534,37 +586,51 @@ fun ConversationScreen(
         selectedMessageIds = emptySet()
     }
 
-    fun handleAction(message: ChatMessage, action: MessageAction) {
+    fun handleAction(sourceMessage: ChatMessage, action: MessageAction) {
+        val message = messages.firstOrNull { it.id == sourceMessage.id } ?: sourceMessage
         focusedMessageId = null
+        selectingTextId = null
         if (action in setOf(MessageAction.Edit, MessageAction.EditHistory, MessageAction.OpenMessage, MessageAction.SelectText)) {
             history.cancel()
             pendingInitialMessageId = null
             initialViewportSettled = true
         }
         when (action) {
+            MessageAction.Translate -> { readerMessageId = null; translationPendingGeneration = null; translationSource = message; translationMessageId = message.id }
             MessageAction.RetrySend -> onRetry(message.id)
             MessageAction.Edit -> { readerMessageId = null; editMessageId = message.id }
             MessageAction.EditHistory -> { readerMessageId = null; historyMessageId = message.id }
             MessageAction.RetryEdit -> onRetryMessageEdit(message.id)
             MessageAction.DiscardEdit -> onDiscardMessageEdit(message.id)
-            MessageAction.OpenMessage, MessageAction.SelectText -> {
-                readerStartsSelection = action == MessageAction.SelectText
+            MessageAction.OpenMessage -> {
+                readerStartsSelection = false
                 readerMessageId = message.id
+            }
+            MessageAction.SelectText -> {
+                readerMessageId = null
+                isSelecting = false
+                selectedMessageIds = emptySet()
+                readAloudController.follow(false)
+                selectingTextSource = displayedMessage(message).text
+                selectingTextId = message.id
             }
             MessageAction.Reply -> beginReply(message.id)
             MessageAction.Share, MessageAction.SaveAttachments -> {
                 exportMessageId = message.id; exportSharing = action == MessageAction.Share
             }
             MessageAction.Forward -> forwardMessageIds = setOf(message.id)
+            MessageAction.Pin, MessageAction.Unpin -> {
+                if (onSetMessagePinned(message.id, action == MessageAction.Pin)) selectedPinId = message.id
+            }
             MessageAction.Copy -> {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.plainVisibleText(profile.id)))
+                clipboard.setPrimaryClip(ClipData.newPlainText("Message", displayedMessage(message).plainVisibleText(profile.id)))
             }
             MessageAction.CopyMarkdown -> {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.text))
+                clipboard.setPrimaryClip(ClipData.newPlainText("Message", displayedMessage(message).text))
             }
-            MessageAction.ReadAloud -> readAloudController.startConversation(profile, chat, message.id)
+            MessageAction.ReadAloud -> readAloudController.startDisplayedMessage(profile, chat, displayedMessage(message))
             MessageAction.StopReading -> readAloudController.stop()
             MessageAction.Transcribe -> {
                 localVoiceTranscripts = localVoiceTranscripts +
@@ -650,17 +716,32 @@ fun ConversationScreen(
     }
     LaunchedEffect(currentSearchMessageId) {
         val messageId = currentSearchMessageId ?: return@LaunchedEffect
-        if (isSearching) history.target(chat, messageId, onHistoryScenario(HistoryOperation.Target))
+        if (isSearching && !showJumpDate && history.request?.dateJump != true && history.readyTarget?.dateJump != true) history.target(chat, messageId, onHistoryScenario(HistoryOperation.Target))
     }
     val readyTarget = history.readyTarget
     LaunchedEffect(readyTarget?.id) {
         val target = readyTarget ?: return@LaunchedEffect
-        val index = items.indexOfFirst { it is ConversationItem.MessageItem && it.id == target.targetId && !it.message.isDeleted }
+        val index = items.indexOfFirst { it.id == target.targetId && ((it is ConversationItem.MessageItem && !it.message.isDeleted) || (target.dateJump && it is ConversationItem.EventItem)) }
         if (index < 0) return@LaunchedEffect
         val dividerIndex = items.indexOfFirst { it.id == "history.unread" }
         val landingAtDivider = !initialViewportSettled && initialMessageId == null &&
             pendingInitialMessageId == history.boundaryId && target.targetId == history.boundaryId && dividerIndex >= 0
-        listState.scrollToItem(if (landingAtDivider) dividerIndex else index, target.scrollOffset)
+        if (target.dateJump) {
+            isSearching = false
+            searchQuery = ""
+            pinnedSearchMessageId = null
+            preSearchAnchor = null
+            // Let the normal chat header/composer settle before placing the target.
+            repeat(2) { withFrameNanos { } }
+            if (history.readyTarget?.id != target.id) return@LaunchedEffect
+        }
+        val dateHeaderIndex = dayHeaderIndices.lastOrNull { it < index }
+        val landingIndex = when {
+            landingAtDivider -> dividerIndex
+            target.dateJump && dateHeaderIndex == index - 1 -> dateHeaderIndex
+            else -> index
+        }
+        listState.scrollToItem(landingIndex, target.scrollOffset)
         repeat(2) { withFrameNanos { } }
         if (history.readyTarget?.id != target.id) return@LaunchedEffect
         if (listState.layoutInfo.visibleItemsInfo.none { it.key == target.targetId || (landingAtDivider && it.key == "history.unread") }) {
@@ -672,8 +753,21 @@ fun ConversationScreen(
         initialViewportSettled = true
         if (target.highlight) {
             highlightedMessageId = target.targetId
-            delay(1_400)
-            if (highlightedMessageId == target.targetId) highlightedMessageId = null
+            if (target.dateJump) {
+                highlightedDateId = dateHeaderIndex?.let { items[it].id }
+                dateHighlightDescription = dateIndex.entries.firstOrNull { it.id == target.targetId }?.date?.format(
+                    java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.FULL)
+                        .withLocale(dateLocale))
+            }
+            try {
+                delay(1_400)
+            } finally {
+                if (highlightedMessageId == target.targetId) {
+                    highlightedMessageId = null
+                    highlightedDateId = null
+                    dateHighlightDescription = null
+                }
+            }
         }
         if (history.readyTarget?.id == target.id) history.readyTarget = null
     }
@@ -704,7 +798,7 @@ fun ConversationScreen(
     }
     val nearTail = initialViewportSettled && tailWasLoaded && !listState.canScrollForward
     LaunchedEffect(chat.timeline) {
-        val follow = nearTail && !isSearching && !isSelecting && focusedMessageId == null
+        val follow = nearTail && !isSearching && !isSelecting && selectingTextId == null && focusedMessageId == null
         val hadArrival = chat.timeline.any { it.id !in history.observedIds }
         history.reconcileArrivals(chat, profile.id, follow)
         if (hadArrival && follow) pendingEndSettlement = true
@@ -713,6 +807,7 @@ fun ConversationScreen(
     DisposableEffect(lifecycle, profile.id, chat.id) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
+                selectingTextId = null
                 onInterruptMessageEdits()
                 // A cancelled entry target must not hold the restored viewport unsettled.
                 pendingInitialMessageId = null
@@ -726,9 +821,9 @@ fun ConversationScreen(
     val currentItems by rememberUpdatedState(items)
     val currentVisibleCallback by rememberUpdatedState(onMessagesVisible)
     val canRead by rememberUpdatedState((speechSession?.following != true || speechSession.phase == dev.ipf.whitenoise.model.SpeechPhase.Completed) && initialViewportSettled && !isSearching && !isSelecting && focusedMessageId == null &&
-        editMessageId == null && readerMessageId == null && historyMessageId == null && exportMessageId == null &&
+        editMessageId == null && readerMessageId == null && selectingTextId == null && translationMessageId == null && historyMessageId == null && exportMessageId == null &&
         !attachmentReaderPresented && !operationCovered && viewerSelection == null && forwardMediaKey == null && forwardMessageIds == null && deleteMessageIds == null &&
-        !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
+        !showJumpDate && !showPinnedMessages && !showEmojiPicker && !showConfigureReactions && configureReactionSlot == null && !showDeclineConfirmation &&
         !composerPresentationActive && !composerOverlayActive && history.request == null && history.readyTarget == null)
     val relatedPx = with(density) { WhiteNoiseSpacing.Related.roundToPx() }
     LaunchedEffect(profile.id, chat.id, listState, lifecycle) {
@@ -750,10 +845,10 @@ fun ConversationScreen(
 
     val pendingEdits = messages.mapNotNull { message -> message.editAttempt?.takeIf { it.phase == dev.ipf.whitenoise.model.MessageEditPhase.Pending }?.let { message.id to it.id } }
     LaunchedEffect(speechSession?.id, speechSession?.current?.item?.id, speechSession?.following,
-        initialViewportSettled, readerMessageId != null, isSearching, isSelecting, focusedMessageId) {
+        initialViewportSettled, readerMessageId != null, isSearching, isSelecting, selectingTextId, focusedMessageId) {
         val speech = speechSession ?: return@LaunchedEffect
         if (!speech.following || speech.phase in setOf(dev.ipf.whitenoise.model.SpeechPhase.Unavailable, dev.ipf.whitenoise.model.SpeechPhase.Completed) ||
-            !initialViewportSettled || isSearching || isSelecting || focusedMessageId != null) return@LaunchedEffect
+            !initialViewportSettled || isSearching || isSelecting || selectingTextId != null || focusedMessageId != null) return@LaunchedEffect
         if (readerMessageId != null) readerMessageId = speech.current.item.id
         else history.target(chat, speech.current.item.id, HistoryScenario.Success, highlight = false)
     }
@@ -780,9 +875,15 @@ fun ConversationScreen(
         localVoiceTranscripts = localVoiceTranscripts.filterKeys { it in available }
         visibleVoiceTranscriptIds = visibleVoiceTranscriptIds.intersect(available)
     }
-    CompositionLocalProvider(LocalSpeechOwner provides dev.ipf.whitenoise.model.SpeechOwner(profile.id, chat.id), LocalMessageReading provides MessageReadingActions(
+    val selectingTextMessage = messages.firstOrNull { it.id == selectingTextId && !it.isDeleted && displayedMessage(it).text == selectingTextSource && it.editAttempt == null }
+    LaunchedEffect(selectingTextId, selectingTextMessage) {
+        if (selectingTextMessage == null) selectingTextId = null
+    }
+    CompositionLocalProvider(LocalMessageTranslation provides translations, LocalSpeechOwner provides dev.ipf.whitenoise.model.SpeechOwner(profile.id, chat.id), LocalMessageReading provides MessageReadingActions(
         collapse = chat.collapseLongMessages && !isSearching,
         canWrite = chat.composerAvailability(profile) == ComposerAvailability.Available,
+        selectingTextId = selectingTextMessage?.id,
+        dismissTextSelection = { selectingTextId = null },
         open = { history.cancel(); pendingInitialMessageId = null; initialViewportSettled = true; readerStartsSelection = false; readerMessageId = it },
         history = { history.cancel(); pendingInitialMessageId = null; initialViewportSettled = true; historyMessageId = it },
         retry = onRetryMessageEdit, discard = onDiscardMessageEdit,
@@ -817,6 +918,13 @@ fun ConversationScreen(
                         initialViewportSettled = true
                     },
                     onClose = ::closeSearch,
+                    onJumpDate = {
+                        history.cancel()
+                        dateAnchorId = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+                            items.getOrNull(info.index).let { it is ConversationItem.MessageItem || it is ConversationItem.EventItem }
+                        }?.key as? String
+                        showJumpDate = true
+                    },
                 )
                 else -> ConversationTopBar(
                     chat = chat,
@@ -824,6 +932,13 @@ fun ConversationScreen(
                     onInfo = onOpenChatInfo,
                     onDeveloperTools = onOpenDeveloperTools,
                 )
+            }
+            if (!isSelecting && !isSearching && pinnedMessages.isNotEmpty()) {
+                PinnedMessageBanner(profile, chat, pinnedMessages[pinIndex], pinIndex, pinnedMessages.size,
+                    onOpen = { openPinnedMessage(pinnedMessages[pinIndex].id) },
+                    onNext = { selectedPinId = pinnedMessages[(pinIndex + 1) % pinnedMessages.size].id },
+                    onUnpin = { onSetMessagePinned(pinnedMessages[pinIndex].id, false) },
+                    onViewAll = { showPinnedMessages = true })
             }
             AdaptiveContent(Modifier.padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)) {
                 Column {
@@ -876,7 +991,7 @@ fun ConversationScreen(
                         if (target != null) {
                             history.target(chat, target, onHistoryScenario(HistoryOperation.Target), highlight = false)
                         }
-                    }, modifier = Modifier.minimumInteractiveComponentSize().size(40.dp).testTag("history.jumpLatest"),
+                    }, modifier = Modifier.minimumInteractiveComponentSize().size(40.dp).amoledOutline(CircleShape).testTag("history.jumpLatest"),
                         elevation = FloatingActionButtonDefaults.elevation(
                             defaultElevation = 0.dp,
                             pressedElevation = 0.dp,
@@ -898,7 +1013,8 @@ fun ConversationScreen(
         },
         containerColor = MaterialTheme.colorScheme.surface,
     ) { contentPadding ->
-        val appliedContentPadding = if (showsAvailableComposer) {
+        val overlaysBottomContent = showsAvailableComposer || isSearching
+        val appliedContentPadding = if (overlaysBottomContent) {
             val leftPadding = contentPadding.calculateLeftPadding(layoutDirection)
             val rightPadding = contentPadding.calculateRightPadding(layoutDirection)
             PaddingValues(
@@ -923,12 +1039,20 @@ fun ConversationScreen(
         } else {
             0.dp
         }
+        // Search controls float above the transcript. Keep their measured clearance
+        // inside the scrolling content, excluding the IME handled by the viewport.
+        val transcriptBottomPadding = if (isSearching) {
+            (contentPadding.calculateBottomPadding() -
+                WindowInsets.ime.asPaddingValues().calculateBottomPadding()).coerceAtLeast(0.dp)
+        } else {
+            bottomSafePadding + with(density) { compactComposerHeightPx.toDp() }
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(appliedContentPadding)
                 .consumeWindowInsets(appliedContentPadding)
-                .then(if (showsAvailableComposer) Modifier.imePadding() else Modifier),
+                .then(if (overlaysBottomContent) Modifier.imePadding() else Modifier),
         ) {
             AdaptiveContent(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -947,8 +1071,7 @@ fun ConversationScreen(
                         start = WhiteNoiseSpacing.CompactScreenMargin,
                         top = WhiteNoiseSpacing.Related,
                         end = WhiteNoiseSpacing.CompactScreenMargin,
-                        bottom = WhiteNoiseSpacing.Related + bottomSafePadding +
-                            with(density) { compactComposerHeightPx.toDp() },
+                        bottom = WhiteNoiseSpacing.Related + transcriptBottomPadding,
                     ),
                     verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Bottom),
                     userScrollEnabled = !composerPresentationActive,
@@ -960,6 +1083,7 @@ fun ConversationScreen(
                                     label = item.label,
                                     id = item.id,
                                     visible = !composerPresentationActive,
+                                    highlightDescription = dateHighlightDescription.takeIf { highlightedDateId == item.id },
                                 )
                             }
                             is ConversationItem.EventItem -> item(key = item.id, contentType = "event") {
@@ -1034,7 +1158,7 @@ fun ConversationScreen(
                                             selectedMessageIds + item.message.id
                                         }
                                     },
-                                    onShowActions = { focusedMessageId = item.message.id },
+                                    onShowActions = { selectingTextId = null; focusedMessageId = item.message.id },
                                     onAccessibilityAction = { action ->
                                         handleAction(item.message, action)
                                     },
@@ -1063,6 +1187,7 @@ fun ConversationScreen(
                     pinnedDayHeader?.let { dayHeader ->
                         PinnedDayHeader(
                             label = dayHeader.label,
+                            highlightDescription = dateHighlightDescription.takeIf { highlightedDateId == dayHeader.id },
                             modifier = Modifier.align(Alignment.TopCenter),
                         )
                     }
@@ -1073,6 +1198,7 @@ fun ConversationScreen(
                     modifier = Modifier.fillMaxSize().navigationBarsPadding(),
                 ) {
                     FullConversationComposer(
+                        writingToolsEnabled = editMessageId == null && readerMessageId == null && selectingTextId == null,
                         profile = profile,
                         chat = chat,
                         onDraftTextChanged = onDraftTextChanged,
@@ -1099,7 +1225,8 @@ fun ConversationScreen(
                                 listState.layoutInfo.totalItemsCount - 1
                             if (compactComposerHeightPx != measuredHeight) {
                                 compactComposerHeightPx = measuredHeight
-                                if (wasAtBottom || !initialViewportSettled) {
+                                if ((wasAtBottom || !initialViewportSettled) &&
+                                    history.readyTarget?.dateJump != true && history.request?.dateJump != true) {
                                     pendingEndSettlement = true
                                 }
                             }
@@ -1165,6 +1292,46 @@ fun ConversationScreen(
             },
         )
     }
+
+    if (showJumpDate) ConversationDatePicker(dateIndex, dateAnchorId,
+        onDismiss = { showJumpDate = false },
+        onJump = { day ->
+            dateIndex.target(day)?.let { target ->
+                showJumpDate = false
+                pendingInitialMessageId = null
+                initialViewportSettled = true
+                pendingEndSettlement = false
+                history.target(chat, target.id, onHistoryScenario(HistoryOperation.Target), dateJump = true)
+            }
+        })
+
+    val translationMessage = messages.firstOrNull { it.id == translationMessageId && it == translationSource && dev.ipf.whitenoise.model.TranslationExamples.eligible(it) && it.id in history.windowIds }
+    if (translationMessageId != null && translationMessage == null) LaunchedEffect(translationMessageId) { translationMessageId = null }
+    val translationResult = translationMessage?.let(translations::state)
+    LaunchedEffect(translationPendingGeneration, translationResult) {
+        if (translationPendingGeneration != null && translationResult?.generation == translationPendingGeneration &&
+            translationResult?.phase == dev.ipf.whitenoise.model.TranslationPhase.Ready) {
+            translationPendingGeneration = null; translationMessageId = null
+        }
+    }
+    if (translationMessage != null) MessageTranslationSheet(translationMessage, translationResult,
+        onSelect = { language ->
+            onTranslationPreferences(profile.settings.translation.copy(lastManual = language))
+            translations.request(translationMessage.id, language, scenario = onTranslationScenario())
+            translationPendingGeneration = translations.state(translationMessage)?.generation
+        },
+        onToggle = { translations.toggle(translationMessage.id); translationPendingGeneration = null; translationMessageId = null },
+        onRetry = { translations.retry(translationMessage.id); translationPendingGeneration = translations.state(translationMessage)?.generation },
+        onDownload = { translations.download(translationMessage.id); translationPendingGeneration = translations.state(translationMessage)?.generation },
+        onCancel = { translations.cancel(translationMessage.id); translationPendingGeneration = null; translationMessageId = null },
+        onDismiss = {
+            if (translationResult?.phase in setOf(dev.ipf.whitenoise.model.TranslationPhase.Loading, dev.ipf.whitenoise.model.TranslationPhase.Downloading)) translations.cancel(translationMessage.id)
+            translationPendingGeneration = null; translationMessageId = null
+        })
+    if (showPinnedMessages) PinnedMessagesSheet(profile, chat,
+        onDismiss = { showPinnedMessages = false },
+        onOpen = { showPinnedMessages = false; openPinnedMessage(it) },
+        onUnpin = { onSetMessagePinned(it, false) })
 
     items.filterIsInstance<ConversationItem.MessageItem>()
         .firstOrNull { it.message.id == focusedMessageId }
@@ -1304,13 +1471,15 @@ fun ConversationScreen(
         else MessageAttachmentExportSheet(current, exportSharing, profile.people) { exportMessageId = null }
     }
     messages.firstOrNull { it.id == readerMessageId && !it.isDeleted }?.let { message ->
-        MessageReaderDialog(profile, chat, message, readerStartsSelection, speechActionState(message), readAloudController,
+        MessageReaderDialog(profile, chat, displayedMessage(message), readerStartsSelection, speechActionState(message), readAloudController,
             onDismiss = { readerMessageId = null }, onAction = { action ->
                 if (action !in setOf(MessageAction.Copy, MessageAction.CopyMarkdown, MessageAction.ReadAloud, MessageAction.StopReading, MessageAction.RetryEdit, MessageAction.DiscardEdit)) readerMessageId = null
                 handleAction(message, action)
             }, onReact = { readerMessageId = null; focusedMessageId = message.id }, onPerson = { readerMessageId = null; onOpenPersonProfile(it) })
     }
     }
+    // Registered after the composer: selection consumes Back before expansion or navigation.
+    BackHandler(enabled = selectingTextId != null) { selectingTextId = null }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1337,8 +1506,8 @@ private fun FocusedMessageActionsOverlay(
     val quickReactions = remember(profile.quickReactions, selectedReaction) {
         ReactionCatalog.quickStrip(profile.quickReactions, selectedReaction)
     }
-    val actions = remember(message, profile.id, speechActionState, chat.composerAvailability(profile)) {
-        MessageActionPolicy.available(message, profile.id, speechActionState, chat.composerAvailability(profile) == ComposerAvailability.Available)
+    val actions = remember(message, profile.id, speechActionState, chat) {
+        MessageActionPolicy.available(message, profile.id, speechActionState, chat.composerAvailability(profile) == ComposerAvailability.Available, canPin = dev.ipf.whitenoise.model.MessagePins.canManage(chat, profile.id), pinned = message.id in chat.pinnedMessageIds)
     }
     val density = LocalDensity.current
     val dismissInteraction = remember { MutableInteractionSource() }
@@ -1350,14 +1519,17 @@ private fun FocusedMessageActionsOverlay(
     val bottomInsetPx = WindowInsets.safeDrawing.getBottom(density)
     val marginPx = with(density) { WhiteNoiseSpacing.CompactScreenMargin.roundToPx() }
     val availableHeightDp = with(density) {
-        (dialogHeightPx - topInsetPx - bottomInsetPx - marginPx * 2).coerceAtLeast(0).toDp()
+        (dialogHeightPx - topInsetPx - marginPx).coerceAtLeast(0).toDp()
     }
+    val bottomContentInset = with(density) { (bottomInsetPx + marginPx).toDp() }
     val desiredTop = ((sourceBounds?.center?.y ?: (dialogHeightPx / 2f)) - contentHeightPx / 2f).roundToInt()
     val minimumTop = topInsetPx + marginPx
-    val maximumTop = (dialogHeightPx - bottomInsetPx - marginPx - contentHeightPx).coerceAtLeast(minimumTop)
+    val maximumTop = (dialogHeightPx - contentHeightPx).coerceAtLeast(minimumTop)
     val contentTop = desiredTop.coerceIn(minimumTop, maximumTop)
+    val forwardedLabel = stringResource(R.string.message_forwarded)
     val previewDescription = buildString {
         append(if (outgoing) profile.name else profile.people.firstOrNull { it.id == message.authorId }?.displayName ?: chat.title)
+        if (message.isForwarded && !message.isDeleted) append(", $forwardedLabel")
         val visible = message.plainVisibleText(profile.id)
         if (visible.isNotBlank()) append(", $visible")
         message.attachments.forEach { append(", ${it.label}") }
@@ -1413,6 +1585,7 @@ private fun FocusedMessageActionsOverlay(
                     .widthIn(max = 560.dp)
                     .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
                     .heightIn(max = availableHeightDp)
+                    .testTag("message.actions.scroll")
                     .verticalScroll(rememberScrollState())
                     .onSizeChanged { contentHeightPx = it.height },
                 verticalArrangement = Arrangement.Top,
@@ -1436,6 +1609,7 @@ private fun FocusedMessageActionsOverlay(
                                 onClick = {},
                             )
                             .testTag("message.actions.reactions"),
+                        border = amoledOutlineBorder(),
                         shape = MaterialTheme.shapes.extraLarge,
                         color = MenuDefaults.groupStandardContainerColor,
                         tonalElevation = MenuDefaults.TonalElevation,
@@ -1485,7 +1659,7 @@ private fun FocusedMessageActionsOverlay(
                                             modifier = Modifier.size(FocusedReactionSelectedFillSize),
                                             shape = CircleShape,
                                             color = if (selected) {
-                                                MaterialTheme.colorScheme.primaryContainer
+                                                outlineSelectionColor(MaterialTheme.colorScheme.primaryContainer)
                                             } else {
                                                 Color.Transparent
                                             },
@@ -1550,34 +1724,34 @@ private fun FocusedMessageActionsOverlay(
                     }
                 }
                 Spacer(modifier = Modifier.height(WhiteNoiseSpacing.Related))
-                ScaleToFitHeight(
-                    maximumHeight = 320.dp,
-                    transformOrigin = TransformOrigin(if (outgoing) 1f else 0f, 0f),
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("message.actions.preview")
                         .clearAndSetSemantics { contentDescription = previewDescription },
                 ) {
-                    MessageRow(
-                        profile = profile,
-                        chat = chat,
-                        item = item,
-                        speechActionState = speechActionState,
-                        onRetry = {},
-                        onOpenMedia = {},
-                        isSelectionMode = false,
-                        selected = false,
-                        searchAlpha = 1f,
-                        searchQuery = "",
-                        searchPosition = null,
-                        onToggleSelection = {},
-                        onShowActions = {},
-                        onAccessibilityAction = {},
-                        onSwipeReply = { false },
-                        onReaction = {},
-                        readAloudController = readAloudController,
-                        contextPreview = true,
-                    )
+                    CompositionLocalProvider(LocalFocusedMessagePreview provides true) {
+                        MessageRow(
+                            profile = profile,
+                            chat = chat,
+                            item = item,
+                            speechActionState = speechActionState,
+                            onRetry = {},
+                            onOpenMedia = {},
+                            isSelectionMode = false,
+                            selected = false,
+                            searchAlpha = 1f,
+                            searchQuery = "",
+                            searchPosition = null,
+                            onToggleSelection = {},
+                            onShowActions = {},
+                            onAccessibilityAction = {},
+                            onSwipeReply = { false },
+                            onReaction = {},
+                            readAloudController = readAloudController,
+                            contextPreview = true,
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(WhiteNoiseSpacing.Related))
                 Box(
@@ -1610,39 +1784,7 @@ private fun FocusedMessageActionsOverlay(
                         .height(FocusedOverlayShadowSafeInset)
                         .testTag("message.actions.shadowGutter.bottom"),
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScaleToFitHeight(
-    maximumHeight: Dp,
-    transformOrigin: TransformOrigin,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    val maximumHeightPx = with(LocalDensity.current) { maximumHeight.roundToPx() }
-    Layout(
-        modifier = modifier,
-        content = content,
-    ) { measurables, constraints ->
-        val placeable = measurables.single().measure(
-            constraints.copy(minWidth = 0, minHeight = 0, maxHeight = Constraints.Infinity),
-        )
-        val scale = if (placeable.height <= 0) {
-            1f
-        } else {
-            min(1f, maximumHeightPx.toFloat() / placeable.height)
-        }
-        val reportedHeight = (placeable.height * scale).roundToInt()
-        val reportedWidth = placeable.width.coerceIn(constraints.minWidth, constraints.maxWidth)
-        val constrainedHeight = reportedHeight.coerceIn(constraints.minHeight, constraints.maxHeight)
-        layout(reportedWidth, constrainedHeight) {
-            placeable.placeRelativeWithLayer(0, 0) {
-                scaleX = scale
-                scaleY = scale
-                this.transformOrigin = transformOrigin
+                Spacer(Modifier.height(bottomContentInset))
             }
         }
     }
@@ -1785,6 +1927,7 @@ private fun ConversationSearchTopBar(
     query: String,
     onQueryChanged: (String) -> Unit,
     onClose: () -> Unit,
+    onJumpDate: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -1814,6 +1957,11 @@ private fun ConversationSearchTopBar(
                     .semantics { contentDescription = searchDescription },
             )
         },
+        actions = {
+            IconButton(onClick = { keyboardController?.hide(); onJumpDate() }, modifier = Modifier.testTag("conversation.search.calendar")) {
+                Icon(painterResource(R.drawable.ic_calendar_month), stringResource(R.string.jump_to_date))
+            }
+        },
         scrollBehavior = dev.ipf.whitenoise.ui.components.LocalWhiteNoiseHeaderScroll.current,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -1836,6 +1984,7 @@ private fun InlineDayHeader(
     label: String,
     id: String,
     visible: Boolean = true,
+    highlightDescription: String? = null,
 ) {
     Box(
         modifier = Modifier
@@ -1848,10 +1997,11 @@ private fun InlineDayHeader(
             label,
             modifier = Modifier
                 .testTag("conversation.date.inline.$id")
+                .background(if (highlightDescription != null) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, CircleShape)
                 .padding(horizontal = 12.dp, vertical = 3.dp)
-                .semantics { heading() },
+                .semantics { heading(); if (highlightDescription != null) { stateDescription = highlightDescription; liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite } },
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (highlightDescription != null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -1860,6 +2010,7 @@ private fun InlineDayHeader(
 private fun PinnedDayHeader(
     label: String,
     modifier: Modifier = Modifier,
+    highlightDescription: String? = null,
 ) {
     Box(
         modifier = modifier
@@ -1868,19 +2019,20 @@ private fun PinnedDayHeader(
         contentAlignment = Alignment.Center,
     ) {
         Surface(
+            border = amoledOutlineBorder(),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceDim.copy(
+            color = if (highlightDescription != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceDim.copy(
                 alpha = PinnedDayHeaderSurfaceAlpha,
             ),
             modifier = Modifier
                 .testTag("conversation.date.pinned")
-                .semantics { heading() },
+                .semantics { heading(); if (highlightDescription != null) { stateDescription = highlightDescription; liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite } },
         ) {
             Text(
                 label,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 3.dp),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = if (highlightDescription != null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -1918,6 +2070,7 @@ private fun TimelineInformation(text: String, isNotice: Boolean = false) {
                 modifier = Modifier
                     .widthIn(max = 440.dp)
                     .semantics(mergeDescendants = true) { contentDescription = text },
+                border = amoledOutlineBorder(),
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
@@ -1938,6 +2091,19 @@ private fun TimelineInformation(text: String, isNotice: Boolean = false) {
                 textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+/** Reuse the full transcript renderer; the enclosing result owns interaction and semantics. */
+@Composable
+internal fun ReadOnlyMessageBubble(profile: Profile, chat: Chat, item: ConversationItem.MessageItem, searchQuery: String = "") {
+    val controller = LocalReadAloudController.current ?: remember { ReadAloudController() }
+    CompositionLocalProvider(LocalMessageReading provides MessageReadingActions(collapse = false, canWrite = false)) {
+        MessageRow(profile = profile, chat = chat, item = item,
+            speechActionState = MessageSpeechActionState(), onRetry = {}, onOpenMedia = {},
+            isSelectionMode = false, selected = false, searchAlpha = 1f, searchQuery = searchQuery, searchPosition = null,
+            onToggleSelection = {}, onShowActions = {}, onAccessibilityAction = {}, onSwipeReply = { false },
+            onReaction = {}, readAloudController = controller, contextPreview = true)
     }
 }
 
@@ -1968,11 +2134,12 @@ private fun MessageRow(
     contextPreview: Boolean = false,
 ) {
     val message = item.message
+    val selectingText = !contextPreview && LocalMessageReading.current.selectingTextId == message.id
     val outgoing = message.authorId == profile.id
     val author = profile.people.firstOrNull { it.id == message.authorId }
     val authorName = if (outgoing) stringResource(R.string.you) else author?.displayName ?: chat.title
     val verticalPadding = when {
-        item.startsCluster && !contextPreview -> WhiteNoiseSpacing.FormField
+        item.startsCluster && !contextPreview -> WhiteNoiseSpacing.ConversationCluster
         else -> 0.dp
     }
     val haptics = LocalHapticFeedback.current
@@ -2010,13 +2177,15 @@ private fun MessageRow(
         profile.id,
         speechActionState,
         canWrite = chat.composerAvailability(profile) == ComposerAvailability.Available,
+        canPin = dev.ipf.whitenoise.model.MessagePins.canManage(chat, profile.id),
+        pinned = message.id in chat.pinnedMessageIds,
     ).map { action ->
         CustomAccessibilityAction(actionLabel(action)) {
             onAccessibilityAction(action)
             true
         }
     }
-    val availableActions = MessageActionPolicy.available(message, profile.id, speechActionState, chat.composerAvailability(profile) == ComposerAvailability.Available)
+    val availableActions = MessageActionPolicy.available(message, profile.id, speechActionState, chat.composerAvailability(profile) == ComposerAvailability.Available, canPin = dev.ipf.whitenoise.model.MessagePins.canManage(chat, profile.id), pinned = message.id in chat.pinnedMessageIds)
     val failedOutgoing = !message.isDeleted && outgoing && message.deliveryState == MessageDeliveryState.Failed
     val retryLabel = stringResource(R.string.not_delivered_retry)
     val messageInteractionSource = remember(message.id) { MutableInteractionSource() }
@@ -2025,7 +2194,7 @@ private fun MessageRow(
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         if (message.isDeleted) onAccessibilityAction(MessageAction.Delete) else onShowActions()
     }
-    val canSwipeReply = !contextPreview && !isSelectionMode && MessageAction.Reply in availableActions
+    val canSwipeReply = !contextPreview && !isSelectionMode && !selectingText && MessageAction.Reply in availableActions
     val swipeState = rememberDraggableState { physicalDelta ->
         val semanticDelta = physicalDelta * directionMultiplier
         rawSwipeDistance = (rawSwipeDistance + semanticDelta).coerceAtLeast(0f)
@@ -2072,7 +2241,7 @@ private fun MessageRow(
             replyPulseScale.snapTo(1f)
         },
     )
-    val interactionModifier = if (contextPreview) {
+    val interactionModifier = if (contextPreview || selectingText) {
         Modifier
     } else if (isSelectionMode) {
         Modifier.toggleable(
@@ -2260,7 +2429,7 @@ private fun MessageRow(
                             onReaction = onReaction,
                             onShowActions = onShowActions,
                             onBubbleLongPress = if (
-                                !contextPreview && !isSelectionMode && availableActions.isNotEmpty()
+                                !contextPreview && !isSelectionMode && !selectingText && availableActions.isNotEmpty()
                             ) {
                                 showMessageActions
                             } else {
@@ -2558,13 +2727,19 @@ private fun MessageBubble(
     messageInteractionSource: MutableInteractionSource?,
     onPositioned: (Rect) -> Unit,
 ) {
-    val authoredText = if (message.isDeleted || searchQuery.isNotBlank()) message.visibleText(profile.id) else dev.ipf.whitenoise.model.MessageEditing.displayedText(message)
-    val eventOnly = searchQuery.isBlank() && message.nostrEvents.isNotEmpty() &&
+    val selectingText = LocalMessageReading.current.selectingTextId == message.id
+    val translation = LocalMessageTranslation.current
+    val authoredText = if (message.isDeleted || searchQuery.isNotBlank()) message.visibleText(profile.id)
+        else if (translation?.state(message)?.phase == dev.ipf.whitenoise.model.TranslationPhase.Ready) translation.text(message)
+        else dev.ipf.whitenoise.model.MessageEditing.displayedText(message)
+    val eventOnly = !selectingText && searchQuery.isBlank() && message.nostrEvents.isNotEmpty() &&
         authoredText.trim() in message.nostrEvents.map { it.authoredReference.trim() }
     val text = authoredText.takeUnless { eventOnly }.orEmpty()
     val plainText = dev.ipf.whitenoise.model.InlineMessageMarkup.plainText(text)
+    val forwardedLabel = stringResource(R.string.message_forwarded)
     val description = buildString {
         append(authorName)
+        if (message.isForwarded && !message.isDeleted) append(", $forwardedLabel")
         if (plainText.isNotBlank()) append(", $plainText")
         if (!message.isDeleted) {
             message.attachments.forEach { append(", ${it.label}") }
@@ -2576,11 +2751,12 @@ private fun MessageBubble(
         AgentOperationCard(
             messageId = message.id,
             operation = operation,
+            isForwarded = message.isForwarded,
             onLongPress = onLongPress,
             modifier = Modifier
                 .testTag("conversation.message.bubble.${message.id}")
                 .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
-                .semantics(mergeDescendants = true) { contentDescription = description },
+                .then(if (selectingText) Modifier else Modifier.semantics(mergeDescendants = true) { contentDescription = description }),
         )
         return
     }
@@ -2598,6 +2774,7 @@ private fun MessageBubble(
     val bubbleOverride = dev.ipf.whitenoise.model.AppearanceColorPolicy.effectiveBubble(
         chatOverride = if (outgoing) chatBubbleColors.mineArgb else chatBubbleColors.otherArgb,
         globalOverride = if (outgoing) globalBubbleColors.mineBubbleArgb else globalBubbleColors.otherBubbleArgb,
+        theme = dev.ipf.whitenoise.ui.theme.LocalAppearanceColorTheme.current,
     )
     val readableBubble = dev.ipf.whitenoise.model.AppearanceColorPolicy.readable(bubbleOverride)
     val bubbleContainerColor = readableBubble?.containerArgb
@@ -2609,8 +2786,10 @@ private fun MessageBubble(
     val hasRichContent = !message.isDeleted &&
         (message.replyToMessageId != null || message.attachments.isNotEmpty() || message.nostrEvents.isNotEmpty())
     val singleMediaSize = rememberTimelineSingleMediaSize(message.attachments.singleOrNull())
-    val richCanvasWidth = richContentCanvasWidthDp(message.attachments, singleMediaSize).dp
+    val previewMediaScale = if (LocalFocusedMessagePreview.current && message.attachments.any { it.isVisual() }) FocusedPreviewMediaScale else 1f
+    val richCanvasWidth = richContentCanvasWidthDp(message.attachments, singleMediaSize).dp * previewMediaScale
     Surface(
+        border = amoledOutlineBorder(),
         shape = bubbleShape,
         color = bubbleContainerColor,
         contentColor = bubbleContentColor,
@@ -2621,96 +2800,106 @@ private fun MessageBubble(
                 onLongPress = bubbleLongPress,
             )
             .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
-            .semantics(mergeDescendants = true) { contentDescription = description },
+            .then(if (selectingText) Modifier else Modifier.semantics(mergeDescendants = true) { contentDescription = description }),
     ) {
-        Box {
-            if (hasRichContent) {
-                Column(
-                    modifier = Modifier
-                        .padding(ConversationMessageMetrics.RichOuterInset)
-                        .width(richCanvasWidth),
-                    verticalArrangement = Arrangement.spacedBy(
-                        ConversationMessageMetrics.RichContentSpacing,
-                    ),
-                ) {
-                    if (message.replyToMessageId != null) {
-                        ReplyQuote(
-                            profile = profile,
-                            item = item,
-                            outgoing = outgoing,
-                            onOpenReplyTarget = onOpenReplyTarget,
-                            canOpenReplyTarget = canOpenReplyTarget,
-                        )
+        dev.ipf.whitenoise.ui.theme.MessageSelectionColors(bubbleContainerColor, bubbleContentColor) {
+            Box {
+                if (hasRichContent) {
+                    Column(
+                        modifier = Modifier
+                            .padding(ConversationMessageMetrics.RichOuterInset)
+                            .width(richCanvasWidth),
+                        verticalArrangement = Arrangement.spacedBy(
+                            ConversationMessageMetrics.RichContentSpacing,
+                        ),
+                    ) {
+                        if (message.isForwarded) {
+                            ForwardedMessageLabel(
+                                message.id, selectingText, bubbleContainerColor,
+                                Modifier.padding(horizontal = ConversationMessageMetrics.RichTextHorizontalAdjustment),
+                            )
+                        }
+                        if (message.replyToMessageId != null) {
+                            ReplyQuote(
+                                profile = profile,
+                                item = item,
+                                outgoing = outgoing,
+                                onOpenReplyTarget = onOpenReplyTarget,
+                                canOpenReplyTarget = canOpenReplyTarget,
+                            )
+                        }
+                        if (message.attachments.isNotEmpty()) {
+                            TimelineAttachmentContent(
+                                attachments = message.attachments,
+                                outgoing = outgoing,
+                                messageId = message.id,
+                                onOpenMedia = onOpenMedia,
+                                searchQuery = searchQuery,
+                                voiceTranscript = voiceTranscript,
+                                voiceTranscriptVisible = voiceTranscriptVisible,
+                                people = profile.people,
+                                onOpenPerson = onOpenPersonProfile,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        if (message.nostrEvents.isNotEmpty()) {
+                            NostrEventCards(
+                                message = message,
+                                profile = profile,
+                                onRetry = onRetryNostrEvent,
+                                onOpenPerson = onOpenPersonProfile,
+                            )
+                        }
+                        if (text.isNotBlank()) {
+                            MessageBubbleText(
+                                containerColor = bubbleContainerColor,
+                                profile = profile,
+                                message = message,
+                                text = text,
+                                plainText = plainText,
+                                searchQuery = searchQuery,
+                                onOpenPersonProfile = onOpenPersonProfile,
+                                memberIds = memberIds,
+                                readAloudController = readAloudController,
+                                showTranscriptLabel = message.attachments.any {
+                                    it.voiceFormat == VoiceMessageFormat.Both
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        start = ConversationMessageMetrics.RichTextHorizontalAdjustment,
+                                        end = ConversationMessageMetrics.RichTextHorizontalAdjustment,
+                                        bottom = ConversationMessageMetrics.RichTextBottomAdjustment,
+                                    ),
+                            )
+                        }
                     }
-                    if (message.attachments.isNotEmpty()) {
-                        TimelineAttachmentContent(
-                            attachments = message.attachments,
-                            outgoing = outgoing,
-                            messageId = message.id,
-                            onOpenMedia = onOpenMedia,
-                            searchQuery = searchQuery,
-                            voiceTranscript = voiceTranscript,
-                            voiceTranscriptVisible = voiceTranscriptVisible,
-                            people = profile.people,
-                            onOpenPerson = onOpenPersonProfile,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    if (message.nostrEvents.isNotEmpty()) {
-                        NostrEventCards(
-                            message = message,
-                            profile = profile,
-                            onRetry = onRetryNostrEvent,
-                            onOpenPerson = onOpenPersonProfile,
-                        )
-                    }
-                    if (text.isNotBlank()) {
-                        MessageBubbleText(
-                            profile = profile,
-                            message = message,
-                            text = text,
-                            plainText = plainText,
-                            searchQuery = searchQuery,
-                            onOpenPersonProfile = onOpenPersonProfile,
-                            memberIds = memberIds,
-                            readAloudController = readAloudController,
-                            showTranscriptLabel = message.attachments.any {
-                                it.voiceFormat == VoiceMessageFormat.Both
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    start = ConversationMessageMetrics.RichTextHorizontalAdjustment,
-                                    end = ConversationMessageMetrics.RichTextHorizontalAdjustment,
-                                    bottom = ConversationMessageMetrics.RichTextBottomAdjustment,
-                                ),
-                        )
-                    }
+                } else {
+                    MessageBubbleText(
+                        containerColor = bubbleContainerColor,
+                        profile = profile,
+                        message = message,
+                        text = text,
+                        plainText = plainText,
+                        searchQuery = searchQuery,
+                        onOpenPersonProfile = onOpenPersonProfile,
+                        memberIds = memberIds,
+                        readAloudController = readAloudController,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
                 }
-            } else {
-                MessageBubbleText(
-                    profile = profile,
-                    message = message,
-                    text = text,
-                    plainText = plainText,
-                    searchQuery = searchQuery,
-                    onOpenPersonProfile = onOpenPersonProfile,
-                    memberIds = memberIds,
-                    readAloudController = readAloudController,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                )
-            }
-            if (messageInteractionSource != null) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clip(bubbleShape)
-                        .indication(
-                            messageInteractionSource,
-                            ripple(color = bubbleContentColor),
-                        )
-                        .testTag("conversation.message.pressLayer.${message.id}"),
-                )
+                if (messageInteractionSource != null) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(bubbleShape)
+                            .indication(
+                                messageInteractionSource,
+                                ripple(color = bubbleContentColor),
+                            )
+                            .testTag("conversation.message.pressLayer.${message.id}"),
+                    )
+                }
             }
         }
     }
@@ -2718,6 +2907,7 @@ private fun MessageBubble(
 
 @Composable
 private fun MessageBubbleText(
+    containerColor: Color,
     profile: Profile,
     message: ChatMessage,
     text: String,
@@ -2733,6 +2923,13 @@ private fun MessageBubbleText(
         mutableStateOf<dev.ipf.whitenoise.model.NostrProfileOccurrence?>(null)
     }
     Column(modifier = modifier) {
+        if (message.isForwarded && !message.isDeleted && message.replyToMessageId == null &&
+            message.attachments.isEmpty() && message.nostrEvents.isEmpty()) {
+            ForwardedMessageLabel(
+                message.id, LocalMessageReading.current.selectingTextId == message.id, containerColor,
+                Modifier.padding(bottom = ConversationMessageMetrics.ForwardedLabelGap),
+            )
+        }
         if (showTranscriptLabel) {
             Text(
                 stringResource(R.string.transcribed),
@@ -2740,44 +2937,54 @@ private fun MessageBubbleText(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        val location = remember(message, text) { dev.ipf.whitenoise.model.LocationSharing.fromMessage(message.copy(text = text)) }
-        if (location != null && searchQuery.isBlank()) {
-            LocationMessageCard(location)
-        } else if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
-            SearchHighlightedText(
-                text = plainText,
-                query = searchQuery,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        } else if (message.deletionState == MessageDeletionState.None) {
-            val reading = LocalMessageReading.current
-            val document = remember(text) { dev.ipf.whitenoise.model.MessageDocuments.parse(text) }
-            val limit = with(LocalDensity.current) { (MaterialTheme.typography.bodyLarge.lineHeight * 52).toDp() }
-            val limitPx = with(LocalDensity.current) { limit.roundToPx() }
-            var overflow by remember(text, limitPx) { mutableStateOf(false) }
-            Box(if (reading.collapse) Modifier.heightIn(max = limit).clipToBounds() else Modifier) {
-                MessageDocumentContent(document, profile.people, onOpenPersonProfile,
-                    Modifier.wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged { overflow = it.height > limitPx },
-                    spokenRange = readAloudController.session?.takeIf { it.owner == LocalSpeechOwner.current && it.current.item.id == message.id && it.current.item.authored == text }
-                        ?.passage?.let { it.sourceStart until it.sourceEnd },
-                    followSpeech = readAloudController.session?.following == true,
-                    memberIds = memberIds,
-                    onOpenProfileReference = { occurrence ->
-                        val person = profile.people.firstOrNull { it.publicKey == occurrence.publicKey }
-                        if (person != null) onOpenPersonProfile(person.id) else unavailableProfile = occurrence
-                    })
+        val reading = LocalMessageReading.current
+        val selectingText = reading.selectingTextId == message.id
+        val body: @Composable () -> Unit = {
+            val location = remember(message, text) { dev.ipf.whitenoise.model.LocationSharing.fromMessage(message.copy(text = text)) }
+            if (LocalFocusedMessagePreview.current && !message.isDeleted) {
+                FocusedMessageText(text, message.id)
+            } else if (location != null && searchQuery.isBlank() && !selectingText) {
+                LocationMessageCard(location)
+            } else if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
+                SearchHighlightedText(
+                    text = plainText,
+                    query = searchQuery,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            } else if (message.deletionState == MessageDeletionState.None) {
+                val document = remember(text) { dev.ipf.whitenoise.model.MessageDocuments.parse(text) }
+                val limit = with(LocalDensity.current) { (MaterialTheme.typography.bodyLarge.lineHeight * 52).toDp() }
+                val limitPx = with(LocalDensity.current) { limit.roundToPx() }
+                var overflow by remember(text, limitPx) { mutableStateOf(false) }
+                Box(if (reading.collapse && !selectingText) Modifier.heightIn(max = limit).clipToBounds() else Modifier) {
+                    MessageDocumentContent(document, profile.people, onOpenPersonProfile,
+                        Modifier.wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged { overflow = it.height > limitPx },
+                        spokenRange = readAloudController.session?.takeIf { it.owner == LocalSpeechOwner.current && it.current.item.id == message.id && it.current.item.authored == text }
+                            ?.passage?.let { it.sourceStart until it.sourceEnd },
+                        followSpeech = !selectingText && readAloudController.session?.following == true,
+                        annotateSource = selectingText,
+                        memberIds = memberIds,
+                        onOpenProfileReference = { occurrence ->
+                            val person = profile.people.firstOrNull { it.publicKey == occurrence.publicKey }
+                            if (person != null) onOpenPersonProfile(person.id) else unavailableProfile = occurrence
+                        })
+                }
+                if (overflow && reading.collapse && !selectingText) TextButton(onClick = { reading.open(message.id) }, modifier = Modifier.testTag("message.readMore.${message.id}"),
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.LocalContentColor.current)) {
+                    Text(stringResource(R.string.message_read_more))
+                }
+            } else {
+                Text(
+                    text = text,
+                    fontStyle = FontStyle.Italic,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
             }
-            if (overflow && reading.collapse) TextButton(onClick = { reading.open(message.id) }, modifier = Modifier.testTag("message.readMore.${message.id}"),
-                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.LocalContentColor.current)) {
-                Text(stringResource(R.string.message_read_more))
-            }
-        } else {
-            Text(
-                text = text,
-                fontStyle = FontStyle.Italic,
-                style = MaterialTheme.typography.bodyLarge,
-            )
         }
+        if (selectingText) {
+            InlineMessageSelection(message.id, reading.dismissTextSelection, body)
+        } else body()
+        TranslationBubbleStatus(message, !message.isDeleted && searchQuery.isBlank() && !selectingText, containerColor)
         if (!message.isDeleted) MessageEditStatus(message)
         ReadAloudProgress(message.id, readAloudController)
     }
@@ -2809,8 +3016,8 @@ private fun ReplyQuote(
         }
         else -> stringResource(R.string.original_message_unavailable)
     }
-    val content = if (outgoing) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-    val secondary = if (outgoing) {
+    val content = if (outgoing && !isAmoledOutline()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val secondary = if (outgoing && !isAmoledOutline()) {
         MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
@@ -2819,7 +3026,7 @@ private fun ReplyQuote(
     ConversationQuoteBlock(
         author = author ?: stringResource(R.string.original_message_unavailable),
         excerpt = body,
-        containerColor = if (outgoing) {
+        containerColor = if (outgoing && !isAmoledOutline()) {
             MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)
         } else {
             MaterialTheme.colorScheme.surface

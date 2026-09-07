@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise
 
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -65,16 +66,39 @@ class MessageBatchFlowTest {
         rule.onNodeWithText("Deleted 2 of 2 messages").assertExists()
         rule.onNodeWithContentDescription("Close Selection").assertDoesNotExist()
     }
-    @Test fun folderChoosesAllSixEligibleDestinationsAndToggleClearsThem() {
+    @Test fun foldersUseSeparatePageAndDoneAppliesWhileBackDiscards() {
         val vm=model();val p=vm.uiState.activeProfile!!
         val targets=p.chats.filter{it.id!=chatId&&it.composerAvailability(p)==ComposerAvailability.Available}.take(6).map{it.id}.toSet()
-        val folderId=vm.saveChatFolder(p.id,null,ChatFolderDraft("Recipients",chatIds=targets))!!;val folder=vm.uiState.activeProfile!!.chatFolders.first { it.id==folderId }
+        val folderId=vm.saveChatFolder(p.id,null,ChatFolderDraft("Recipients",chatIds=targets))!!
         rule.setContent {WhiteNoiseTheme {ForwardMessagesSheet(vm.uiState.activeProfile!!,chatId,{},onForward={_,_->})}}
-        rule.onNodeWithTag("conversation.forward.search").performTextInput("Recipients")
-        rule.onNodeWithTag("conversation.forward.destinations").performScrollToNode(hasTestTag("conversation.forward.folder.${folder.id}"))
-        val row=rule.onNodeWithTag("conversation.forward.folder.${folder.id}")
-        row.performClick().assertIsOn();rule.onNodeWithContentDescription("Forward to 6 Chats").assertExists()
-        row.performClick().assertIsOff();rule.onNodeWithContentDescription("Forward to 6 Chats").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.forward.submit").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.forward.folder.$folderId").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.forward.chooseFolders").performClick()
+        rule.onNodeWithTag("conversation.forward.folderList").performScrollToNode(hasTestTag("conversation.forward.folder.$folderId"))
+        rule.onNodeWithTag("conversation.forward.folder.$folderId").performClick().assertIsOn()
+        rule.onNodeWithContentDescription("Back").performClick()
+        rule.onNodeWithTag("conversation.forward.submit").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.forward.chooseFolders").performClick()
+        rule.onNodeWithTag("conversation.forward.folderList").performScrollToNode(hasTestTag("conversation.forward.folder.$folderId"))
+        rule.onNodeWithTag("conversation.forward.folder.$folderId").performClick()
+        rule.onNodeWithTag("conversation.forward.folders.done").performClick()
+        rule.onNodeWithText("Forward to 6 Chats").assertExists()
+        rule.onNodeWithTag("conversation.forward.chooseFolders").performClick()
+        rule.onNodeWithTag("conversation.forward.folderList").performScrollToNode(hasTestTag("conversation.forward.folder.$folderId"))
+        rule.onNodeWithTag("conversation.forward.folder.$folderId").performClick().assertIsOff()
+        rule.onNodeWithTag("conversation.forward.folders.done").performClick()
+        rule.onNodeWithTag("conversation.forward.submit").assertDoesNotExist()
+    }
+    @Test fun forwardActionAppearsOnlyAfterSelectingAChatAndHidesAfterDeselecting() {
+        val vm=model()
+        rule.setContent {WhiteNoiseTheme {ForwardMessagesSheet(vm.uiState.activeProfile!!,chatId,{},onForward={_,_->})}}
+        rule.onNodeWithTag("conversation.forward.submit").assertDoesNotExist()
+        rule.onNodeWithTag("conversation.forward.search").performTextInput("Maya")
+        rule.onNodeWithTag("conversation.forward.destination.maya-chen").performClick()
+        rule.onNodeWithTag("conversation.forward.submit").assertIsEnabled()
+        rule.onNodeWithText("Forward to 1 Chat").assertExists()
+        rule.onNodeWithTag("conversation.forward.destination.maya-chen").performClick()
+        rule.onNodeWithTag("conversation.forward.submit").assertDoesNotExist()
     }
     @Test fun unavailableDestinationExplainsWhyItCannotBeSelected() {
         val vm=model();vm.toggleBlocked("maya-chen")
@@ -83,6 +107,42 @@ class MessageBatchFlowTest {
         rule.onNodeWithTag("conversation.forward.destinations").performScrollToNode(hasTestTag("conversation.forward.destination.maya-chen"))
         rule.onNodeWithTag("conversation.forward.destination.maya-chen").assertIsNotEnabled()
         rule.onNodeWithText("Unblock this person to send messages.").assertExists()
+    }
+    @Test fun multipleFoldersSelectUniqueChatsAndSystemBackReturnsToThePicker() {
+        val vm=model(); val p=vm.uiState.activeProfile!!
+        val targets=p.chats.filter { it.id!=chatId && it.composerAvailability(p)==ComposerAvailability.Available }.take(3).map { it.id }
+        val first=vm.saveChatFolder(p.id,null,ChatFolderDraft("First recipients",chatIds=targets.take(2).toSet()))!!
+        val second=vm.saveChatFolder(p.id,null,ChatFolderDraft("More recipients",chatIds=targets.drop(1).toSet()))!!
+        rule.setContent { WhiteNoiseTheme { ForwardMessagesSheet(vm.uiState.activeProfile!!,chatId,{},onForward={_,_->}) } }
+        rule.onNodeWithTag("conversation.forward.chooseFolders").performClick()
+        for (id in listOf(first,second)) {
+            rule.onNodeWithTag("conversation.forward.folderList").performScrollToNode(hasTestTag("conversation.forward.folder.$id"))
+            rule.onNodeWithTag("conversation.forward.folder.$id").performClick()
+        }
+        rule.onNodeWithTag("conversation.forward.folders.done").performClick()
+        rule.onNodeWithText("Forward to 3 Chats").assertExists()
+        rule.onNodeWithTag("conversation.forward.chooseFolders").performClick()
+        rule.runOnIdle { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithTag("conversation.forward.folders").assertDoesNotExist()
+        rule.onNodeWithText("Forward to 3 Chats").assertExists()
+    }
+    @Test fun completedForwardClearsOnceAndNeverShowsPersistentSuccessControls() {
+        val vm=model(); val id=vm.send()
+        assertTrue(vm.forwardMessages(chatId,setOf(id),listOf("maya-chen")))
+        val op=vm.messageForwards.getValue(vm.owner())
+        var dismissed=0
+        var appearance by mutableStateOf(AppearancePreference.Light)
+        rule.setContent {
+            WhiteNoiseTheme(appearance=appearance) {
+                MessageOperationsHost(vm.uiState.activeProfile,op,{_,_->},{_,_,_->},{},{},{ dismissed++ }) {}
+            }
+        }
+        rule.waitUntil { dismissed==1 }
+        rule.onNodeWithTag("message.forward.status").assertDoesNotExist()
+        rule.onNodeWithText("Details").assertDoesNotExist()
+        rule.onNodeWithText("Dismiss").assertDoesNotExist()
+        rule.runOnIdle { appearance=AppearancePreference.Dark }
+        rule.runOnIdle { assertEquals(1,dismissed) }
     }
     @Test fun changingDestinationProfileClearsRecipientsWithoutSwitchingActiveProfile() {
         val vm=model();val owner=vm.owner();vm.completeSignIn(OnboardingOrigin.AddProfile);val other=vm.owner();vm.openOrCreateDirectChat("maya-chen",requestedChatId="maya-chen");vm.selectProfile(owner)
@@ -103,17 +163,35 @@ class MessageBatchFlowTest {
         rule.onNodeWithTag("message.forward.status").assertExists();rule.onNodeWithText("Details").performClick()
         rule.onNodeWithTag("message.forward.target.theo-grant").performScrollTo().assertExists()
         rule.onNodeWithText("Couldn’t send the remaining messages.").assertExists();rule.onNodeWithText("Retry failed").performScrollTo().performClick()
-        rule.waitUntil(5_000){vm.messageForwards[vm.owner()]?.phase==MessageForwardPhase.Completed}
-        rule.onNodeWithText("Close").performScrollTo().performClick();rule.onNodeWithText("Dismiss").performClick()
+        rule.waitUntil(5_000){vm.messageForwards[vm.owner()]==null}
+        rule.onNodeWithTag("message.forward.details").assertDoesNotExist()
         rule.onNodeWithTag("message.forward.status").assertDoesNotExist()
     }
-    @Test fun closingProgressDetailsKeepsWorkWhileCancelIsAnExplicitAction() {
-        val vm=model();val id=vm.send();vm.beginMessageForward(vm.owner(),chatId,setOf(id),vm.owner(),listOf("maya-chen"));val op=vm.messageForwards.getValue(vm.owner())
-        var cancelled: Long?=null
-        rule.setContent {WhiteNoiseTheme {MessageOperationsHost(vm.uiState.activeProfile,op,{_,_->},{_,_,_->},{},{cancelled=it},{}) {}}}
-        rule.onNodeWithText("Details").performClick();rule.onNodeWithText("Close").performClick()
-        rule.runOnIdle {assertNull(cancelled)}
-        rule.onNodeWithText("Details").performClick();rule.onNodeWithText("Cancel").performClick();rule.runOnIdle {assertEquals(op.id,cancelled)}
+    @Test fun preparingAndSendingKeepContentFullHeightWithoutProgressControls() {
+        val vm=model(); val id=vm.send()
+        vm.beginMessageForward(vm.owner(),chatId,setOf(id),vm.owner(),listOf("maya-chen"))
+        var op by mutableStateOf(vm.messageForwards.getValue(vm.owner()))
+        var advanced=0
+        var cancelled=false
+        var dismissed=false
+        rule.setContent {
+            WhiteNoiseTheme {
+                MessageOperationsHost(vm.uiState.activeProfile,op,{_,_-> advanced++},{_,_,_->},{},{cancelled=true},{dismissed=true},
+                    modifier=androidx.compose.ui.Modifier.testTag("operation.host")) { modifier ->
+                    androidx.compose.foundation.layout.Box(modifier.testTag("operation.content"))
+                }
+            }
+        }
+        rule.waitUntil { advanced>0 }
+        rule.onNodeWithTag("message.forward.status").assertDoesNotExist()
+        rule.onNodeWithText("Details").assertDoesNotExist()
+        val host=rule.onNodeWithTag("operation.host").fetchSemanticsNode().boundsInRoot
+        val content=rule.onNodeWithTag("operation.content").fetchSemanticsNode().boundsInRoot
+        assertEquals(host.top,content.top,1f)
+        assertEquals(host.bottom,content.bottom,1f)
+        rule.runOnIdle { op=op.copy(phase=MessageForwardPhase.Running,revision=op.revision+1) }
+        rule.onNodeWithTag("message.forward.status").assertDoesNotExist()
+        rule.runOnIdle { assertFalse(cancelled); assertFalse(dismissed) }
     }
     @Test fun sharedContentForwardsOneFrameToAnotherProfileThroughTheAppOwnedOperation() {
         val vm=model();val owner=vm.owner()
@@ -132,10 +210,10 @@ class MessageBatchFlowTest {
         rule.onNodeWithTag("conversation.forward.destinations").performScrollToNode(hasTestTag("conversation.forward.destination.maya-chen"))
         rule.onNodeWithTag("conversation.forward.destination.maya-chen").performClick()
         rule.onNodeWithContentDescription("Forward to 1 Chat").performClick()
-        rule.waitUntil(5_000){vm.messageForwards[owner]?.phase==MessageForwardPhase.Completed}
-        rule.onNodeWithTag("message.forward.status").assertIsDisplayed()
+        rule.waitUntil(5_000){vm.messageForwards[owner]==null}
+        rule.onNodeWithTag("message.forward.status").assertDoesNotExist()
         rule.runOnIdle {
-            val op=vm.messageForwards.getValue(owner);assertEquals(destination,op.destinationProfileId);assertEquals(owner,vm.owner())
+            assertEquals(owner,vm.owner())
             val copy=vm.uiState.profiles.first {it.id==destination}.chats.first {it.id=="maya-chen"}.timeline.filterIsInstance<ChatTimelineEntry.Message>().last().message
             assertEquals(1,copy.attachments.size);assertEquals(frame.image,copy.attachments.single().images.singleOrNull())
         }

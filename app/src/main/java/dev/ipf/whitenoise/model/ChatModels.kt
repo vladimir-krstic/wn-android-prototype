@@ -196,6 +196,7 @@ data class ChatMessage(
     val editAttempt: MessageEditAttempt? = null,
     val agentOperation: AgentOperation? = null,
     val nostrEvents: List<NostrEventReference> = emptyList(),
+    val isForwarded: Boolean = false,
 ) {
     val isDeleted: Boolean
         get() = deletionState != MessageDeletionState.None
@@ -239,12 +240,15 @@ data class Chat(
     val pinnedOrder: Int? = null,
     val readState: ConversationReadState? = null,
     val collapseLongMessages: Boolean = true,
+    val downloadOverrides: ChatDownloadOverrides = ChatDownloadOverrides(),
     val bubbleColors: ChatBubbleColorOverrides = ChatBubbleColorOverrides(),
     val messageDeletion: MessageDeleteOperation? = null,
     val groupRoster: GroupRoster = GroupRoster(),
     val publicInviteAvatar: ProfileAvatar = avatar,
     val groupLifecycle: GroupLifecycle = GroupLifecycle.Active,
     val disbandCapability: GroupDisbandCapability = GroupDisbandCapability(),
+    val pinnedMessageIds: List<String> = emptyList(),
+    val messagePinPermission: MessagePinPermission = MessagePinPermission.Enabled,
 ) {
     val visibleAvatar: ProfileAvatar get() = if (isGroup && membership == ChatMembership.Invited) publicInviteAvatar else avatar
 
