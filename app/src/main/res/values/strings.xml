@@ -1943,4 +1943,17 @@
     <string name="quick_account_switching_detail">Show a button beside your avatar to switch accounts with one tap.</string>
     <string name="quick_account_switch_to">Switch to %1$s</string>
     <string name="quick_account_switched">Switched to %1$s</string>
+    <string name="floating_keep">Keep on screen</string>
+    <string name="floating_title">Kept on screen</string>
+    <string name="floating_expand">Expand message</string>
+    <string name="floating_drag">Move message</string>
+    <string name="floating_next">Next kept message</string>
+    <string name="floating_options">Kept message options</string>
+    <string name="floating_position">%1$d of %2$d</string>
+    <string name="floating_source">From: %1$s · %2$s</string>
+    <string name="floating_remove">Remove this message</string>
+    <string name="floating_clear">Clear all kept messages</string>
+    <string name="floating_move_side">Move to other side</string>
+    <string name="floating_move_top">Move to top</string>
+    <string name="floating_move_bottom">Move to bottom</string>
 </resources>

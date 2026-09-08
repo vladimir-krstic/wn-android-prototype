@@ -254,10 +254,22 @@ fun WhiteNoiseNavHost(
         modifier = speechModifier,
         onAutomaticRetry = { id, revision -> uiState.activeProfileId?.let { appViewModel.retryMessageForward(it, id, automatic = true, expectedRevision = revision) } },
     ) { operationModifier ->
+    androidx.compose.runtime.LaunchedEffect(uiState.profiles, uiState.signedInProfileIds, appViewModel.retention.nowMillis) {
+        appViewModel.floatingMessages.reconcile()
+    }
+    dev.ipf.whitenoise.ui.conversation.FloatingMessagesHost(
+        controller = appViewModel.floatingMessages, profileId = uiState.activeProfileId,
+        visible = !showMainProfileSwitcher && !appViewModel.appLock.blocked && !appViewModel.appLock.shieldsBackground &&
+            !appViewModel.incoming.locked && currentBackStackEntry?.destination?.route?.substringBefore('/')?.substringBefore('?') in
+            setOf(AppRoute.SignedIn::class.qualifiedName, AppRoute.Conversation::class.qualifiedName),
+        modifier = operationModifier,
+        onOpen = { key -> if (key.profileId == appViewModel.uiState.activeProfileId)
+            openConversation(key.chatId, clearsCreationFlow = false, messageId = key.messageId) },
+    ) { floatingModifier ->
     NavHost(
         navController = navController,
         startDestination = AppRoute.startDestination,
-        modifier = operationModifier,
+        modifier = floatingModifier,
     ) {
         composable<AppRoute.Welcome> { entry ->
             val route = entry.toRoute<AppRoute.Welcome>()
@@ -1114,6 +1126,7 @@ fun WhiteNoiseNavHost(
                 )
             }
         }
+    }
     }
     AppUpdateHost(appViewModel.appUpdates)
     }

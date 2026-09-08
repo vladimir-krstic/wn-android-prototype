@@ -90,7 +90,7 @@ internal fun PinnedMessageBanner(
 
 /** A moving window keeps the segments legible even when a chat has many pins. */
 @Composable
-private fun PinPagination(index: Int, count: Int) {
+internal fun PinPagination(index: Int, count: Int) {
     val selected = MaterialTheme.colorScheme.onSurface
     val idle = MaterialTheme.colorScheme.outlineVariant
     Canvas(Modifier.width(2.dp).height(32.dp).testTag("message.pins.pagination")) {

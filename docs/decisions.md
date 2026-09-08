@@ -4804,3 +4804,44 @@ same-white-outline treatment for message bubbles only.
 rows. Restore standard 1 dp weight around grouped outside perimeters so corners
 retain visible weight at high density; keep one physical-pixel internal divider
 and touching rows. This supersedes the 1px outer-perimeter treatment only.
+
+### Personal floating message stack — 2026-09-08
+
+User approved multiple messages kept on screen across chats and the chat list:
+compact tap/swipe cycling with pin-style pagination, long press/explicit expansion,
+full message paging in a native sheet and X to collapse. Use a personal per-account
+reference stack, independent of shared chat pins and admin roles. A navigation-level
+Surface with a dedicated draggable handle satisfies cross-screen positioning;
+no Android system PiP/notification overlay or permission is introduced. See
+`docs/screens/floating-messages.md` for ownership, cleanup and accessibility.
+
+### Floating message presentation follow-up — 2026-09-08
+
+User replaced the modal sheet with expansion inside the same floating card. Show
+content directly, remove the expand glyph, use whole-card long-press feedback,
+and keep multi-message-only pagination in a fixed header. X/Back collapse; long
+content scrolls within available space. Card width now uses 24 dp outer margins.
+This supersedes the initial floating-stack sheet/320 dp metrics above.
+
+Floating stack correction (2026-09-08): pagination belongs at the message's leading
+side, aligned to its top, outside the pager and scrolling content. It is not in
+the toolbar. Tap cycles in either state; long press toggles expansion/collapse.
+Remove card press indication per explicit user direction; preserve control actions.
+
+### Floating card header and swipe-only paging — 2026-09-08
+
+Latest user correction: horizontal content swipes own paging; taps are inert.
+The full 48 dp title row is the drag target, with 16 dp leading text inset and no
+handle icon. Sender is expanded-only. The menu precedes the trailing inward-arrow
+collapse button; long press still toggles expansion without a card press effect.
+Implementation: `FloatingMessagesUi.kt`; interaction contracts:
+`FloatingMessageFlowTest.kt`. See `docs/screens/floating-messages.md` for validation.
+
+### Floating compact typography and circular paging — 2026-09-08
+
+User correction keeps bodyMedium text in both floating-card states and hides
+sender/source/time metadata when collapsed. HorizontalPager boundary copies
+wrap swipes in both directions, with actual-message pagination and selection;
+one message remains non-scrollable. Evidence: `FloatingMessagesUi.kt`,
+`FloatingMessagePages`, `FloatingMessagesTest`, and `FloatingMessageFlowTest`.
+Validation is recorded in `docs/screens/floating-messages.md`.

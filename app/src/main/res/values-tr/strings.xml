@@ -1939,4 +1939,17 @@
     <string name="quick_account_switching_detail">Hesapları tek dokunuşla değiştirmek için avatarınızın yanında bir düğme gösterin.</string>
     <string name="quick_account_switch_to">%1$s hesabına geç</string>
     <string name="quick_account_switched">%1$s hesabına geçildi</string>
+    <string name="floating_keep">Ekranda tut</string>
+    <string name="floating_title">Ekranda tutulanlar</string>
+    <string name="floating_expand">Mesajı genişlet</string>
+    <string name="floating_drag">Mesajı taşı</string>
+    <string name="floating_next">Ekranda tutulan sonraki mesaj</string>
+    <string name="floating_options">Ekranda tutulan mesaj seçenekleri</string>
+    <string name="floating_position">%1$d / %2$d</string>
+    <string name="floating_source">Kaynak: %1$s · %2$s</string>
+    <string name="floating_remove">Bu mesajı ekrandan kaldır</string>
+    <string name="floating_clear">Ekranda tutulan tüm mesajları kaldır</string>
+    <string name="floating_move_side">Diğer tarafa taşı</string>
+    <string name="floating_move_top">Üste taşı</string>
+    <string name="floating_move_bottom">Alta taşı</string>
 </resources>

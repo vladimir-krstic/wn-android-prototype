@@ -134,6 +134,7 @@ internal fun actionLabel(action: MessageAction): String = stringResource(
         MessageAction.Share -> R.string.attachment_share
         MessageAction.SaveAttachments -> R.string.save_attachments
         MessageAction.Forward -> R.string.forward
+        MessageAction.KeepOnScreen -> R.string.floating_keep
         MessageAction.Pin -> R.string.message_pin
         MessageAction.Unpin -> R.string.message_unpin
         MessageAction.Copy -> R.string.copy
@@ -163,6 +164,7 @@ internal fun actionIcon(action: MessageAction): Int = when (action) {
     MessageAction.Share -> R.drawable.ic_share
     MessageAction.SaveAttachments -> R.drawable.ic_download
     MessageAction.Forward -> R.drawable.ic_forward
+    MessageAction.KeepOnScreen -> R.drawable.ic_floating_message
     MessageAction.Pin -> R.drawable.ic_push_pin
     MessageAction.Unpin -> R.drawable.ic_unpin
     MessageAction.Copy -> R.drawable.ic_content_copy

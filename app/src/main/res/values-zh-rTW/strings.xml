@@ -1902,4 +1902,17 @@
     <string name="quick_account_switching_detail">在頭像旁顯示按鈕，輕點即可切換帳號。</string>
     <string name="quick_account_switch_to">切換至 %1$s</string>
     <string name="quick_account_switched">已切換至 %1$s</string>
+    <string name="floating_keep">保留在螢幕上</string>
+    <string name="floating_title">螢幕上保留的訊息</string>
+    <string name="floating_expand">展開訊息</string>
+    <string name="floating_drag">移動訊息</string>
+    <string name="floating_next">下一則保留的訊息</string>
+    <string name="floating_options">保留的訊息選項</string>
+    <string name="floating_position">%1$d / %2$d</string>
+    <string name="floating_source">來自：%1$s · %2$s</string>
+    <string name="floating_remove">移除此訊息</string>
+    <string name="floating_clear">移除所有保留的訊息</string>
+    <string name="floating_move_side">移到另一側</string>
+    <string name="floating_move_top">移到頂部</string>
+    <string name="floating_move_bottom">移到底部</string>
 </resources>

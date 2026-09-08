@@ -1164,3 +1164,41 @@ AMOLED screenshot follow-up (2026-09-08): grouped **outside perimeters** use the
 standard pixel-rounded 1 dp outline, including curves. Internal shared dividers
 remain exactly one physical pixel and row gaps remain zero. Ordinary chat-list
 entries have no border.
+
+### Floating reference messages — 2026-09-08
+
+The approved floating stack uses a maximum 320 dp card with Material large shape,
+surfaceContainer and 6 dp shadow. Reuse standard 48 dp IconButtons, 16 dp margins,
+8 dp related spacing and the pinned-message vertical pagination indicator. Reserve
+64 dp below safe top insets and measured composer height (80 dp minimum on the chat
+list) plus 8 dp below; respect safe drawing and IME insets. A short viewport keeps
+only the actionable header. Expanded content uses a standard sheet, 16 dp insets
+and the existing full message renderer. See the floating-messages brief.
+
+Floating stack follow-up: replace the 320 dp cap with full available width minus
+24 dp on each side (16 dp chat margin × 1.5). Place pagination only when count > 1
+in the fixed 48 dp minimum header, outside the pager. Expansion remains within
+the card, wraps short content and bounds long content at 480 dp or available height.
+A shared Material ripple covers the full card; there is no expand glyph.
+
+Floating pagination correction: leading side rail, 8 dp gap to message content,
+top-aligned to the message rather than the toolbar or vertical center. Keep it
+outside scrolling/paging content. Remove the card-wide press/ripple layer.
+
+### Floating card header and swipe-only paging — 2026-09-08
+
+Latest user correction: horizontal content swipes own paging; taps are inert.
+The full 48 dp title row is the drag target, with 16 dp leading text inset and no
+handle icon. Sender is expanded-only. The menu precedes the trailing inward-arrow
+collapse button; long press still toggles expansion without a card press effect.
+Implementation: `FloatingMessagesUi.kt`; interaction contracts:
+`FloatingMessageFlowTest.kt`. See `docs/screens/floating-messages.md` for validation.
+
+### Floating compact typography and circular paging — 2026-09-08
+
+User correction keeps bodyMedium text in both floating-card states and hides
+sender/source/time metadata when collapsed. HorizontalPager boundary copies
+wrap swipes in both directions, with actual-message pagination and selection;
+one message remains non-scrollable. Evidence: `FloatingMessagesUi.kt`,
+`FloatingMessagePages`, `FloatingMessagesTest`, and `FloatingMessageFlowTest`.
+Validation is recorded in `docs/screens/floating-messages.md`.

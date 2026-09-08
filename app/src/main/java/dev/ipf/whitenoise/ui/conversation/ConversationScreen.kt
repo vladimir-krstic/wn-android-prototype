@@ -334,6 +334,10 @@ fun ConversationScreen(
     onTranslationPreferences: (dev.ipf.whitenoise.model.TranslationPreferences) -> Unit = {},
     onTranslationScenario: () -> dev.ipf.whitenoise.model.TranslationScenario = { dev.ipf.whitenoise.model.TranslationScenario.Ready },
 ) {
+    val floatingMessages = LocalFloatingMessages.current
+    val floatingComposerHeight = LocalFloatingComposerHeight.current
+    val floatingObscured = LocalFloatingObscured.current
+
     DictationOriginHost(profile, chat)
     val retentionController = LocalRetention.current
     LaunchedEffect(profile.id, chat.id, retentionController?.example) { retentionController?.open(dev.ipf.whitenoise.model.GroupOwner(profile.id, chat.id)) }
@@ -438,8 +442,13 @@ fun ConversationScreen(
     var sentLocationTarget by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var pendingEndSettlement by remember(chat.id) { mutableStateOf(false) }
     var compactComposerHeightPx by remember(chat.id) { mutableIntStateOf(0) }
+    androidx.compose.runtime.SideEffect { floatingComposerHeight(compactComposerHeightPx.toFloat()) }
+    androidx.compose.runtime.DisposableEffect(chat.id) {
+        onDispose { floatingComposerHeight(0f); floatingObscured(false) }
+    }
     var composerOverlayActive by remember(chat.id) { mutableStateOf(false) }
     var composerPresentationActive by remember(chat.id) { mutableStateOf(false) }
+    androidx.compose.runtime.SideEffect { floatingObscured(composerOverlayActive || composerPresentationActive || focusedMessageId != null) }
     var composerTravelPx by remember(chat.id) { mutableFloatStateOf(0f) }
     var pushTimelineWithComposer by remember(chat.id) { mutableStateOf(false) }
     val messageBounds = remember(chat.id) { mutableStateMapOf<String, Rect>() }
@@ -597,6 +606,7 @@ fun ConversationScreen(
             initialViewportSettled = true
         }
         when (action) {
+            MessageAction.KeepOnScreen -> floatingMessages?.keep(profile.id, chat.id, message.id)
             MessageAction.Translate -> { readerMessageId = null; translationPendingGeneration = null; translationSource = message; translationMessageId = message.id }
             MessageAction.RetrySend -> onRetry(message.id)
             MessageAction.Edit -> { readerMessageId = null; editMessageId = message.id }
@@ -2091,6 +2101,36 @@ private fun TimelineInformation(text: String, isNotice: Boolean = false) {
                 style = MaterialTheme.typography.labelMedium,
                 textAlign = TextAlign.Center,
             )
+        }
+    }
+}
+
+/** Message content for the floating card, without direction alignment or an enclosing bubble. */
+@Composable
+internal fun ReadOnlyMessageContent(profile: Profile, chat: Chat, message: ChatMessage) {
+    val item = remember(chat, message.id) {
+        ConversationProjection.items(chat).filterIsInstance<ConversationItem.MessageItem>().firstOrNull { it.id == message.id }
+    }
+    val controller = LocalReadAloudController.current ?: remember { ReadAloudController() }
+    val text = dev.ipf.whitenoise.model.MessageEditing.displayedText(message)
+    val operation = message.agentOperation
+    CompositionLocalProvider(LocalMessageReading provides MessageReadingActions(collapse = false, canWrite = false)) {
+        Column(Modifier.fillMaxWidth().testTag("floating.content.${message.id}"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (item != null && message.replyToMessageId != null) ReplyQuote(profile, item, outgoing = false,
+                onOpenReplyTarget = {}, canOpenReplyTarget = false)
+            if (message.attachments.isNotEmpty()) TimelineAttachmentContent(message.attachments, outgoing = false,
+                onOpenMedia = {}, messageId = message.id, people = profile.people, modifier = Modifier.fillMaxWidth())
+            if (message.nostrEvents.isNotEmpty()) NostrEventCards(message, profile, onRetry = { _, _ -> }, onOpenPerson = {})
+            if (operation != null) {
+                Text(operation.name, style = MaterialTheme.typography.titleSmall)
+                Text(operation.summary, style = MaterialTheme.typography.bodyMedium)
+                operation.result?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+                operation.statusDetail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            if (text.isNotBlank()) MessageBubbleText(containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                profile = profile, message = message, text = text, plainText = dev.ipf.whitenoise.model.InlineMessageMarkup.plainText(text),
+                searchQuery = "", onOpenPersonProfile = {}, memberIds = null, readAloudController = controller,
+                modifier = Modifier.fillMaxWidth())
         }
     }
 }

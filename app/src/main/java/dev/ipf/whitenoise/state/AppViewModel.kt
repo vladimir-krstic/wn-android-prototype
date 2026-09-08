@@ -236,6 +236,11 @@ class AppViewModel(
             signedIn = { it in uiState.signedInProfileIds },locked = { appLock.blocked || appLock.shieldsBackground })
     }
 
+    val floatingMessages by lazy {
+        FloatingMessageController(profiles = { uiState.profiles }, activeId = { uiState.activeProfileId },
+            signedIn = { uiState.signedInProfileIds }, now = { retention.nowMillis })
+    }
+
     val appLock: AppLockController by lazy {
         AppLockController(active = { uiState.activeProfile },signedIn = { it in uiState.signedInProfileIds },
             gateChanged = { blocked -> incoming.applySessionLock(blocked); notificationActions.reconcile(); auditLogs.reconcile() })
@@ -342,6 +347,7 @@ class AppViewModel(
         val results = targets.associate { it.id to IncomingSharing.stage(it,prepared,requestId) }
         uiState = uiState.copy(profiles = uiState.profiles.map { p -> if (p.id != profileId) p else
             p.copy(chats = p.chats.map { results[it.id]?.chat ?: it }) })
+        floatingMessages.reconcile()
         composerCapture.reconcile()
         return IncomingCommit(targets.map { it.id }, results.values.sumOf { it.dropped })
     }
@@ -439,6 +445,7 @@ class AppViewModel(
                     uiState = uiState.copy(profiles = uiState.profiles.map { profile -> if (profile.id != owner.profileId) profile else
                         profile.copy(chats = profile.chats.mapNotNull { if (it.id == owner.chatId) next else it },
                             chatFolders = if (next == null) profile.chatFolders.map { it.copy(chatIds = it.chatIds - owner.chatId) } else profile.chatFolders) })
+                    floatingMessages.reconcile()
                     composerCapture.reconcile()
                     true
                 }
@@ -633,6 +640,7 @@ class AppViewModel(
         interruptMessageOperations()
         cancelAccess()
         uiState = uiState.copy(activeProfileId = null, signedInProfileIds = emptySet(), pendingDiagnosticsProfileId = null)
+        floatingMessages.reconcile()
         startupState = startupState.copy(phase = StartupPhase.Ready)
     }
 
@@ -917,6 +925,7 @@ class AppViewModel(
             lastRetainedProfileId = activeId.takeUnless { wipeData },
             quickAccountSwitching = uiState.quickAccountSwitching,
         )
+        floatingMessages.reconcile()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()
@@ -1020,6 +1029,7 @@ class AppViewModel(
             profiles = uiState.profiles.filterNot { it.id == profileId },
             signedInProfileIds = uiState.signedInProfileIds - profileId,
         )
+        floatingMessages.reconcile()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()
@@ -1080,6 +1090,7 @@ class AppViewModel(
         appLock.erase()
         auditLogs.erase()
         notificationReadTargets.clear()
+        floatingMessages.reconcile()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()
@@ -2929,6 +2940,7 @@ class AppViewModel(
                 profiles.first { candidate -> candidate.id == profile.id }.diagnostics.hasSeenPrompt
             },
         )
+        floatingMessages.reconcile()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()
@@ -2982,6 +2994,7 @@ class AppViewModel(
                 if (profile.id == activeId) transform(profile) else profile
             },
         )
+        floatingMessages.reconcile()
         composerCapture.reconcile()
         groupWork.reconcile()
         groupLifecycle.reconcile()

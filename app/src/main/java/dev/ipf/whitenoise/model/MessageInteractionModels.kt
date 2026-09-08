@@ -10,6 +10,7 @@ enum class MessageAction {
     SelectText,
     Reply,
     Forward,
+    KeepOnScreen,
     Pin,
     Unpin,
     Share,
@@ -72,6 +73,7 @@ object MessageActionPolicy {
             }
             add(MessageAction.Reply)
             add(MessageAction.Forward)
+            add(MessageAction.KeepOnScreen)
             if (canPin && message.deliveryState == MessageDeliveryState.Sent) add(if (pinned) MessageAction.Unpin else MessageAction.Pin)
             if (inReader) add(MessageAction.Share)
             if (AttachmentExports.keys(message).isNotEmpty()) add(MessageAction.SaveAttachments)
