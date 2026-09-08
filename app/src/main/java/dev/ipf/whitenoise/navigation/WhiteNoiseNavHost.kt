@@ -1,8 +1,7 @@
 package dev.ipf.whitenoise.navigation
 
-import dev.ipf.whitenoise.ui.settings.DownloadExampleControls
-import dev.ipf.whitenoise.ui.settings.RelayPublicationDeveloperControls
-import dev.ipf.whitenoise.ui.settings.AppUpdateDeveloperControls
+import androidx.compose.ui.res.stringResource
+
 import dev.ipf.whitenoise.R
 
 import androidx.activity.compose.BackHandler
@@ -90,6 +89,14 @@ fun WhiteNoiseNavHost(
     appViewModel: AppViewModel,
     modifier: Modifier = Modifier,
 ) {
+    val scenarioSessions = dev.ipf.whitenoise.scenarios.LocalScenarioSessions.current
+    val scenarioRun = dev.ipf.whitenoise.scenarios.LocalScenarioRun.current
+    fun back(): Boolean {
+        val popped = navController.popBackStack()
+        if (!popped && scenarioRun != null) scenarioSessions?.exit()
+        return popped
+    }
+
     val uiState = appViewModel.uiState
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -125,7 +132,7 @@ fun WhiteNoiseNavHost(
         signInPrivateKey.edit { replace(0, length, "") }
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
-        navController.popBackStack()
+        back()
     }
 
     fun showSignedInRoot() {
@@ -161,12 +168,24 @@ fun WhiteNoiseNavHost(
     }
 
     val accessAttempt = appViewModel.accessAttempt
-    BackHandler(enabled = accessAttempt != null && accessAttempt.phase != AccessPhase.RecoveryConsent) {
+    BackHandler(enabled = accessAttempt != null && accessAttempt.phase !in setOf(AccessPhase.RecoveryConsent, AccessPhase.ProfileSetup)) {
         appViewModel.cancelAccess()
     }
     LaunchedEffect(accessAttempt?.id, accessAttempt?.phase, currentBackStackEntry) {
         val attempt = accessAttempt ?: return@LaunchedEffect
         val entry = currentBackStackEntry ?: return@LaunchedEffect
+        if (attempt.phase == AccessPhase.ProfileSetup) {
+            val routeName = entry.destination.route?.substringBefore('/')?.substringBefore('?')
+            if (routeName == AppRoute.SignIn::class.qualifiedName) {
+                focusManager.clearFocus(force = true)
+                keyboardController?.hide()
+                navController.navigate(AppRoute.ProfileSetup(attempt.origin)) {
+                    popUpTo<AppRoute.SignIn> { inclusive = true }
+                    launchSingleTop = true
+                }
+            } else if (routeName !in setupRouteNames) appViewModel.cancelAccess()
+            return@LaunchedEffect
+        }
         val expectedRoute = when (attempt.method) {
             AccessMethod.Retained -> AppRoute.Welcome::class.qualifiedName
             AccessMethod.CreateProfile -> AppRoute.SignUp::class.qualifiedName
@@ -181,6 +200,40 @@ fun WhiteNoiseNavHost(
             delay(2_000)
             if (appViewModel.advanceAccess(attempt.id, attempt.phase)) showSignedInRoot()
         }
+    }
+
+    val setupSession = appViewModel.profileSetup.session
+    val setupWork = setupSession?.work
+    LaunchedEffect(setupSession?.id, setupWork, currentBackStackEntry) {
+        val entry = currentBackStackEntry ?: return@LaunchedEffect
+        val routeName = entry.destination.route?.substringBefore('/')?.substringBefore('?')
+        if (routeName !in setupRouteNames) return@LaunchedEffect
+        if (setupSession == null) {
+            if (appViewModel.uiState.activeProfile == null) {
+                navController.navigate(AppRoute.Welcome()) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                    launchSingleTop = true
+                }
+            } else navController.popBackStack<AppRoute.Welcome>(inclusive = false)
+            return@LaunchedEffect
+        }
+        if (setupWork != null) entry.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(700)
+            appViewModel.profileSetup.complete(setupSession.id, setupWork)
+        }
+    }
+
+    fun cancelSetup(origin: OnboardingOrigin) {
+        appViewModel.cancelAccess()
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        navController.popBackStack(AppRoute.Welcome(origin), inclusive = false)
+    }
+
+    fun backFromSetupDetail() {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        back()
     }
 
     appViewModel.profileExitReport?.let { ProfileExitReportDialog(it, appViewModel::dismissProfileExitReport) }
@@ -268,7 +321,7 @@ fun WhiteNoiseNavHost(
     ) { floatingModifier ->
     NavHost(
         navController = navController,
-        startDestination = AppRoute.startDestination,
+        startDestination = scenarioRun?.destination?.route ?: AppRoute.startDestination,
         modifier = floatingModifier,
     ) {
         composable<AppRoute.Welcome> { entry ->
@@ -295,6 +348,9 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.SignIn> { entry ->
             val route = entry.toRoute<AppRoute.SignIn>()
             var scannerOpen by rememberSaveable { mutableStateOf(false) }
+            dev.ipf.whitenoise.scenarios.ScenarioEntry({ it == "sign-in-form" }) {
+                signInPrivateKey.edit { replace(0, length, dev.ipf.whitenoise.model.LoginPrototypeData.privateKey) }
+            }
             SignInScreen(
                 onBack = ::returnFromOnboardingForm,
                 onScan = { scannerOpen = true },
@@ -315,6 +371,7 @@ fun WhiteNoiseNavHost(
                 onRetry = appViewModel::retryAccess,
                 onRecover = appViewModel::confirmAccessRecovery,
                 onCancel = appViewModel::cancelAccess,
+                onKeyEdited = appViewModel::signInKeyEdited,
             )
 
             if (scannerOpen) {
@@ -329,6 +386,49 @@ fun WhiteNoiseNavHost(
                         scannerUnavailable = true
                     },
                 )
+            }
+        }
+        composable<AppRoute.ProfileSetup> { entry ->
+            val route = entry.toRoute<AppRoute.ProfileSetup>()
+            setupSession?.let { session ->
+                dev.ipf.whitenoise.ui.onboarding.ProfileSetupScreen(session,
+                    onBack = { cancelSetup(route.origin) },
+                    onStep = { navController.navigate(AppRoute.ProfileSetupDetail(it.name)) },
+                    onOpenChats = { if (appViewModel.finishProfileSetup(session.id)) showSignedInRoot() })
+            }
+        }
+        composable<AppRoute.ProfileSetupDetail> { entry ->
+            val step = dev.ipf.whitenoise.model.ProfileSetupStep.entries.firstOrNull { it.name == entry.toRoute<AppRoute.ProfileSetupDetail>().step }
+            if (step != null) setupSession?.let { session ->
+                val status = session.check(step).status
+                LaunchedEffect(status) {
+                    if (status in setOf(dev.ipf.whitenoise.model.ProfileSetupStatus.Done, dev.ipf.whitenoise.model.ProfileSetupStatus.Skipped))
+                        navController.popBackStack<AppRoute.ProfileSetup>(inclusive = false)
+                }
+                dev.ipf.whitenoise.ui.onboarding.ProfileSetupDetailScreen(session, step,
+                    onBack = ::backFromSetupDetail,
+                    onAction = { appViewModel.profileSetup.act(session.id, step, it) },
+                    onEditProfile = { navController.navigate(AppRoute.SetupProfileEditor) },
+                    onDiscoveryUrl = { appViewModel.profileSetup.updateDiscoveryUrl(session.id, it) })
+            }
+        }
+        composable<AppRoute.SetupProfileEditor> {
+            setupSession?.let { session ->
+                val check = session.check(dev.ipf.whitenoise.model.ProfileSetupStep.Profile)
+                LaunchedEffect(check.status) {
+                    if (check.status == dev.ipf.whitenoise.model.ProfileSetupStatus.Done)
+                        navController.popBackStack<AppRoute.ProfileSetup>(inclusive = false)
+                }
+                SignUpScreen(initialName = session.draft.name, initialAbout = session.draft.about,
+                    initialAvatar = session.draft.avatar, editing = true,
+                    saving = session.work?.action == dev.ipf.whitenoise.model.ProfileSetupAction.SaveProfile,
+                    saveError = if (check.issue == dev.ipf.whitenoise.model.ProfileSetupIssue.ProfileSave) stringResource(R.string.setup_save_failed) else null,
+                    onBack = ::backFromSetupDetail,
+                    onSignUp = { name, about, avatar ->
+                        appViewModel.profileSetup.updateDraft(session.id, dev.ipf.whitenoise.model.SetupProfileDraft(name, about, avatar ?: dev.ipf.whitenoise.model.ProfileAvatar.Monogram))
+                        appViewModel.profileSetup.act(session.id, dev.ipf.whitenoise.model.ProfileSetupStep.Profile, dev.ipf.whitenoise.model.ProfileSetupAction.SaveProfile)
+                    },
+                    onDraftChanged = { appViewModel.profileSetup.updateDraft(session.id, it) })
             }
         }
         composable<AppRoute.SignUp> { entry ->
@@ -402,7 +502,7 @@ fun WhiteNoiseNavHost(
             SettingsScreen(
                 uiState = uiState,
                 onAddProfile = { navController.navigate(AppRoute.Welcome(OnboardingOrigin.AddProfile)) },
-                onBack = { navController.popBackStack() },
+                onBack = { back() },
                 onShareConnect = { navController.navigate(AppRoute.ShareConnect) },
                 onEditProfile = { navController.navigate(AppRoute.EditProfile) },
                 onProfileKeys = { navController.navigate(AppRoute.ProfileKeys) },
@@ -430,30 +530,30 @@ fun WhiteNoiseNavHost(
         }
         composable<AppRoute.Dictation> {
             uiState.activeProfile?.let { profile ->
-                dev.ipf.whitenoise.ui.settings.DictationSettingsScreen(profile, onBack = { navController.popBackStack() })
+                dev.ipf.whitenoise.ui.settings.DictationSettingsScreen(profile, onBack = { back() })
             }
         }
         composable<AppRoute.AiAgents> {
             uiState.activeProfile?.let { profile ->
-                AiAgentsScreen(profile, onBack = { navController.popBackStack() })
+                AiAgentsScreen(profile, onBack = { back() })
             }
         }
         composable<AppRoute.Translation> {
             uiState.activeProfile?.let { profile ->
                 dev.ipf.whitenoise.ui.settings.TranslationSettingsScreen(profile,
-                    onChange = { appViewModel.updateTranslationPreferences(profile.id, it) }, onBack = { navController.popBackStack() })
+                    onChange = { appViewModel.updateTranslationPreferences(profile.id, it) }, onBack = { back() })
             }
         }
         composable<AppRoute.ReadAloud> {
             uiState.activeProfile?.let { profile ->
-                dev.ipf.whitenoise.ui.settings.ReadAloudSettingsScreen(profile, onBack = { navController.popBackStack() })
+                dev.ipf.whitenoise.ui.settings.ReadAloudSettingsScreen(profile, onBack = { back() })
             }
         }
         composable<AppRoute.Folders> { entry ->
             val route = entry.toRoute<AppRoute.Folders>()
             val profile = uiState.activeProfile?.takeIf { it.id == route.profileId }
             if (profile == null) LaunchedEffect(route.profileId) { showSignedInRoot() }
-            else ChatFoldersScreen(profile, onBack = { navController.popBackStack() },
+            else ChatFoldersScreen(profile, onBack = { back() },
                 onCreate = { navController.navigate(AppRoute.EditFolder(profile.id)) },
                 onEdit = { navController.navigate(AppRoute.EditFolder(profile.id, it)) },
                 onMove = { id, delta -> appViewModel.moveChatFolder(profile.id, id, delta) },
@@ -464,11 +564,11 @@ fun WhiteNoiseNavHost(
             val route = entry.toRoute<AppRoute.EditFolder>()
             val profile = uiState.activeProfile?.takeIf { it.id == route.profileId }
             if (profile == null) LaunchedEffect(route.profileId) { showSignedInRoot() }
-            else ChatFolderEditScreen(profile, route.folderId, onBack = { navController.popBackStack() },
+            else ChatFolderEditScreen(profile, route.folderId, onBack = { back() },
                 onSave = { appViewModel.saveChatFolder(profile.id, route.folderId, it) != null })
         }
         composable<AppRoute.ShareConnect> {
-            uiState.activeProfile?.let { ShareConnectScreen(it, onBack = { navController.popBackStack() }, onOpenProfile = { person ->
+            uiState.activeProfile?.let { ShareConnectScreen(it, onBack = { back() }, onOpenProfile = { person ->
                 if (person.id != it.id) appViewModel.acceptDiscoveredPerson(it.id, person)?.let { id -> navController.navigate(AppRoute.PersonProfile(id)) }
             }) }
         }
@@ -476,7 +576,7 @@ fun WhiteNoiseNavHost(
             uiState.activeProfile?.let { profile ->
                 EditProfileScreen(
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onSave = appViewModel::updateActiveProfileDetails,
                     onSaveAddress = appViewModel::updateNostrAddress,
                     onSaveDraft = { appViewModel.beginProfileSave(profile.id, it) },
@@ -491,7 +591,7 @@ fun WhiteNoiseNavHost(
         }
         composable<AppRoute.ProfileKeys> {
             uiState.activeProfile?.let { profile -> ProfileKeysScreen(
-                profile, onBack = { navController.popBackStack() },
+                profile, onBack = { back() },
                 onRetryKey = { appViewModel.retryLocalKeyAccess(profile.id) },
             ) }
         }
@@ -500,12 +600,12 @@ fun WhiteNoiseNavHost(
             val profile = uiState.activeProfile
             val chat = appViewModel.chat(route.chatId)
             if (profile != null && chat != null) dev.ipf.whitenoise.ui.settings.ConversationNotificationScreen(
-                profile,chat,appViewModel.notificationControls,onBack = { navController.popBackStack() })
-            else LaunchedEffect(route.chatId) { navController.popBackStack() }
+                profile,chat,appViewModel.notificationControls,onBack = { back() })
+            else LaunchedEffect(route.chatId) { back() }
         }
         composable<AppRoute.Notifications> {
             uiState.activeProfile?.let { profile ->
-                NotificationsScreen(profile, onBack = { navController.popBackStack() }, onChange = {
+                NotificationsScreen(profile, onBack = { back() }, onChange = {
                     if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.updateProfileSettings(it)
                 })
             }
@@ -515,11 +615,11 @@ fun WhiteNoiseNavHost(
             val profile = uiState.activeProfile?.takeIf { it.id == route.profileId }
             val chat = profile?.chats?.firstOrNull { it.id == route.chatId }
             if (profile != null && chat != null) dev.ipf.whitenoise.ui.settings.ChatDownloadScreen(
-                profile, chat, onBack = { navController.popBackStack() },
+                profile, chat, onBack = { back() },
                 onInheritance = { type, inherit -> appViewModel.setChatDownloadInheritance(profile.id, chat.id, type, inherit) },
                 onNetwork = { type, network, enabled -> appViewModel.setChatDownloadNetwork(profile.id, chat.id, type, network, enabled) },
                 onReset = { appViewModel.resetChatDownloads(profile.id, chat.id) },
-            ) else LaunchedEffect(route) { navController.popBackStack() }
+            ) else LaunchedEffect(route) { back() }
         }
         composable<AppRoute.Appearance> {
             uiState.activeProfile?.let { profile ->
@@ -527,7 +627,7 @@ fun WhiteNoiseNavHost(
                     profile = profile,
                     quickAccountSwitching = uiState.quickAccountSwitching,
                     onQuickAccountSwitching = appViewModel::setQuickAccountSwitching,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onChange = appViewModel::updateProfileSettings,
                     onLanguage = { navController.navigate(AppRoute.Language) },
                     onActionColor = { navController.navigate(AppRoute.ActionColor) },
@@ -539,7 +639,7 @@ fun WhiteNoiseNavHost(
             uiState.activeProfile?.let { profile ->
                 ActionColorScreen(
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onChange = appViewModel::updateProfileSettings,
                 )
             }
@@ -552,21 +652,21 @@ fun WhiteNoiseNavHost(
                 ChatBubbleColorsScreen(
                     profile = profile,
                     chat = chat,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onProfileChange = appViewModel::updateProfileSettings,
                     onChatChange = { colors ->
                         if (chat != null) appViewModel.setChatBubbleColors(profile.id, chat.id, colors)
                     },
                 )
             } else if (profile != null) {
-                LaunchedEffect(route.chatId) { navController.popBackStack() }
+                LaunchedEffect(route.chatId) { back() }
             }
         }
         composable<AppRoute.Language> {
             uiState.activeProfile?.let { profile ->
                 LanguageScreen(
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onChange = appViewModel::updateProfileSettings,
                 )
             }
@@ -576,7 +676,7 @@ fun WhiteNoiseNavHost(
                 PrivacySecurityScreen(
                     profile = profile,
                     allProfileIds = uiState.profiles.map { it.id },
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onChange = appViewModel::updateProfileSettings,
                     onDiagnosticsImprovements = { navController.navigate(AppRoute.DiagnosticsImprovements) },
                     onEraseAppData = { confirmation ->
@@ -587,7 +687,7 @@ fun WhiteNoiseNavHost(
         }
         composable<AppRoute.DataUsage> {
             uiState.activeProfile?.let { profile ->
-                DataUsageScreen(profile, onBack = { navController.popBackStack() }, onChange = { appViewModel.updateDataUsageSettings(profile.id, it) },
+                DataUsageScreen(profile, onBack = { back() }, onChange = { appViewModel.updateDataUsageSettings(profile.id, it) },
                     onPauseAutomatic = { appViewModel.pauseAutomaticDownloads(profile.id, it) })
             }
         }
@@ -595,7 +695,7 @@ fun WhiteNoiseNavHost(
             uiState.activeProfile?.let { profile ->
                 DiagnosticsImprovementsScreen(
                     profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onAnalytics = { appViewModel.setAnalyticsEnabled(profile.id, it) },
                     onLogging = { appViewModel.setDiagnosticLoggingEnabled(profile.id, it) },
                     onClear = { appViewModel.clearDiagnosticRecords(profile.id) },
@@ -606,7 +706,7 @@ fun WhiteNoiseNavHost(
             uiState.activeProfile?.let { profile ->
                 ProfileRelaysScreen(
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onRelay = { navController.navigate(AppRoute.ProfileRelayDetails(it)) },
                     onAdd = { value, roles -> appViewModel.addProfileRelay(profile.id, value, roles) },
                     onConnected = {
@@ -627,7 +727,7 @@ fun WhiteNoiseNavHost(
                 profile.settings.relays.firstOrNull { it.id == route.relayId }?.let { relay ->
                     ProfileRelayDetailsScreen(
                         relay = relay,
-                        onBack = { navController.popBackStack() },
+                        onBack = { back() },
                         onSetRole = { role, enabled ->
                             appViewModel.setProfileRelayRole(profile.id, relay.id, role, enabled)
                         },
@@ -640,7 +740,7 @@ fun WhiteNoiseNavHost(
             uiState.activeProfile?.let { profile ->
                 SupportScreen(
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onStart = {
                         appViewModel.openOrCreateSupportChat()?.let {
                             openConversation(it, clearsCreationFlow = false)
@@ -652,102 +752,69 @@ fun WhiteNoiseNavHost(
         }
         composable<AppRoute.Help> {
             HelpScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { back() },
                 onReportBug = { navController.navigate(AppRoute.BugReport) },
                 onAbout = { navController.navigate(AppRoute.AboutLicenses) },
             )
         }
         composable<AppRoute.BugReport> {
-            BugReportScreen(onBack = { navController.popBackStack() })
+            BugReportScreen(onBack = { back() })
         }
         composable<AppRoute.AboutLicenses> {
             AboutLicensesScreen(
                 versionName = dev.ipf.whitenoise.BuildConfig.VERSION_NAME,
                 buildNumber = dev.ipf.whitenoise.BuildConfig.VERSION_CODE.toString(),
-                onBack = { navController.popBackStack() },
+                onBack = { back() },
             )
         }
         composable<AppRoute.Donate> {
-            DonateScreen(onBack = { navController.popBackStack() })
+            DonateScreen(onBack = { back() })
         }
         composable<AppRoute.ManageProfiles> {
             uiState.activeProfile?.let { profile ->
                 ManageProfilesScreen(
                     profiles = uiState.profiles,
                     activeProfileId = profile.id,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onRemove = appViewModel::removeStoredProfile,
                 )
             }
         }
         composable<AppRoute.AuditLogs> {
             if (uiState.activeProfile?.developerTools?.isEnabled == true)
-                dev.ipf.whitenoise.ui.settings.AuditLogsScreen(appViewModel.auditLogs) { navController.popBackStack() }
-            else dev.ipf.whitenoise.ui.settings.SettingsScaffold(title = androidx.compose.ui.res.stringResource(R.string.audit_logs_title),onBack = { navController.popBackStack() }) {
+                dev.ipf.whitenoise.ui.settings.AuditLogsScreen(appViewModel.auditLogs) { back() }
+            else dev.ipf.whitenoise.ui.settings.SettingsScaffold(title = androidx.compose.ui.res.stringResource(R.string.audit_logs_title),onBack = { back() }) {
                 dev.ipf.whitenoise.ui.settings.SettingsExplainer(androidx.compose.ui.res.stringResource(R.string.audit_logs_developer_only))
             }
+        }
+        composable<AppRoute.Scenarios> {
+            dev.ipf.whitenoise.scenarios.ScenarioCatalogScreen({ back() }) {
+                navController.navigate(AppRoute.ScenarioVariants(it))
+            }
+        }
+        composable<AppRoute.ScenarioVariants> { entry ->
+            val definition = dev.ipf.whitenoise.scenarios.ScenarioCatalog.find(entry.toRoute<AppRoute.ScenarioVariants>().scenarioId)
+            if (definition != null) dev.ipf.whitenoise.scenarios.ScenarioVariantsScreen(definition,
+                { back() }, { scenarioSessions?.start(definition, it) })
+        }
+        composable<AppRoute.ScenarioExample> { entry ->
+            val route = entry.toRoute<AppRoute.ScenarioExample>()
+            dev.ipf.whitenoise.scenarios.ScenarioExampleScreen(route.kind, route.variant) { back() }
+        }
+        composable<AppRoute.ProfileSetupScenarios> {
+            LaunchedEffect(Unit) { navController.navigate(AppRoute.ScenarioVariants("setup")) { popUpTo<AppRoute.ProfileSetupScenarios> { inclusive = true } } }
         }
         composable<AppRoute.DeveloperTools> {
             uiState.activeProfile?.let { profile ->
                 DeveloperToolsScreen(
-                    parityController = appViewModel.developerParity,
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onEnabled = appViewModel::setDeveloperToolsEnabled,
                     onDebugMode = appViewModel::setDebugMode,
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics()) },
                     onKeyPackages = { navController.navigate(AppRoute.KeyPackages) },
                     onAuditLogs = { navController.navigate(AppRoute.AuditLogs) },
-                    accessScenario = appViewModel.nextAccessScenario,
-                    onAccessScenario = appViewModel::selectAccessScenario,
-                    onStartupFailure = appViewModel::previewStartupFailure,
-                    peopleSearchScenario = appViewModel.peopleSearchScenario,
-                    onPeopleSearchScenario = appViewModel::selectPeopleSearchScenario,
-                    groupContactScenario = appViewModel.groupContactScenario,
-                    onGroupContactScenario = appViewModel::selectGroupContactScenario,
-                    createdChatUnavailable = appViewModel.nextCreatedChatUnavailable,
-                    onCreatedChatUnavailable = appViewModel::setCreatedChatUnavailable,
-                    historyScenario = appViewModel.nextHistoryScenario,
-                    onHistoryScenario = appViewModel::selectHistoryScenario,
-                    messageEditScenario = appViewModel.nextMessageEditScenario,
-                    onMessageEditScenario = appViewModel::selectMessageEditScenario,
-                    messageDeleteScenario = appViewModel.nextMessageDeleteScenario,
-                    onMessageDeleteScenario = appViewModel::selectMessageDeleteScenario,
-                    messageForwardScenario = appViewModel.nextMessageForwardScenario,
-
-
-                    attachmentTransferScenario = appViewModel.attachmentTransferScenario,
-                    onAttachmentTransferScenario = appViewModel::selectAttachmentTransferScenario,
-                    downloadExampleControls = { DownloadExampleControls(
-                        appViewModel.downloadNetworkExample, appViewModel.downloadTransfersHeld,
-                        appViewModel::chooseDownloadNetwork, appViewModel::loadDownloadQueueExample, appViewModel::holdDownloadTransfers) },
-                    relayPublicationControls = { RelayPublicationDeveloperControls(appViewModel.relayPublication, appViewModel::loadRelayImportExample) },
-                    updateControls = { AppUpdateDeveloperControls(appViewModel.appUpdates) },
-                    photoEditorScenario = appViewModel.nextPhotoEditorScenario,
-                    onPhotoEditorScenario = appViewModel::selectPhotoEditorScenario,
-                    locationScenario = appViewModel.nextLocationScenario,
-                    onLocationScenario = appViewModel::selectLocationScenario,
-                    attachmentAccessScenario = appViewModel.nextAttachmentAccessScenario,
-                    onAttachmentAccessScenario = appViewModel::selectAttachmentAccessScenario,
-                    onMessageForwardScenario = appViewModel::selectMessageForwardScenario,
-                    translationScenario = appViewModel.nextTranslationScenario,
-                    onTranslationScenario = appViewModel::selectTranslationScenario,
-                    writingScenario = appViewModel.nextWritingScenario,
-                    onWritingScenario = appViewModel::selectWritingScenario,
-                    libraryScenario = appViewModel.nextGlobalLibraryScenario,
-                    onLibraryScenario = appViewModel::selectGlobalLibraryScenario,
-                    globalVoiceScenario = appViewModel.nextGlobalVoiceScenario,
-                    onGlobalVoiceScenario = appViewModel::selectGlobalVoiceScenario,
-                    chatBatchScenario = appViewModel.nextChatBatchScenario,
-                    onChatBatchScenario = appViewModel::selectChatBatchScenario,
-                    onChatConnectionScenario = appViewModel::selectChatConnectionScenario,
-                    profileSaveScenario = appViewModel.nextProfileSaveScenario,
-                    onProfileSaveScenario = appViewModel::selectProfileSaveScenario,
-                    profileImageFails = appViewModel.nextProfileImageFails,
-                    onProfileImageFails = appViewModel::selectProfileImageFailure,
-                    exitScenario = appViewModel.nextProfileExitScenario,
-                    onExitScenario = appViewModel::selectProfileExitScenario,
-                    onLocalKeyAvailable = appViewModel::setLocalKeyAvailable,
+                    onScenarios = { navController.navigate(AppRoute.Scenarios) },
                 )
             }
         }
@@ -758,7 +825,7 @@ fun WhiteNoiseNavHost(
                     parityController = appViewModel.developerParity,
                     profile = profile,
                     diagnosticSummary = route.chatId?.let(appViewModel::conversationDebugSnapshot)?.diagnosticSummary,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onTest = appViewModel::runDiagnosticTest,
                     onClear = appViewModel::clearDiagnosticEvents,
                 )
@@ -769,7 +836,7 @@ fun WhiteNoiseNavHost(
                 KeyPackagesScreen(
                     controller = appViewModel.developerParity,
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                 )
             }
         }
@@ -781,14 +848,9 @@ fun WhiteNoiseNavHost(
                     profile = profile,
                     chat = appViewModel.chat(route.chatId),
                     snapshot = appViewModel.conversationDebugSnapshot(route.chatId),
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onOpenDeveloperTools = { navController.navigate(AppRoute.DeveloperTools) },
                     onDiagnostics = { navController.navigate(AppRoute.Diagnostics(route.chatId)) },
-                    onAddArrival = { streaming -> appViewModel.addConversationArrival(profile.id, route.chatId, streaming) },
-                    onAddReadingExample = { appViewModel.addMessageReadingExample(profile.id, route.chatId) },
-                    onAddAttachmentExamples = { appViewModel.addAttachmentReadingExamples(profile.id, route.chatId) },
-                    onAddAgentExamples = { appViewModel.addAgentConversationExamples(profile.id, route.chatId) },
-                    onAddNostrEventExamples = { appViewModel.addNostrEventExamples(profile.id, route.chatId) },
                 )
             }
         }
@@ -796,7 +858,7 @@ fun WhiteNoiseNavHost(
             uiState.activeProfile?.let { profile ->
                 NewChatScreen(
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onNewGroup = { navController.navigate(AppRoute.NewGroup()) },
                     onConnectWithQr = { navController.navigate(AppRoute.ShareConnect) },
                     onPerson = { navController.navigate(AppRoute.PersonProfile(it)) },
@@ -818,7 +880,7 @@ fun WhiteNoiseNavHost(
                 PersonProfileScreen(
                     profile = profile,
                     person = person,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onMessage = {
                         val request = if (appViewModel.uiState.activeProfileId == profile.id) appViewModel.startDirectConversation(person.id, entry.id) else null
                         if (request != null && !appViewModel.createdChatProjectionUnavailable) {
@@ -861,7 +923,7 @@ fun WhiteNoiseNavHost(
                 GroupsInCommonScreen(
                     profile = profile,
                     person = person,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onOpenGroup = { openConversation(it, clearsCreationFlow = false) },
                     onAddToGroup = { chatId -> appViewModel.addGroupMembers(chatId, listOf(person.id)) },
                     groupScenario = appViewModel.groupContactScenario,
@@ -876,7 +938,7 @@ fun WhiteNoiseNavHost(
                 NewGroupScreen(
                     initialPersonId = route.initialPersonId,
                     profile = profile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onContinue = { navController.navigate(AppRoute.GroupSetup(it)) },
                 )
             }
@@ -889,7 +951,7 @@ fun WhiteNoiseNavHost(
                 LaunchedEffect(work?.id, work?.phase) {
                     if (work?.phase == GroupCreatePhase.Ready) appViewModel.groupWork.takeCreated(work.id, entry.id)?.let { openConversation(it, clearsCreationFlow = true) }
                 }
-                GroupSetupScreen(profile, route.selectedPersonIds, onBack = { navController.popBackStack() },
+                GroupSetupScreen(profile, route.selectedPersonIds, onBack = { back() },
                     onCreate = { _, _, _ -> false }, creationOrigin = entry.id,
                     onOpenRelays = { navController.navigate(AppRoute.ProfileRelays) })
             }
@@ -925,7 +987,7 @@ fun WhiteNoiseNavHost(
                     onTranslationScenario = { appViewModel.consumeTranslationScenario(profile.id) },
                     profile = profile,
                     chat = chat,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onSend = { appViewModel.sendText(chat.id, it) },
                     onRetry = { appViewModel.retryMessage(chat.id, it) },
                     onAcceptInvitation = { appViewModel.acceptInvitation(chat.id) },
@@ -1000,7 +1062,7 @@ fun WhiteNoiseNavHost(
                     onTranslationPreferences = { appViewModel.updateTranslationPreferences(profile.id, it) },
                     profile = profile,
                     chat = chat,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onAbout = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) },
                     onAllMembers = { navController.navigate(AppRoute.GroupMembers(profile.id, chat.id)) },
                     onMember = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) },
@@ -1041,7 +1103,7 @@ fun WhiteNoiseNavHost(
                 LaunchedEffect(route.profileId, route.chatId) { showSignedInRoot() }
             } else {
                 dev.ipf.whitenoise.ui.conversation.GroupMembersScreen(profile, chat,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onMember = { navController.navigate(AppRoute.PersonProfile(it, chat.id)) })
             }
         }
@@ -1058,7 +1120,7 @@ fun WhiteNoiseNavHost(
                     profile = profile,
                     chat = chat,
                     category = category,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     forwardProfiles = uiState.signedInProfiles,
                     onForwardMediaToProfile = { key, destination, targets, text -> appViewModel.beginMessageForward(profile.id, chat.id, setOf(key.messageId), destination, targets, key, text) },
                     onForwardMedia = { key, targets, message ->
@@ -1082,7 +1144,7 @@ fun WhiteNoiseNavHost(
                 EditGroupScreen(
                     chat = chat,
                     profile = uiState.activeProfile,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onSave = { name, description, avatar -> appViewModel.editGroup(chat.id, name, description, avatar) },
                 )
             }
@@ -1095,7 +1157,7 @@ fun WhiteNoiseNavHost(
                 AddGroupMembersScreen(
                     profile,
                     chat,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onAdd = { appViewModel.groupWork.beginMembers(GroupOwner(profile.id, chat.id), GroupMemberAction.Invite, it) },
                 )
             }
@@ -1105,7 +1167,7 @@ fun WhiteNoiseNavHost(
             appViewModel.chat(route.chatId)?.let { chat ->
                 ChatRelaysScreen(
                     chat = chat,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                     onAdd = { appViewModel.addChatRelay(chat.id, it) },
                     onRemove = { appViewModel.removeChatRelay(chat.id, it) },
                     onRestore = { appViewModel.restoreChatRelays(chat.id) },
@@ -1122,7 +1184,7 @@ fun WhiteNoiseNavHost(
                     profile = profile,
                     chat = chat,
                     message = message,
-                    onBack = { navController.popBackStack() },
+                    onBack = { back() },
                 )
             }
         }
@@ -1141,5 +1203,14 @@ fun WhiteNoiseNavHost(
 private val onboardingRouteNames = setOfNotNull(
     AppRoute.Welcome::class.qualifiedName,
     AppRoute.SignIn::class.qualifiedName,
+    AppRoute.ProfileSetup::class.qualifiedName,
+    AppRoute.ProfileSetupDetail::class.qualifiedName,
+    AppRoute.SetupProfileEditor::class.qualifiedName,
     AppRoute.SignUp::class.qualifiedName,
+)
+
+private val setupRouteNames = setOf(
+    AppRoute.ProfileSetup::class.qualifiedName,
+    AppRoute.ProfileSetupDetail::class.qualifiedName,
+    AppRoute.SetupProfileEditor::class.qualifiedName,
 )

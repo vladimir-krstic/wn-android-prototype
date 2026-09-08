@@ -497,6 +497,30 @@ fun ConversationScreen(
             }
         }
     }
+
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it in setOf("message-edit", "message-delete", "message-forward", "translation") || it.startsWith("speech-history:") || it.startsWith("speech-audio:") }) { action ->
+        val available = messages.filter { !it.isDeleted && it.text.isNotBlank() }
+        val message = available.lastOrNull { it.authorId == profile.id } ?: available.lastOrNull()
+        if (message != null) {
+            when {
+                action == "message-edit" -> editMessageId = message.id
+                action == "message-delete" -> deleteMessageIds = available.takeLast(3).map { it.id }.toSet()
+                action == "message-forward" -> forwardMessageIds = available.takeLast(3).map { it.id }.toSet()
+                action == "translation" -> { translationSource = message; translationMessageId = message.id }
+                else -> {
+                    readAloudController.chooseCatalogScenario(dev.ipf.whitenoise.model.SpeechCatalogScenario.Voices)
+                    if (action.startsWith("speech-history:")) readAloudController.setEdgeScenario(profile.id, dev.ipf.whitenoise.model.SpeechEdgeScenario.valueOf(action.substringAfter(":")))
+                    else readAloudController.chooseAudioScenario(when(action.substringAfter(":")) {
+                        "OtherMedia" -> dev.ipf.whitenoise.model.SpeechAudioEnvironment(mediaActive = true)
+                        "Quiet" -> dev.ipf.whitenoise.model.SpeechAudioEnvironment(mediaActive = false)
+                        "FocusDenied" -> dev.ipf.whitenoise.model.SpeechAudioEnvironment(focusAvailable = false)
+                        else -> null
+                    })
+                    readerMessageId = message.id
+                }
+            }
+        }
+    }
     val selectedMessages = messages.filter { it.id in selectedMessageIds }
     ConversationHistoryScan(history, profile, chat, searchQuery.takeIf { isSearching }.orEmpty(), onHistoryScenario)
     val searchResults = history.scan ?: remember(chat.timeline, history.windowIds, profile.people, searchQuery) {

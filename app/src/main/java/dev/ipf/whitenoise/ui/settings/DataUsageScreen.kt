@@ -109,21 +109,3 @@ internal fun DownloadSwitch(title: String, checked: Boolean, tag: String, enable
         Switch(checked, onCheckedChange = null, enabled = enabled)
     }
 }
-
-@Composable
-internal fun SettingsGroupScope.DownloadExampleControls(example: DownloadNetworkExample, held: Boolean,
-    onNetwork: (DownloadNetworkExample) -> Unit, onSeed: () -> Unit, onHold: (Boolean) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    row {
-        SettingsLink(stringResource(R.string.ui_download_network_example), example.developerLabel, { open = true })
-    }
-    row {
-        SettingsAction(stringResource(R.string.ui_load_automatic_download_queue), onSeed,
-            subtitle = stringResource(R.string.ui_uses_existing_local_attachments_and_holds_transfer_pro))
-    }
-    row {
-        SettingsSwitch(stringResource(R.string.ui_hold_transfer_example), held, onHold)
-    }
-    if (open) ChoiceDialog(stringResource(R.string.ui_download_network_example), DownloadNetworkExample.entries, example,
-        { it.developerLabel }, onDismiss = { open = false }, onSelect = { onNetwork(it); open = false })
-}

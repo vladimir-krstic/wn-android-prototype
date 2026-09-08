@@ -155,6 +155,7 @@ data class AppUiState(
 class AppViewModel(
     initialAccessScenario: AccessScenario = AccessScenario.Success,
     startupFails: Boolean = false,
+    initialSetupScenario: dev.ipf.whitenoise.model.ProfileSetupScenario = dev.ipf.whitenoise.model.ProfileSetupScenario.Ready,
 ) : ViewModel() {
     val appUpdates = AppUpdateController(dev.ipf.whitenoise.BuildConfig.VERSION_NAME)
     private var createdChatSequence = 0
@@ -164,6 +165,37 @@ class AppViewModel(
         private set
     var nextAccessScenario by mutableStateOf(initialAccessScenario)
         private set
+    var nextSetupScenario by mutableStateOf(initialSetupScenario)
+        private set
+    // Applied values survive cancellation; no progress, credentials or unconfirmed draft is saved.
+    private val setupAppliedProfiles = mutableMapOf<String, Profile>()
+    val profileSetup = ProfileSetupController(
+        ownsAttempt = { id -> accessAttempt?.let { it.id == id && it.phase == AccessPhase.ProfileSetup && ownsAccess(it) } == true },
+        applyProfile = { profile ->
+            setupAppliedProfiles[profile.id] = profile
+            uiState = uiState.copy(profiles = uiState.profiles.map { existing ->
+                if (existing.id == profile.id) existing.copy(name = profile.name, about = profile.about,
+                    avatar = profile.avatar, settings = existing.settings.copy(relays = profile.settings.relays),
+                    chatRelayUrls = profile.chatRelayUrls) else existing
+            })
+        },
+    )
+
+    fun selectSetupScenario(scenario: dev.ipf.whitenoise.model.ProfileSetupScenario) {
+        if (uiState.activeProfile?.developerTools?.isEnabled == true) nextSetupScenario = scenario
+    }
+
+    fun finishProfileSetup(id: Long): Boolean {
+        val attempt = accessAttempt ?: return false
+        val setup = profileSetup.session ?: return false
+        if (attempt.id != id || setup.id != id || attempt.phase != AccessPhase.ProfileSetup ||
+            !ownsAccess(attempt) || !setup.ready || setup.work != null) return false
+        activate(setup.candidate, updatesStoredProfile = true)
+        if (attempt.origin == OnboardingOrigin.AddProfile) addShowcaseProfiles()
+        cancelAccess()
+        return true
+    }
+
     // Initial state is synchronous; only an explicit failure preview needs startup staging.
     var startupState by mutableStateOf(StartupState(
         phase = if (startupFails) StartupPhase.Loading else StartupPhase.Ready,
@@ -180,6 +212,12 @@ class AppViewModel(
 
     var uiState by mutableStateOf(AppUiState())
         private set
+
+    /** Used only by isolated developer scenario recipes to prepare otherwise unreachable prerequisites. */
+    internal fun prepareScenarioProfile(transform: (Profile) -> Profile) {
+        check(uiState.activeProfile?.developerTools?.isEnabled == true)
+        updateActiveProfile(transform)
+    }
 
     fun completeSignIn(origin: OnboardingOrigin) {
         cancelAccess()
@@ -523,7 +561,8 @@ class AppViewModel(
     fun beginPrivateKeySignIn(origin: OnboardingOrigin, key: String): Boolean {
         if (PrivateKeyValidator.state(key) != PrivateKeyState.Valid) return false
         val candidate = if (origin == OnboardingOrigin.Initial) ProfileFixtures.marmota else ProfileFixtures.openCircuit
-        return beginAccess(origin, candidate, AccessMethod.PrivateKey)
+        val current = uiState.profiles.firstOrNull { it.id == candidate.id } ?: setupAppliedProfiles[candidate.id] ?: candidate
+        return beginAccess(origin, current.copy(signingMode = dev.ipf.whitenoise.model.ProfileSigningMode.LocalKey), AccessMethod.PrivateKey)
     }
 
     fun beginAmberSignIn(origin: OnboardingOrigin): Boolean = beginAccess(
@@ -547,7 +586,7 @@ class AppViewModel(
     }
 
     private fun beginAccess(origin: OnboardingOrigin, candidate: Profile, method: AccessMethod): Boolean {
-        if (accessAttempt?.phase?.isBusy == true || accessAttempt?.phase == AccessPhase.RecoveryConsent) return false
+        if (accessAttempt != null && accessAttempt?.phase != AccessPhase.Failed) return false
         if ((origin == OnboardingOrigin.Initial) != (uiState.activeProfileId == null)) return false
         val scenario = nextAccessScenario
         nextAccessScenario = AccessScenario.Success
@@ -559,7 +598,9 @@ class AppViewModel(
             method = method,
             phase = AccessPhase.SigningIn,
             scenario = scenario,
+            setupScenario = nextSetupScenario,
         )
+        if (method == AccessMethod.PrivateKey) nextSetupScenario = dev.ipf.whitenoise.model.ProfileSetupScenario.Ready
         accessAttempt = attempt.copy(phase = attempt.startingPhase())
         return true
     }
@@ -579,6 +620,11 @@ class AppViewModel(
         val stored = uiState.profiles.firstOrNull { it.id == attempt.candidate.id }
         if (stored != null && stored.publicKey != attempt.candidate.publicKey) {
             accessAttempt = attempt.copy(phase = AccessPhase.Failed, failure = AccessFailure.AmberMismatch)
+            return false
+        }
+        if (attempt.method == AccessMethod.PrivateKey) {
+            accessAttempt = attempt.copy(phase = AccessPhase.ProfileSetup)
+            profileSetup.start(attempt.id, attempt.candidate, attempt.setupScenario)
             return false
         }
         activate(attempt.candidate, updatesStoredProfile = attempt.method == AccessMethod.CreateProfile)
@@ -604,7 +650,15 @@ class AppViewModel(
         )
     }
 
+    /** Credential edits clear only their own failed sign-in, never work handed to setup. */
+    fun signInKeyEdited(requestId: Long) {
+        val attempt = accessAttempt ?: return
+        if (attempt.id == requestId && attempt.phase == AccessPhase.Failed &&
+            attempt.method in setOf(AccessMethod.PrivateKey, AccessMethod.Amber)) cancelAccess()
+    }
+
     fun cancelAccess() {
+        profileSetup.cancel()
         accessGeneration++
         accessAttempt = null
     }
@@ -916,6 +970,7 @@ class AppViewModel(
             downloadNetworks = downloadNetworks - activeId
             heldDownloadProfiles = heldDownloadProfiles - activeId
         }
+        if (wipeData) setupAppliedProfiles.remove(activeId)
         val profiles = if (wipeData) uiState.profiles.filterNot { it.id == activeId } else uiState.profiles
         val nextActiveId = profiles.firstOrNull { it.id in signedIn }?.id
         uiState = AppUiState(
@@ -1022,6 +1077,7 @@ class AppViewModel(
         if (profile.id == uiState.activeProfileId || !WipeConfirmationPhrase.matches(confirmation, profile.name)) {
             return false
         }
+        setupAppliedProfiles.remove(profileId)
         interruptMessageOperations(profileId)
         messageForwards = messageForwards.filterValues { profileId !in setOf(it.sourceProfileId, it.destinationProfileId) }
         if (accessAttempt?.candidate?.id == profileId) cancelAccess()
@@ -1050,6 +1106,8 @@ class AppViewModel(
         if (!WipeConfirmationPhrase.matches(confirmation, expected)) return false
         cancelAccess()
         nextAccessScenario = AccessScenario.Success
+        nextSetupScenario = dev.ipf.whitenoise.model.ProfileSetupScenario.Ready
+        setupAppliedProfiles.clear()
         profileExitAttempt = null
         profileExitReport = null
         nextProfileExitScenario = ProfileExitScenario.Success

@@ -149,6 +149,7 @@ fun ChatInfoScreen(
     val notifications = dev.ipf.whitenoise.ui.settings.LocalNotificationControls.current
     var muteSheet by remember(profile.id,chat.id) { mutableStateOf(false) }
     var disappearingSheet by remember { mutableStateOf(false) }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it == "retention" }) { disappearingSheet = true }
     var leaveConfirmation by remember { mutableStateOf(false) }
     var onlyAdminWarning by remember { mutableStateOf(false) }
     val directPersonId = (chat.kind as? dev.ipf.whitenoise.model.ChatKind.Direct)?.personId

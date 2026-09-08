@@ -1095,3 +1095,44 @@ wrap swipes in both directions, with actual-message pagination and selection;
 one message remains non-scrollable. Evidence: `FloatingMessagesUi.kt`,
 `FloatingMessagePages`, `FloatingMessagesTest`, and `FloatingMessageFlowTest`.
 Validation is recorded in `docs/screens/floating-messages.md`.
+
+## Profile setup after Private Key Sign In — 2026-09-08
+
+Implemented with host verification; hands-on and visual acceptance pending.
+The scoped #939 / #940 extension adds six stable checks, full-screen decision
+and profile-editor destinations, optional skipping, explicit relay defaults,
+device acknowledgment, messaging retry, and Open Chats activation gating.
+Cancellation discards the attempt with no resume control. Developer Tools
+selects one of three complete scenarios or eight focused cases for the next
+Private Key Sign In; Sign Up, Amber and retained entry keep their contracts.
+
+Evidence: `ProfileSetup.kt`, `ProfileSetupController.kt`, `ProfileSetupScreens.kt`,
+`WhiteNoiseNavHost.kt`, `AppViewModel.kt`, reused `SignUpScreen.kt`, and the
+scenario chooser. `ProfileSetupTest` adds 13 host cases; seven
+`ProfileSetupFlowTest` cases compile navigation and UI behavior. The README
+host gate passes 1,082 unit tests, lint (zero errors), both APKs, six Python
+verifier tests and full four-locale parity. No device tests were run. Exact
+scope, copy and remaining checks: [Profile setup](../screens/profile-setup.md).
+
+Profile-setup follow-up: fixed outgoing Sign In credential cleanup cancelling
+the new attempt. Key edits can invalidate only their matching failed sign-in;
+the loading state stays active during navigation. Two host regressions cover
+both origins and stale callbacks, and the seven compiled navigation cases now
+enter through the real Sign In controls. See the screen brief’s transition
+regression note for host verification and the remaining device check.
+
+Developer scenario presentation follow-up: **Profile Setup Scenarios** is now a
+separate profile-owned page linked immediately below the Developer Tools switch.
+It describes all 11 scenarios, explains the Sign In steps, and applies only an
+explicit Use Scenario choice. Evidence: `ProfileSetupScenariosScreen.kt`, typed
+navigation and the expanded `ProfileSetupFlowTest`; validation is in the brief.
+
+### Android developer scenario catalog — 2026-09-08
+
+User-approved Android addition: `scenarios/ScenarioCatalog.kt`, `ScenarioSession.kt`, and `ScenarioScreens.kt` centralize all declared scenario families plus prior switch/action examples into searchable full pages and isolated immediate launches. Entry is available with Developer Tools disabled. `ScenarioCatalogTest` exercises every launch recipe and session isolation; `test_scenario_catalog.py` guards registration coverage. Host validation recorded in README; device/visual acceptance remains pending.
+
+Scenario centralization follow-up: Conversation Debug no longer inserts example
+messages, attachments, agents or event cards. The catalog is the only UI entry
+for those recipes. Legacy chooser components were removed, and host boundary
+checks enforce exclusive selector/injection ownership. Ordinary feature and
+diagnostic operations remain intact. See `screens/scenario-catalog.md`.

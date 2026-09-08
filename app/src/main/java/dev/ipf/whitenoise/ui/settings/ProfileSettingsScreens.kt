@@ -128,6 +128,7 @@ fun SettingsScreen(
     val profile = uiState.activeProfile ?: return
     val canEditProfile = ProfileSettingsPolicy.canPublishProfile(profile.settings)
     var signOutOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it == "sign-out" }) { signOutOpen = true }
     SettingsScaffold(
         title = stringResource(R.string.ui_settings),
         onBack = onBack,
@@ -467,6 +468,7 @@ fun EditProfileScreen(
     var avatar by remember(profile.id) { mutableStateOf(retainedImages?.avatar ?: startingDraft.avatar) }
     var banner by remember(profile.id) { mutableStateOf(if (retainedImages != null) retainedImages.banner else startingDraft.banner) }
     var isEditing by rememberSaveable(profile.id) { mutableStateOf(saveAttempt != null) }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it == "edit-profile" }) { isEditing = true }
     var suggestionIndex by rememberSaveable(profile.id) { mutableIntStateOf(0) }
     var imageBusy by remember(profile.id) { mutableStateOf(emptySet<String>()) }
     var error by remember(profile.id) { mutableStateOf(false) }
@@ -574,6 +576,7 @@ fun ProfileKeysScreen(profile: Profile, onBack: () -> Unit, onRetryKey: () -> Un
     val hasLocalKey = profile.signingMode == dev.ipf.whitenoise.model.ProfileSigningMode.LocalKey
     val canReadKey = ProfileKeyAccessPolicy.canRead(profile)
     var showPrivate by remember(profile.id) { mutableStateOf(false) }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it == "reveal-key" }) { showPrivate = true }
     var pendingExport by remember(profile.id) { mutableStateOf<ProfileKeyExportRequest?>(null) }
     var passwordDialog by remember(profile.id) { mutableStateOf(false) }
     var rawExportDialog by remember(profile.id) { mutableStateOf(false) }

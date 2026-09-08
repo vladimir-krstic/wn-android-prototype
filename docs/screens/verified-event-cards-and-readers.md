@@ -70,11 +70,10 @@ The pinned production baseline is
 
 ## Entry, navigation, Back, and exit
 
-Conversation Debug → **Add event card examples** inserts or replaces stable
-local rows in that exact active chat. The action is visible only through the
-existing Developer Tools gate. Returning to the conversation shows the rows as
-ordinary content; the cards and readers remain available when Developer Tools
-is later disabled.
+Developer Tools → Scenarios → Conversation examples → Nostr Events launches
+a temporary chat with stable event-card rows already inserted. The catalog is
+available even when Developer Tools is disabled. The ordinary card/reader UI
+remains part of the app; Conversation Debug no longer has an injection action.
 
 Card **Read**, **Play**, and **Open event** actions open route-local modal
 presentation. App-bar Back, system Back, and Close dismiss that presentation

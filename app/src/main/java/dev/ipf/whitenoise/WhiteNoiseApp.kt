@@ -44,6 +44,46 @@ fun WhiteNoiseApp(
     navController: NavHostController = rememberNavController(),
     appViewModel: AppViewModel = viewModel(),
 ) {
+    val sessions: dev.ipf.whitenoise.scenarios.ScenarioSessions = viewModel()
+    val run = sessions.run
+    val saved = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
+    androidx.compose.runtime.CompositionLocalProvider(
+        dev.ipf.whitenoise.scenarios.LocalScenarioSessions provides sessions,
+        dev.ipf.whitenoise.scenarios.LocalScenarioRun provides run,
+    ) {
+        if (run == null) saved.SaveableStateProvider("main") {
+            WhiteNoiseAppContent(navController, appViewModel)
+        } else androidx.compose.runtime.key(run.generation) {
+            val scenarioNav = rememberNavController()
+            val scenarioEntry by scenarioNav.currentBackStackEntryAsState()
+            // Clear scenario navigation ViewModels as well as app state when a run ends.
+            val owner = androidx.compose.runtime.remember(run.generation) {
+                object : androidx.lifecycle.ViewModelStoreOwner {
+                    override val viewModelStore = androidx.lifecycle.ViewModelStore()
+                }
+            }
+            androidx.compose.runtime.DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
+            androidx.compose.runtime.CompositionLocalProvider(androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides owner) {
+                androidx.activity.compose.BackHandler(enabled = scenarioEntry != null && scenarioNav.previousBackStackEntry == null) { sessions.exit() }
+                WhiteNoiseTheme {
+                    androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+                        Box(Modifier.weight(1f)) { WhiteNoiseAppContent(scenarioNav, run.model) }
+                        dev.ipf.whitenoise.scenarios.ScenarioControls(run, sessions::restart, {
+                            val id = run.definition.id
+                            sessions.exit()
+                            // The main navigation stack is retained while the test session runs.
+                            navController.navigate(dev.ipf.whitenoise.navigation.AppRoute.ScenarioVariants(id)) { launchSingleTop = true }
+                        }, sessions::exit)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel: AppViewModel) {
+    val scenario = dev.ipf.whitenoise.scenarios.LocalScenarioRun.current
     val view = LocalView.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val startup = appViewModel.startupState
@@ -104,7 +144,8 @@ fun WhiteNoiseApp(
                 dev.ipf.whitenoise.ui.settings.AuditLogHost(appViewModel.auditLogs) {
                     dev.ipf.whitenoise.ui.settings.AppLockScope(appLock,profile,
                         onLeaveApp = { view.context.findActivity()?.moveTaskToBack(true) },
-                        changingConfiguration = { view.context.findActivity()?.isChangingConfigurations == true }) {
+                        changingConfiguration = { view.context.findActivity()?.isChangingConfigurations == true },
+                        credentialOverride = if (scenario?.definition?.id == "app-lock") true else null) {
                         Box(Modifier.fillMaxSize().clearFocusOnBackgroundTap(focusManager)) {
                             if (startup.phase != StartupPhase.Ready) StartupScreen(
                                 phase = startup.phase,

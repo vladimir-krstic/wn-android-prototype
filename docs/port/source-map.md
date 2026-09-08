@@ -216,7 +216,7 @@ TtsAudioFocusOwner and ConversationTtsEffects/AutoReadCursor into
 The local cursor uses prototype chronology and captured unread IDs; production
 reconnects authoritative history, settings and audio ownership. The
 TtsPlaybackForegroundService/AppState lock-boundary contract is represented only
-by `SpeechBackgroundExample` and `SpeechDeveloperDialog`. These example controls
+by `SpeechBackgroundExample` and the catalog-owned `ScenarioExampleScreen`. These example controls
 must not be migrated as a real notification, service, clock or lock authority.
 
 ## Production B17 dictation and voice recording
@@ -465,3 +465,24 @@ unknown-sources permission and installer only at the controller's typed phase
 boundaries. Preserve exact-generation ownership, a separate verification phase,
 store-managed absence and per-version dismissal. The prototype fixtures perform
 no network, file, cryptographic, permission, notification or installer operation.
+
+## Scoped 2026-09-08 profile-setup authorization
+
+The user selected production iOS PR #939 and polish issue #940 as scoped new
+behavior, followed by explicit approval of full-screen Android setup and
+one-shot Developer Tools scenarios. Read-only production evidence is
+`marmot-protocol/whitenoise-ios@094f61d5d7f135a4057996b519d91b455637ba30`:
+`whitenoise-ios/Onboarding/AccountSetupPresentation.swift`,
+`AccountSetupView.swift`, `AccountSetupActions.swift`, `AccountSetupModel.swift`
+and related onboarding tests. Issue #940 supersedes the PR’s deferred/resumable
+setup UI. This does not refresh the global prototype baseline.
+
+Android maps these behaviors through [Profile setup](../screens/profile-setup.md)
+to `model/ProfileSetup.kt`, `state/ProfileSetupController.kt`, access ownership
+in `AppViewModel`, typed setup destinations in `WhiteNoiseNavHost`,
+`ProfileSetupScreens.kt` and the reused `SignUpScreen` editing mode. Network,
+MDK, persistent checkpoints and real publication remain outside this prototype.
+
+### Android scenario catalog
+
+User-directed Android flow: `scenarios/ScenarioCatalog.kt` maps each described variant to existing model/controller evidence and a typed route; `ScenarioSession.kt` owns isolated runs; `ScenarioScreens.kt` owns catalog, variants and controls. Brief: `docs/screens/scenario-catalog.md`. Supersedes `ProfileSetupScenariosScreen.kt`.

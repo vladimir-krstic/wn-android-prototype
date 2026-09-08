@@ -75,18 +75,3 @@ internal fun SettingsGroupScope.RelayPublicationRows(profile: Profile, controlle
         }
     }
 }
-
-@Composable
-internal fun SettingsGroupScope.RelayPublicationDeveloperControls(controller: RelayPublicationController, onImport: () -> Unit = {}) {
-    var open by remember { mutableStateOf(false) }
-    row {
-        SettingsLink(stringResource(R.string.ui_relay_publication_outcome), controller.scenario.developerLabel, { open = true })
-    }
-    row {
-        SettingsAction(stringResource(R.string.ui_load_imported_relay_issue), onImport,
-            subtitle = stringResource(R.string.ui_adds_one_invalid_imported_address_without_removing_its))
-    }
-    if (open) ChoiceDialog("Relay publication outcome", RelayPublicationScenario.entries,
-        controller.scenario, RelayPublicationScenario::developerLabel,
-        onDismiss = { open = false }, onSelect = { controller.chooseScenario(it); open = false })
-}

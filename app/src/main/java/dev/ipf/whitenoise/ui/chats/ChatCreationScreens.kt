@@ -149,6 +149,7 @@ fun NewChatScreen(
     val inviteContext = LocalContext.current
     var inviteFailed by rememberSaveable(profile.id) { mutableStateOf(false) }
     var query by rememberSaveable(profile.id) { mutableStateOf("") }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it == "people-search" }) { query = "Maya" }
     var retry by remember(profile.id) { mutableIntStateOf(0) }
     var resolving by remember(profile.id, query, retry) { mutableStateOf(query.isNotBlank()) }
     var searchResult by remember(profile.id, query, retry) {
@@ -270,6 +271,7 @@ fun PersonProfileScreen(
 ) {
     var showPrivateDetails by rememberSaveable(profile.id, person.id) { mutableStateOf(false) }
     var groupAction by remember(profile.id, person.id) { mutableStateOf<GroupContactAction?>(null) }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it == "group-contact" }) { groupAction = GroupContactAction.Invite }
     if (showPrivateDetails) PrivateContactDialog(person, { showPrivateDetails = false }, onSavePrivateContact)
     groupAction?.let { action -> ContactGroupsSheet(profile, person, action, groupScenario,
         onDismiss = { groupAction = null }, onRetryRoster = onRetryRoster, onApply = onApplyGroups) }

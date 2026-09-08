@@ -343,5 +343,18 @@ class AccessStateTest {
 
     private fun start(vm: AppViewModel) = assertTrue(vm.beginPrivateKeySignIn(OnboardingOrigin.Initial, LoginPrototypeData.privateKey))
 
-    private fun advance(vm: AppViewModel): Boolean = vm.accessAttempt!!.let { vm.advanceAccess(it.id, it.phase) }
+    // These legacy cases exercise access/recovery. ProfileSetupTest asserts the new gate itself.
+    private fun advance(vm: AppViewModel): Boolean {
+        val activated = vm.accessAttempt!!.let { vm.advanceAccess(it.id, it.phase) }
+        if (vm.accessAttempt?.phase != AccessPhase.ProfileSetup) return activated
+        repeat(12) {
+            val setup = vm.profileSetup.session ?: return false
+            val work = setup.work
+            if (work != null) vm.profileSetup.complete(setup.id, work)
+            else if (setup.ready) return vm.finishProfileSetup(setup.id)
+            else vm.profileSetup.act(setup.id, dev.ipf.whitenoise.model.ProfileSetupStep.Device,
+                dev.ipf.whitenoise.model.ProfileSetupAction.Acknowledge)
+        }
+        error("Ready setup did not complete")
+    }
 }

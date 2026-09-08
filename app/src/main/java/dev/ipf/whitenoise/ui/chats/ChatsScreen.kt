@@ -230,6 +230,14 @@ fun ChatsScreen(
     var deleteIds by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
     var folderTargets by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
     var selectedIds by rememberSaveable(profile?.id) { mutableStateOf(emptyList<String>()) }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it in setOf("chat-batch", "voice-search", "library") }) { action ->
+        when (action) {
+            "chat-batch" -> selectedIds = profile?.chats?.filter { it.membership == dev.ipf.whitenoise.model.ChatMembership.Active }?.take(2)?.map { it.id }.orEmpty()
+            "voice-search" -> isSearching = true
+            "library" -> { isSearching = true; searchFilters = searchFilters.copy(content = setOf(dev.ipf.whitenoise.model.GlobalSearchContent.Files)) }
+        }
+    }
+
     var folderId by rememberSaveable(profile?.id) { mutableStateOf<String?>(null) }
     val selectedFolder = profile?.chatFolders?.firstOrNull { it.id == folderId }
     LaunchedEffect(profile?.id, folderId, selectedFolder?.id) {

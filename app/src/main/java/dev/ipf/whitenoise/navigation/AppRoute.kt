@@ -23,6 +23,15 @@ sealed interface AppRoute {
     data class SignUp(val origin: OnboardingOrigin) : AppRoute
 
     @Serializable
+    data class ProfileSetup(val origin: OnboardingOrigin) : AppRoute
+
+    @Serializable
+    data class ProfileSetupDetail(val step: String) : AppRoute
+
+    @Serializable
+    data object SetupProfileEditor : AppRoute
+
+    @Serializable
     data object SignedIn : AppRoute
 
     @Serializable
@@ -155,6 +164,18 @@ sealed interface AppRoute {
 
     @Serializable
     data object DeveloperTools : AppRoute
+
+    @Serializable
+    data object Scenarios : AppRoute
+
+    @Serializable
+    data class ScenarioVariants(val scenarioId: String) : AppRoute
+
+    @Serializable
+    data class ScenarioExample(val kind: String, val variant: String) : AppRoute
+
+    @Serializable
+    data class ProfileSetupScenarios(val profileId: String) : AppRoute
 
     @Serializable
     data object AuditLogs : AppRoute

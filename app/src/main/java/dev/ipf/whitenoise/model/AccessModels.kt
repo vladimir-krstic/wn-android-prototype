@@ -7,10 +7,10 @@ enum class ProfileSigningMode { LocalKey, Amber }
 enum class AccessMethod { PrivateKey, CreateProfile, Amber, Retained }
 
 enum class AccessPhase {
-    SigningIn, CreatingProfile, AmberIdentity, AmberProof, Recovering, RecoveryConsent, Failed;
+    SigningIn, CreatingProfile, AmberIdentity, AmberProof, Recovering, RecoveryConsent, Failed, ProfileSetup;
 
     val isBusy: Boolean
-        get() = this !in setOf(RecoveryConsent, Failed)
+        get() = this !in setOf(RecoveryConsent, Failed, ProfileSetup)
 }
 
 enum class AccessFailure {
@@ -37,6 +37,7 @@ data class AccessAttempt(
     val scenario: AccessScenario,
     val failure: AccessFailure? = null,
     val recoveryAcknowledged: Boolean = false,
+    val setupScenario: ProfileSetupScenario = ProfileSetupScenario.Ready,
 ) {
     val usesAmber: Boolean
         get() = candidate.signingMode == ProfileSigningMode.Amber

@@ -52,6 +52,9 @@ internal fun speechRateLabel(rate: Float): String = NumberFormat.getNumberInstan
 @Composable
 internal fun ReadAloudSettingsScreen(profile: Profile, onBack: () -> Unit) {
     val controller = LocalReadAloudController.current ?: return
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it.startsWith("speech-catalog:") }) {
+        controller.chooseCatalogScenario(dev.ipf.whitenoise.model.SpeechCatalogScenario.valueOf(it.substringAfter(":")))
+    }
     val preferences = profile.settings.speech
     val discovery = controller.discovery
     val context = LocalContext.current

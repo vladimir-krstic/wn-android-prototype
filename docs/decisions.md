@@ -4845,3 +4845,44 @@ wrap swipes in both directions, with actual-message pagination and selection;
 one message remains non-scrollable. Evidence: `FloatingMessagesUi.kt`,
 `FloatingMessagePages`, `FloatingMessagesTest`, and `FloatingMessageFlowTest`.
 Validation is recorded in `docs/screens/floating-messages.md`.
+
+## 2026-09-08 — Private Key Sign In checks profile readiness before activation
+
+Approved by the user’s PR #939 / issue #940 follow-up and Developer Tools
+scenario selection. Full-screen Profile Setup and decision/editor destinations
+extend our existing onboarding navigation. Required checks gate explicit Open
+Chats; profile details and follows may be skipped. Setup has no Later, durable
+checkpoint, unfinished-profile entry or automatic activation. Cancelling ends
+the attempt; another Sign In starts fresh while already-applied values remain
+in process. Navigation Compose owns system/predictive Back; detail Back returns
+to the preserved checklist, and setup Back cancels to the originating Welcome.
+
+Developer Tools selects Ready profile, Needs attention or Recovery required,
+plus focused failures, once for the next Private Key Sign In. Sign Up and Amber
+do not consume this selection. Existing retained-profile entry is independent.
+The Android relay default set remains shared with Settings; it is displayed
+exactly and applies only after explicit selection. Success and attention use
+theme-aware green/orange semantic accents with text and symbols.
+
+Evidence and verification: [Profile setup](screens/profile-setup.md).
+
+### Profile setup scenarios have a dedicated developer page — 2026-09-08
+
+User-requested discoverability and instructions replace the scenario alert with
+a full-screen Settings destination. Its link is directly below the Developer
+Tools switch. The page separates complete flows from focused cases and explains
+every scenario and the subsequent Sign In path. Radio selection is provisional
+until Use Scenario; Back discards it. One-shot consumption and access behavior
+remain unchanged. See [Profile setup](screens/profile-setup.md).
+
+## 2026-09-08 — App-wide developer scenario sessions
+
+The user approved one searchable Scenarios catalog, available from Developer Tools even when disabled. Every scenario has a dedicated described variant page; tapping a variant launches its prepared product flow immediately in an isolated in-memory session. Restart resets it, Change Variant returns to selection, and Exit Scenario restores the original model/navigation. This supersedes next-attempt selection followed by manual navigation. See `screens/scenario-catalog.md`.
+
+## 2026-09-08 — Scenarios are exclusive to the catalog
+
+User direction removes all duplicate scenario selectors and example-injection
+buttons from feature pages. Only Developer Tools → Scenarios may select and
+launch a fixture variant. Feature screens retain ordinary product/diagnostic
+actions and consume the temporary run's state. Obsolete chooser components are
+deleted rather than hidden for later reuse. See `screens/scenario-catalog.md`.

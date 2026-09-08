@@ -169,7 +169,7 @@ the labeled tonal field. Product strings live in `strings.xml`.
   and background return obey queue ownership. Background stops actual speech;
   returning can read only new arrivals when no newer/manual queue intervened.
 - `SpeechCatalogExamples`, the controller's developer outcomes and
-  `SpeechDeveloperDialog` expose checking/empty/failure/offline/missing-voice/
+  the centralized `ScenarioCatalog` expose checking/empty/failure/offline/missing-voice/
   selection-failure catalogs, media/focus conditions and a separate local
   background-controls example. The latter models notification start failure,
   foreground/background, immediate/delayed lock, profile exit and session-owned

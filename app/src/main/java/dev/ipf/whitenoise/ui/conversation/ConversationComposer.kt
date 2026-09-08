@@ -813,6 +813,9 @@ fun FullConversationComposer(
         if (inlineDictation?.capturing == true) capture?.pauseInline(captureOwner)
         else capture?.beginInline(captureOwner, editorValue.text, editorValue.selection.start, editorValue.selection.end)
     }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it in setOf("writing", "dictation") }) {
+        if (it == "writing") openWritingTools(false) else capture?.present(captureOwner)
+    }
     val sendable = chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty() || linkPreview != null
     val isExpansionEnabled = when (val state = voiceState) {
         ComposerVoiceState.Idle -> true

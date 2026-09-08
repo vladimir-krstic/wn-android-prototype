@@ -28,6 +28,12 @@ internal fun DeveloperOperationHost(profile: Profile, surface: String, controlle
         if (profile.developerTools.isEnabled) controller.open(profile.id, surface)
         onPauseOrDispose { controller.close(profile.id, surface) }
     }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it.startsWith("inspection:") }) {
+        controller.open(profile.id, surface)
+        controller.work?.let { work -> controller.dismiss(work.id) }
+        val operation = DeveloperOperation.valueOf(it.substringAfter(":"))
+        controller.begin(operation, if (operation == DeveloperOperation.DeletePackage) DeveloperInspection.packages(profile).firstOrNull()?.id else null)
+    }
     val w = controller.work
     LaunchedEffect(w?.id, w?.phase) {
         if (w?.phase == DeveloperPhase.Running) { delay(400); controller.complete(w.id) }
@@ -201,25 +207,4 @@ internal fun DiagnosticHealthSheet(profile: Profile, controller: DeveloperParity
             }
         }
     }
-}
-
-@Composable
-internal fun DeveloperParityControls(profile: Profile, controller: DeveloperParityController) {
-    var choose by remember { mutableStateOf(false) }
-    var inventory by remember { mutableStateOf(false) }
-    SettingsSection(stringResource(R.string.developer_inspection_controls))
-    SettingsGroup {
-        row {
-            SettingsSwitch(stringResource(R.string.developer_streaming), checked = profile.developerTools.streamingDebug, onCheckedChange = controller::streaming)
-        }
-        row {
-            SettingsLink(stringResource(R.string.developer_inspection_operation_outcome), controller.outcome.name, { choose = true })
-        }
-        row {
-            SettingsLink(stringResource(R.string.developer_key_package_inventory_example), onClick = { inventory = true })
-        }
-    }
-    SettingsExplainer(stringResource(R.string.developer_streaming_help))
-    if (inventory) ScenarioChoiceDialog(stringResource(R.string.developer_key_package_inventory_example), PackageInventoryExample.entries, PackageInventoryExample.Published, { it.name }, controller::inventoryExample, { inventory = false })
-    if (choose) ScenarioChoiceDialog(stringResource(R.string.developer_inspection_operation_outcome), DeveloperOutcome.entries, controller.outcome, { it.name }, controller::chooseOutcome, { choose = false })
 }

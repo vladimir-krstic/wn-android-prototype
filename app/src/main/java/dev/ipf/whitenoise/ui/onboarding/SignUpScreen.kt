@@ -77,23 +77,37 @@ fun SignUpScreen(
     onRetry: (Long) -> Unit = {},
     onRecover: (Long) -> Unit = {},
     onCancel: () -> Unit = {},
+    editing: Boolean = false,
+    initialAbout: String = "",
+    initialAvatar: ProfileAvatar? = null,
+    saving: Boolean = false,
+    saveError: String? = null,
+    onDraftChanged: ((dev.ipf.whitenoise.model.SetupProfileDraft) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val photoErrorText = stringResource(R.string.photo_error)
-    val name = rememberSaveable(initialName, saver = TextFieldState.Saver) {
+    val name = rememberSaveable(if (editing) null else initialName, saver = TextFieldState.Saver) {
         TextFieldState(initialText = initialName)
     }
-    val about = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() }
-    var avatar by remember { mutableStateOf<ProfileAvatar?>(null) }
+    val about = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState(initialText = initialAbout) }
+    var avatar by remember { mutableStateOf(initialAvatar) }
     var webChoiceId by remember { mutableStateOf<String?>(null) }
     var isPhotoMenuOpen by remember { mutableStateOf(false) }
     var isWebPickerOpen by remember { mutableStateOf(false) }
     var isPreparingPhoto by remember { mutableStateOf(false) }
     var photoError by remember { mutableStateOf<String?>(null) }
-    val isSigningUp = attempt?.phase?.isBusy == true
+    val isSigningUp = saving || attempt?.phase?.isBusy == true
+    val editable = !saving && attempt == null
     var preparationJob by remember { mutableStateOf<Job?>(null) }
     var preparationGeneration by remember { mutableIntStateOf(0) }
+
+    val latestDraftCallback by androidx.compose.runtime.rememberUpdatedState(onDraftChanged)
+    androidx.compose.runtime.LaunchedEffect(name, about) {
+        androidx.compose.runtime.snapshotFlow {
+            dev.ipf.whitenoise.model.SetupProfileDraft(name.text.toString(), about.text.toString(), avatar ?: ProfileAvatar.Monogram)
+        }.collect { latestDraftCallback?.invoke(it) }
+    }
 
     fun prepare(uri: android.net.Uri) {
         val generation = ++preparationGeneration
@@ -139,7 +153,7 @@ fun SignUpScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.sign_up),
+                        text = stringResource(if (editing) R.string.setup_edit_profile else R.string.sign_up),
                         style = MaterialTheme.typography.titleLarge,
                     )
                 },
@@ -171,13 +185,13 @@ fun SignUpScreen(
                     onClick = { onSignUp(name.text.toString().trim(), about.text.toString(), avatar) },
                     enabled = !isPreparingPhoto && (attempt == null || isSigningUp),
                     loading = isSigningUp,
-                    loadingLabel = stringResource(R.string.creating_profile),
+                    loadingLabel = stringResource(if (editing) R.string.setup_saving else R.string.creating_profile),
                     modifier = Modifier
                         .widthIn(max = 520.dp)
                         .fillMaxWidth()
                         .testTag("onboarding.sign_up.action"),
                 ) {
-                    Text(stringResource(R.string.sign_up))
+                    Text(stringResource(if (editing) R.string.save else R.string.sign_up))
                 }
             }
         },
@@ -214,7 +228,7 @@ fun SignUpScreen(
                         AvatarPhotoButton(
                             hasPhoto = avatar != null,
                             onClick = { isPhotoMenuOpen = true },
-                            enabled = !isPreparingPhoto && attempt == null,
+                            enabled = !isPreparingPhoto && editable,
                         )
                         WhiteNoiseDropdownMenu(
                             expanded = isPhotoMenuOpen,
@@ -295,7 +309,7 @@ fun SignUpScreen(
                     WhiteNoiseTextField(
                         state = name,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = attempt == null,
+                        enabled = editable,
                         label = { Text(stringResource(R.string.name)) },
                         lineLimits = TextFieldLineLimits.SingleLine,
                         keyboardOptions = KeyboardOptions(
@@ -306,7 +320,7 @@ fun SignUpScreen(
                     WhiteNoiseTextField(
                         state = about,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = attempt == null,
+                        enabled = editable,
                         label = { Text(stringResource(R.string.about)) },
                         placeholder = { Text(stringResource(R.string.about_prompt)) },
                         lineLimits = TextFieldLineLimits.MultiLine(
@@ -315,6 +329,8 @@ fun SignUpScreen(
                         ),
                     )
                 }
+                saveError?.let { Text(it, color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
                 AccessFeedback(attempt, onRetry, onRecover, onCancel)
             }
         }

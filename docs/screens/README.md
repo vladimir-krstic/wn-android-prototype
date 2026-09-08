@@ -18,6 +18,7 @@ for pinned evidence and [the parity ledger](../port/feature-inventory.md) for st
 ## Access and profiles
 
 - [Onboarding and profile foundation](onboarding-and-profiles.md)
+- [Profile setup after Sign In](profile-setup.md)
 - [Optional quick account switching](quick-account-switching.md)
 - [Access and recovery — production Android batch B01](access-and-recovery.md)
 - [Keys and profile exit — production Android batch B02](keys-and-profile-exit.md)
@@ -83,3 +84,5 @@ for pinned evidence and [the parity ledger](../port/feature-inventory.md) for st
 - [Files and media from main search](global-files-and-media.md) — browse attachments across the current account (#19).
 
 - [Timestamps inside message bubbles](message-inline-timestamps.md)
+
+- [Scenario catalog and temporary sessions](scenario-catalog.md): all developer scenario families, immediate variant launches and original-session restoration.

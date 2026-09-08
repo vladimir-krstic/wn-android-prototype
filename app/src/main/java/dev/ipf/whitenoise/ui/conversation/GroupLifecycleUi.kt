@@ -51,6 +51,19 @@ internal fun GroupLifecyclePanel(profile: Profile, chat: Chat, onLeft: () -> Uni
     var pick by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var thenLeave by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
     var rejected by rememberSaveable(profile.id, chat.id) { mutableStateOf(false) }
+    dev.ipf.whitenoise.scenarios.ScenarioEntry({ it.startsWith("group-admin:") }) { action ->
+        when (dev.ipf.whitenoise.model.GroupLifecycleScenario.valueOf(action.substringAfter(":"))) {
+            GroupLifecycleScenario.GrantFailure, GroupLifecycleScenario.StepDownFailure, GroupLifecycleScenario.LeaveFailure, GroupLifecycleScenario.Success -> {
+                thenLeave = action.endsWith("LeaveFailure"); pick = true
+            }
+            GroupLifecycleScenario.EnableFailure -> confirm = GroupLifecycleAction.EnableDisband.name
+            GroupLifecycleScenario.DisbandFailure, GroupLifecycleScenario.ConvergenceFailure -> confirm = GroupLifecycleAction.Disband.name
+            GroupLifecycleScenario.DeleteFailure -> confirm = GroupLifecycleAction.Delete.name
+            GroupLifecycleScenario.AcknowledgeFailure -> controller.begin(owner, GroupLifecycleAction.Acknowledge)
+            GroupLifecycleScenario.RecoveryFailure -> controller.begin(owner, GroupLifecycleAction.Recover)
+        }
+    }
+
     LaunchedEffect(work?.id, work?.stage) {
         if (work?.stage == GroupLifecycleStage.Complete && work.thenLeave && chat.membership == ChatMembership.Left) {
             controller.dismiss(owner, work.id); onLeft()

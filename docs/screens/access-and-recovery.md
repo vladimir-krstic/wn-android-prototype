@@ -1,5 +1,12 @@
 # Access and recovery — production Android batch B01
 
+2026-09-08 extension: [Profile setup](profile-setup.md) gates Private Key Sign In
+from both origins before activation. It supersedes immediate activation for
+that method only. Setup and recovery use full-screen destinations, fresh
+attempts after cancellation, explicit Open Chats, and one-shot Developer Tools
+scenarios. Sign Up, Amber and retained-profile re-entry retain this brief’s
+existing contracts.
+
 Status: implemented and host-verified 2026-09-04; device and visual acceptance pending.
 
 The user authorized B01–B32 as one implementation goal on 2026-09-04, with a
@@ -22,7 +29,7 @@ Amber. Try again.” Validate both origins, unchanged profile state, retry/cance
 and stale callbacks; compile UI recovery tests without device execution.
 
 Implementation evidence: `AccessModels` includes AmberTimeout and
-AmberInvalidResponse, surfaced by `AccessScenarioDialog` and `AccessFeedback`.
+AmberInvalidResponse, selected through `ScenarioCatalog` and surfaced by `AccessFeedback`.
 Both messages have English, Russian, Turkish and Chinese locale resources.
 `AccessStateTest` extends failure coverage and adds both-origin retry/cancel and
 stale-callback regressions. Two `AccessFlowTest` cases compile the error and

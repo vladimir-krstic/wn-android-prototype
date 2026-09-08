@@ -1202,3 +1202,12 @@ wrap swipes in both directions, with actual-message pagination and selection;
 one message remains non-scrollable. Evidence: `FloatingMessagesUi.kt`,
 `FloatingMessagePages`, `FloatingMessagesTest`, and `FloatingMessageFlowTest`.
 Validation is recorded in `docs/screens/floating-messages.md`.
+
+### Profile setup after Sign In — 2026-09-08
+
+The checklist and full-screen decision pages reuse the onboarding 520 dp bound,
+16 dp margins and pinned medium task action. Material ListItem owns row padding,
+shape and interaction; a fixed 24 dp leading slot prevents status changes from
+moving text. Text and semantic status accompany the green success / orange
+attention symbols. Shared form metrics and one IME/navigation inset owner keep
+profile Save visible. No inline expanding checklist content or new sheet metric.

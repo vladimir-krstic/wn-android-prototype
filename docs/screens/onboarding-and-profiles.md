@@ -1,5 +1,12 @@
 # Onboarding and profile foundation
 
+2026-09-08 extension: [Profile setup](profile-setup.md) gates Private Key Sign In
+from both origins before activation. It supersedes immediate activation for
+that method only. Setup and recovery use full-screen destinations, fresh
+attempts after cancellation, explicit Open Chats, and one-shot Developer Tools
+scenarios. Sign Up, Amber and retained-profile re-entry retain this brief’s
+existing contracts.
+
 2026-09-04 B01 extension: `access-and-recovery.md` governs retained-profile
 Welcome actions, shape/type validation, Amber states, setup consent/recovery,
 startup retry and request ownership. It supersedes the original prefix-only

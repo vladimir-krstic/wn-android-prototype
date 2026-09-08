@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.R
 import dev.ipf.whitenoise.model.LoginPrototypeData
 import dev.ipf.whitenoise.model.AccessAttempt
+import dev.ipf.whitenoise.model.AccessPhase
 import dev.ipf.whitenoise.model.PrivateKeyState
 import dev.ipf.whitenoise.model.PrivateKeyValidator
 import dev.ipf.whitenoise.ui.components.AdaptiveContent
@@ -74,11 +75,12 @@ fun SignInScreen(
     onRetry: (Long) -> Unit,
     onRecover: (Long) -> Unit,
     onCancel: () -> Unit,
+    onKeyEdited: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val normalizedKey = PrivateKeyValidator.normalize(privateKey.text.toString())
     val keyState = PrivateKeyValidator.state(normalizedKey)
-    val isSigningIn = attempt?.phase?.isBusy == true
+    val isSigningIn = attempt?.phase?.isBusy == true || attempt?.phase == AccessPhase.ProfileSetup
     val keyErrorRes = when (keyState) {
         PrivateKeyState.PublicKey -> R.string.private_key_public_error
         PrivateKeyState.EncryptedKey -> R.string.private_key_encrypted_error
@@ -100,7 +102,7 @@ fun SignInScreen(
     LaunchedEffect(normalizedKey) {
         if (previousKey != normalizedKey) {
             previousKey = normalizedKey
-            if (!isSigningIn) onCancel()
+            attempt?.let { onKeyEdited(it.id) }
         }
     }
 

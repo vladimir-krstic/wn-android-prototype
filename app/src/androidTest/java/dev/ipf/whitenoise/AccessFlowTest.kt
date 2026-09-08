@@ -36,7 +36,7 @@ class AccessFlowTest {
                 scannedPrivateKey = null, scannerUnavailable = false,
                 onScannedPrivateKeyConsumed = {}, onScannerUnavailableConsumed = {},
                 onSignIn = { submissions++ }, onAmberSignIn = {}, attempt = null,
-                onRetry = {}, onRecover = {}, onCancel = {},
+                onRetry = {}, onRecover = {}, onCancel = {}, onKeyEdited = {},
             )
         } }
         rule.onNodeWithText("This is a Public Key. Enter your Private Key to sign in.").assertIsDisplayed()
@@ -140,6 +140,7 @@ class AccessFlowTest {
                 onSignIn = {}, onAmberSignIn = { vm.beginAmberSignIn(OnboardingOrigin.Initial) },
                 attempt = vm.accessAttempt, onRetry = vm::retryAccess,
                 onRecover = vm::confirmAccessRecovery, onCancel = vm::cancelAccess,
+                onKeyEdited = vm::signInKeyEdited,
             )
         } }
         rule.onNodeWithTag("access.failure").performScrollTo().assertTextEquals(message)

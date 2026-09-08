@@ -24,13 +24,12 @@ class ReadAloudPreferencesTest {
         this.profile = { this@ReadAloudPreferencesTest.profile }
         attachTestOutput({ _, _ -> true }, SpeechCatalogExamples.discovery(SpeechCatalogScenario.Voices, Locale.getDefault().toLanguageTag(), this@ReadAloudPreferencesTest.profile.settings.speech))
     }
-    private fun show(c: ReadAloudController, chat: Boolean = false, developer: Boolean = false) {
+    private fun show(c: ReadAloudController, chat: Boolean = false) {
         rule.setContent { WhiteNoiseTheme { CompositionLocalProvider(LocalReadAloudController provides c) {
             ReadAloudHost(profile, {}, onPreferences = { id, reduce ->
                 if (profile.id == id) profile = profile.copy(settings = profile.settings.copy(speech = reduce(profile.settings.speech)))
             }) {
                 when {
-                    developer -> SpeechDeveloperDialog(profile, c, {})
                     chat -> ChatAutoReadSetting(profile, profile.chats.single())
                     else -> ReadAloudSettingsScreen(profile, {})
                 }
@@ -98,11 +97,11 @@ class ReadAloudPreferencesTest {
         rule.onNodeWithText("Refresh").performScrollTo().performClick()
         rule.runOnIdle { assertTrue(c.discovery.usable) }
     }
-    @Test fun staleNotificationCommandCannotStopNewExampleSession() {
-        val c = controller(); show(c, developer = true)
-        rule.onNodeWithText("New session").performScrollTo().performClick()
-        rule.onNodeWithText("Send previous session command").performScrollTo().performClick()
-        rule.onNodeWithTag("speech.example.state").performScrollTo().assertTextContains("Session 2 · Foreground", substring = true)
-        rule.runOnIdle { assertNull(c.session) }
+    @Test fun staleNotificationCommandScenarioKeepsTheNewSessionActive() {
+        rule.setContent { WhiteNoiseTheme {
+            dev.ipf.whitenoise.scenarios.ScenarioExampleScreen("speech-background", "StaleCommand", {})
+        } }
+        rule.onNodeWithText("Foreground").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Playing").performScrollTo().assertIsDisplayed()
     }
 }

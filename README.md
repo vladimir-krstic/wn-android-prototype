@@ -86,6 +86,28 @@ an emulator, install/launch the app, interact with a device, or take screenshots
 An attached phone or earlier inspection request does not carry authorization
 forward. See [AGENTS.md](AGENTS.md) for the full workflow.
 
+## Developer scenarios
+
+Open **Settings → Developer Tools → Scenarios**, even when Developer Tools is off.
+Search or choose a feature, read its variants, then tap one to launch immediately
+into a temporary account/chat session. Use **Restart**, **Change Variant**, or
+**Exit Scenario** in the scenario controls. Exiting restores your original app
+session. Tap the scenario name during a run to reveal its instructions.
+
+The catalog includes **74 scenarios and 372 variants**, covering all existing
+scenario enums and the former switch/action examples across the app. Scenario
+selectors and example-injection buttons are exclusive to this catalog. See [the catalog brief](docs/screens/scenario-catalog.md)
+for scope, navigation and validation boundaries. Android integration descriptions
+identify device-dependent flows; app-state isolation does not undo files you export
+or settings you change outside the app.
+
+
+Validation on 2026-09-08: `./gradlew testDebugUnitTest lintDebug assembleDebug
+assembleDebugAndroidTest` passed: 1,089 unit tests, lint 0 errors / 16 warnings,
+and both APKs built. The ten Python checks and locale verification passed
+(1,750 keys, four complete locales). Instrumentation is compiled only; device
+and visual acceptance remain pending.
+
 ## Repository map
 
 | Location | Responsibility |

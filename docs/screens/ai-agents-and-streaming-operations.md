@@ -55,9 +55,9 @@ profile and public key. Selecting a row opens a Material bottom sheet. Close,
 system Back, or outside dismissal returns to the list without copying anything;
 leaving the screen cannot perform or repeat setup.
 
-Conversation Debug → Add agent conversation examples adds local rows to that
-exact chat. Returning to the conversation presents those rows through the
-ordinary timeline. Profile switching invalidates the old insertion callback.
+Developer Tools → Scenarios → Conversation examples → Agents launches a
+temporary chat with agent rows already inserted. The ordinary timeline renders
+them. The former Conversation Debug injection action has been removed.
 
 ## Exact product copy
 
