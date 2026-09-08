@@ -2,6 +2,8 @@
 
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
+
 import dev.ipf.whitenoise.ui.theme.isAmoledOutline
 import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
@@ -633,7 +635,7 @@ private data class ChatInfoAction(
 private fun ChatInfoActionGroup(actions: List<ChatInfoAction>, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+        verticalArrangement = Arrangement.spacedBy(WhiteNoiseListItemDefaults.segmentedGap),
     ) {
         actions.forEachIndexed { index, action ->
             val contentColor = if (action.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
@@ -651,6 +653,7 @@ private fun ChatInfoActionGroup(actions: List<ChatInfoAction>, modifier: Modifie
                     null
                 },
                 shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, actions.size),
+                modifier = Modifier.amoledOutline(WhiteNoiseListItemDefaults.segmentedShapes(index, actions.size).shape, action.enabled),
                 colors = ListItemDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                     contentColor = contentColor,
@@ -710,13 +713,13 @@ private fun ChatInfoMemberRow(
     val rowModifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)
-        .padding(bottom = if (index == count - 1) 0.dp else ListItemDefaults.SegmentedGap)
+        .padding(bottom = if (index == count - 1) 0.dp else WhiteNoiseListItemDefaults.segmentedGap)
         .testTag("chat_info.member.${member.personId}")
     val shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, count)
     val colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
     if (person == null) {
         ListItem(
-            modifier = rowModifier,
+            modifier = rowModifier.amoledOutline(shapes.shape),
             content = headline,
             supportingContent = supporting,
             leadingContent = leading,
@@ -726,7 +729,7 @@ private fun ChatInfoMemberRow(
     } else {
         ListItem(
             onClick = { onMember(person.id) },
-            modifier = rowModifier,
+            modifier = rowModifier.amoledOutline(shapes.shape),
             content = headline,
             supportingContent = supporting,
             leadingContent = leading,

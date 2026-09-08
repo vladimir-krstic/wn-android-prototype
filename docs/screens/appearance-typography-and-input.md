@@ -281,3 +281,77 @@ AppearanceInputInteractionTest now checks Save before both color and reset
 commits. Current-build device inspection remains pending.
 
 Action-color host validation: the full unit/lint/app APK/UI-test APK gate passed, with 1,046 unit tests and no failures/errors/skips. Script tests, locale verification and whitespace checks pass. UI regression tests were compiled, not executed on a device.
+
+## One AMOLED theme and connected groups — 2026-09-08
+
+Latest user direction supersedes the separate AMOLED variants above. Appearance
+now offers System default, Light, Dark and **AMOLED**. AMOLED retains the former
+outlined palette, pure black surfaces, white outlines, fixed monochrome colors
+and native interaction states. The old filled variant is removed. Existing
+non-AMOLED color preferences, profile ownership and navigation are unchanged.
+
+AMOLED grouped rows touch with no gap and no rounded inner corners. Each group
+keeps its native outside corners and one physical-pixel outline. Each row owns
+its bottom boundary; the next row omits its top stroke, so adjacent rows share
+one separator. This is intentionally a physical pixel rather than one dp.
+Independent groups retain their existing section margins.
+
+`WhiteNoiseListItemDefaults` supplies theme-aware gaps and positional shapes.
+`ConnectedRowShape` identifies those boundaries for the shared `amoledOutline`
+modifier, including independently composed lazy rows. Material components still
+own row semantics, touch targets, disabled/selected feedback, focus and clicks.
+A small border path is needed because a complete border on every native row
+would double the shared boundary; no custom gesture or state handling is added.
+The same rule covers mixed Settings groups, profile switching, people/group
+creation, group members/actions, entity/contact pickers, forwarding and incoming
+share destinations. Other themes keep the existing Material segmented gaps.
+
+State coverage: single/first/middle/last rows; conditional rows; enabled and
+disabled controls; selected rows; LTR/RTL and changing density. The attached
+reference is used for grouping geometry only; its yellow colors are not adopted.
+No new platform integration, route or Back behavior is introduced.
+
+Sources: [Compose dividers](https://developer.android.com/develop/ui/compose/components/divider)
+and [Dp.Hairline](https://developer.android.com/reference/kotlin/androidx/compose/ui/unit/Dp).
+Local parity remains the Appearance entry in `docs/port/source-map.md`; this
+explicit Android presentation update does not expand the pinned iOS baseline.
+
+Validation: `AmoledOutlineTest` now verifies the four-choice theme set and the
+remaining palette/override policy. `AppearanceInputInteractionTest` covers
+AMOLED selection and restoring color editing in Dark. `AmoledGroupedRowsTest`
+checks touching mixed rows, a single-pixel separator at 1× and 3× density, RTL
+edge continuity and retained row actions. Device tests are compiled only;
+visual acceptance remains with the user.
+
+Host verification (2026-09-08): `./gradlew testDebugUnitTest lintDebug
+assembleDebug assembleDebugAndroidTest` passes; 1,058 unit tests, zero failures
+or errors. App and instrumentation APKs assemble successfully. No device or
+emulator was used.
+
+### Message outline direction — 2026-09-08
+
+User-approved follow-up: sent AMOLED bubbles retain pure white outlines;
+received bubbles use the existing neutral gray outline color (`#999999`).
+Both keep the existing 1 dp stroke, black fill and readable white content.
+`amoledMessageBorder` applies at the shared bubble surface, including focused,
+pinned/search presentations and agent-operation cards. Other themes and
+non-message control borders retain their existing treatment.
+
+Host follow-up verification: unit tests (1,058, zero failures/errors), lint,
+app APK and instrumentation APK assembly all pass. No device inspection was
+performed for the outline-color update.
+
+### Chat-list rows and grouped perimeter weight — 2026-09-08
+
+User screenshot follow-up: ordinary `ChatListRow` entries have no AMOLED outline.
+Their existing selection, context actions and native pressed feedback remain.
+Grouped controls retain touching rows and a single 1px internal divider; the
+outside perimeter now uses the same pixel-rounded 1 dp weight as other outlined
+controls. This supersedes the earlier 1px outside-border metric, avoiding the
+very thin appearance of high-density rounded corners. First/last positional
+shapes preserve continuous corners; lazy interior rows extend both side strokes
+to their full height without adding another horizontal border.
+
+Host verification for this follow-up: `testDebugUnitTest`, `lintDebug`,
+`assembleDebug` and `assembleDebugAndroidTest` pass; 1,058 unit tests with no
+failures or errors. No device or emulator inspection was performed.

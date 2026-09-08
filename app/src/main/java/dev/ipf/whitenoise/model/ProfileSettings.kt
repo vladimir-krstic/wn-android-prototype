@@ -5,7 +5,6 @@ enum class AppearancePreference(val label: String) {
     Light("Light"),
     Dark("Dark"),
     Amoled("AMOLED"),
-    AmoledOutline("AMOLED Outline"),
 }
 
 enum class LanguagePreference(val label: String, val localeTag: String?) {

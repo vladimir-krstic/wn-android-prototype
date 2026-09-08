@@ -118,17 +118,12 @@ internal val WhiteNoiseDarkColors = darkColorScheme(
     onTertiaryFixedVariant = Color(0xFF4D4D4D),
 )
 
+/** Outline surfaces have no tonal fill; interaction state layers remain Material-owned. */
 internal val WhiteNoiseAmoledColors = WhiteNoiseDarkColors.copy(
     background = Color.Black,
     surface = Color.Black,
     surfaceDim = Color.Black,
-    surfaceContainerLowest = Color(0xFF080808),
-    surfaceContainerLow = Color.Black,
     surfaceTint = Color.Transparent,
-)
-
-/** Outline surfaces have no tonal fill; interaction state layers remain Material-owned. */
-internal val WhiteNoiseAmoledOutlineColors = WhiteNoiseAmoledColors.copy(
     primary = Color.White,
     onPrimary = Color.Black,
     primaryContainer = Color.Black,
@@ -155,7 +150,6 @@ internal fun whiteNoiseColorScheme(appearance: AppearancePreference, systemDark:
     AppearancePreference.Light -> WhiteNoiseLightColors
     AppearancePreference.Dark -> WhiteNoiseDarkColors
     AppearancePreference.Amoled -> WhiteNoiseAmoledColors
-    AppearancePreference.AmoledOutline -> WhiteNoiseAmoledOutlineColors
 }
 
 data class DefaultMessageBubbleColors(
@@ -174,8 +168,8 @@ internal fun defaultMessageBubbleColors(
     base: androidx.compose.material3.ColorScheme,
     theme: AppearanceColorTheme,
 ) = DefaultMessageBubbleColors(
-    mineContainer = if (theme == AppearanceColorTheme.AmoledOutline) base.surface else base.primary,
-    mineContent = if (theme == AppearanceColorTheme.AmoledOutline) base.onSurface else base.onPrimary,
+    mineContainer = if (theme == AppearanceColorTheme.Amoled) base.surface else base.primary,
+    mineContent = if (theme == AppearanceColorTheme.Amoled) base.onSurface else base.onPrimary,
     otherContainer = base.surfaceContainerHigh,
     otherContent = base.onSurface,
 )

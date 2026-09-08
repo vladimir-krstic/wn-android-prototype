@@ -1150,3 +1150,17 @@ right inner edge for incoming/outgoing time and status. Align text baselines whe
 the final line plus 8 dp separation plus footer fits; otherwise use a footer line
 with 4 dp top gap. Keep 12 dp horizontal / 8 dp vertical text insets, rich content
 insets, existing labelSmall and 14 dp status glyphs. Reactions remain external.
+
+### AMOLED connected groups — 2026-09-08
+
+User-approved AMOLED exception to the shared segmented row gap: 0 dp between
+members of one group, 0 dp internal corner radii, and one physical-pixel white
+boundary. Only the first row draws the top border; each row draws the bottom.
+Use `WhiteNoiseListItemDefaults.segmentedGap` and `segmentedShapes` with
+`amoledOutline` so Settings, sheets and lazy grouped lists share this rule.
+Standalone outlines and spacing between separate sections retain their metrics.
+
+AMOLED screenshot follow-up (2026-09-08): grouped **outside perimeters** use the
+standard pixel-rounded 1 dp outline, including curves. Internal shared dividers
+remain exactly one physical pixel and row gaps remain zero. Ordinary chat-list
+entries have no border.

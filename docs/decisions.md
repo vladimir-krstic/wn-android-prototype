@@ -4783,3 +4783,24 @@ The user reversed the earlier outside-bubble decision. Keep existing timestamp
 visibility but place time, delivery and retention inside the right edge, sharing
 the last text baseline when space permits and moving to a footer line when full.
 See docs/screens/message-inline-timestamps.md for the measured layout and states.
+
+## 2026-09-08 — One AMOLED theme with connected outlined groups
+
+Explicit user direction replaces the 2026-09-06 two-variant decision: remove
+filled AMOLED and rename AMOLED Outline to AMOLED. Keep the outlined palette
+and fixed-color policy. For AMOLED only, app-wide grouped rows have zero gap,
+straight internal corners and a shared one-physical-pixel divider. Each row
+owns its bottom stroke; only the first owns a top stroke. Outside corners,
+section margins and native Material interaction behavior remain intact.
+Other themes retain their separated segmented rows. See the
+[appearance brief](screens/appearance-typography-and-input.md#one-amoled-theme-and-connected-groups--2026-09-08).
+
+2026-09-08 AMOLED message follow-up: distinguish direction with white sent-bubble
+outlines and neutral gray (`#999999`) received-bubble outlines. Preserve stroke
+width, text, fill and other theme/control styling. This supersedes the earlier
+same-white-outline treatment for message bubbles only.
+
+2026-09-08 screenshot follow-up: omit AMOLED outlines from ordinary chat-list
+rows. Restore standard 1 dp weight around grouped outside perimeters so corners
+retain visible weight at high density; keep one physical-pixel internal divider
+and touching rows. This supersedes the 1px outer-perimeter treatment only.

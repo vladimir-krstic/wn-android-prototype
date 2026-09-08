@@ -1038,3 +1038,22 @@ MessageDocumentContent preserves formatting and selection. Reactions retain thei
 external rail. Search, pinned and focused views reuse this behavior. Geometry unit
 tests and Compose baseline/containment regressions added. Unit tests, lint and
 both debug APK assemblies pass. UI tests compiled only; visual acceptance pending.
+
+2026-09-08 AMOLED consolidation: the former outlined variant is now the single
+AMOLED choice; the filled variant is removed from profile appearance and color
+resolution. Shared grouped-row gaps/shapes and `ConnectedRowShape` provide
+zero-gap rows with one physical-pixel shared boundary across Settings, profiles,
+creation/member lists, entity/contact pickers and forwarding/share destinations.
+Theme-policy unit tests are updated; `AmoledGroupedRowsTest` adds density/RTL
+pixel-boundary and action coverage. See the Appearance brief for host evidence;
+device execution and visual acceptance are not claimed.
+
+2026-09-08 AMOLED message direction: shared conversation and agent-operation
+bubble surfaces now resolve white sent outlines and gray received outlines via
+`amoledMessageBorder`; other appearance modes are unchanged. Visual acceptance
+remains pending user inspection.
+
+2026-09-08 AMOLED screenshot follow-up: `ChatListRow` no longer adds an outline;
+`ConnectedRowShape` separates the standard-weight rounded outside perimeter from
+one-pixel shared dividers. Existing row interaction and grouping remain intact.
+See the Appearance brief for verification; no device execution is claimed.

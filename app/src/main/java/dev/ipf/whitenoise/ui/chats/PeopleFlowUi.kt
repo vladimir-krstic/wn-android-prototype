@@ -2,6 +2,8 @@
 
 package dev.ipf.whitenoise.ui.chats
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
+
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
@@ -154,7 +156,7 @@ fun ContactGroupsSheet(
                 }
                 if (groups.isEmpty()) item { Text(stringResource(R.string.contact_no_eligible_groups), Modifier.padding(vertical = WhiteNoiseSpacing.FormField)) }
                 itemsIndexed(groups, key = { _, group -> group.id }) { index, group ->
-                    if (index > 0) Spacer(Modifier.height(ListItemDefaults.SegmentedGap))
+                    if (index > 0) Spacer(Modifier.height(WhiteNoiseListItemDefaults.segmentedGap))
                     ListItem(
                         checked = group.id in selected,
                         onCheckedChange = { checked -> selected = if (checked) selected + group.id else selected - group.id },
@@ -171,7 +173,7 @@ fun ContactGroupsSheet(
                         },
                         trailingContent = { Checkbox(checked = group.id in selected, onCheckedChange = null,
                             modifier = Modifier.clearAndSetSemantics { }) },
-                        modifier = Modifier.fillMaxWidth().testTag("contact.group.${group.id}"),
+                        modifier = Modifier.fillMaxWidth().amoledOutline(WhiteNoiseListItemDefaults.segmentedShapes(index, groups.size).shape).testTag("contact.group.${group.id}"),
                     ) { Text(group.title) }
                 }
             }

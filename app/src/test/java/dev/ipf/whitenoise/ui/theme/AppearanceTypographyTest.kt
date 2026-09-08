@@ -42,13 +42,14 @@ class AppearanceTypographyTest {
         assertSame(WhiteNoiseLightColors, whiteNoiseColorScheme(AppearancePreference.Light,true))
         assertSame(WhiteNoiseDarkColors, whiteNoiseColorScheme(AppearancePreference.Dark,false))
     }
-    @Test fun amoledUsesBlackCanvasAndKeepsDistinctSemanticSurfaces() {
+    @Test fun amoledUsesBlackSurfacesAndKeepsSemanticErrorColors() {
         val colors = whiteNoiseColorScheme(AppearancePreference.Amoled,false)
         assertSame(colors, whiteNoiseColorScheme(AppearancePreference.Amoled,true))
         assertEquals(Color.Black, colors.background); assertEquals(Color.Black, colors.surface)
         assertEquals(Color.Black, colors.surfaceContainerLow); assertEquals(Color.Transparent,colors.surfaceTint)
-        assertNotEquals(colors.surface, colors.surfaceContainer)
-        assertNotEquals(colors.surfaceContainer, colors.surfaceContainerHigh)
+        assertEquals(Color.Black, colors.surfaceContainer)
+        assertEquals(Color.Black, colors.surfaceContainerHigh)
+        assertEquals(Color.White, colors.outline)
         assertEquals(WhiteNoiseDarkColors.error, colors.error)
         assertEquals(WhiteNoiseDarkColors.onError, colors.onError)
     }

@@ -12,10 +12,10 @@ import androidx.compose.ui.unit.dp
 import dev.ipf.whitenoise.model.AppearanceColorTheme
 
 @Composable
-fun isAmoledOutline(): Boolean = LocalAppearanceColorTheme.current == AppearanceColorTheme.AmoledOutline
+fun isAmoledOutline(): Boolean = LocalAppearanceColorTheme.current == AppearanceColorTheme.Amoled
 
 internal fun outlineBorder(theme: AppearanceColorTheme, enabled: Boolean = true): BorderStroke? =
-    if (theme == AppearanceColorTheme.AmoledOutline) {
+    if (theme == AppearanceColorTheme.Amoled) {
         BorderStroke(1.dp, Color.White.copy(alpha = if (enabled) 1f else 0.38f))
     } else null
 
@@ -24,9 +24,18 @@ internal fun outlineBorder(theme: AppearanceColorTheme, enabled: Boolean = true)
 fun amoledOutlineBorder(enabled: Boolean = true): BorderStroke? =
     outlineBorder(LocalAppearanceColorTheme.current, enabled)
 
+/** Message direction changes the bubble boundary, without dimming its content. */
+@Composable
+fun amoledMessageBorder(outgoing: Boolean): BorderStroke? =
+    if (isAmoledOutline()) {
+        BorderStroke(1.dp, if (outgoing) Color.White else WhiteNoiseDarkColors.outline)
+    } else null
+
 @Composable
 fun Modifier.amoledOutline(shape: Shape, enabled: Boolean = true): Modifier =
-    amoledOutlineBorder(enabled)?.let { border(it, shape) } ?: this
+    if (isAmoledOutline() && shape is ConnectedRowShape) {
+        connectedRowBorder(shape, Color.White.copy(alpha = if (enabled) 1f else 0.38f))
+    } else amoledOutlineBorder(enabled)?.let { border(it, shape) } ?: this
 
 /** Selected containers need a state layer even when resting tonal surfaces are all black. */
 @Composable

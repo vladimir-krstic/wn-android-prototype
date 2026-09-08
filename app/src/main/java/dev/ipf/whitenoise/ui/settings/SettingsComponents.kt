@@ -4,7 +4,6 @@ package dev.ipf.whitenoise.ui.settings
 
 import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
 import dev.ipf.whitenoise.ui.theme.amoledOutline
-import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
@@ -172,7 +171,7 @@ internal fun SettingsGroup(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin),
-        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+        verticalArrangement = Arrangement.spacedBy(WhiteNoiseListItemDefaults.segmentedGap),
     ) {
         group.rows.forEachIndexed { index, row ->
             val shapes = WhiteNoiseListItemDefaults.segmentedShapes(index, group.rows.size)
@@ -185,7 +184,7 @@ internal fun SettingsGroup(
                 if (row.native) {
                     row.content()
                 } else {
-                    Surface(color = containerColor, border = amoledOutlineBorder(), shape = shapes.shape) {
+                    Surface(color = containerColor, modifier = Modifier.amoledOutline(shapes.shape), shape = shapes.shape) {
                         Column(Modifier.fillMaxWidth()) { row.content() }
                     }
                 }
@@ -199,7 +198,7 @@ private fun settingsRowShapes(): ListItemShapes = LocalSettingsRowShapes.current
 
 @Composable
 internal fun SettingsDivider(modifier: Modifier = Modifier) {
-    Spacer(modifier.fillMaxWidth().height(ListItemDefaults.SegmentedGap))
+    Spacer(modifier.fillMaxWidth().height(WhiteNoiseListItemDefaults.segmentedGap))
 }
 
 @Composable

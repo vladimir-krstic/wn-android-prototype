@@ -273,7 +273,7 @@ fun AppearanceScreen(
                             SettingsChoice(
                                 title = stringResource(preference.labelResource()),
                                 selected = settings.appearance == preference,
-                                subtitle = if (preference == AppearancePreference.AmoledOutline) stringResource(R.string.appearance_amoled_outline_detail) else null,
+                                subtitle = if (preference == AppearancePreference.Amoled) stringResource(R.string.appearance_amoled_detail) else null,
                                 highlightSelected = false,
                                 onClick = { onChange(settings.copy(appearance = preference)) },
                             )
@@ -291,15 +291,15 @@ fun AppearanceScreen(
                     row {
                         SettingsLink(
                             title = stringResource(R.string.action_color),
-                            enabled = settings.appearance != AppearancePreference.AmoledOutline,
-                            subtitle = if (settings.appearance == AppearancePreference.AmoledOutline) stringResource(R.string.appearance_outline_colors_fixed) else null,
+                            enabled = settings.appearance != AppearancePreference.Amoled,
+                            subtitle = if (settings.appearance == AppearancePreference.Amoled) stringResource(R.string.appearance_outline_colors_fixed) else null,
                             onClick = onActionColor,
                         )
                     }
                     row {
                         SettingsLink(
                             title = stringResource(R.string.chat_bubble_colors),
-                            enabled = settings.appearance != AppearancePreference.AmoledOutline,
+                            enabled = settings.appearance != AppearancePreference.Amoled,
                             onClick = onBubbleColors,
                         )
                     }
@@ -386,7 +386,6 @@ private fun AppearancePreference.labelResource(): Int = when (this) {
     AppearancePreference.Light -> R.string.theme_light
     AppearancePreference.Dark -> R.string.theme_dark
     AppearancePreference.Amoled -> R.string.appearance_amoled
-    AppearancePreference.AmoledOutline -> R.string.appearance_amoled_outline
 }
 
 @Composable

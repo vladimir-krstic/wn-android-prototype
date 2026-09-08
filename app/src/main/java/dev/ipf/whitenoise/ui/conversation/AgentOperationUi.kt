@@ -1,6 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
-import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
+import dev.ipf.whitenoise.ui.theme.amoledMessageBorder
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +44,7 @@ internal fun AgentOperationCard(
     modifier: Modifier = Modifier,
     footer: (@Composable () -> Unit)? = null,
     isForwarded: Boolean = false,
+    outgoing: Boolean = false,
 ) {
     val reading = LocalMessageReading.current
     val selectingText = reading.selectingTextId == messageId
@@ -68,7 +69,7 @@ internal fun AgentOperationCard(
                 onLongClick = onLongPress,
             ))
             .semantics { stateDescription = status },
-        border = amoledOutlineBorder(),
+        border = amoledMessageBorder(outgoing),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurface,

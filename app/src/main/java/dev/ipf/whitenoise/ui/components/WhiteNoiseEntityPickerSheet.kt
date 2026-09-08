@@ -108,7 +108,7 @@ internal fun WhiteNoiseEntityPickerSheet(
                 state = listState,
                 modifier = Modifier.weight(1f, fill = false).fillMaxWidth().testTag("entity.list"),
                 contentPadding = PaddingValues(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = WhiteNoiseSpacing.Related),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseListItemDefaults.segmentedGap),
             ) {
                 if (visible.isEmpty()) item {
                     Text(stringResource(R.string.no_results), Modifier.padding(WhiteNoiseSpacing.Related))

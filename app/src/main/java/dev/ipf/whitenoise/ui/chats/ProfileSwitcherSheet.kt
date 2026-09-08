@@ -60,7 +60,7 @@ fun ProfileSwitcherSheet(
             WhiteNoiseSheetHeader(stringResource(R.string.switch_profile), onClose = onDismiss)
             LazyColumn(modifier = Modifier.weight(1f, fill = false).heightIn(max = 520.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+                verticalArrangement = Arrangement.spacedBy(WhiteNoiseListItemDefaults.segmentedGap),
             ) {
                 itemsIndexed(presentedProfiles, key = { _, item -> item.profile.id }) { index, item ->
                     val profile = item.profile

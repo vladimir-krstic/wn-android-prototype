@@ -1,7 +1,6 @@
 package dev.ipf.whitenoise.ui.chats
 
 import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
-import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -162,7 +161,7 @@ internal fun ChatListRow(chat: Chat, onOpen: () -> Unit, onActions: () -> Unit, 
                 }
             }
         },
-        modifier = Modifier.fillMaxWidth().amoledOutline(WhiteNoiseListItemDefaults.shapes().shape).testTag("chat.row.${chat.id}")
+        modifier = Modifier.fillMaxWidth().testTag("chat.row.${chat.id}")
             .semantics { customActions = actions; selected = highlighted; role = if (selecting) Role.Checkbox else Role.Button
                 if (selecting) toggleableState = if (checked) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off },
         // The anchor's outer inset plus this inner padding keep artwork on the shared

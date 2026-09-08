@@ -51,10 +51,9 @@ enum class AppearanceColorTheme {
     Light,
     Dark,
     Amoled,
-    AmoledOutline,
     ;
 
-    val supportsCustomColors: Boolean get() = this != AmoledOutline
+    val supportsCustomColors: Boolean get() = this != Amoled
 
     companion object {
         fun resolve(appearance: AppearancePreference, systemDark: Boolean): AppearanceColorTheme = when (appearance) {
@@ -62,7 +61,6 @@ enum class AppearanceColorTheme {
             AppearancePreference.Light -> Light
             AppearancePreference.Dark -> Dark
             AppearancePreference.Amoled -> Amoled
-            AppearancePreference.AmoledOutline -> AmoledOutline
         }
     }
 }
@@ -81,8 +79,7 @@ data class AppearanceColorPreferences(
     fun forTheme(theme: AppearanceColorTheme): ThemeColorOverrides = when (theme) {
         AppearanceColorTheme.Light -> light
         AppearanceColorTheme.Dark -> dark
-        AppearanceColorTheme.Amoled -> amoled
-        AppearanceColorTheme.AmoledOutline -> ThemeColorOverrides()
+        AppearanceColorTheme.Amoled -> ThemeColorOverrides()
     }
 
     fun updateTheme(
@@ -91,8 +88,7 @@ data class AppearanceColorPreferences(
     ): AppearanceColorPreferences = when (theme) {
         AppearanceColorTheme.Light -> copy(light = transform(light))
         AppearanceColorTheme.Dark -> copy(dark = transform(dark))
-        AppearanceColorTheme.Amoled -> copy(amoled = transform(amoled))
-        AppearanceColorTheme.AmoledOutline -> this
+        AppearanceColorTheme.Amoled -> this
     }
 }
 

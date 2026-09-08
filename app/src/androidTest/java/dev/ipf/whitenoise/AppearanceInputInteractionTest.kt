@@ -72,14 +72,14 @@ class AppearanceInputInteractionTest {
                 AppearanceScreen(profile, {}, { profile = profile.copy(settings = it) }, {})
             }
         }
-        compose.onNodeWithText("AMOLED Outline").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("AMOLED").performScrollTo().performClick().assertIsSelected()
         compose.onNodeWithText("Action color").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("Chat bubble colors").performScrollTo().assertIsNotEnabled()
         compose.runOnIdle {
-            assertEquals(AppearancePreference.AmoledOutline, profile.settings.appearance)
+            assertEquals(AppearancePreference.Amoled, profile.settings.appearance)
             assertEquals(saved, profile.settings.colors)
         }
-        compose.onNodeWithText("AMOLED").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText("Dark").performScrollTo().performClick().assertIsSelected()
         compose.onNodeWithText("Action color").performScrollTo().assertIsEnabled()
         compose.runOnIdle { assertEquals(saved, profile.settings.colors) }
     }

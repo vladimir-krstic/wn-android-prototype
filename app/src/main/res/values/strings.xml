@@ -1506,7 +1506,7 @@
     <string name="audit_logs_developer_only">Enable Developer Tools to manage sensitive audit logs.</string>
     <string name="audit_logs_sensitive">Sensitive recording, export and deletion</string>
     <string name="appearance_amoled">AMOLED</string>
-    <string name="appearance_theme_help">System default follows your device. Light and Dark keep the selected appearance. AMOLED uses a black background with dark controls.</string>
+    <string name="appearance_theme_help">System default follows your device. Light and Dark keep the selected appearance. AMOLED uses a black background with white outlines.</string>
     <string name="appearance_font_size">Font size</string>
     <string name="appearance_font_small">Small</string>
     <string name="appearance_font_default">Default</string>
@@ -1854,9 +1854,8 @@
     <string name="group_see_all_members">See all</string>
     <string name="contact_add_to_group">Add to a group</string>
     <string name="dictation_resume">Resume dictation</string>
-    <string name="appearance_amoled_outline">AMOLED Outline</string>
-    <string name="appearance_amoled_outline_detail">Pure black with crisp white outlines.</string>
-    <string name="appearance_outline_colors_fixed">AMOLED Outline uses fixed white action and bubble colors. Switch themes to customize colors.</string>
+    <string name="appearance_amoled_detail">Pure black with crisp white outlines.</string>
+    <string name="appearance_outline_colors_fixed">AMOLED uses fixed white action and bubble colors. Switch themes to customize colors.</string>
     <string name="message_forwarded">Forwarded</string>
     <string name="forward_success">Forwarded</string>
     <string name="forward_choose_folders">Forward to chats in a folder</string>

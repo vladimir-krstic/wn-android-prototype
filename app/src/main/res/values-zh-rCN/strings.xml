@@ -1468,7 +1468,7 @@
     <string name="audit_logs_developer_only">启用开发者 管理敏感审计日志的工具。</string>
     <string name="audit_logs_sensitive">敏感记录、导出和删除</string>
     <string name="appearance_amoled">AMOLED</string>
-    <string name="appearance_theme_help">系统默认跟踪您的设备 。 光和暗保持选定的外观.AMOLED使用带有暗控的黑色背景。</string>
+    <string name="appearance_theme_help">系统默认跟踪您的设备 。 光和暗保持选定的外观.AMOLED使用带有白色轮廓的黑色背景。</string>
     <string name="appearance_font_size">字体大小</string>
     <string name="appearance_font_small">小</string>
     <string name="appearance_font_default">默认</string>
@@ -1813,9 +1813,8 @@
     <string name="group_see_all_members">查看全部</string>
     <string name="contact_add_to_group">添加到群组</string>
     <string name="dictation_resume">继续听写</string>
-    <string name="appearance_amoled_outline">AMOLED Outline</string>
-    <string name="appearance_amoled_outline_detail">纯黑背景，搭配清晰的白色轮廓。</string>
-    <string name="appearance_outline_colors_fixed">AMOLED Outline 的操作按钮和消息气泡使用固定的白色。如需自定义颜色，请切换主题。</string>
+    <string name="appearance_amoled_detail">纯黑背景，搭配清晰的白色轮廓。</string>
+    <string name="appearance_outline_colors_fixed">AMOLED 的操作按钮和消息气泡使用固定的白色。如需自定义颜色，请切换主题。</string>
     <string name="message_forwarded">已转发</string>
     <string name="forward_success">已转发</string>
     <string name="forward_choose_folders">转发到文件夹中的聊天</string>

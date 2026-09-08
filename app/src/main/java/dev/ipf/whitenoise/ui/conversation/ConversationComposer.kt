@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.theme.isAmoledOutline
 import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
@@ -2295,7 +2296,7 @@ private fun ContactPickerSheet(
                         )
                         ListItem(
                             onClick = { onSelect(person) },
-                            modifier = Modifier.testTag("conversation.contact.${person.id}"),
+                            modifier = Modifier.amoledOutline(shapes.shape).testTag("conversation.contact.${person.id}"),
                             leadingContent = {
                                 ProfileAvatar(
                                     person.displayName,
@@ -2323,7 +2324,7 @@ private fun ContactPickerSheet(
                             Spacer(
                                 Modifier
                                     .fillMaxWidth()
-                                    .height(ListItemDefaults.SegmentedGap)
+                                    .height(WhiteNoiseListItemDefaults.segmentedGap)
                                     .background(MaterialTheme.colorScheme.surfaceContainerLow),
                             )
                         }

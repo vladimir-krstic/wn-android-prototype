@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.share
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.components.WhiteNoiseListItemDefaults
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,7 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -76,6 +78,7 @@ internal fun IncomingShareScreen(controller: IncomingController) {
     val share = work.entry is IncomingEntry.Share
     val query = rememberSaveable(work.id,selected?.id,saver = TextFieldState.Saver) { TextFieldState() }
     var choosingProfile by rememberSaveable(work.id) { mutableStateOf(false) }
+    val joinedRows = dev.ipf.whitenoise.ui.theme.isAmoledOutline()
     val title = stringResource(if (share) R.string.incoming_share_to else R.string.incoming_open_title)
     BackHandler { if (choosingProfile) choosingProfile = false else if (query.text.isNotEmpty()) query.edit { replace(0,length,"") } else controller.cancel(work.id) }
     Scaffold(modifier = Modifier.fillMaxSize().testTag("incoming.screen").semantics { paneTitle = title },
@@ -89,22 +92,32 @@ internal fun IncomingShareScreen(controller: IncomingController) {
             }
         } }) { padding ->
         AdaptiveContent(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
-            LazyColumn(Modifier.fillMaxSize().imePadding().testTag("incoming.list"), contentPadding = PaddingValues(WhiteNoiseSpacing.CompactScreenMargin), verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
-                if (share && work.committed == null) item {
+            LazyColumn(Modifier.fillMaxSize().imePadding().testTag("incoming.list"), contentPadding = PaddingValues(WhiteNoiseSpacing.CompactScreenMargin), verticalArrangement = Arrangement.spacedBy(if (joinedRows) 0.dp else WhiteNoiseSpacing.Related)) {
+                // Keep section spacing while the independently lazy destination rows touch.
+                fun section(content: @Composable () -> Unit) {
+                    item {
+                        Column {
+                            content()
+                            if (joinedRows) Spacer(Modifier.height(WhiteNoiseSpacing.Related))
+                        }
+                    }
+                }
+
+                if (share && work.committed == null) section {
                     TextButton(onClick = { choosingProfile = true }, enabled = !work.running && profiles.isNotEmpty(), modifier = Modifier.testTag("incoming.profile")) {
                         Text(selected?.name ?: stringResource(R.string.incoming_choose_profile))
                     }
                 }
-                work.failure?.let { failure -> item {
+                work.failure?.let { failure -> section {
                     Text(stringResource(incomingFailureResource(failure, work.committed != null)), color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("incoming.failure"))
                 } }
-                if (work.running) item {
+                if (work.running) section {
                     Text(stringResource(when(work.phase) { IncomingPhase.Preparing -> if (share) R.string.incoming_preparing else if ((work.entry as? IncomingEntry.Notification)?.target?.kind == NotificationTargetKind.Invite) R.string.notification_invite_opening else R.string.incoming_opening; IncomingPhase.Applying -> R.string.incoming_staging; else -> R.string.incoming_opening }), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     TextButton(onClick = { controller.cancel(work.id) }) { Text(stringResource(R.string.cancel)) }
                 }
-                if (work.phase == IncomingPhase.Failed) item {
+                if (work.phase == IncomingPhase.Failed) section {
                     FlowRow {
                         if (selected != null && work.failure !in setOf(IncomingFailure.ContentEmpty,IncomingFailure.ContentInvalid,IncomingFailure.ContentUnavailable,IncomingFailure.ContentTooLarge))
                             TextButton(onClick = { controller.retry(work.id) }) { Text(stringResource(R.string.lifecycle_retry)) }
@@ -114,7 +127,7 @@ internal fun IncomingShareScreen(controller: IncomingController) {
                     }
                 }
                 if (work.phase == IncomingPhase.Choosing) {
-                    item {
+                    section {
                         Text(stringResource(R.string.incoming_review))
                         if (work.fallback) Text(stringResource(R.string.incoming_shortcut_fallback))
                         work.prepared?.let { p ->
@@ -122,11 +135,11 @@ internal fun IncomingShareScreen(controller: IncomingController) {
                             if (p.media.isNotEmpty() || p.documents.isNotEmpty()) Text(pluralStringResource(R.plurals.incoming_files,p.media.size+p.documents.size,p.media.size+p.documents.size))
                         }
                     }
-                    item { WhiteNoiseTextField(state = query, lineLimits = TextFieldLineLimits.SingleLine, label = { Text(stringResource(R.string.incoming_search)) }, modifier = Modifier.fillMaxWidth().testTag("incoming.search")) }
+                    section { WhiteNoiseTextField(state = query, lineLimits = TextFieldLineLimits.SingleLine, label = { Text(stringResource(R.string.incoming_search)) }, modifier = Modifier.fillMaxWidth().testTag("incoming.search")) }
                     val targets = selected?.let { controller.targets(it.id) }.orEmpty().filter { it.title.contains(query.text,ignoreCase = true) }
-                    if (targets.isEmpty()) item { Text(stringResource(R.string.incoming_no_chats)) }
+                    if (targets.isEmpty()) section { Text(stringResource(R.string.incoming_no_chats)) }
                     else {
-                        item { Text(stringResource(R.string.incoming_recent),style = MaterialTheme.typography.titleSmall) }
+                        section { Text(stringResource(R.string.incoming_recent),style = MaterialTheme.typography.titleSmall) }
                         itemsIndexed(targets,key = { _, chat -> chat.id }) { index, chat ->
                             val checked = chat.id in work.selectedChatIds
                             ListItem(checked = checked, onCheckedChange = { controller.toggle(work.id,chat.id) },
@@ -135,7 +148,7 @@ internal fun IncomingShareScreen(controller: IncomingController) {
                                     selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
                                 supportingContent = if (chat.isArchived) ({ Text(stringResource(R.string.incoming_archived)) }) else null,
                                 leadingContent = { Checkbox(checked,onCheckedChange = null, modifier = Modifier.clearAndSetSemantics { }) },
-                                modifier = Modifier.fillMaxWidth().testTag("incoming.chat.${chat.id}")) { Text(chat.title) }
+                                modifier = Modifier.fillMaxWidth().amoledOutline(WhiteNoiseListItemDefaults.segmentedShapes(index, targets.size).shape).testTag("incoming.chat.${chat.id}")) { Text(chat.title) }
                         }
                     }
                 }

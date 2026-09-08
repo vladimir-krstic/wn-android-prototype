@@ -1,5 +1,6 @@
 package dev.ipf.whitenoise.ui.conversation
 
+import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
 import dev.ipf.whitenoise.ui.theme.isAmoledOutline
 import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
@@ -747,7 +748,7 @@ internal fun ForwardMessagesSheet(
                                         leadingContent = { Icon(painterResource(R.drawable.ic_folder), contentDescription = null) },
                                         trailingContent = { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null) },
                                         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                                        modifier = Modifier.testTag("conversation.forward.chooseFolders"),
+                                        modifier = Modifier.amoledOutline(WhiteNoiseListItemDefaults.segmentedShapes(0, 1).shape).testTag("conversation.forward.chooseFolders"),
                                     ) { Text(stringResource(R.string.forward_choose_folders)) }
                                     Spacer(Modifier.height(WhiteNoiseSpacing.Related))
                                 }
@@ -801,7 +802,7 @@ internal fun ForwardMessagesSheet(
                                         } else {
                                             null
                                         },
-                                        modifier = Modifier.testTag(
+                                        modifier = Modifier.amoledOutline(shapes.shape, enabled).testTag(
                                             "conversation.forward.destination.${chat.id}",
                                         ),
                                         content = {
@@ -812,7 +813,7 @@ internal fun ForwardMessagesSheet(
                                             )
                                         },
                                     )
-                                    if (index != chats.lastIndex) {
+                                    if (index != chats.lastIndex && !isAmoledOutline()) {
                                         HorizontalDivider(
                                             thickness = 2.dp,
                                             color = MaterialTheme.colorScheme.surfaceContainerLow,

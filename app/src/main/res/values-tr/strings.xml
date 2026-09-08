@@ -1505,7 +1505,7 @@
     <string name="audit_logs_developer_only">Hassas denetim günlüklerini yönetmek için Geliştirici Araçlarını etkinleştirin.</string>
     <string name="audit_logs_sensitive">Hassas kayıt, dışa aktarma ve silme</string>
     <string name="appearance_amoled">AMOLED</string>
-    <string name="appearance_theme_help">Sistem varsayılanı cihazınızı takip eder. Açık ve Koyu, seçilen görünümü korur. AMOLED, koyu kontrollere sahip siyah bir arka plan kullanır.</string>
+    <string name="appearance_theme_help">Sistem varsayılanı cihazınızı takip eder. Açık ve Koyu, seçilen görünümü korur. AMOLED, beyaz çizgili siyah bir arka plan kullanır.</string>
     <string name="appearance_font_size">Yazı boyutu</string>
     <string name="appearance_font_small">Küçük</string>
     <string name="appearance_font_default">Varsayılan</string>
@@ -1850,9 +1850,8 @@
     <string name="group_see_all_members">Tümünü gör</string>
     <string name="contact_add_to_group">Bir gruba ekle</string>
     <string name="dictation_resume">Dikteye devam et</string>
-    <string name="appearance_amoled_outline">AMOLED Outline</string>
-    <string name="appearance_amoled_outline_detail">Keskin beyaz çizgilerle saf siyah.</string>
-    <string name="appearance_outline_colors_fixed">AMOLED Outline, eylemler ve mesaj balonları için sabit beyaz renk kullanır. Renkleri özelleştirmek için temayı değiştirin.</string>
+    <string name="appearance_amoled_detail">Keskin beyaz çizgilerle saf siyah.</string>
+    <string name="appearance_outline_colors_fixed">AMOLED, eylemler ve mesaj balonları için sabit beyaz renk kullanır. Renkleri özelleştirmek için temayı değiştirin.</string>
     <string name="message_forwarded">İletildi</string>
     <string name="forward_success">İletildi</string>
     <string name="forward_choose_folders">Bir klasördeki sohbetlere ilet</string>

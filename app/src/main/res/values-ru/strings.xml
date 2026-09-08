@@ -1579,7 +1579,7 @@
     <string name="audit_logs_developer_only">Включите инструменты разработчика для управления конфиденциальными журналами аудита.</string>
     <string name="audit_logs_sensitive">Конфиденциальная запись, экспорт и удаление</string>
     <string name="appearance_amoled">AMOLED</string>
-    <string name="appearance_theme_help">Системные настройки по умолчанию соответствуют вашему устройству. Светлый и Темный сохраняют выбранный вид. AMOLED использует черный фон с темными элементами управления.</string>
+    <string name="appearance_theme_help">Системные настройки по умолчанию соответствуют вашему устройству. Светлый и Темный сохраняют выбранный вид. AMOLED использует черный фон с белыми контурами.</string>
     <string name="appearance_font_size">Размер шрифта</string>
     <string name="appearance_font_small">Мелкий</string>
     <string name="appearance_font_default">Стандартный</string>
@@ -1924,9 +1924,8 @@
     <string name="group_see_all_members">Показать всех</string>
     <string name="contact_add_to_group">Добавить в группу</string>
     <string name="dictation_resume">Продолжить диктовку</string>
-    <string name="appearance_amoled_outline">AMOLED Outline</string>
-    <string name="appearance_amoled_outline_detail">Чистый чёрный фон с чёткими белыми контурами.</string>
-    <string name="appearance_outline_colors_fixed">В теме AMOLED Outline цвета кнопок действий и сообщений всегда белые. Чтобы настроить цвета, выберите другую тему.</string>
+    <string name="appearance_amoled_detail">Чистый чёрный фон с чёткими белыми контурами.</string>
+    <string name="appearance_outline_colors_fixed">В теме AMOLED цвета кнопок действий и сообщений всегда белые. Чтобы настроить цвета, выберите другую тему.</string>
     <string name="message_forwarded">Переслано</string>
     <string name="forward_success">Переслано</string>
     <string name="forward_choose_folders">Переслать в чаты из папки</string>

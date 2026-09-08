@@ -13,19 +13,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AmoledOutlineTest {
-    private val theme = AppearanceColorTheme.AmoledOutline
+    private val theme = AppearanceColorTheme.Amoled
 
     @Test fun explicitOutlineIsIndependentOfSystemTheme() {
         listOf(false, true).forEach { systemDark ->
-            assertEquals(theme, AppearanceColorTheme.resolve(AppearancePreference.AmoledOutline, systemDark))
-            assertSame(WhiteNoiseAmoledOutlineColors, whiteNoiseColorScheme(AppearancePreference.AmoledOutline, systemDark))
+            assertEquals(theme, AppearanceColorTheme.resolve(AppearancePreference.Amoled, systemDark))
+            assertSame(WhiteNoiseAmoledColors, whiteNoiseColorScheme(AppearancePreference.Amoled, systemDark))
         }
         assertSame(WhiteNoiseAmoledColors, whiteNoiseColorScheme(AppearancePreference.Amoled, false))
-        assertNotEquals(WhiteNoiseAmoledColors.surfaceContainerHigh, WhiteNoiseAmoledOutlineColors.surfaceContainerHigh)
+        assertEquals(listOf("System", "Light", "Dark", "Amoled"), AppearancePreference.entries.map { it.name })
     }
 
     @Test fun restingSurfacesAreBlackWithWhiteBoundariesAndNoTint() {
-        val c = WhiteNoiseAmoledOutlineColors
+        val c = WhiteNoiseAmoledColors
         listOf(c.background, c.surface, c.surfaceBright, c.surfaceDim, c.surfaceVariant,
             c.surfaceContainerLowest, c.surfaceContainerLow, c.surfaceContainer,
             c.surfaceContainerHigh, c.surfaceContainerHighest,
@@ -41,7 +41,7 @@ class AmoledOutlineTest {
     }
 
     @Test fun outlinedBubblesUseReadableWhiteTextOnBothSides() {
-        val c = WhiteNoiseAmoledOutlineColors
+        val c = WhiteNoiseAmoledColors
         val bubbles = defaultMessageBubbleColors(c, theme)
         assertEquals(Color.Black, bubbles.mineContainer)
         assertEquals(Color.Black, bubbles.otherContainer)
@@ -72,9 +72,9 @@ class AmoledOutlineTest {
         assertFalse(theme.supportsCustomColors)
         assertEquals(ThemeColorOverrides(), saved.forTheme(theme))
         assertSame(saved, saved.updateTheme(theme) { error("Outline must not edit saved colors") })
-        assertSame(WhiteNoiseAmoledOutlineColors, withActionColor(WhiteNoiseAmoledOutlineColors, saved.forTheme(theme).actionArgb))
+        assertSame(WhiteNoiseAmoledColors, withActionColor(WhiteNoiseAmoledColors, saved.forTheme(theme).actionArgb))
         assertNull(AppearanceColorPolicy.effectiveBubble(0xFFFF0000, 0xFFFFFF00, theme))
-        assertEquals(0xFFFF0000L, AppearanceColorPolicy.effectiveBubble(0xFFFF0000, 0xFFFFFF00, AppearanceColorTheme.Amoled))
+        assertEquals(0xFFFF0000L, AppearanceColorPolicy.effectiveBubble(0xFFFF0000, 0xFFFFFF00, AppearanceColorTheme.Dark))
         assertEquals(0xFFFFFF00L, saved.amoled.actionArgb)
     }
 }

@@ -4,6 +4,7 @@ import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.theme.outlineSelectionColor
 import dev.ipf.whitenoise.ui.theme.isAmoledOutline
 import dev.ipf.whitenoise.ui.theme.amoledOutlineBorder
+import dev.ipf.whitenoise.ui.theme.amoledMessageBorder
 import dev.ipf.whitenoise.model.ConversationHistory
 import dev.ipf.whitenoise.model.ConversationReading
 import dev.ipf.whitenoise.model.HistoryOperation
@@ -2695,6 +2696,7 @@ private fun MessageBubble(
         AgentOperationCard(
             messageId = message.id,
             operation = operation,
+            outgoing = outgoing,
             isForwarded = message.isForwarded,
             onLongPress = onLongPress,
             footer = if (showTime) ({ MessageBubbleTime(message, outgoing, MaterialTheme.colorScheme.surfaceContainerHigh) }) else null,
@@ -2737,7 +2739,7 @@ private fun MessageBubble(
     val previewMediaScale = if (LocalFocusedMessagePreview.current && message.attachments.any { it.isVisual() }) FocusedPreviewMediaScale else 1f
     val richCanvasWidth = richContentCanvasWidthDp(message.attachments, singleMediaSize).dp * previewMediaScale
     Surface(
-        border = amoledOutlineBorder(),
+        border = amoledMessageBorder(outgoing),
         shape = bubbleShape,
         color = bubbleContainerColor,
         contentColor = bubbleContentColor,

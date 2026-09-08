@@ -444,7 +444,6 @@ private fun AppearanceColorTheme.label(): String = stringResource(
         AppearanceColorTheme.Light -> R.string.theme_light
         AppearanceColorTheme.Dark -> R.string.theme_dark
         AppearanceColorTheme.Amoled -> R.string.appearance_amoled
-        AppearanceColorTheme.AmoledOutline -> R.string.appearance_amoled_outline
     },
 )
 
