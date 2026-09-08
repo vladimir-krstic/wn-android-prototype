@@ -1,4 +1,5 @@
 package dev.ipf.whitenoise.ui.chats
+import androidx.compose.material3.PlainTooltip
 
 import dev.ipf.whitenoise.ui.theme.amoledOutline
 import dev.ipf.whitenoise.ui.theme.isAmoledOutline
@@ -25,6 +26,9 @@ import kotlinx.coroutines.delay
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +47,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -52,6 +57,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import dev.ipf.whitenoise.ui.components.WhiteNoiseAlertDialog as AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.ripple
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -78,6 +84,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -89,6 +96,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -153,12 +161,16 @@ fun ChatsScreen(
     onRetryConnection: () -> Unit = {},
     onAdvanceConnection: (String, Long, ChatConnectionPhase) -> Boolean = { _, _, _ -> false },
     appUpdates: AppUpdateController? = null,
+    onQuickSwitchAccount: () -> Profile? = { null },
 ) {
     val profile = uiState.activeProfile
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var switchToast by remember { mutableStateOf<android.widget.Toast?>(null) }
+    DisposableEffect(Unit) { onDispose { switchToast?.cancel() } }
     var profileSwitcherOpen by rememberSaveable(profile?.id) { mutableStateOf(false) }
     LaunchedEffect(showProfileSwitcher) {
         if (showProfileSwitcher) {
-            profileSwitcherOpen = true
+            profileSwitcherOpen = uiState.signedInProfiles.size > 1
             onProfileSwitcherShown()
         }
     }
@@ -375,7 +387,21 @@ fun ChatsScreen(
                                 profile = profile,
                                 updateState = appUpdates?.state,
                                 onSettings = { menuTarget = null; onSettings() },
-                                onSwitchProfile = { menuTarget = null; profileSwitcherOpen = true },
+                                onSwitchProfile = {
+                                    menuTarget = null
+                                    if (uiState.signedInProfiles.size > 1) profileSwitcherOpen = true else onSettings()
+                                },
+                                opensSettings = uiState.signedInProfiles.size <= 1,
+                                nextQuickSwitchProfile = uiState.nextQuickSwitchProfile,
+                                onQuickSwitch = {
+                                    menuTarget = null
+                                    onQuickSwitchAccount()?.let { switched ->
+                                        switchToast?.cancel()
+                                        switchToast = android.widget.Toast.makeText(context,
+                                            resources.getString(R.string.quick_account_switched, switched.name), android.widget.Toast.LENGTH_SHORT)
+                                            .also { it.show() }
+                                    }
+                                },
                                 onSearch = { isSearching = true },
                                 searchChatsDescription = searchChatsDescription,
                             )
@@ -628,13 +654,17 @@ private fun ChatsTopBar(
     onSwitchProfile: () -> Unit,
     onSearch: () -> Unit,
     searchChatsDescription: String,
+    opensSettings: Boolean,
+    nextQuickSwitchProfile: Profile?,
+    onQuickSwitch: () -> Unit,
 ) {
     val switchProfileDescription = profile?.let {
-        stringResource(R.string.switch_profile_for, it.name)
+        if (opensSettings) stringResource(R.string.ui_settings) else stringResource(R.string.switch_profile_for, it.name)
     }
     TopAppBar(
         title = {},
         navigationIcon = {
+            androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
             profile?.let {
                 IconButton(
                     onClick = onSwitchProfile,
@@ -652,6 +682,44 @@ private fun ChatsTopBar(
                         contentDescription = null,
                     )
                 }
+            }
+            nextQuickSwitchProfile?.let { next ->
+                val description = stringResource(R.string.quick_account_switch_to, next.name)
+                val interactions = remember { MutableInteractionSource() }
+                androidx.compose.material3.TooltipBox(
+                    positionProvider = androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider(),
+                    tooltip = { PlainTooltip { Text(description) } },
+                    state = androidx.compose.material3.rememberTooltipState(),
+                ) {
+                    Box(
+                        modifier = Modifier.minimumInteractiveComponentSize().size(48.dp)
+                            .testTag("chats.quickSwitch")
+                            .clickable(
+                                interactionSource = interactions,
+                                indication = null,
+                                role = Role.Button,
+                                onClick = onQuickSwitch,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier.offset(x = (-4).dp).size(30.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)
+                                .amoledOutline(CircleShape)
+                                .indication(interactions, ripple(bounded = false, radius = 15.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_swap_vert),
+                                contentDescription = description,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
             }
         },
         actions = {

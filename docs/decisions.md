@@ -4732,3 +4732,47 @@ Back. Place full-width outlined Reset to default inside the picker block and the
 supporting text immediately below it. This supersedes the earlier Action-color
 Apply exception; both color screens share the same continuous picker behavior.
 See the [appearance brief](screens/appearance-typography-and-input.md).
+
+## Optional quick account switching and single-account Settings — 2026-09-07
+
+User-approved: a single signed-in account's Chats avatar opens Settings; multiple
+accounts retain the existing sheet. Settings reuses Add Profile below its identity
+card. Appearance has an app-wide, default-off Quick account switching toggle.
+When enabled with multiple signed-in accounts, a separate two-arrow button beside
+the avatar cycles in stable profile-list order and shows a short account-name
+toast. This overrides the earlier mandatory-sheet avatar entry and absence of
+Add Profile in Settings. See screens/quick-account-switching.md.
+
+### Account entry refinements — 2026-09-07
+
+The user restored Add Profile inside the same segmented Settings group as the
+identity row, matching the historical grouping in `527217d^`. It is visible
+only with exactly one signed-in account; with multiple accounts, adding remains
+in the existing account sheet. The optional quick-switch button now uses a
+neutral gray circular FilledTonalIconButton.
+
+### Quick account symbol — 2026-09-07
+
+The user replaced the horizontal swap and tonal container with Google's filled
+swap_vertical_circle, gray and visibly 32 dp like the update emblem. Account
+cycling, tooltip and native button interaction stay unchanged.
+
+### Quick account weight correction — 2026-09-07
+
+The user rejected the filled swap circle as too large, thick and dark. Replace
+it with a softer neutral circle and separate rounded vertical arrows. The visual
+sizes are 30 dp and 20 dp respectively; switching behavior is unchanged.
+
+### Quick account tap feedback — 2026-09-07
+
+User requested a closer shortcut and tap feedback no larger than its circle.
+Use a native clickable target with a shared interaction source and the Material
+ripple on the clipped inner circle. Offset only the visual 4 dp toward the avatar;
+keep the full touch target, tooltip and accessible button behavior.
+
+### Restore folder controls in Settings — 2026-09-07
+
+The user restored Folders in Settings in addition to the Chats shortcut. Place
+it after Appearance using the existing SettingsHubLink and folder icon. Reuse
+the active-profile Folders route and all existing controls; Back returns to the
+entry screen. This supersedes the earlier Settings-entry removal.

@@ -18,6 +18,7 @@ for pinned evidence and [the parity ledger](../port/feature-inventory.md) for st
 ## Access and profiles
 
 - [Onboarding and profile foundation](onboarding-and-profiles.md)
+- [Optional quick account switching](quick-account-switching.md)
 - [Access and recovery — production Android batch B01](access-and-recovery.md)
 - [Keys and profile exit — production Android batch B02](keys-and-profile-exit.md)
 - [People discovery and private details](people-discovery-and-private-details.md)

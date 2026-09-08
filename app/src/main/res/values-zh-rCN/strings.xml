@@ -1899,4 +1899,8 @@
     <string name="translation_error">无法翻译此消息。请重试。</string>
     <string name="translation_detected">检测到的语言：%1$s</string>
     <string name="translation_not_detected">未检测到</string>
+    <string name="quick_account_switching">快速切换账号</string>
+    <string name="quick_account_switching_detail">在头像旁显示按钮，轻点即可切换账号。</string>
+    <string name="quick_account_switch_to">切换到 %1$s</string>
+    <string name="quick_account_switched">已切换到 %1$s</string>
 </resources>

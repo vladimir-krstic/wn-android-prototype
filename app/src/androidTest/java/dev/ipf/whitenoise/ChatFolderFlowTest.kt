@@ -179,14 +179,23 @@ class ChatFolderFlowTest {
         }
     }
 
-    @Test fun foldersAreManagedFromChatsInsteadOfSettings() {
+    @Test fun foldersAreManagedFromBothSettingsAndChats() {
         val vm = model(); lateinit var nav: NavHostController
         rule.setContent { nav = rememberNavController(); WhiteNoiseTheme { WhiteNoiseNavHost(nav, vm) } }
         rule.runOnIdle { nav.navigate(AppRoute.Settings()) }
-        rule.onNodeWithText("Folders").assertDoesNotExist()
-        rule.runOnIdle { nav.popBackStack() }
+        rule.onNodeWithTag("settings.list").performScrollToNode(hasText("Folders"))
+        rule.onNodeWithText("Folders").performClick()
+        rule.onNodeWithContentDescription("New Folder").performClick()
+        rule.onNodeWithTag("folder.name").performTextInput("From Settings")
+        rule.onNodeWithText("Save").performClick()
+        rule.onNodeWithText("From Settings").assertExists()
+        rule.runOnIdle { assertEquals(1, vm.uiState.activeProfile!!.chatFolders.count { it.name == "From Settings" }) }
+        pressBack()
+        rule.onNodeWithTag("settings.list").assertExists()
+        pressBack()
         rule.onNodeWithTag("chats.folders").performScrollToNode(hasTestTag("chats.manageFolders"))
         rule.onNodeWithTag("chats.manageFolders").performClick()
+        rule.onNodeWithText("From Settings").assertExists()
         rule.onNodeWithContentDescription("New Folder").performClick()
         rule.onNodeWithTag("folder.name").performTextInput("From Chats")
         rule.onNodeWithText("Save").performClick()

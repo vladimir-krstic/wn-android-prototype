@@ -234,6 +234,8 @@ fun AppearanceScreen(
     onLanguage: () -> Unit,
     onActionColor: () -> Unit = {},
     onBubbleColors: () -> Unit = {},
+    quickAccountSwitching: Boolean = false,
+    onQuickAccountSwitching: (Boolean) -> Unit = {},
 ) {
     val settings = profile.settings
     var fontFamilyOpen by rememberSaveable(profile.id) { mutableStateOf(false) }
@@ -253,6 +255,14 @@ fun AppearanceScreen(
         onSelect = { enterOpen = false; onChange(settings.copy(enterKeyBehavior = it)) })
     SettingsScaffold(title = stringResource(R.string.appearance_title), onBack = onBack) {
         SettingsList {
+            item {
+                SettingsGroup(Modifier.testTag("appearance.quick_account_switching")) {
+                    row {
+                        SettingsSwitch(stringResource(R.string.quick_account_switching), quickAccountSwitching,
+                            onQuickAccountSwitching, subtitle = stringResource(R.string.quick_account_switching_detail))
+                    }
+                }
+            }
             item { SettingsSection(stringResource(R.string.appearance_theme)) }
             item {
                 SettingsGroup(

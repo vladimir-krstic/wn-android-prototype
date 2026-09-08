@@ -1108,3 +1108,37 @@ layout, including the 28 dp Add/emoji relationship when expanded.
 Latest Add/emoji spacing: 32 dp centers, replacing the 28 dp trial. The integrated
 emoji target is 32 dp wide at logical x = 40 dp; Add's inset is 8 dp per side.
 Mic-to-wave/Send remains 40 dp; pause-to-animated-mic remains 28 dp.
+
+## Quick account shortcut — 2026-09-07
+
+The optional Chats shortcut follows the avatar in the native top-bar navigation
+row: a plain 24 dp swap icon in a native 48 dp minimum IconButton, using semantic
+on-surface colors. Keep the existing 40 dp avatar and outer header inset. No
+composer-specific narrow-target exceptions apply to these header controls.
+
+### Quick account shortcut refinement — 2026-09-07
+
+Use a native FilledTonalIconButton with CircleShape, surfaceContainerHigh fill
+and onSurface content for the quick account shortcut. Keep the 24 dp glyph and
+native minimum touch target. Single-account Add Profile shares the identity
+SettingsGroup and its standard segmented gap and shapes.
+
+### Quick account symbol refinement — 2026-09-07
+
+The user requested the filled swap_vertical_circle symbol at the update
+emblem size. Draw the official 960-unit vector at 38.4 dp: its 800-unit circle
+is visibly 32 dp, matching UpdateEmblem. Use onSurfaceVariant gray and the
+native IconButton target; the symbol supplies the circle without a second fill.
+
+### Quick account optical correction — 2026-09-07
+
+User screenshot feedback supersedes the filled 32 dp symbol: use a 30 dp circle
+with a 20 dp rounded swap_vert glyph, matching the update glyph scale. Keep the
+native touch target. surfaceContainerHighest softens the background and
+onSurfaceVariant preserves arrow contrast; AMOLED Outline retains its outline.
+
+### Quick account spacing and feedback — 2026-09-07
+
+Move only the 30 dp circle 4 dp toward the avatar, respecting RTL. Retain separate
+48 dp touch targets. Clip the shared Material ripple/state layer to CircleShape
+at 30 dp, with a centered 15 dp ripple radius, matching the visible container.

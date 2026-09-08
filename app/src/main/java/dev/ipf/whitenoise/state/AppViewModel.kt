@@ -127,12 +127,21 @@ data class AppUiState(
     val signedInProfileIds: Set<String> = emptySet(),
     val pendingDiagnosticsProfileId: String? = null,
     val lastRetainedProfileId: String? = null,
+    val quickAccountSwitching: Boolean = false,
 ) {
     val activeProfile: Profile?
         get() = profiles.firstOrNull { it.id == activeProfileId }
 
     val signedInProfiles: List<Profile>
         get() = profiles.filter { it.id in signedInProfileIds }
+
+    val nextQuickSwitchProfile: Profile?
+        get() {
+            if (!quickAccountSwitching) return null
+            val accounts = signedInProfiles
+            val current = accounts.indexOfFirst { it.id == activeProfileId }
+            return if (accounts.size > 1 && current >= 0) accounts[(current + 1) % accounts.size] else null
+        }
 
     val retainedProfiles: List<Profile>
         get() = profiles.filterNot { it.id in signedInProfileIds }
@@ -476,6 +485,16 @@ class AppViewModel(
                     profile.copy(settings = profile.settings.copy(dictation = reduce(profile.settings.dictation))) }
             },
         )
+    }
+
+    fun setQuickAccountSwitching(enabled: Boolean) {
+        uiState = uiState.copy(quickAccountSwitching = enabled)
+    }
+
+    fun quickSwitchAccount(): Profile? {
+        val next = uiState.nextQuickSwitchProfile ?: return null
+        selectProfile(next.id)
+        return uiState.activeProfile?.takeIf { it.id == next.id }
     }
 
     fun selectProfile(profileId: String) {
@@ -896,6 +915,7 @@ class AppViewModel(
             activeProfileId = nextActiveId,
             signedInProfileIds = signedIn,
             lastRetainedProfileId = activeId.takeUnless { wipeData },
+            quickAccountSwitching = uiState.quickAccountSwitching,
         )
         composerCapture.reconcile()
         groupWork.reconcile()

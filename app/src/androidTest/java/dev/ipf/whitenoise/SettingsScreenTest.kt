@@ -20,6 +20,7 @@ import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -99,7 +100,8 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
         composeRule.onNodeWithTag("settings.active_profile").performClick()
         composeRule.runOnIdle { check(openedShareConnect) }
-        composeRule.onNodeWithText("Add Profile").assertDoesNotExist()
+        composeRule.onNodeWithTag("settings.add_profile").assertIsDisplayed()
+            .assert(hasAnyAncestor(hasTestTag("settings.profile_group")))
         composeRule.onNodeWithTag("settings.profile_management").assertDoesNotExist()
         composeRule.onNodeWithText("Profile Keys").assertIsDisplayed()
         listOf(
@@ -108,6 +110,7 @@ class SettingsScreenTest {
             Triple("ai_agents", "AI Agents", "Connect an agent you run and trust"),
             Triple("notifications", "Notifications", "Local and native push preferences"),
             Triple("appearance", "Appearance", null),
+            Triple("folders", "Folders", null),
             Triple("privacy_security", "Privacy & Security", "Device protection and auto-lock"),
             Triple("data_usage", "Data Usage", "Downloads and sent-media quality"),
             Triple("relays", "Relays", null),
@@ -140,22 +143,27 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun settingsDoesNotOfferProfileSwitchingWithMultipleProfiles() {
+    fun settingsOffersAddProfileOnlyWhileOneAccountIsSignedIn() {
         val profiles = listOf(ProfileFixtures.marmota, ProfileFixtures.pebble)
+        var signedInIds by mutableStateOf(setOf(profiles.first().id))
         composeRule.setContent {
             WhiteNoiseTheme {
                 SettingsScreen(
-                    uiState = AppUiState(profiles, profiles.first().id, profiles.mapTo(mutableSetOf()) { it.id }),
+                    uiState = AppUiState(profiles, profiles.first().id, signedInIds),
                     onBack = {}, onShareConnect = {}, onEditProfile = {}, onProfileKeys = {},
                     onNotifications = {}, onAppearance = {}, onPrivacy = {}, onDataUsage = {},
                     onRelays = {}, onSupport = {}, onDonate = {}, onDeveloperTools = {}, onSignOut = {},
                 )
             }
         }
+        composeRule.onNodeWithTag("settings.add_profile").assertIsDisplayed()
+        composeRule.runOnIdle { signedInIds = profiles.mapTo(mutableSetOf()) { it.id } }
         composeRule.onNodeWithTag("settings.active_profile").assertIsDisplayed()
         composeRule.onNodeWithTag("settings.profile_management").assertDoesNotExist()
         composeRule.onNodeWithText("Switch Profile").assertDoesNotExist()
-        composeRule.onNodeWithText("Add Profile").assertDoesNotExist()
+        composeRule.onNodeWithTag("settings.add_profile").assertDoesNotExist()
+        composeRule.runOnIdle { signedInIds = setOf(profiles.first().id) }
+        composeRule.onNodeWithTag("settings.add_profile").assertIsDisplayed()
     }
 
     @Test

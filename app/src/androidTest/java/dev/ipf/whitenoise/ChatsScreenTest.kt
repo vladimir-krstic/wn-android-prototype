@@ -78,7 +78,7 @@ class ChatsScreenTest {
     }
 
     @Test
-    fun topBarSwitcherOpensSettingsAndKeepsSearchAndScopesOnDemand() {
+    fun singleAccountAvatarOpensSettingsAndKeepsSearchAndScopesOnDemand() {
         val profile = ProfileFixtures.marmota
         var settingsOpened = false
         composeRule.setContent {
@@ -100,8 +100,7 @@ class ChatsScreenTest {
 
         composeRule.onNodeWithText("Search Chats").assertIsNotDisplayed()
         composeRule.onNodeWithTag("chats.switchProfile").performClick()
-        composeRule.runOnIdle { check(!settingsOpened) }
-        composeRule.onNodeWithTag("profile_switcher.settings").performClick()
+        composeRule.onNodeWithTag("profile_switcher.settings").assertDoesNotExist()
         composeRule.runOnIdle { check(settingsOpened) }
 
         composeRule.onNodeWithTag("chats.scope.chats").assertIsSelected()

@@ -982,3 +982,50 @@ pause/edit; expanded emoji stays beside Add. DictationCaptureTest adds the
 live-dictation → edit → wide draft → clear regression and 40/28 dp spacing
 assertions. Host validation is recorded in the composer brief; device acceptance
 remains pending.
+
+2026-09-07 account-entry refinement: AppUiState/ViewModel implement app-wide,
+default-off quick account cycling with stable signed-in order, wraparound and
+sign-out preservation. ChatsScreen shows a native shortcut with next-account
+label and selected-account toast, and sends a single-account avatar to Settings.
+Settings reuses Add Profile and its existing onboarding route; Appearance owns
+the toggle. QuickAccountSwitchingTest and ChatsProfileSwitcherFlowTest cover the
+state/navigation contract. Host evidence and pending visual acceptance are in
+screens/quick-account-switching.md.
+
+### Account entry refinement evidence — 2026-09-07
+
+SettingsProfileHeader now groups Add Profile with the identity row only when
+exactly one account is signed in. ChatsTopBar uses a gray circular native tonal
+button for optional quick switching. SettingsScreenTest covers one-to-two-to-one
+account visibility and the shared profile group. Unit tests, lint, debug APK
+assembly and instrumentation-test APK compilation pass for this refinement.
+Device/visual acceptance remains pending; instrumentation tests were not run.
+
+### Quick account symbol refinement — 2026-09-07
+
+ChatsTopBar now uses the official filled swap_vertical_circle drawable, neutral
+gray with a 32 dp visible circle matching the update emblem. No state changes.
+Unit tests, lint, debug APK assembly and instrumentation-test APK compilation
+pass. No device inspection was requested or performed.
+
+### Quick account optical refinement — 2026-09-07
+
+ChatsTopBar uses separate 20 dp rounded vertical arrows in a 30 dp soft gray
+circle following user screenshot feedback. Native interaction and tooltip remain.
+Unit tests, lint, debug APK assembly and instrumentation-test APK compilation
+pass. No device inspection performed; visual acceptance pending.
+
+### Quick account spacing and tap feedback — 2026-09-07
+
+ChatsTopBar moves the shortcut visual 4 dp toward the avatar and clips its
+Material ripple to the 30 dp circle, retaining the 48 dp clickable target.
+Unit tests, lint, debug APK assembly and instrumentation-test APK compilation
+pass. No device inspection performed; visual acceptance pending.
+
+### Folder Settings entry restored — 2026-09-07
+
+SettingsScreen adds Folders after Appearance and WhiteNoiseNavHost routes it to
+the same profile-owned folder manager used from Chats. SettingsScreenTest covers
+the row; ChatFolderFlowTest covers creation through Settings, returning with Back,
+and accessing the resulting folder through Chats. Unit tests, lint and both debug
+APK assemblies pass; navigation tests compiled only. No device inspection performed.

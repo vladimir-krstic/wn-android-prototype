@@ -1899,4 +1899,8 @@
     <string name="translation_error">無法翻譯此訊息。請重試。</string>
     <string name="translation_detected">偵測到的語言：%1$s</string>
     <string name="translation_not_detected">未偵測到</string>
+    <string name="quick_account_switching">快速切換帳號</string>
+    <string name="quick_account_switching_detail">在頭像旁顯示按鈕，輕點即可切換帳號。</string>
+    <string name="quick_account_switch_to">切換至 %1$s</string>
+    <string name="quick_account_switched">已切換至 %1$s</string>
 </resources>

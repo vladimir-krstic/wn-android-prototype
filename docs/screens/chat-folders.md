@@ -21,8 +21,9 @@ rules include muted chats to preserve existing Unread/Archived behavior.
 
 ## Entry, Back and composition
 
-Folder management opens from Manage folders at the end of the horizontal Chats
-pill row; there is no Folders entry in Settings. Use the existing Settings detail
+Folder management opens from both Folders in Settings (after Appearance) and
+Manage folders at the end of the horizontal Chats pill row. Both open the same
+active-profile folder controls; Back returns to the originating screen. Use the existing Settings detail
 canvas, adaptive measure, native ListItem rows, shared tonal fields, switches,
 menus and task controls. New/Edit is a typed profile/folder-owned destination.
 Name and description precede Included Chats, automatic People/Keyword/constraint
@@ -238,3 +239,15 @@ governs the standard transparent action. Device visual acceptance is pending.
 
 Host validation: `./gradlew lintDebug assembleDebug` passed. No device inspection
 was performed for this icon/style change.
+
+## 2026-09-07 — restore Settings entry
+
+Latest user direction restores Folders as a normal icon-and-chevron Settings row
+after Appearance, alongside the existing Chats entry. Both navigate to the same
+profile-owned Folders destination with create, edit, reorder, delete and restore
+controls. Existing resource copy and folder icon are reused. This supersedes the
+earlier removal of the Settings entry; no folder state behavior changes.
+SettingsScreenTest covers the restored row. ChatFolderFlowTest covers creating
+from Settings, Back to Settings, and accessing the same folder from Chats.
+Unit tests, lint, debug APK assembly and instrumentation-test APK compilation
+pass. No device inspection performed; navigation tests compiled only.

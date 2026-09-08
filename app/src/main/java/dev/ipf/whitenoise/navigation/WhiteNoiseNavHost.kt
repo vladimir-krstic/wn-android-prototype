@@ -359,6 +359,7 @@ fun WhiteNoiseNavHost(
                 onDelete = { appViewModel.deleteEndedChat(it) },
                 onSettings = { navController.navigate(AppRoute.Settings()) },
                 onSelectProfile = appViewModel::selectProfile,
+                onQuickSwitchAccount = appViewModel::quickSwitchAccount,
                 onAddProfile = { navController.navigate(AppRoute.Welcome(OnboardingOrigin.AddProfile)) },
                 showProfileSwitcher = showMainProfileSwitcher,
                 onProfileSwitcherShown = { showMainProfileSwitcher = false },
@@ -388,6 +389,7 @@ fun WhiteNoiseNavHost(
         composable<AppRoute.Settings> {
             SettingsScreen(
                 uiState = uiState,
+                onAddProfile = { navController.navigate(AppRoute.Welcome(OnboardingOrigin.AddProfile)) },
                 onBack = { navController.popBackStack() },
                 onShareConnect = { navController.navigate(AppRoute.ShareConnect) },
                 onEditProfile = { navController.navigate(AppRoute.EditProfile) },
@@ -395,6 +397,7 @@ fun WhiteNoiseNavHost(
                 onAiAgents = { navController.navigate(AppRoute.AiAgents) },
                 onNotifications = { navController.navigate(AppRoute.Notifications) },
                 onAppearance = { navController.navigate(AppRoute.Appearance) },
+                onFolders = { uiState.activeProfileId?.let { navController.navigate(AppRoute.Folders(it)) } },
                 onReadAloud = { navController.navigate(AppRoute.ReadAloud) },
                 onTranslation = { navController.navigate(AppRoute.Translation) },
                 onDictation = { navController.navigate(AppRoute.Dictation) },
@@ -510,6 +513,8 @@ fun WhiteNoiseNavHost(
             uiState.activeProfile?.let { profile ->
                 AppearanceScreen(
                     profile = profile,
+                    quickAccountSwitching = uiState.quickAccountSwitching,
+                    onQuickAccountSwitching = appViewModel::setQuickAccountSwitching,
                     onBack = { navController.popBackStack() },
                     onChange = appViewModel::updateProfileSettings,
                     onLanguage = { navController.navigate(AppRoute.Language) },

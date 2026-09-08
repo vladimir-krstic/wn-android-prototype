@@ -1940,4 +1940,8 @@
     <string name="translation_error">Could not translate this message. Try again.</string>
     <string name="translation_detected">Detected language: %1$s</string>
     <string name="translation_not_detected">Not detected</string>
+    <string name="quick_account_switching">Quick account switching</string>
+    <string name="quick_account_switching_detail">Show a button beside your avatar to switch accounts with one tap.</string>
+    <string name="quick_account_switch_to">Switch to %1$s</string>
+    <string name="quick_account_switched">Switched to %1$s</string>
 </resources>

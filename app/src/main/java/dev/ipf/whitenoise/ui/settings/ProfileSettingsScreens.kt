@@ -122,6 +122,8 @@ fun SettingsScreen(
     onAdvanceExit: (Long, dev.ipf.whitenoise.model.ProfileExitStep) -> Unit = { _, _ -> },
     onRetryExit: (Long) -> Unit = {},
     onDismissExit: () -> Unit = {},
+    onAddProfile: () -> Unit = {},
+    onFolders: () -> Unit = {},
 ) {
     val profile = uiState.activeProfile ?: return
     val canEditProfile = ProfileSettingsPolicy.canPublishProfile(profile.settings)
@@ -139,6 +141,7 @@ fun SettingsScreen(
                 SettingsProfileHeader(
                     profile = profile,
                     onShareConnect = onShareConnect,
+                    onAddProfile = onAddProfile.takeIf { uiState.signedInProfiles.size == 1 },
                 )
             }
             appUpdates?.state?.let { update ->
@@ -219,6 +222,14 @@ fun SettingsScreen(
                             icon = R.drawable.ic_settings_contrast,
                             iconTag = "appearance",
                             onClick = onAppearance,
+                        )
+                    }
+                    row {
+                        SettingsHubLink(
+                            title = stringResource(R.string.chat_folders),
+                            icon = R.drawable.ic_folder,
+                            iconTag = "folders",
+                            onClick = onFolders,
                         )
                     }
                     row {
@@ -357,6 +368,7 @@ private fun SettingsHubLink(
 private fun SettingsProfileHeader(
     profile: Profile,
     onShareConnect: () -> Unit,
+    onAddProfile: (() -> Unit)?,
 ) {
     val shareDescription = stringResource(R.string.open_share_connect_for, profile.name)
     Column(
@@ -418,6 +430,16 @@ private fun SettingsProfileHeader(
                             role = Role.Button
                         },
                 )
+            }
+            onAddProfile?.let { addProfile ->
+                row {
+                    SettingsAction(
+                        title = stringResource(R.string.add_profile),
+                        onClick = addProfile,
+                        modifier = Modifier.testTag("settings.add_profile"),
+                        leading = { Icon(painterResource(R.drawable.ic_settings_person_add), null) },
+                    )
+                }
             }
         }
     }

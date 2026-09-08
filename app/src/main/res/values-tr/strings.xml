@@ -1936,4 +1936,8 @@
     <string name="translation_error">Bu mesaj çevrilemedi. Tekrar deneyin.</string>
     <string name="translation_detected">Algılanan dil: %1$s</string>
     <string name="translation_not_detected">Algılanamadı</string>
+    <string name="quick_account_switching">Hızlı hesap değiştirme</string>
+    <string name="quick_account_switching_detail">Hesapları tek dokunuşla değiştirmek için avatarınızın yanında bir düğme gösterin.</string>
+    <string name="quick_account_switch_to">%1$s hesabına geç</string>
+    <string name="quick_account_switched">%1$s hesabına geçildi</string>
 </resources>
