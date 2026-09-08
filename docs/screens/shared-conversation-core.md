@@ -298,3 +298,10 @@ Final rounded-value host validation: `./gradlew testDebugUnitTest lintDebug asse
 passed with 927 unit tests, no failures/errors/skips, zero lint errors (nine
 warnings), and both APKs assembled. The existing row-height/alignment regression
 was updated and compiled only. No device or emulator inspection was performed.
+
+## 2026-09-08 — timestamp placement override
+
+Latest user direction moves time and delivery status inside the bubble at its
+right edge, sharing the last line where space permits. This supersedes the
+external timestamp rules above. See [message-inline-timestamps.md](message-inline-timestamps.md)
+for behavior, native measurement, rich-content fallbacks and validation.

@@ -1272,13 +1272,13 @@ class ConversationScreenTest {
         assertTrue(abs((countedPill.left - firstPill.right) - threeDp) < 1.5f)
         assertTrue(abs((lastPill.left - countedPill.right) - threeDp) < 1.5f)
         assertTrue(abs((bubble.bottom - firstPill.top) - nineDp) < 1.5f)
-        assertTrue(abs((time.top - bubble.bottom) - twoDp) < 1.5f)
-        assertTrue(abs((time.left - bubble.left) - twelveDp) < 1.5f)
+        assertTrue(time.top >= bubble.top && time.bottom <= bubble.bottom)
+        assertTrue(abs((bubble.right - time.right) - twelveDp) < 1.5f)
         assertTrue(abs((bubble.right - lastPill.right) - twelveDp) < 1.5f)
     }
 
     @Test
-    fun timestampsFollowMessageDirectionWithAndWithoutReactions() {
+    fun timestampsStayInsideAtTheRightEdgeWithAndWithoutReactions() {
         setConversation("catalog-direct-reactions")
         val twoDp = with(composeRule.density) { 2.dp.toPx() }
         val twelveDp = with(composeRule.density) { 12.dp.toPx() }
@@ -1295,7 +1295,7 @@ class ConversationScreenTest {
                 useUnmergedTree = true,
             ).fetchSemanticsNode().boundsInRoot
 
-            assertTrue(abs((time.top - bubble.bottom) - twoDp) < 1.5f)
+            assertTrue(time.top >= bubble.top && time.bottom <= bubble.bottom)
             if (outgoing) {
                 assertTrue(abs((bubble.right - time.right) - twelveDp) < 1.5f)
                 composeRule.onNodeWithTag(
@@ -1312,7 +1312,7 @@ class ConversationScreenTest {
                     .assertWidthIsEqualTo(10.dp)
                     .assertHeightIsEqualTo(10.dp)
             } else {
-                assertTrue(abs((time.left - bubble.left) - twelveDp) < 1.5f)
+                assertTrue(abs((bubble.right - time.right) - twelveDp) < 1.5f)
                 composeRule.onNodeWithTag("conversation.message.delivery.$messageId")
                     .assertDoesNotExist()
             }
@@ -1486,8 +1486,8 @@ class ConversationScreenTest {
             abs(overlap - nineDp) < 1.5f,
         )
         assertTrue(
-            "Expected a 2 dp timestamp gap at 200% type; bubble=$bubble time=$time",
-            abs((time.top - bubble.bottom) - twoDp) < 1.5f,
+            "Expected the timestamp inside the bubble at 200% type; bubble=$bubble time=$time",
+            time.top >= bubble.top && time.bottom <= bubble.bottom,
         )
 
         composeRule.onNodeWithTag("conversation.message.RCT-13")

@@ -49,13 +49,14 @@ internal fun focusedMessagePreviewText(source: String): AnnotatedString {
 }
 
 @Composable
-internal fun FocusedMessageText(source: String, messageId: String) {
+internal fun FocusedMessageText(source: String, messageId: String, onTextLayout: (androidx.compose.ui.text.TextLayoutResult) -> Unit = {}) {
     Text(
         text = remember(source) { focusedMessagePreviewText(source) },
         style = MaterialTheme.typography.bodyLarge,
         maxLines = FocusedPreviewTextLines,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.testTag("message.actions.excerpt.$messageId"),
+        onTextLayout = onTextLayout,
     )
 }
 

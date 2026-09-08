@@ -163,7 +163,7 @@ internal fun RetentionWorkPanel(profile: Profile, chat: Chat) {
 }
 
 @Composable
-internal fun MessageExpiryIndicator(message: ChatMessage, semanticsEnabled: Boolean = true) {
+internal fun MessageExpiryIndicator(message: ChatMessage, semanticsEnabled: Boolean = true, color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     val controller = LocalRetention.current
     val presentation = MessageRetentionPolicy.presentation(message, controller?.nowMillis ?: MessageForwarding.nowMillis) ?: return
     val label = stringResource(R.string.retention_message)
@@ -177,7 +177,7 @@ internal fun MessageExpiryIndicator(message: ChatMessage, semanticsEnabled: Bool
     val modifier = Modifier.size(14.dp).then(if (semanticsEnabled)
         Modifier.semantics { contentDescription = label; stateDescription = state }.testTag("retention.message.${message.id}")
         else Modifier.clearAndSetSemantics { })
-    if (presentation.fraction == null) Icon(painterResource(R.drawable.ic_timer), null, modifier, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (presentation.fraction == null) Icon(painterResource(R.drawable.ic_timer), null, modifier, tint = color)
     else CircularProgressIndicator(progress = { presentation.fraction }, modifier = modifier, strokeWidth = 1.5.dp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant, trackColor = MaterialTheme.colorScheme.outlineVariant)
+        color = color, trackColor = color.copy(alpha = 0.24f))
 }

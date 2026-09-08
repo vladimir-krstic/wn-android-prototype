@@ -1029,3 +1029,12 @@ the same profile-owned folder manager used from Chats. SettingsScreenTest covers
 the row; ChatFolderFlowTest covers creation through Settings, returning with Back,
 and accessing the resulting folder through Chats. Unit tests, lint and both debug
 APK assemblies pass; navigation tests compiled only. No device inspection performed.
+
+### Inside-bubble timestamps — 2026-09-08
+
+The shared conversation renderer moves timestamps and delivery/retention status
+inside message bubbles. MessageInlineFooter uses actual final-line measurement;
+MessageDocumentContent preserves formatting and selection. Reactions retain their
+external rail. Search, pinned and focused views reuse this behavior. Geometry unit
+tests and Compose baseline/containment regressions added. Unit tests, lint and
+both debug APK assemblies pass. UI tests compiled only; visual acceptance pending.

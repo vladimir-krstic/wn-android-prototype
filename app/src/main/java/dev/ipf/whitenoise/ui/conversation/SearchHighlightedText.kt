@@ -42,6 +42,7 @@ internal fun SearchHighlightedText(
     fontWeight: FontWeight? = null,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
 ) {
     val ranges = remember(text, query) { searchMatchRanges(text, query) }
     val contentColor = if (color == Color.Unspecified) LocalContentColor.current else color
@@ -76,7 +77,7 @@ internal fun SearchHighlightedText(
             fontWeight = fontWeight,
             maxLines = maxLines,
             overflow = overflow,
-            onTextLayout = { layoutResult = it },
+            onTextLayout = { layoutResult = it; onTextLayout(it) },
         )
     }
 }

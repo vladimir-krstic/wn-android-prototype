@@ -42,6 +42,7 @@ internal fun AgentOperationCard(
     operation: AgentOperation,
     onLongPress: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null,
     isForwarded: Boolean = false,
 ) {
     val reading = LocalMessageReading.current
@@ -164,6 +165,7 @@ internal fun AgentOperationCard(
                         )
                     }
                 }
+                footer?.let { MessageFooterRow(it) }
             }
         }
     }

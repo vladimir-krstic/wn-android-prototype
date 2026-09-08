@@ -4776,3 +4776,10 @@ The user restored Folders in Settings in addition to the Chats shortcut. Place
 it after Appearance using the existing SettingsHubLink and folder icon. Reuse
 the active-profile Folders route and all existing controls; Back returns to the
 entry screen. This supersedes the earlier Settings-entry removal.
+
+### Inside-bubble timestamps — 2026-09-08
+
+The user reversed the earlier outside-bubble decision. Keep existing timestamp
+visibility but place time, delivery and retention inside the right edge, sharing
+the last text baseline when space permits and moving to a footer line when full.
+See docs/screens/message-inline-timestamps.md for the measured layout and states.

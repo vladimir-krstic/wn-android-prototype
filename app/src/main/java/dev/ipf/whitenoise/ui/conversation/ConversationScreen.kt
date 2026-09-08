@@ -2162,10 +2162,9 @@ private fun MessageRow(
         maximum = replyMaximumPx,
     )
     val showTime = item.endsCluster || message.retention != null
-    val hasMetadata = message.reactions.isNotEmpty() || showTime
+    val hasMetadata = message.reactions.isNotEmpty()
     val metadataGeometry = messageMetadataGeometry(
         hasReactions = message.reactions.isNotEmpty(),
-        hasTimestamp = showTime,
     )
     val metadataReservePx = if (hasMetadata) metadataGeometry.reservePx else 0
     val showActionsLabel = stringResource(R.string.show_message_actions)
@@ -2467,63 +2466,24 @@ private val ReactionPillMinimumWidth = 31.dp
 private val ReactionPillSpacing = 3.dp
 private val ReactionContentSpacing = 2.dp
 private val MessageMetadataTargetHeight = 48.dp
-private val TimestampTopGap = 2.dp
 private const val MaximumVisibleReactionTypes = 4
 
 private data class MessageMetadataGeometry(
     val overlapPx: Int,
     val reservePx: Int,
     val invisibleTargetBottomPx: Int,
-    val timestampVerticalOffsetPx: Int,
-    val timestampTopGapPx: Int,
 )
 
 @Composable
-private fun messageMetadataGeometry(
-    hasReactions: Boolean,
-    hasTimestamp: Boolean,
-): MessageMetadataGeometry {
+private fun messageMetadataGeometry(hasReactions: Boolean): MessageMetadataGeometry {
+    if (!hasReactions) return MessageMetadataGeometry(0, 0, 0)
     val density = LocalDensity.current
-    val targetHeightPx = with(density) { MessageMetadataTargetHeight.roundToPx() }
-    val timestampHeightPx = with(density) {
-        MaterialTheme.typography.labelSmall.lineHeight.toPx().roundToInt()
-    }
-    val timestampTopGapPx = with(density) { TimestampTopGap.roundToPx() }
-    val overlapPx: Int
-    val reservePx: Int
-    val invisibleTargetBottomPx: Int
-    val timestampVerticalOffsetPx: Int
-    if (hasReactions) {
-        val minimumPillHeightPx = with(density) { ReactionPillMinimumHeight.roundToPx() }
-        val pillHeightPx = minimumPillHeightPx
-        val targetInsetPx = ((targetHeightPx - pillHeightPx).coerceAtLeast(0)) / 2
-        overlapPx = targetInsetPx + with(density) { ReactionVisibleOverlap.roundToPx() }
-        timestampVerticalOffsetPx = overlapPx + timestampTopGapPx
-        val timestampBottomPx = overlapPx + timestampTopGapPx + timestampHeightPx
-        val pillBottomPx = targetInsetPx + pillHeightPx
-        val visibleMetadataBottomPx = if (hasTimestamp) {
-            maxOf(timestampBottomPx, pillBottomPx)
-        } else {
-            pillBottomPx
-        }
-        reservePx = maxOf(
-            (targetHeightPx - overlapPx).coerceAtLeast(0),
-            if (hasTimestamp) timestampTopGapPx + timestampHeightPx else 0,
-        )
-        invisibleTargetBottomPx = (targetHeightPx - visibleMetadataBottomPx).coerceAtLeast(0)
-    } else {
-        overlapPx = 0
-        reservePx = timestampTopGapPx + timestampHeightPx
-        invisibleTargetBottomPx = 0
-        timestampVerticalOffsetPx = 0
-    }
-    return MessageMetadataGeometry(
-        overlapPx = overlapPx,
-        reservePx = reservePx,
-        invisibleTargetBottomPx = invisibleTargetBottomPx,
-        timestampVerticalOffsetPx = timestampVerticalOffsetPx,
-        timestampTopGapPx = timestampTopGapPx,
-    )
+    val target = with(density) { MessageMetadataTargetHeight.roundToPx() }
+    val pill = with(density) { ReactionPillMinimumHeight.roundToPx() }
+    val inset = ((target - pill).coerceAtLeast(0)) / 2
+    val overlap = inset + with(density) { ReactionVisibleOverlap.roundToPx() }
+    return MessageMetadataGeometry(overlap, (target - overlap).coerceAtLeast(0),
+        (target - inset - pill).coerceAtLeast(0))
 }
 
 @Composable
@@ -2554,10 +2514,9 @@ private fun MessageBubbleWithMetadata(
     modifier: Modifier = Modifier,
 ) {
     val hasReactions = message.reactions.isNotEmpty()
-    val hasMetadata = hasReactions || showTime
+    val hasMetadata = hasReactions
     val metadataGeometry = messageMetadataGeometry(
         hasReactions = hasReactions,
-        hasTimestamp = showTime,
     )
     val overlapPx = metadataGeometry.overlapPx
     val contextTrimPx = if (trimInvisibleReactionTarget && hasReactions) {
@@ -2590,6 +2549,7 @@ private fun MessageBubbleWithMetadata(
                     onLongPress = onBubbleLongPress,
                     messageInteractionSource = messageInteractionSource,
                     onPositioned = onBubblePositioned,
+                    showTime = showTime,
                 )
             }.single().measure(looseConstraints)
             return@SubcomposeLayout layout(bubble.width, bubble.height) {
@@ -2613,16 +2573,11 @@ private fun MessageBubbleWithMetadata(
             )
             val candidate = subcompose("metadata.measure.$maximumReactionPills") {
                 MessageMetadataContent(
-                    retentionMessage = message,
                     messageId = message.id,
-                    timeLabel = message.timeLabel,
-                    outgoing = outgoing,
-                    deliveryState = message.deliveryState,
-                    showTime = showTime,
+                    alignEnd = if (showTime) !outgoing else outgoing,
                     summary = summary,
                     fillWidth = false,
                     measurementOnly = true,
-                    timestampVerticalOffsetPx = metadataGeometry.timestampVerticalOffsetPx,
                     onReaction = onReaction,
                     onShowActions = onShowActions,
                     onLongPress = null,
@@ -2655,6 +2610,7 @@ private fun MessageBubbleWithMetadata(
                 onLongPress = onBubbleLongPress,
                 messageInteractionSource = messageInteractionSource,
                 onPositioned = onBubblePositioned,
+                showTime = showTime,
             )
         }.single().measure(
             looseConstraints.copy(
@@ -2665,15 +2621,10 @@ private fun MessageBubbleWithMetadata(
         val summary = ReactionCatalog.summary(message.reactions, profile.id, selectedLimit)
         val metadata = subcompose("metadata.final.$selectedLimit") {
             MessageMetadataContent(
-                retentionMessage = message,
                 messageId = message.id,
-                timeLabel = message.timeLabel,
-                outgoing = outgoing,
-                deliveryState = message.deliveryState,
-                showTime = showTime,
+                alignEnd = if (showTime) !outgoing else outgoing,
                 summary = summary,
                 fillWidth = true,
-                timestampVerticalOffsetPx = metadataGeometry.timestampVerticalOffsetPx,
                 onReaction = onReaction,
                 onShowActions = onShowActions,
                 onLongPress = onBubbleLongPress,
@@ -2686,16 +2637,8 @@ private fun MessageBubbleWithMetadata(
                 maxHeight = constraints.maxHeight,
             ),
         )
-        val reportedReservePx = if (hasReactions) {
-            (metadata.height - overlapPx - contextTrimPx).coerceAtLeast(0)
-        } else {
-            metadataGeometry.timestampTopGapPx + metadata.height
-        }
-        val metadataY = if (hasReactions) {
-            bubble.height - overlapPx
-        } else {
-            bubble.height + metadataGeometry.timestampTopGapPx
-        }
+        val reportedReservePx = (metadata.height - overlapPx - contextTrimPx).coerceAtLeast(0)
+        val metadataY = bubble.height - overlapPx
         val height = (bubble.height + reportedReservePx)
             .coerceIn(constraints.minHeight, constraints.maxHeight)
         layout(width, height) {
@@ -2726,6 +2669,7 @@ private fun MessageBubble(
     onLongPress: (() -> Unit)?,
     messageInteractionSource: MutableInteractionSource?,
     onPositioned: (Rect) -> Unit,
+    showTime: Boolean,
 ) {
     val selectingText = LocalMessageReading.current.selectingTextId == message.id
     val translation = LocalMessageTranslation.current
@@ -2753,6 +2697,7 @@ private fun MessageBubble(
             operation = operation,
             isForwarded = message.isForwarded,
             onLongPress = onLongPress,
+            footer = if (showTime) ({ MessageBubbleTime(message, outgoing, MaterialTheme.colorScheme.surfaceContainerHigh) }) else null,
             modifier = Modifier
                 .testTag("conversation.message.bubble.${message.id}")
                 .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
@@ -2783,6 +2728,9 @@ private fun MessageBubble(
     val bubbleContentColor = readableBubble?.contentArgb
         ?.let(::colorFromOpaqueArgb)
         ?: if (outgoing) defaultBubbleColors.mineContent else defaultBubbleColors.otherContent
+    val footer: (@Composable () -> Unit)? = if (showTime) {
+        { MessageBubbleTime(message, outgoing, bubbleContainerColor) }
+    } else null
     val hasRichContent = !message.isDeleted &&
         (message.replyToMessageId != null || message.attachments.isNotEmpty() || message.nostrEvents.isNotEmpty())
     val singleMediaSize = rememberTimelineSingleMediaSize(message.attachments.singleOrNull())
@@ -2803,7 +2751,7 @@ private fun MessageBubble(
             .then(if (selectingText) Modifier else Modifier.semantics(mergeDescendants = true) { contentDescription = description }),
     ) {
         dev.ipf.whitenoise.ui.theme.MessageSelectionColors(bubbleContainerColor, bubbleContentColor) {
-            Box {
+            Box(propagateMinConstraints = true) {
                 if (hasRichContent) {
                     Column(
                         modifier = Modifier
@@ -2852,6 +2800,7 @@ private fun MessageBubble(
                         }
                         if (text.isNotBlank()) {
                             MessageBubbleText(
+                                footer = footer,
                                 containerColor = bubbleContainerColor,
                                 profile = profile,
                                 message = message,
@@ -2872,10 +2821,14 @@ private fun MessageBubble(
                                         bottom = ConversationMessageMetrics.RichTextBottomAdjustment,
                                     ),
                             )
+                        } else if (footer != null) {
+                            MessageFooterRow(footer, Modifier.padding(start = ConversationMessageMetrics.RichTextHorizontalAdjustment,
+                                end = ConversationMessageMetrics.RichTextHorizontalAdjustment, bottom = ConversationMessageMetrics.RichTextBottomAdjustment))
                         }
                     }
                 } else {
                     MessageBubbleText(
+                        footer = footer,
                         containerColor = bubbleContainerColor,
                         profile = profile,
                         message = message,
@@ -2918,11 +2871,12 @@ private fun MessageBubbleText(
     readAloudController: ReadAloudController,
     modifier: Modifier = Modifier,
     showTranscriptLabel: Boolean = false,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     var unavailableProfile by rememberSaveable(message.id) {
         mutableStateOf<dev.ipf.whitenoise.model.NostrProfileOccurrence?>(null)
     }
-    Column(modifier = modifier) {
+    Column(modifier = modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max)) {
         if (message.isForwarded && !message.isDeleted && message.replyToMessageId == null &&
             message.attachments.isEmpty() && message.nostrEvents.isEmpty()) {
             ForwardedMessageLabel(
@@ -2939,30 +2893,46 @@ private fun MessageBubbleText(
         }
         val reading = LocalMessageReading.current
         val selectingText = reading.selectingTextId == message.id
+        val translationState = LocalMessageTranslation.current?.state(message)
+        val hasStatusBelow = !message.isDeleted && (
+            message.editAttempt != null || message.editHistory != null ||
+                (searchQuery.isBlank() && !selectingText && translationState?.phase == dev.ipf.whitenoise.model.TranslationPhase.Ready &&
+                    !translationState.showOriginal && translationState.source != translationState.target) ||
+                readAloudController.activeMessageId == message.id
+            )
+        val bodyFooter = footer.takeUnless { hasStatusBelow }
         val body: @Composable () -> Unit = {
             val location = remember(message, text) { dev.ipf.whitenoise.model.LocationSharing.fromMessage(message.copy(text = text)) }
             if (LocalFocusedMessagePreview.current && !message.isDeleted) {
-                FocusedMessageText(text, message.id)
+                MessageTextWithFooter(bodyFooter, Modifier.fillMaxWidth()) { onLayout -> FocusedMessageText(text, message.id, onLayout) }
             } else if (location != null && searchQuery.isBlank() && !selectingText) {
                 LocationMessageCard(location)
+                bodyFooter?.let { MessageFooterRow(it, Modifier.padding(top = 4.dp)) }
             } else if (searchQuery.isNotBlank() && message.deletionState == MessageDeletionState.None) {
-                SearchHighlightedText(
-                    text = plainText,
-                    query = searchQuery,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                MessageTextWithFooter(bodyFooter, Modifier.fillMaxWidth()) { onLayout ->
+                    SearchHighlightedText(
+                        text = plainText, query = searchQuery,
+                        style = MaterialTheme.typography.bodyLarge, onTextLayout = onLayout,
+                    )
+                }
             } else if (message.deletionState == MessageDeletionState.None) {
                 val document = remember(text) { dev.ipf.whitenoise.model.MessageDocuments.parse(text) }
                 val limit = with(LocalDensity.current) { (MaterialTheme.typography.bodyLarge.lineHeight * 52).toDp() }
                 val limitPx = with(LocalDensity.current) { limit.roundToPx() }
                 var overflow by remember(text, limitPx) { mutableStateOf(false) }
+                var measuredWidth by remember(text, limitPx) { mutableIntStateOf(-1) }
                 Box(if (reading.collapse && !selectingText) Modifier.heightIn(max = limit).clipToBounds() else Modifier) {
                     MessageDocumentContent(document, profile.people, onOpenPersonProfile,
-                        Modifier.wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged { overflow = it.height > limitPx },
+                        Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).onSizeChanged {
+                            // Removing the clipped footer must not toggle Read more back off.
+                            overflow = it.height > limitPx || (overflow && measuredWidth == it.width)
+                            measuredWidth = it.width
+                        },
                         spokenRange = readAloudController.session?.takeIf { it.owner == LocalSpeechOwner.current && it.current.item.id == message.id && it.current.item.authored == text }
                             ?.passage?.let { it.sourceStart until it.sourceEnd },
                         followSpeech = !selectingText && readAloudController.session?.following == true,
                         annotateSource = selectingText,
+                        footer = bodyFooter.takeUnless { overflow && reading.collapse && !selectingText },
                         memberIds = memberIds,
                         onOpenProfileReference = { occurrence ->
                             val person = profile.people.firstOrNull { it.publicKey == occurrence.publicKey }
@@ -2973,12 +2943,12 @@ private fun MessageBubbleText(
                     colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.LocalContentColor.current)) {
                     Text(stringResource(R.string.message_read_more))
                 }
+                if (overflow && reading.collapse && !selectingText) bodyFooter?.let { MessageFooterRow(it) }
             } else {
-                Text(
-                    text = text,
-                    fontStyle = FontStyle.Italic,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                MessageTextWithFooter(bodyFooter, Modifier.fillMaxWidth()) { onLayout ->
+                    Text(text = text, fontStyle = FontStyle.Italic,
+                        style = MaterialTheme.typography.bodyLarge, onTextLayout = onLayout)
+                }
             }
         }
         if (selectingText) {
@@ -2987,6 +2957,7 @@ private fun MessageBubbleText(
         TranslationBubbleStatus(message, !message.isDeleted && searchQuery.isBlank() && !selectingText, containerColor)
         if (!message.isDeleted) MessageEditStatus(message)
         ReadAloudProgress(message.id, readAloudController)
+        if (hasStatusBelow) footer?.let { MessageFooterRow(it, Modifier.padding(top = 4.dp)) }
     }
     unavailableProfile?.let { occurrence ->
         UnavailableNostrProfileDialog(occurrence) { unavailableProfile = null }
@@ -3054,90 +3025,41 @@ private fun ReplyQuote(
 
 @Composable
 private fun MessageMetadataContent(
-    retentionMessage: ChatMessage,
     messageId: String,
-    timeLabel: String,
-    outgoing: Boolean,
-    deliveryState: MessageDeliveryState,
-    showTime: Boolean,
+    alignEnd: Boolean,
     summary: List<ReactionCatalog.SummaryItem>,
     fillWidth: Boolean,
     measurementOnly: Boolean = false,
-    timestampVerticalOffsetPx: Int,
     onReaction: (String) -> Unit,
     onShowActions: () -> Unit,
     onLongPress: (() -> Unit)?,
 ) {
     val currentLongPress = rememberUpdatedState(onLongPress)
-    val metadataLongPress = remember(messageId) {
-        {
-            currentLongPress.value?.invoke()
-            Unit
-        }
-    }
-    val widthModifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier
-    val arrangement = when {
-        summary.isNotEmpty() && showTime -> Arrangement.SpaceBetween
-        outgoing -> Arrangement.End
-        else -> Arrangement.Start
-    }
+    val metadataLongPress = remember(messageId) { { currentLongPress.value?.invoke(); Unit } }
     Row(
-        modifier = widthModifier
+        modifier = (if (fillWidth) Modifier.fillMaxWidth() else Modifier)
             .padding(horizontal = 12.dp)
-            .interceptBubbleLongPress(
-                enabled = !measurementOnly && onLongPress != null,
-                onLongPress = metadataLongPress,
-            )
-            .then(
-                if (measurementOnly) {
-                    Modifier.clearAndSetSemantics { }
-                } else {
-                    Modifier.testTag("conversation.message.metadata.$messageId")
-                },
-            ),
-        horizontalArrangement = arrangement,
+            .interceptBubbleLongPress(!measurementOnly && onLongPress != null, metadataLongPress)
+            .then(if (measurementOnly) Modifier.clearAndSetSemantics { }
+                else Modifier.testTag("conversation.message.metadata.$messageId")),
+        horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Top,
     ) {
-        if (!outgoing && showTime) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MessageExpiryIndicator(retentionMessage, semanticsEnabled = !measurementOnly)
-                if (retentionMessage.retention != null) Spacer(Modifier.width(4.dp))
-            MessageTime(
-                messageId = messageId,
-                timeLabel = timeLabel,
-                outgoing = false,
-                deliveryState = deliveryState,
-                testTagEnabled = !measurementOnly,
-                verticalOffsetPx = timestampVerticalOffsetPx,
-            )
-            }
-        }
-        if (!outgoing && showTime && summary.isNotEmpty()) Spacer(Modifier.width(4.dp))
-        if (summary.isNotEmpty()) {
-            ReactionRow(
-                messageId = messageId,
-                summary = summary,
-                interactive = !measurementOnly,
-                onReaction = onReaction,
-                onShowActions = onShowActions,
-                onLongPress = metadataLongPress.takeIf { onLongPress != null },
-            )
-        }
-        if (outgoing && showTime && summary.isNotEmpty()) Spacer(Modifier.width(4.dp))
-        if (outgoing && showTime) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MessageExpiryIndicator(retentionMessage, semanticsEnabled = !measurementOnly)
-                if (retentionMessage.retention != null) Spacer(Modifier.width(4.dp))
-            MessageTime(
-                messageId = messageId,
-                timeLabel = timeLabel,
-                outgoing = true,
-                deliveryState = deliveryState,
-                testTagEnabled = !measurementOnly,
-                verticalOffsetPx = timestampVerticalOffsetPx,
-            )
-            }
-        }
+        ReactionRow(
+            messageId = messageId, summary = summary, interactive = !measurementOnly,
+            onReaction = onReaction, onShowActions = onShowActions,
+            onLongPress = metadataLongPress.takeIf { onLongPress != null },
+        )
+    }
+}
+
+@Composable
+private fun MessageBubbleTime(message: ChatMessage, outgoing: Boolean, containerColor: Color) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        MessageExpiryIndicator(message, color = dev.ipf.whitenoise.ui.theme.forwardedLabelColor(
+            containerColor, androidx.compose.material3.LocalContentColor.current))
+        MessageTime(message.id, message.timeLabel, outgoing, message.deliveryState,
+            testTagEnabled = true, verticalOffsetPx = 0, containerColor = containerColor)
     }
 }
 
@@ -3149,10 +3071,11 @@ private fun MessageTime(
     deliveryState: MessageDeliveryState,
     testTagEnabled: Boolean,
     verticalOffsetPx: Int,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
 ) {
     val failed = outgoing && deliveryState == MessageDeliveryState.Failed
     val failedLabel = if (failed) stringResource(R.string.not_delivered_retry) else null
-    val timestampColor = MaterialTheme.colorScheme.outline
+    val timestampColor = dev.ipf.whitenoise.ui.theme.forwardedLabelColor(containerColor, androidx.compose.material3.LocalContentColor.current)
     val deliveryLabel = if (outgoing || deliveryState == MessageDeliveryState.Streaming) {
         stringResource(
             when (deliveryState) {
@@ -3224,7 +3147,7 @@ private fun MessageTime(
                                     Modifier
                                 },
                             ),
-                        tint = MaterialTheme.colorScheme.surface,
+                        tint = containerColor,
                     )
                 }
 

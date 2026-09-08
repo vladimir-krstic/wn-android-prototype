@@ -65,6 +65,7 @@ internal fun MessageDocumentContent(
     modifier: Modifier = Modifier, annotateSource: Boolean = false, spokenRange: IntRange? = null, followSpeech: Boolean = false,
     memberIds: Set<String>? = null,
     onOpenProfileReference: ((NostrProfileOccurrence) -> Unit)? = null,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     var pendingLink by rememberSaveable(document.source) { mutableStateOf<String?>(null) }
     var failedLink by remember { mutableStateOf(false) }
@@ -78,7 +79,7 @@ internal fun MessageDocumentContent(
         LocalDocumentSpeech provides DocumentSpeech(spokenRange, followSpeech),
         LocalProfileReferencePresentation provides ProfileReferencePresentation(memberIds, onOpenProfileReference),
     ) {
-        DocumentBlocks(document.blocks, people, onOpenPerson, open, annotateSource, modifier)
+        DocumentBlocks(document.blocks, people, onOpenPerson, open, annotateSource, modifier, footer)
     }
     pendingLink?.let { destination ->
         AlertDialog(onDismissRequest = { pendingLink = null }, title = { Text(stringResource(R.string.message_open_link)) },
@@ -98,11 +99,13 @@ internal fun MessageDocumentContent(
 
 @Composable
 private fun DocumentBlocks(blocks: List<DocumentBlock>, people: List<Person>, onPerson: (String) -> Unit,
-    onLink: (String, Boolean) -> Unit, annotate: Boolean, modifier: Modifier = Modifier) {
+    onLink: (String, Boolean) -> Unit, annotate: Boolean, modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
         blocks.forEachIndexed { index, block -> key(index, block) {
             when (block) {
-                is DocumentBlock.Paragraph -> DocumentText(block.runs, people, onPerson, onLink, annotate)
+                is DocumentBlock.Paragraph -> DocumentText(block.runs, people, onPerson, onLink, annotate,
+                    footer = footer.takeIf { index == blocks.lastIndex })
                 is DocumentBlock.Heading -> {
                     val typography = MaterialTheme.typography
                     val style = when (block.level) {
@@ -113,7 +116,8 @@ private fun DocumentBlocks(blocks: List<DocumentBlock>, people: List<Person>, on
                         5 -> typography.bodyLarge
                         else -> typography.bodyMedium
                     }.copy(fontWeight = FontWeight.SemiBold)
-                    DocumentText(block.runs, people, onPerson, onLink, annotate, Modifier.semantics { heading() }, style)
+                    DocumentText(block.runs, people, onPerson, onLink, annotate, Modifier.semantics { heading() }, style,
+                        footer = footer.takeIf { index == blocks.lastIndex })
                 }
                 is DocumentBlock.Code -> Surface(color = if (isAmoledOutline()) MaterialTheme.colorScheme.surface else LocalContentColor.current.copy(alpha = 0.08f), border = amoledOutlineBorder(), shape = MaterialTheme.shapes.small) {
                     Column(Modifier.padding(WhiteNoiseSpacing.Related)) {
@@ -170,13 +174,16 @@ private fun DocumentBlocks(blocks: List<DocumentBlock>, people: List<Person>, on
                 DocumentBlock.Divider -> HorizontalDivider(color = LocalContentColor.current.copy(alpha = 0.25f))
             }
         } }
+        if (footer != null && blocks.lastOrNull() !is DocumentBlock.Paragraph && blocks.lastOrNull() !is DocumentBlock.Heading) {
+            MessageFooterRow(footer)
+        }
     }
 }
 
 @Composable
 private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson: (String) -> Unit,
     onLink: (String, Boolean) -> Unit, annotate: Boolean, modifier: Modifier = Modifier,
-    style: TextStyle = MaterialTheme.typography.bodyLarge, align: TextAlign? = null, linksEnabled: Boolean = true) {
+    style: TextStyle = MaterialTheme.typography.bodyLarge, align: TextAlign? = null, linksEnabled: Boolean = true, footer: (@Composable () -> Unit)? = null) {
     val color = LocalContentColor.current
     val referencePresentation = LocalProfileReferencePresentation.current
     val spoken = LocalDocumentSpeech.current
@@ -256,9 +263,13 @@ private fun DocumentText(runs: List<DocumentRun>, people: List<Person>, onPerson
             }
         }
     }
-    Text(text, modifier.bringIntoViewRequester(requester).semantics {
-        if (hit != null) stateDescription = currentSentenceLabel
-    }, color = color, style = style, textAlign = align, onTextLayout = { layout = it })
+    val renderText: @Composable (Modifier, (TextLayoutResult) -> Unit) -> Unit = { textModifier, onLayout ->
+        Text(text, textModifier.bringIntoViewRequester(requester).semantics {
+            if (hit != null) stateDescription = currentSentenceLabel
+        }, color = color, style = style, textAlign = align, onTextLayout = { layout = it; onLayout(it) })
+    }
+    if (footer == null) renderText(modifier) {}
+    else MessageTextWithFooter(footer, modifier.fillMaxWidth()) { onLayout -> renderText(Modifier, onLayout) }
 }
 
 private fun blockSourceIntersects(block: DocumentBlock, range: IntRange): Boolean = when (block) {

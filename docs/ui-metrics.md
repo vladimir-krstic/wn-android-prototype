@@ -1142,3 +1142,11 @@ onSurfaceVariant preserves arrow contrast; AMOLED Outline retains its outline.
 Move only the 30 dp circle 4 dp toward the avatar, respecting RTL. Retain separate
 48 dp touch targets. Clip the shared Material ripple/state layer to CircleShape
 at 30 dp, with a centered 15 dp ripple radius, matching the visible container.
+
+### Inside-bubble timestamps — 2026-09-08
+
+Supersedes the external 2 dp time gap and direction-based timestamp edge. Use the
+right inner edge for incoming/outgoing time and status. Align text baselines when
+the final line plus 8 dp separation plus footer fits; otherwise use a footer line
+with 4 dp top gap. Keep 12 dp horizontal / 8 dp vertical text insets, rich content
+insets, existing labelSmall and 14 dp status glyphs. Reactions remain external.

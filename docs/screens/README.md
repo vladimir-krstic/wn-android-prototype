@@ -81,3 +81,5 @@ for pinned evidence and [the parity ledger](../port/feature-inventory.md) for st
 - [Jump to date](jump-to-date.md) — calendar navigation from conversation search (#18).
 
 - [Files and media from main search](global-files-and-media.md) — browse attachments across the current account (#19).
+
+- [Timestamps inside message bubbles](message-inline-timestamps.md)
