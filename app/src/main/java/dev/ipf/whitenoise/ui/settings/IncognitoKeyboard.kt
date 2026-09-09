@@ -9,6 +9,8 @@ import androidx.compose.ui.platform.PlatformTextInputInterceptor
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSession
 
+internal val LocalKeyboardInputBlocked = androidx.compose.runtime.compositionLocalOf { false }
+
 /** Preserve field actions and existing privacy flags; this is a request to the keyboard. */
 // The caller supplies Build.VERSION.SDK_INT; this inlined flag is guarded before use.
 @android.annotation.SuppressLint("InlinedApi")
@@ -29,5 +31,7 @@ internal class IncognitoKeyboardInterceptor(private val enabled: Boolean, privat
 @Composable
 internal fun IncognitoKeyboardScope(enabled: Boolean, blocked: Boolean = false, content: @Composable () -> Unit) {
     val interceptor = remember(enabled,blocked) { IncognitoKeyboardInterceptor(enabled,blocked) }
-    InterceptPlatformTextInput(interceptor,content)
+    androidx.compose.runtime.CompositionLocalProvider(LocalKeyboardInputBlocked provides blocked) {
+        InterceptPlatformTextInput(interceptor,content)
+    }
 }

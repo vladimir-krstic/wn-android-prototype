@@ -28,8 +28,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.alpha
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -56,6 +56,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -131,6 +132,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -139,13 +141,14 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalDensity
@@ -157,6 +160,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.customActions
@@ -171,6 +175,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.Dialog
@@ -321,10 +326,10 @@ private fun Modifier.composerExpansionGesture(
 }
 
 /** Keeps the app-shell outside-tap observer from clearing a focus acquired by this editor tap. */
-private fun Modifier.consumeEditorTapAtFinalPass(): Modifier = pointerInput(Unit) {
+private fun Modifier.consumeEditorTapBeforeBackgroundObserver(): Modifier = pointerInput(Unit) {
     awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final).consume()
-        waitForUpOrCancellation(pass = PointerEventPass.Final)?.consume()
+        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Main).consume()
+        waitForUpOrCancellation(pass = PointerEventPass.Main)?.consume()
     }
 }
 
@@ -337,34 +342,19 @@ private fun ComposerLeadingAction(
     enabled: Boolean,
     menuItems: List<WhiteNoiseMenuItem>,
     onCancelVoice: () -> Unit,
-    integratedProgress: Float = 0f,
 ) {
     val showsCancel = voiceState is ComposerVoiceState.Review
     val isAddAction = voiceState == ComposerVoiceState.Idle && !showsCancel
-    val containerColor = when {
-        isAmoledOutline() -> MaterialTheme.colorScheme.surface
-        !isAddAction -> MaterialTheme.colorScheme.surfaceContainerHigh
-        enabled -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-    }
-    val contentColor = when {
-        isAmoledOutline() -> MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f)
-        !isAddAction -> MaterialTheme.colorScheme.onSurface
-        enabled -> MaterialTheme.colorScheme.onPrimary
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-    }
-    val presentedContainer = androidx.compose.ui.graphics.lerp(containerColor, Color.Transparent, integratedProgress)
-    val presentedContent = androidx.compose.ui.graphics.lerp(contentColor, MaterialTheme.colorScheme.onSurfaceVariant, integratedProgress)
+    val contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f)
     Box(Modifier.size(48.dp).testTag("conversation.attachment.add")) {
         Surface(
             modifier = Modifier.fillMaxSize().testTag("conversation.attachment.add.surface"),
-            border = if (integratedProgress == 0f) amoledOutlineBorder() else null,
             shape = CircleShape,
-            color = presentedContainer,
-            contentColor = presentedContent,
+            color = Color.Transparent,
+            contentColor = contentColor,
         ) {
             IconButton(
-                modifier = Modifier.padding(horizontal = 8.dp * integratedProgress),
+                modifier = Modifier.padding(horizontal = 8.dp),
                 onClick = {
                     if (voiceState is ComposerVoiceState.Review) {
                         onCancelVoice()
@@ -383,7 +373,7 @@ private fun ComposerLeadingAction(
                     } else {
                         addAttachmentDescription
                     },
-                    tint = presentedContent,
+                    tint = contentColor,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -513,8 +503,8 @@ fun FullConversationComposer(
     val photoQuality = chat.effectivePhotoQuality(profile.settings)
     var mediaViewerAttachmentId by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var isExpanded by rememberSaveable(chat.id) { mutableStateOf(false) }
+    var editorFocused by remember(profile.id, chat.id) { mutableStateOf(false) }
     val expansionProgress = remember(chat.id) { Animatable(if (isExpanded) 1f else 0f).apply { updateBounds(0f, 1f) } }
-    val automaticWidthProgress = remember(chat.id) { Animatable(0f).apply { updateBounds(0f, 1f) } }
     val textMeasurer = rememberTextMeasurer()
     var requestedDragProgress by remember { mutableFloatStateOf(0f) }
     var expansionJob by remember { mutableStateOf<Job?>(null) }
@@ -817,52 +807,73 @@ fun FullConversationComposer(
         if (it == "writing") openWritingTools(false) else capture?.present(captureOwner)
     }
     val sendable = chat.draftText.isNotBlank() || chat.draftAttachments.isNotEmpty() || linkPreview != null
+    val keyboardDismissal = dev.ipf.whitenoise.ui.components.LocalBackgroundKeyboardDismissal.current
+    DisposableEffect(chat.id, keyboardDismissal) {
+        onDispose { keyboardDismissal?.cancel() }
+    }
+    val dismissingKeyboard = keyboardDismissal?.requested == true
+    val compactReadingMode = (!editorFocused || dismissingKeyboard) && editorValue.text.isEmpty() &&
+        chat.draftAttachments.isEmpty() && replyMessage == null && linkPreview == null &&
+        voiceState == ComposerVoiceState.Idle && inlineDictation == null && !isPreparing && !attachmentError
+    val editingProgress = rememberComposerKeyboardProgress(
+        editing = !compactReadingMode,
+        keyboardFocusChange = editorValue.text.isEmpty() && chat.draftAttachments.isEmpty() &&
+            replyMessage == null && linkPreview == null && voiceState == ComposerVoiceState.Idle &&
+            inlineDictation == null && !isPreparing && !attachmentError,
+    )
     val isExpansionEnabled = when (val state = voiceState) {
         ComposerVoiceState.Idle -> true
         is ComposerVoiceState.Recording -> false
         is ComposerVoiceState.Review -> state.transcript != null && state.format != VoiceMessageFormat.Voice
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        // Measure against the compact editor even while wide, so reflow cannot flip the mode.
+    val manuallyResizing = isExpanded || expansionProgress.value > 0f || isDraggingExpansion || isSettlingExpansion
+    val keyboardInsets = composerKeyboardInsets()
+    val navigationInsets = WindowInsets.navigationBars
+    BoxWithConstraints(modifier = modifier.fillMaxSize().then(
+        if (manuallyResizing) Modifier else Modifier.stableComposerKeyboardConstraints(keyboardInsets, navigationInsets),
+    )) {
+        // Measure at the actual full text width so vertical collapse follows the current draft.
         val compactEditorWidth = (constraints.maxWidth - with(density) {
-            (WhiteNoiseSpacing.CompactScreenMargin * 2 + 48.dp + WhiteNoiseSpacing.Related +
-                84.dp + 48.dp).roundToPx()
+            (WhiteNoiseSpacing.CompactScreenMargin * 2 + 28.dp).roundToPx()
         }).coerceAtLeast(1)
         val compactTextLayout = textMeasurer.measure(
             text = editorValue.text.ifEmpty { " " },
             style = MaterialTheme.typography.bodyLarge,
             constraints = Constraints(maxWidth = compactEditorWidth),
         )
-        val automaticallyWide = voiceState == ComposerVoiceState.Idle &&
-            ComposerExpansionPolicy.usesFullWidth(compactTextLayout.lineCount)
         val referenceEditorHeight = with(density) { 24.dp.roundToPx() } +
             compactTextLayout.getLineBottom((compactTextLayout.lineCount - 1)
                 .coerceAtMost(ComposerExpansionPolicy.compactLineLimit(chat.draftAttachments.isNotEmpty()) - 1)).roundToInt()
         val manualProgress = if (isDraggingExpansion) requestedDragProgress else expansionProgress.value
-        // One geometric progress value moves the toolbar and capsule together. A long draft
-        // keeps its full-width baseline even when manual expansion returns to zero.
-        val toolbarProgress = maxOf(automaticWidthProgress.value, manualProgress)
-        val presentedWidthProgress = if (voiceState == ComposerVoiceState.Idle) toolbarProgress else 0f
-        val morphSpec = spring<Float>(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow,
-            visibilityThreshold = 0.001f,
-        )
+        val morphSpec = tween<Float>(220, easing = LinearEasing)
         val controlHeightPx = with(density) { 48.dp.roundToPx() }
-        val naturalCompactEditorHeightPx = maxOf(controlHeightPx, referenceEditorHeight) +
-            (controlHeightPx * automaticWidthProgress.value).roundToInt()
+        val textRowHeightPx by animateIntAsState(
+            targetValue = maxOf(controlHeightPx, referenceEditorHeight),
+            animationSpec = tween(160, easing = LinearEasing),
+            label = "composer text height",
+        )
+        // The 48 dp toolbar already leaves 12 dp above its 24 dp icons. Remove the
+        // text-side 12 dp spacer to halve the combined padding, keeping full action targets.
+        val compactTextHeightPx = { textRowHeightPx - if (voiceState == ComposerVoiceState.Idle) {
+            (with(density) { 12.dp.toPx() } * editingProgress()).roundToInt()
+        } else 0 }
+        val toolbarOverlapPx = if (voiceState == ComposerVoiceState.Idle) {
+            with(density) { 4.dp.roundToPx() }
+        } else 0
+        val naturalCompactEditorHeightPx = { compactTextHeightPx() +
+            ((controlHeightPx - toolbarOverlapPx) * editingProgress()).roundToInt() }
+        val usesFlexibleLayout = compactHeightPx > 0 &&
+            (isExpanded || manualProgress > 0f || isDraggingExpansion || isSettlingExpansion)
         // Text may change while expanded. Rebase the collapsed endpoint on its current
         // content instead of landing on the old height and jumping when intrinsic sizing returns.
-        val compactTargetHeightPx = if (voiceState == ComposerVoiceState.Idle && measuredCompactEditorHeightPx > 0) {
-            (compactHeightPx - measuredCompactEditorHeightPx + naturalCompactEditorHeightPx)
+        val compactTargetHeightPx = if (usesFlexibleLayout && voiceState == ComposerVoiceState.Idle && measuredCompactEditorHeightPx > 0) {
+            (compactHeightPx - measuredCompactEditorHeightPx + naturalCompactEditorHeightPx())
                 .coerceAtLeast(controlHeightPx)
         } else compactHeightPx
         val expandedTopGapPx = with(density) { ComposerExpansionPolicy.ExpandedTopGapDp.dp.roundToPx() }
         val expandedHeightPx = (constraints.maxHeight - expandedTopGapPx).coerceAtLeast(compactTargetHeightPx)
         val travelPx = (expandedHeightPx - compactTargetHeightPx).coerceAtLeast(1)
-        val usesFlexibleLayout = compactHeightPx > 0 &&
-            (isExpanded || manualProgress > 0f || isDraggingExpansion || isSettlingExpansion)
         val presentedHeightPx = compactTargetHeightPx + (travelPx * manualProgress).roundToInt()
 
         fun requestSettle(expanded: Boolean, initialVelocity: Float? = null) {
@@ -887,9 +898,6 @@ fun FullConversationComposer(
             }
         }
 
-        LaunchedEffect(automaticallyWide, isExpansionEnabled) {
-            automaticWidthProgress.animateTo(if (automaticallyWide && isExpansionEnabled) 1f else 0f, morphSpec)
-        }
         LaunchedEffect(isExpansionEnabled) {
             if (!isExpansionEnabled && (isExpanded || manualProgress > 0f)) requestSettle(false)
         }
@@ -943,14 +951,20 @@ fun FullConversationComposer(
                         Modifier
                     },
                 )
-                .onSizeChanged { size ->
+                .layout { measurable, constraints ->
+                    val child = measurable.measure(constraints)
                     if (!usesFlexibleLayout) {
-                        measuredCompactEditorHeightPx = naturalCompactEditorHeightPx
-                        if (size.height != compactHeightPx) {
-                            compactHeightPx = size.height
-                            onCompactHeightChanged(size.height)
+                        // Cache manual-expansion endpoints only after focus/line motion
+                        // settles. Intermediate pixels belong to layout, not composition.
+                        val focusProgress = editingProgress()
+                        if ((focusProgress == 0f || focusProgress == 1f) &&
+                            textRowHeightPx == maxOf(controlHeightPx, referenceEditorHeight)) {
+                            measuredCompactEditorHeightPx = naturalCompactEditorHeightPx()
+                            compactHeightPx = child.height
                         }
+                        onCompactHeightChanged(child.height)
                     }
+                    layout(child.width, child.height) { child.placeRelative(0, 0) }
                 }
                 .testTag("conversation.composer.host"),
         ) {
@@ -971,11 +985,66 @@ fun FullConversationComposer(
                     .then(if (usesFlexibleLayout) Modifier.weight(1f) else Modifier)
                     .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin, vertical = 6.dp),
             ) {
+                val leadingAction: @Composable () -> Unit = {
+                    if (voiceState !is ComposerVoiceState.Recording && inlineDictation?.capturing != true) {
+                        ComposerLeadingAction(
+                            voiceState = voiceState,
+                            menuExpanded = attachmentMenuOpen,
+                            onMenuExpandedChange = { attachmentMenuOpen = it },
+                            addAttachmentDescription = addAttachmentDescription,
+                            enabled = !isPreparing,
+                            menuItems = listOf(
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.camera),
+                                icon = R.drawable.ic_camera,
+                                onClick = ::requestCameraCapture,
+                            ),
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.photos_and_videos),
+                                icon = R.drawable.ic_image,
+                                onClick = {
+                                    attachmentError = false
+                                    attachmentError = runCatching {
+                                        visualPicker.launch(
+                                            PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageAndVideo,
+                                            ),
+                                        )
+                                    }.isFailure
+                                },
+                            ),
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.files),
+                                icon = R.drawable.ic_description,
+                                onClick = {
+                                    attachmentError = false
+                                    attachmentError = runCatching {
+                                        documentPicker.launch(arrayOf("*/*"))
+                                    }.isFailure
+                                },
+                            ),
+                            WhiteNoiseMenuItem(stringResource(R.string.location_title), icon = R.drawable.ic_location_on, onClick = { attachmentError = !attachmentEnvironment.openLocation() }),
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.attachment_contact),
+                                icon = R.drawable.ic_person,
+                                onClick = { contactPickerOpen = true },
+                            ),
+                            WhiteNoiseMenuItem(
+                                label = stringResource(R.string.writing_tools), icon = R.drawable.ic_edit,
+                                enabled = writingEligible && editorValue.text.isNotBlank(),
+                                modifier = Modifier.testTag("writing.menu"), onClick = { openWritingTools(false) },
+                            ),
+                            ),
+                            onCancelVoice = {
+                                voiceState = ComposerVoiceState.Idle
+                                requestSettle(false)
+                            },
+                        )
+                    }
+                }
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = if (voiceState is ComposerVoiceState.Recording || inlineDictation?.capturing == true) 0.dp else
-                            (48.dp + WhiteNoiseSpacing.Related) * (1f - presentedWidthProgress))
                         .heightIn(min = 48.dp)
                         .then(if (usesFlexibleLayout) Modifier.fillMaxHeight() else Modifier)
                         .then(expansionModifier)
@@ -1079,8 +1148,12 @@ fun FullConversationComposer(
                                 onDictation = ::beginDictation,
                                 dictationEnabled = capture != null && (capture.lease == null || inlineDictation?.capturing == true),
                                 dictationSession = inlineDictation,
-                                toolbarProgress = toolbarProgress,
-                                referenceEditorHeight = referenceEditorHeight,
+                                leadingAction = leadingAction,
+                                editingProgress = { maxOf(editingProgress(), manualProgress) },
+                                compactTextHeightPx = compactTextHeightPx,
+                                naturalTextHeightPx = maxOf(controlHeightPx, referenceEditorHeight),
+                                onFocusChanged = { editorFocused = it; if (!it) keyboardDismissal?.cancel() },
+                                showCursor = !dismissingKeyboard,
                                 recordGestureKey = captureOwner,
                                 sendable = sendable,
                                 enabled = !isPreparing,
@@ -1093,6 +1166,7 @@ fun FullConversationComposer(
                             )
                             is ComposerVoiceState.Review -> VoiceReviewComposer(
                                 state = state,
+                                leadingAction = leadingAction,
                                 expanded = usesFlexibleLayout,
                                 onStateChanged = { selected ->
                                     voiceState = selected
@@ -1140,64 +1214,7 @@ fun FullConversationComposer(
                         }
                     }
                 }
-                if (voiceState !is ComposerVoiceState.Recording && inlineDictation?.capturing != true) {
-                    Box(Modifier.align(Alignment.BottomStart)) {
-                        ComposerLeadingAction(
-                            integratedProgress = presentedWidthProgress,
-                            voiceState = voiceState,
-                            menuExpanded = attachmentMenuOpen,
-                            onMenuExpandedChange = { attachmentMenuOpen = it },
-                            addAttachmentDescription = addAttachmentDescription,
-                            enabled = !isPreparing,
-                            menuItems = listOf(
-                            WhiteNoiseMenuItem(
-                                label = stringResource(R.string.camera),
-                                icon = R.drawable.ic_camera,
-                                onClick = ::requestCameraCapture,
-                            ),
-                            WhiteNoiseMenuItem(
-                                label = stringResource(R.string.photos_and_videos),
-                                icon = R.drawable.ic_image,
-                                onClick = {
-                                    attachmentError = false
-                                    attachmentError = runCatching {
-                                        visualPicker.launch(
-                                            PickVisualMediaRequest(
-                                                ActivityResultContracts.PickVisualMedia.ImageAndVideo,
-                                            ),
-                                        )
-                                    }.isFailure
-                                },
-                            ),
-                            WhiteNoiseMenuItem(
-                                label = stringResource(R.string.files),
-                                icon = R.drawable.ic_description,
-                                onClick = {
-                                    attachmentError = false
-                                    attachmentError = runCatching {
-                                        documentPicker.launch(arrayOf("*/*"))
-                                    }.isFailure
-                                },
-                            ),
-                            WhiteNoiseMenuItem(stringResource(R.string.location_title), icon = R.drawable.ic_location_on, onClick = { attachmentError = !attachmentEnvironment.openLocation() }),
-                            WhiteNoiseMenuItem(
-                                label = stringResource(R.string.attachment_contact),
-                                icon = R.drawable.ic_person,
-                                onClick = { contactPickerOpen = true },
-                            ),
-                            WhiteNoiseMenuItem(
-                                label = stringResource(R.string.writing_tools), icon = R.drawable.ic_edit,
-                                enabled = writingEligible && editorValue.text.isNotBlank(),
-                                modifier = Modifier.testTag("writing.menu"), onClick = { openWritingTools(false) },
-                            ),
-                            ),
-                            onCancelVoice = {
-                                voiceState = ComposerVoiceState.Idle
-                                requestSettle(false)
-                            },
-                        )
-                    }
-                }
+
             }
         }
     }
@@ -1352,8 +1369,12 @@ private fun ComposerTextInput(
     onDictation: () -> Unit,
     dictationEnabled: Boolean,
     dictationSession: dev.ipf.whitenoise.model.InlineDictationSession?,
-    toolbarProgress: Float,
-    referenceEditorHeight: Int,
+    leadingAction: @Composable () -> Unit,
+    editingProgress: () -> Float,
+    compactTextHeightPx: () -> Int,
+    naturalTextHeightPx: Int,
+    onFocusChanged: (Boolean) -> Unit,
+    showCursor: Boolean,
     sendable: Boolean,
     enabled: Boolean,
     expanded: Boolean,
@@ -1393,145 +1414,214 @@ private fun ComposerTextInput(
     val displayedMentions = textTransformation.highlightRanges(text.length)
     val dictationDescription = stringResource(R.string.transcribing)
     var mentionLayout by remember(text, indicatorCursor) { mutableStateOf<TextLayoutResult?>(null) }
-    ComposerEditorLayout(
-        modifier = modifier.fillMaxWidth().heightIn(min = 48.dp)
-            .then(if (expanded) Modifier.fillMaxHeight() else Modifier),
-        expanded = expanded,
-        toolbarProgress = if (recording != null) 0f else toolbarProgress,
-        referenceEditorHeight = if (recording != null) 0 else referenceEditorHeight,
-        reserveAddAction = !dictating,
-    ) {
-        if (recording != null) {
-            RecordingComposer(recording.elapsedTenths)
-        } else BasicTextField(
-            value = value,
-            onValueChange = onValueChanged,
-            enabled = enabled,
-            modifier = Modifier
-                .consumeEditorTapAtFinalPass()
-                .focusRequester(focusRequester)
-                .heightIn(min = 48.dp)
-                .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
-                .testTag("conversation.composer.editor")
-                .appendTextContextMenuComponents {
-                    if (writingEnabled && !value.selection.collapsed && value.text.substring(value.selection.min, value.selection.max).isNotBlank()) {
-                        separator()
-                        item(WritingSelectionMenuKey, writingLabel) { onWritingTools(); close() }
-                    }
-                }
-                .semantics {
-                    if (dictating) stateDescription = dictationDescription
-                    if (writingEnabled && !value.selection.collapsed) {
-                        customActions = listOf(CustomAccessibilityAction(writingLabel) { onWritingTools(); true })
-                    }
-                }
-                .onPreviewKeyEvent { event ->
-                    when (ComposerEnterPolicy.decide(enterKeyBehavior,
-                        isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter,
-                        isKeyDown = event.type == KeyEventType.KeyDown,
-                        shift = event.isShiftPressed,
-                        otherModifier = event.isCtrlPressed || event.isAltPressed || event.isMetaPressed,
-                        repeated = event.nativeKeyEvent.repeatCount > 0,
-                        composing = value.composition != null,
-                        enabled = enabled, sendable = sendable,
-                    )) {
-                        ComposerEnterDecision.Native -> false
-                        ComposerEnterDecision.Consume -> true
-                        ComposerEnterDecision.Send -> { onSend(); true }
-                    }
-                },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-            keyboardOptions = KeyboardOptions(imeAction = if (enterKeyBehavior == EnterKeyBehavior.SendMessage) ImeAction.Send else ImeAction.Default),
-            keyboardActions = KeyboardActions(onSend = {
-                if (enterKeyBehavior == EnterKeyBehavior.SendMessage && enabled && sendable && value.composition == null) onSend()
-            }),
-            minLines = 1,
-            maxLines = if (expanded) Int.MAX_VALUE else ComposerExpansionPolicy.compactLineLimit(hasAttachments),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            visualTransformation = textTransformation,
-            onTextLayout = { mentionLayout = it },
-            decorationBox = { innerTextField ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
-                        .padding(horizontal = 14.dp * toolbarProgress, vertical = 12.dp),
-                    contentAlignment = if (expanded) Alignment.TopStart else Alignment.CenterStart,
-                ) {
-                    if (text.isEmpty() && !dictating) {
-                        Text(
-                            stringResource(R.string.message),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
-                    Box {
-                        Canvas(
-                            Modifier
-                                .matchParentSize()
-                                .testTag("conversation.composer.mentionHighlight"),
-                        ) {
-                            mentionLayout
-                                ?.drawRoundedTextHighlights(
-                                    drawScope = this,
-                                    ranges = displayedMentions,
-                                    color = mentionBackground,
-                                )
-                        }
-                        innerTextField()
-                    }
-                }
-            },
-        )
-        ComposerTrailingActions(actionWidth = when { recording != null -> 48.dp; dictating -> 28.dp; else -> 40.dp }) {
-            if (dictationSession?.capturing == true) {
-                val pulse = rememberInfiniteTransition(label = "dictation microphone")
-                val alpha by pulse.animateFloat(1f, 0.45f,
-                    animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "listening pulse")
-                IconButton(onClick = onDictation, modifier = Modifier.size(48.dp).testTag("dictation.pause")) {
-                    Icon(painterResource(R.drawable.ic_pause), stringResource(R.string.pause),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-                }
-                Box(Modifier.size(48.dp).testTag("dictation.listening"), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.dictation_listening),
-                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp).alpha(alpha))
-                }
-            } else if (recording == null) {
-                IconButton(
-                    onClick = onDictation,
-                    enabled = enabled && dictationEnabled,
-                    modifier = Modifier.size(48.dp).testTag("conversation.dictation.start"),
-                ) {
-                    Icon(painterResource(R.drawable.ic_mic), stringResource(if (dictationSession != null) R.string.dictation_resume else R.string.dictation_start),
-                        modifier = Modifier.size(24.dp), tint = if (enabled && dictationEnabled)
-                            MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
-                }
-            }
-            if (sendable && recording == null && dictationSession?.capturing != true) {
-                ComposerSendButton(
-                    onClick = onSend,
+    val messageLabel = stringResource(R.string.message)
+    val showsPlaceholder = recording == null && text.isEmpty() && !dictating
+    Box(modifier.fillMaxWidth().heightIn(min = 48.dp)
+        .then(if (expanded) Modifier.fillMaxHeight() else Modifier)) {
+        ComposerEditorLayout(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .then(if (expanded) Modifier.fillMaxHeight() else Modifier),
+            expanded = expanded,
+            editingProgress = editingProgress,
+            compactTextHeightPx = compactTextHeightPx,
+            reserveAddAction = !dictating,
+            tightenTextToolbar = recording == null,
+        ) {
+            if (recording != null) {
+                RecordingComposer(recording.elapsedTenths)
+            } else StableComposerTextViewport(naturalTextHeightPx, expanded) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChanged,
                     enabled = enabled,
-                    description = stringResource(R.string.send),
+                    modifier = Modifier
+                        .consumeEditorTapBeforeBackgroundObserver()
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { onFocusChanged(it.isFocused) }
+                        .heightIn(min = 48.dp)
+                        .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
+                        .testTag("conversation.composer.editor")
+                        .appendTextContextMenuComponents {
+                            if (writingEnabled && !value.selection.collapsed && value.text.substring(value.selection.min, value.selection.max).isNotBlank()) {
+                                separator()
+                                item(WritingSelectionMenuKey, writingLabel) { onWritingTools(); close() }
+                            }
+                        }
+                        .semantics {
+                            if (showsPlaceholder) contentDescription = messageLabel
+                            if (dictating) stateDescription = dictationDescription
+                            if (writingEnabled && !value.selection.collapsed) {
+                                customActions = listOf(CustomAccessibilityAction(writingLabel) { onWritingTools(); true })
+                            }
+                        }
+                        .onPreviewKeyEvent { event ->
+                            when (ComposerEnterPolicy.decide(enterKeyBehavior,
+                                isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter,
+                                isKeyDown = event.type == KeyEventType.KeyDown,
+                                shift = event.isShiftPressed,
+                                otherModifier = event.isCtrlPressed || event.isAltPressed || event.isMetaPressed,
+                                repeated = event.nativeKeyEvent.repeatCount > 0,
+                                composing = value.composition != null,
+                                enabled = enabled, sendable = sendable,
+                            )) {
+                                ComposerEnterDecision.Native -> false
+                                ComposerEnterDecision.Consume -> true
+                                ComposerEnterDecision.Send -> { onSend(); true }
+                            }
+                        },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    keyboardOptions = KeyboardOptions(imeAction = if (enterKeyBehavior == EnterKeyBehavior.SendMessage) ImeAction.Send else ImeAction.Default),
+                    keyboardActions = KeyboardActions(onSend = {
+                        if (enterKeyBehavior == EnterKeyBehavior.SendMessage && enabled && sendable && value.composition == null) onSend()
+                    }),
+                    minLines = 1,
+                    maxLines = if (expanded) Int.MAX_VALUE else ComposerExpansionPolicy.compactLineLimit(hasAttachments),
+                    cursorBrush = SolidColor(if (showCursor) MaterialTheme.colorScheme.primary else Color.Transparent),
+                    visualTransformation = textTransformation,
+                    onTextLayout = { mentionLayout = it },
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(if (expanded) Modifier.fillMaxHeight() else Modifier)
+                                .padding(vertical = 12.dp)
+                                .layout { measurable, constraints ->
+                                    val inset = (14.dp.toPx() * editingProgress()).roundToInt()
+                                        .coerceAtMost(constraints.maxWidth / 2)
+                                    val field = measurable.measure(constraints.offset(horizontal = -2 * inset))
+                                    layout(field.width + 2 * inset, field.height) { field.placeRelative(inset, 0) }
+                                },
+                            contentAlignment = Alignment.TopStart,
+                        ) {
+                            Box {
+                                Canvas(
+                                    Modifier
+                                        .matchParentSize()
+                                        .testTag("conversation.composer.mentionHighlight"),
+                                ) {
+                                    mentionLayout
+                                        ?.drawRoundedTextHighlights(
+                                            drawScope = this,
+                                            ranges = displayedMentions,
+                                            color = mentionBackground,
+                                        )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    },
                 )
-            } else if (!dictating && (text.isEmpty() || recording != null)) {
-                VoiceCaptureControl(enabled && recordEnabled, recording != null, recordGestureKey,
-                    if (recording != null) stringResource(R.string.stop_recording) else recordVoiceDescription,
-                    onTap = onRecordTap, onHold = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onRecordHold() },
-                    onDrag = onRecordDrag, onRelease = onRecordRelease, onCancel = onRecordGestureCancel) {
-                    if (recording == null) MiniWaveformGlyph(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.testTag("conversation.voice.icon"))
-                    else Icon(painterResource(R.drawable.ic_stop), contentDescription = null, tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp).testTag("conversation.voice.stop.icon"))
+            }
+            ComposerTrailingActions(actionWidth = when { recording != null -> 48.dp; dictating -> 28.dp; else -> 40.dp }) {
+                if (dictationSession?.capturing == true) {
+                    val pulse = rememberInfiniteTransition(label = "dictation microphone")
+                    val alpha by pulse.animateFloat(1f, 0.45f,
+                        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "listening pulse")
+                    IconButton(onClick = onDictation, modifier = Modifier.size(48.dp).testTag("dictation.pause")) {
+                        Icon(painterResource(R.drawable.ic_pause), stringResource(R.string.pause),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                    }
+                    Box(Modifier.size(48.dp).testTag("dictation.listening"), contentAlignment = Alignment.Center) {
+                        Icon(painterResource(R.drawable.ic_mic), stringResource(R.string.dictation_listening),
+                            tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp).alpha(alpha))
+                    }
+                } else if (recording == null) {
+                    IconButton(
+                        onClick = onDictation,
+                        enabled = enabled && dictationEnabled,
+                        modifier = Modifier.size(48.dp).testTag("conversation.dictation.start"),
+                    ) {
+                        Icon(painterResource(R.drawable.ic_mic), stringResource(if (dictationSession != null) R.string.dictation_resume else R.string.dictation_start),
+                            modifier = Modifier.size(24.dp).testTag("conversation.dictation.icon"), tint = if (enabled && dictationEnabled)
+                                MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                    }
+                }
+                if (sendable && recording == null && dictationSession?.capturing != true) {
+                    ComposerSendButton(
+                        onClick = onSend,
+                        enabled = enabled,
+                        description = stringResource(R.string.send),
+                    )
+                } else if (!dictating && (text.isEmpty() || recording != null)) {
+                    VoiceCaptureControl(enabled && recordEnabled, recording != null, recordGestureKey,
+                        if (recording != null) stringResource(R.string.stop_recording) else recordVoiceDescription,
+                        onTap = onRecordTap, onHold = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onRecordHold() },
+                        onDrag = onRecordDrag, onRelease = onRecordRelease, onCancel = onRecordGestureCancel) {
+                        if (recording == null) MiniWaveformGlyph(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.testTag("conversation.voice.icon"))
+                        else Icon(painterResource(R.drawable.ic_stop), contentDescription = null, tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp).testTag("conversation.voice.stop.icon"))
+                    }
                 }
             }
-        }
-        if (recording == null) {
-            IconButton(onClick = onEmoji, enabled = enabled,
-                modifier = Modifier.size(48.dp).testTag("conversation.composer.emoji")) {
-                Icon(painterResource(R.drawable.ic_emoji_smileys), stringResource(R.string.search_emoji),
-                    modifier = Modifier.size(24.dp), tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+            if (recording == null) {
+                IconButton(onClick = onEmoji, enabled = enabled,
+                    modifier = Modifier.size(48.dp).testTag("conversation.composer.emoji")) {
+                    Icon(painterResource(R.drawable.ic_emoji_smileys), stringResource(R.string.search_emoji),
+                        modifier = Modifier.size(24.dp), tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                }
             }
+            Box { leadingAction() }
         }
+        if (showsPlaceholder) {
+            ComposerPlaceholder(messageLabel, editingProgress, naturalTextHeightPx, Modifier.matchParentSize())
+        }
+    }
+}
+
+/** Fade between the two resting positions; never slide the placeholder across the icons. */
+@Composable
+private fun ComposerPlaceholder(label: String, editingProgress: () -> Float, readingHeightPx: Int, modifier: Modifier) {
+    Layout(
+        modifier = modifier,
+        content = {
+            Text(
+                label,
+                modifier = Modifier.testTag("conversation.composer.placeholder")
+                    .clearAndSetSemantics { }
+                    .graphicsLayer { alpha = kotlin.math.abs(1f - 2f * editingProgress()) },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+    ) { measurables, constraints ->
+        val inReadingRow = editingProgress() < 0.5f
+        val start = (if (inReadingRow) 72.dp else 14.dp).roundToPx()
+        val end = (if (inReadingRow) 84.dp else 14.dp).roundToPx()
+        val labelPlaceable = measurables.single().measure(constraints.copy(
+            minWidth = 0, maxWidth = (constraints.maxWidth - start - end).coerceAtLeast(0),
+            minHeight = 0,
+        ))
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            val top = 12.dp.roundToPx() + if (inReadingRow) {
+                (constraints.maxHeight - readingHeightPx).coerceAtLeast(0)
+            } else 0
+            labelPlaceable.placeRelative(start, top)
+        }
+    }
+}
+
+/** Animate the revealed area, never the native text field's scrolling viewport. */
+@Composable
+private fun StableComposerTextViewport(
+    naturalHeightPx: Int,
+    expanded: Boolean,
+    content: @Composable () -> Unit,
+) {
+    Layout(
+        content = content,
+        modifier = Modifier.clipToBounds().testTag("conversation.composer.textViewport"),
+    ) { measurables, constraints ->
+        // A new line receives its full viewport immediately. Only the surrounding
+        // composer grows over time, so caret scrolling cannot hide earlier lines.
+        val fieldHeight = if (expanded) constraints.maxHeight else naturalHeightPx
+        val field = measurables.single().measure(constraints.copy(
+            minHeight = fieldHeight,
+            maxHeight = fieldHeight,
+        ))
+        layout(constraints.maxWidth, constraints.maxHeight) { field.placeRelative(0, 0) }
     }
 }
 
@@ -1550,40 +1640,49 @@ private fun ComposerTrailingActions(actionWidth: androidx.compose.ui.unit.Dp, co
     }
 }
 
-/** One editor node throughout the coordinated toolbar and surface morph. */
+/** Empty, unfocused text shares the action row; editing and drafts use text above it. */
 @Composable
 private fun ComposerEditorLayout(
     modifier: Modifier,
     expanded: Boolean,
-    toolbarProgress: Float,
-    referenceEditorHeight: Int,
+    editingProgress: () -> Float,
+    compactTextHeightPx: () -> Int,
     reserveAddAction: Boolean,
+    tightenTextToolbar: Boolean,
     content: @Composable () -> Unit,
 ) {
     Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val progress = editingProgress()
         val controls = measurables[1].measure(constraints.copy(minWidth = 0, minHeight = 0))
-        val emojiWidth = (48.dp.toPx() - 16.dp.toPx() * toolbarProgress).roundToInt()
-        val emoji = measurables.getOrNull(2)?.measure(constraints.copy(
+        val leading = measurables.last().measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val emojiWidth = 32.dp.roundToPx()
+        val emoji = measurables.getOrNull(2)?.takeIf { measurables.size > 3 }?.measure(constraints.copy(
             minWidth = emojiWidth, maxWidth = emojiWidth, minHeight = 0,
         ))
-        val leadingWidth = ((emoji?.width ?: 0) * (1f - toolbarProgress)).roundToInt()
-        val textWidth = (constraints.maxWidth - controls.width * (1f - toolbarProgress) - leadingWidth).roundToInt().coerceAtLeast(1)
-        val reservedHeight = (controls.height * toolbarProgress).roundToInt()
+        val toolbarHeight = maxOf(controls.height, leading.height, emoji?.height ?: 0)
+        val inlineProgress = 1f - progress
+        val textStart = ((40.dp.roundToPx() + (emoji?.width ?: 0)) * inlineProgress).roundToInt()
+        val textWidth = (constraints.maxWidth - textStart - (controls.width * inlineProgress).roundToInt()).coerceAtLeast(0)
+        // Share 4 dp of the text row's lower line box with the toolbar's empty
+        // top edge. Keep text fully measured and icons centered in their buttons;
+        // reducing reserved height also makes the enclosing composer shorter.
+        val toolbarOverlap = if (tightenTextToolbar) 4.dp.roundToPx() else 0
+        val reservedHeight = ((toolbarHeight - toolbarOverlap) * progress).roundToInt()
+        val textHeight = (constraints.maxHeight - reservedHeight).coerceAtLeast(0)
+        val presentedTextHeight = if (expanded) textHeight else compactTextHeightPx().coerceAtMost(textHeight)
         val editor = measurables[0].measure(Constraints(
             minWidth = textWidth, maxWidth = textWidth,
-            minHeight = if (expanded) (constraints.maxHeight - reservedHeight).coerceAtLeast(0) else 0,
-            maxHeight = (constraints.maxHeight - reservedHeight).coerceAtLeast(0),
+            minHeight = presentedTextHeight,
+            maxHeight = presentedTextHeight,
         ))
-        // Keep the compact-width text height as a floor so reflow cannot shrink it mid-morph.
-        val editorHeight = maxOf(editor.height, referenceEditorHeight.coerceAtMost(constraints.maxHeight - reservedHeight))
-        val height = constraints.constrainHeight(maxOf(controls.height, editorHeight + reservedHeight))
+        val height = constraints.constrainHeight(maxOf(toolbarHeight, editor.height + reservedHeight))
         layout(constraints.maxWidth, height) {
-            editor.placeRelative(leadingWidth, 0)
-            controls.placeRelative(constraints.maxWidth - controls.width, height - controls.height)
-            emoji?.placeRelative(
-                if (reserveAddAction) (40.dp.toPx() * toolbarProgress).roundToInt() else 0,
-                height - emoji.height,
-            )
+            fun actionY(actionHeight: Int) = height - actionHeight -
+                ((editor.height - actionHeight).coerceAtLeast(0) * inlineProgress / 2).roundToInt()
+            editor.placeRelative(textStart, 0)
+            leading.placeRelative(0, actionY(leading.height))
+            controls.placeRelative(constraints.maxWidth - controls.width, actionY(controls.height))
+            emoji?.placeRelative(if (reserveAddAction) 40.dp.roundToPx() else 0, actionY(emoji.height))
         }
     }
 }
@@ -1935,6 +2034,7 @@ private fun RecordingComposer(elapsedTenths: Int) {
 @Composable
 private fun VoiceReviewComposer(
     state: ComposerVoiceState.Review,
+    leadingAction: @Composable () -> Unit,
     expanded: Boolean,
     onStateChanged: (ComposerVoiceState.Review) -> Unit,
     onSend: () -> Unit,
@@ -2075,7 +2175,7 @@ private fun VoiceReviewComposer(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .consumeEditorTapAtFinalPass()
+                        .consumeEditorTapBeforeBackgroundObserver()
                         .then(
                             if (expanded) Modifier.weight(1f)
                             else Modifier.heightIn(max = 208.dp),
@@ -2111,6 +2211,7 @@ private fun VoiceReviewComposer(
                 .fillMaxWidth()
                 .height(48.dp),
         ) {
+            Box(Modifier.align(Alignment.CenterStart)) { leadingAction() }
             Box(Modifier.align(Alignment.Center)) {
                 if (state.transcript == null) {
                     val transcribeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f)

@@ -28,24 +28,27 @@ pickers, popup placement, focus, motion, and safe-area handling.
 
 ### Host and editor
 
-- The available composer is a transparent overlay above the conversation;
-  there is no full-width backing or top divider. The separate Add control and
-  editor capsule own their adaptive Material containers. Idle Add uses the
-  primary/on-primary pair, consistent with the app's filled actions, while the
-  editor capsule uses the lower-emphasis 1 dp `outlineVariant` role. This keeps
-  the input boundary visible over mixed timeline media without adding a
-  full-width scrim. Search, selection,
-  invitation, blocked, ended, and recovery bars remain ordinary Scaffold
-  bottom content.
+- The available composer is one full-width rounded Material surface inside
+  16 dp screen margins. Empty and unfocused, it uses one reading row with
+  Add, emoji, Message, dictation and voice inside the surface. Focusing it or
+  adding draft content places the text above the internal action row.
+  The outer host stays transparent over the timeline. The shared surface uses
+  `surfaceContainerHigh` with a 1 dp `outlineVariant` border and 24 dp radius.
+  Add is unfilled inside it. Search, selection, invitation, blocked, ended and
+  recovery bars remain ordinary Scaffold bottom content.
 - The timeline viewport paints to the physical bottom edge behind the floating
   composer and gesture area. Safe-bottom plus compact-composer clearance lives
   in LazyColumn content padding, keeping the last item reachable above the
   controls without clipping content into a white bottom cutout. The composer
   itself remains inset from system navigation and follows the IME.
-- The compact row uses 16 dp screen margins, a separate circular 48 dp Add
-  action, an 8 dp gap, and a rounded 48 dp-minimum editor capsule. Send and
-  waveform controls retain 48 dp targets; the idle waveform artwork is 24 dp,
-  matching Material's Add icon footprint.
+- The reading row starts at 48 dp minimum, with Message immediately after
+  emoji. In editing mode, text uses 14 dp horizontal and 12 dp vertical content
+  insets above a 48 dp action row. The editing composer starts at approximately
+  96 dp tall before outer padding and grows
+  with font size and content. Existing 32 dp Add/emoji and 40 dp trailing action
+  centers remain. The surface and editor retain the same width across typing,
+  clearing, dictation, recording, review, expansion and collapse. No width
+  threshold, horizontal inset animation or toolbar integration animation remains.
 - A Foundation text editor preserves the existing draft, selection,
   composition, mention styling, focus, and external updates without inheriting
   Material TextField's larger container. Compact budgets are ten text lines,
@@ -56,10 +59,10 @@ pickers, popup placement, focus, motion, and safe-area handling.
   used.
 - The composer has exactly two endpoints. Compact is content-driven. Expanded
   begins 24 dp below the chat header and ends above the IME or bottom safe
-  area. A direction-locked vertical drag settles with an interruptible spring,
+  area. A direction-locked vertical drag settles with an interruptible linear tween,
   a projected 48 dp threshold, and midpoint fallback. The attachment shelf
   retains horizontal scrolling.
-- If the newest message was visible when expansion began, the timeline moves
+- If the timeline was fully at the bottom when expansion began, it moves
   upward by the composer's exact travel. History otherwise remains stationary.
   Timeline scroll, hit testing, date overlays, and accessibility focus are
   unavailable during drag or settling.
@@ -732,3 +735,297 @@ original Add center. Mic-to-wave/Send stays 40 dp; active pause-to-mic stays 28 
 
 32 dp adjustment validation: full host gate passed; updated layout tests compile.
 No device inspection performed.
+
+
+## Always full-width composer — 2026-09-09
+
+User-provided ChatGPT/Claude mobile references supersede the earlier compact
+capsule and side-expansion decisions. “Two lines” follows those references:
+one text row plus one internal action row at rest. Additional text grows upward
+to the existing line budget and then scrolls. Manual expansion, Back/collapse,
+selection, dictation, attachments, voice review and timeline clearance retain
+their accepted behavior; expansion changes height only. Add and voice-review
+Cancel are now children of the appropriate internal toolbar, including when
+preparation/error rows appear below it.
+
+The existing custom Layout remains solely to allocate expanded editor height
+and retain approved 32/40 dp action spacing. Foundation BasicTextField continues
+to own editing, selection and scrolling; the editor is never replaced during
+layout changes. Governing current Android sources:
+[Text input](https://developer.android.com/develop/ui/compose/text/user-input) and
+[Compose layout](https://developer.android.com/develop/ui/compose/layouts/basics).
+
+ComposerLayoutFlowTest covers the empty two-row layout, full available width,
+text growth/clearing, action containment, large text/RTL, selection and fixed
+width throughout drag/expansion/collapse. DictationCaptureTest checks the same
+width and internal controls during recording speech and pausing. Device
+execution and visual acceptance of this revision remain pending.
+
+2026-09-09 host validation: `./gradlew testDebugUnitTest lintDebug assembleDebug
+assembleDebugAndroidTest` passes: 1,089 tests, zero lint errors (16 warnings,
+2 hints), app and instrumentation APKs built. The final dictation geometry test
+update also passes `lintDebug assembleDebugAndroidTest`. Ten Python checks and
+all 1,750 translated keys in four locales pass. No device/emulator inspection
+or instrumentation execution was performed.
+
+
+### Empty, unfocused reading row — 2026-09-09
+
+User refinement: keep the surface full width, but use a single row when the
+editor is empty and unfocused. Add remains internal, followed by emoji and the
+Message placeholder; dictation/voice stay at the end. Native editor focus opens
+the two-row layout. Clearing text while focused keeps two rows; losing focus
+then restores the reading row. Any text (including whitespace), attachment,
+reply, link preview, voice/dictation session, preparation or attachment error
+keeps the editing presentation. Closing only the keyboard does not force focus
+loss. Manual vertical expansion and Back remain available.
+
+One BasicTextField is retained through focus changes. The existing custom Layout
+places empty text inline or above the controls without changing container width.
+The inline placeholder uses one line with ellipsis if needed; controls center
+vertically with large text and mirror in RTL. The compact-height calculation
+uses the reading endpoint for correct timeline clearance and manual collapse.
+
+ComposerLayoutFlowTest covers reading alignment, focus/blur, preserving unfocused
+drafts, clearing while focused, repeated transitions, large text and RTL.
+Current Android source: [Focus observation and ordering](https://developer.android.com/develop/ui/compose/touch-input/focus/change-focus-behavior).
+Device execution and visual acceptance remain pending.
+
+Reading-row validation on 2026-09-09: the full host gate passes (1,089 unit
+tests, lint zero errors / 16 warnings / 2 hints, app and instrumentation APKs).
+Ten Python checks, all 1,750 translated keys in four locales and diff whitespace
+checks pass. Focus/blur and layout regressions are compiled, not device-run.
+
+
+### Linear composer motion and timeline anchoring — 2026-09-09
+
+User correction replaces instant reading/editing reflow with a 220 ms linear,
+interruptible transition. Text allocation, placeholder inset and toolbar
+separation share one progress value. Text-row growth uses a matching linear
+animation, and manual drag settling uses the same tween; surface width stays
+fixed. A single editor retains focus and selection.
+
+TimelineResizeAnchor captures the previous viewport during measurement. When
+height or bottom clearance changes, a timeline fully at its end requests the
+last item's end in that same layout pass. Older history requests its original
+first item and pixel offset. A partly visible last message is not the bottom;
+active user scrolls and explicit history navigation are not overridden. This
+replaces the repeated, delayed scrollToItem calls on every composer resize.
+Manual expansion also tests canScrollForward rather than last-item visibility.
+
+IME and remaining navigation-safe clearance are read during measurement, so
+keyboard-driven viewport resizing and list padding use the same inset frame.
+No second animation is applied to the platform keyboard.
+
+Six host TimelineResizeAnchorTest cases cover bottom/history, a partly visible
+last item, oversized last messages, repeated frames, stable layout, empty lists
+and active scrolling. ComposerViewportFlowTest adds frame geometry checks with
+controlled viewport resizing, for bottom following and stationary history; it
+also checks progressive, monotonic composer motion. Device execution remains
+pending and the controlled viewport is not claimed as real IME verification.
+
+Governing Android sources: [Animation specifications](https://developer.android.com/develop/ui/compose/animation/customize),
+[Inset measurement and animation](https://developer.android.com/develop/ui/compose/system/insets-ui),
+and LazyListState.requestScrollToItem in the pinned AndroidX Foundation source.
+
+Motion/viewport validation on 2026-09-09: the final full Gradle gate passes with
+1,095 host tests, lint zero errors / 16 warnings / 2 hints, and app plus
+instrumentation APKs built. Ten Python checks, 1,750 translated keys in four
+locales and diff checks pass. Frame tests compile; real IME/device execution
+and visual acceptance remain pending.
+
+
+### Tighter text-to-toolbar spacing — 2026-09-09
+
+User screenshot correction halves the editing text's bottom inset from 12 dp
+to 6 dp. Top padding stays 12 dp; icon targets and their row remain intact.
+The measured compact editor height subtracts the same 6 dp, including during
+linear reading/editing motion, so the removed padding does not survive as blank
+allocated space. Empty reading mode retains its centered 48 dp row. The normal
+one-line editing composer is now approximately 90 dp before outer padding.
+
+Spacing validation: `testDebugUnitTest --tests '*Composer*' --tests
+'*TimelineResizeAnchorTest' lintDebug assembleDebug assembleDebugAndroidTest`
+passes (67 targeted tests, lint and both APKs). Diff checks pass. Current
+device/visual inspection remains pending.
+
+
+### Combined gap correction — 2026-09-09
+
+The user reports that the 6 dp change is not visually sufficient. The original
+gap combined 12 dp below text with the 12 dp above 24 dp icons in their 48 dp
+targets. Remove the text-side spacer completely, leaving the icon-side spacing:
+24 dp of explicit combined padding becomes 12 dp. Glyph line metrics remain
+font-owned. The measured editor height subtracts the full 12 dp, giving an
+approximately 84 dp one-line editing surface. Reading mode and action targets
+are unchanged. This supersedes the preceding 6 dp bottom-inset trial.
+
+ComposerLayoutFlowTest now checks that the last text line's measured bottom
+meets the toolbar boundary without extra allocated space. Compilation is host
+validation; current-build visual and device execution remain pending.
+
+Combined-gap correction validation: 67 targeted composer/viewport host tests,
+lint and app/instrumentation APK builds pass. The new measured-line geometry
+regression compiles; device execution and visual acceptance remain pending.
+
+### 36 px gap correction — 2026-09-09
+
+The user rejected raising icons inside unchanged buttons: the composer must
+become shorter. Remove those offsets and reserve 4 dp less for the editing
+toolbar, sharing its empty top edge with the lower text line box. Text retains
+its full measurement and buttons keep centered artwork. The compact surface
+is 4 dp shorter, with the same reduction in the manual-collapse endpoint.
+Reading and voice layouts remain unchanged; focus progress interpolates the
+reserved height. The geometry regression checks surface height and centered
+artwork. Current-build device execution and visual acceptance remain pending.
+
+Height-correction host validation: all 67 targeted unit tests, lint and both
+APK builds pass. The revised geometry regression compiles; device execution
+and visual acceptance remain pending.
+
+### Stable composer transition — 2026-09-09
+
+User-supplied screen-20260909-082959-1788935363435.mp4 shows repeated keyboard
+open/close transitions and first-line clipping when inserting newlines (around
+12 seconds), followed by repeated growth/deletion. Keep the accepted compact
+spacing and full-width shape. Focus and automatic line growth use 160 ms linear
+motion, superseding 220 ms for those two transitions; manual settling retains
+its existing timing.
+
+StableComposerTextViewport measures the native BasicTextField at the current
+natural text height, with constant 12 dp top/bottom internal decoration. Its
+outer viewport reveals the animated text-row height, so the extra internal
+bottom inset does not add visible spacing. Adding a line no longer gives the
+native editor an undersized animated viewport that scrolls existing text away
+from the caret. The placeholder stays one persistent, single-line Text node.
+Native scrolling still handles drafts beyond the compact line limit.
+
+ConversationScreen measures the composer overlay before the lazy timeline,
+keeping its foreground draw order with zIndex. The timeline therefore reads the
+current measured composer height for its padding, retaining bottom anchoring
+and stationary history through IME changes. Keep IME inset reads in layout and
+let Android own keyboard animation, following [Compose phases](https://developer.android.com/develop/ui/compose/phases)
+and [inset timing](https://developer.android.com/develop/ui/compose/system/insets-ui).
+
+ComposerLayoutFlowTest adds rendered first-line checks during line insertion and
+deletion plus placeholder visibility during interrupted focus transitions.
+ComposerViewportFlowTest retains per-frame bottom/history anchoring coverage.
+Current-build device execution and visual acceptance remain pending; video
+inspection was of the user-provided previous build.
+
+Stable-motion host validation: all 1,095 unit tests, lint, app assembly and
+instrumentation-test APK assembly pass. Rendered-frame regression tests are
+compiled only; no device or emulator was used for this change.
+
+### Placeholder endpoint fade — 2026-09-09
+
+User requests that the empty Message placeholder disappear at its reading
+position and appear at the editing position instead of sliding across icons.
+Render it separately from the moving input viewport: the first half of the
+existing 160 ms transition fades the reading label out; the second half fades
+the editing label in. Switch positions only at zero opacity and reverse the
+same behavior on collapse or interrupted focus. Reading placement follows the
+bottom row and respects the natural height at larger font scales. Preserve
+entered text, native caret behavior, composer height and timeline anchoring.
+The input retains the Message accessibility label; the visual placeholder does
+not add a duplicate announcement. ComposerLayoutFlowTest replaces the old
+always-visible placeholder assertion with endpoint/fade/reversal coverage.
+
+Placeholder-fade host validation: 67 targeted unit tests, lint and both APK
+builds pass. Updated UI regression coverage compiles; device execution and
+visual acceptance remain pending.
+
+### Keyboard-synchronized composer — 2026-09-09
+
+User reports keyboard drawing and composer movement out of sync. Conversation
+now owns bottom insets once: the union of navigation bars and IME applies to
+the composer and timeline together. Scaffold receives system bars/display
+cutouts, not the IME; the nested composer no longer reapplies navigation bars.
+The search bottom bar retains its reserved space. The jump-to-latest FAB
+consumes Scaffold's navigation clearance before applying keyboard clearance.
+
+ComposerKeyboardMotion follows Android's current/source/target keyboard insets
+for focus expansion or collapse. Insets and progress are sampled in layout and
+drawing, including text padding and placeholder fade. There is no separate
+lift animation. The fallback gives a software keyboard up to 160 ms to start;
+if no animation arrives, focus uses the existing 160 ms linear transition.
+Hardware or blocked keyboard input bypasses that wait. A late IME takes over
+from the currently presented height without snapping backward. Retain the
+endpoint when Android clears animation metadata, and retain the editing state
+when an already-open keyboard changes height. Draft text and focus still decide
+whether collapse is appropriate. Typed-line growth and manual expansion keep
+their previously accepted behavior.
+
+Use the same inset values for physical positioning and transition progress,
+following [Android inset timing](https://developer.android.com/develop/ui/compose/system/insets-ui).
+ComposerKeyboardMotionTest covers keyboard curves, fallback, delayed startup,
+completion, reversal and keyboard height changes. ComposerViewportFlowTest now
+also feeds changing keyboard insets, checking the exact bottom edge and height
+on opening/closing frames, rather than only resizing the host. These UI tests
+remain compiled-only until device testing is requested.
+
+Keyboard-sync host validation: all 1,103 unit tests, lint and both APK builds
+pass. The inset-driven UI regression compiles; device execution and visual
+acceptance remain pending. No device or emulator was used.
+
+### Reduce keyboard-frame layout work — 2026-09-09
+
+User reports remaining jumpiness after progress synchronization. Source review
+found that changing IME constraints subcomposed the full composer body each
+frame, while intermediate measured heights updated composition state and
+restarted initial/end-settlement effects. This is a concrete source of extra
+frame work; device profiling has not yet confirmed total frame-time impact.
+
+For ordinary keyboard transitions, stableComposerKeyboardConstraints measures
+composer content at the keyboard endpoint height and places that content at
+the current keyboard edge. BoxWithConstraints therefore sees a stable height
+through intermediate frames. Manual expansion retains actual available bounds.
+Keep the existing inset owner, focus progress, placeholder fade and dimensions.
+
+The compact height used as the manual-expansion endpoint is cached only after
+focus/line motion settles. The timeline still receives the current height in
+measurement. Initial/end-settlement effects depend on whether the composer has
+been measured, not every pixel change. Report floating-surface clearance from
+the measurement callback instead of a composition-level SideEffect.
+
+ComposerViewportFlowTest adds an opening/closing inset regression that checks
+physical placement while counting constraint-content compositions. Follow
+[Compose performance guidance](https://developer.android.com/develop/ui/compose/performance/bestpractices)
+for deferred state reads and reducing composition work. Current-build frame
+profiling, UI-test execution and visual acceptance remain pending.
+
+Keyboard frame-work host validation: all 1,103 unit tests, lint and both APK
+builds pass. The new composition-count UI regression compiles; it was not run
+on a device. Current-build runtime performance and visual acceptance remain
+unverified.
+
+### Preserve the input session through keyboard dismissal — 2026-09-09
+
+The supplied 09:33 recording shows a keyboard key-layout change near the end of
+closing and a composer reversal on rapid retaps. Source review found immediate
+app-shell focus clearing on background taps and editor tap consumption occurring
+after the parent Final-pass observer. These are concrete lifecycle/order issues;
+the recording alone does not establish their share of the total frame stutter.
+
+BackgroundKeyboardDismissalHost now requests keyboard hiding while retaining
+native input focus until current, source and target IME insets all reach zero.
+A bounded one-second fallback releases focus if the IME does not complete its
+hide request. During dismissal, the empty composer follows the existing closing
+inset curve and hides its caret without ending the input session early. Consumed
+control/editor taps cancel the pending dismissal; generation checks prevent an
+old completion from clearing newly acquired focus. Losing composer focus or
+leaving the conversation invalidates a pending request. Editor taps are consumed
+in Main pass before the app-shell Final observer, after inner text selection.
+
+Use the public [SoftwareKeyboardController.hide API](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/SoftwareKeyboardController)
+to separate keyboard visibility from focus. Keep the accepted geometry,
+placeholder fade and timeline anchoring. BackgroundKeyboardDismissalTest covers
+completion and superseded requests. ComposerKeyboardDismissalFlowTest exercises
+actual pointer dispatch through the app-shell host, focus retention during the
+last inset frame and retap cancellation with a controlled keyboard controller.
+Current-build device execution and visual acceptance remain pending.
+
+Input-session host validation: all 1,106 unit tests, lint, app assembly and
+instrumentation-test APK assembly pass. The two app-shell pointer/focus UI
+regressions compile; no device or emulator was used. Closing smoothness and
+rapid-retap motion on the current build remain unverified.

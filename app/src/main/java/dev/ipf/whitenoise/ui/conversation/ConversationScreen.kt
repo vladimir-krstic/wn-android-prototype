@@ -59,8 +59,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
@@ -111,6 +117,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.alpha
@@ -125,6 +132,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -367,6 +375,7 @@ fun ConversationScreen(
         }
     }
     val listState = rememberLazyListState()
+    val resizeAnchor = remember(chat.id) { dev.ipf.whitenoise.model.TimelineResizeAnchor() }
     val dayHeaderIndices = remember(items) {
         items.indices.filter { items[it] is ConversationItem.DayHeader }
     }
@@ -442,7 +451,7 @@ fun ConversationScreen(
     var sentLocationTarget by rememberSaveable(profile.id, chat.id) { mutableStateOf<String?>(null) }
     var pendingEndSettlement by remember(chat.id) { mutableStateOf(false) }
     var compactComposerHeightPx by remember(chat.id) { mutableIntStateOf(0) }
-    androidx.compose.runtime.SideEffect { floatingComposerHeight(compactComposerHeightPx.toFloat()) }
+    val hasMeasuredComposer by remember(chat.id) { derivedStateOf { compactComposerHeightPx > 0 } }
     androidx.compose.runtime.DisposableEffect(chat.id) {
         onDispose { floatingComposerHeight(0f); floatingObscured(false) }
     }
@@ -701,7 +710,7 @@ fun ConversationScreen(
     LaunchedEffect(
         chat.id,
         items.size,
-        compactComposerHeightPx,
+        hasMeasuredComposer,
         showsAvailableComposer,
         pendingInitialMessageId,
     ) {
@@ -722,7 +731,7 @@ fun ConversationScreen(
             if (history.request == null && history.readyTarget == null) history.target(chat, target, onHistoryScenario(HistoryOperation.Target), highlight = initialMessageId != null)
         } else if (items.isEmpty()) {
             initialViewportSettled = true
-        } else if (showsAvailableComposer && compactComposerHeightPx == 0) {
+        } else if (showsAvailableComposer && !hasMeasuredComposer) {
             return@LaunchedEffect
         } else if (items.isNotEmpty()) {
             withFrameNanos { }
@@ -732,8 +741,8 @@ fun ConversationScreen(
             initialViewportSettled = true
         }
     }
-    LaunchedEffect(pendingEndSettlement, items.size, compactComposerHeightPx) {
-        if (!pendingEndSettlement || items.isEmpty() || (showsAvailableComposer && compactComposerHeightPx == 0)) {
+    LaunchedEffect(pendingEndSettlement, items.size, hasMeasuredComposer) {
+        if (!pendingEndSettlement || items.isEmpty() || (showsAvailableComposer && !hasMeasuredComposer)) {
             return@LaunchedEffect
         }
         withFrameNanos { }
@@ -933,7 +942,7 @@ fun ConversationScreen(
                     Modifier
                 },
             ),
-        contentWindowInsets = WindowInsets.safeDrawing,
+        contentWindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout),
         topBar = {
             Column {
             when {
@@ -1018,7 +1027,8 @@ fun ConversationScreen(
                 // again above the measured composer. Preserve the native 48 dp touch target.
                 val composerClearance = (with(density) { compactComposerHeightPx.toDp() } -
                     WhiteNoiseSpacing.CompactScreenMargin).coerceAtLeast(0.dp)
-                Column(Modifier.imePadding().padding(bottom = composerClearance),
+                Column(Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
+                    .imePadding().padding(bottom = composerClearance),
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related)) {
                     if (!nearTail && initialViewportSettled && farFromTail) SmallFloatingActionButton(onClick = {
@@ -1069,31 +1079,95 @@ fun ConversationScreen(
         } else {
             contentPadding
         }
-        val bottomSafePadding = if (showsAvailableComposer && !WindowInsets.isImeVisible) {
-            contentPadding.calculateBottomPadding()
-        } else {
-            0.dp
-        }
-        // Search controls float above the transcript. Keep their measured clearance
-        // inside the scrolling content, excluding the IME handled by the viewport.
-        val transcriptBottomPadding = if (isSearching) {
-            (contentPadding.calculateBottomPadding() -
-                WindowInsets.ime.asPaddingValues().calculateBottomPadding()).coerceAtLeast(0.dp)
-        } else {
-            bottomSafePadding + with(density) { compactComposerHeightPx.toDp() }
+        // One inset owner lifts both the composer and timeline above the larger
+        // of the navigation area and animated keyboard, in the current layout pass.
+        val keyboardAndNavigation = WindowInsets.navigationBars.union(composerKeyboardInsets().current)
+            .only(WindowInsetsSides.Bottom)
+        val transcriptBottomPadding = {
+            when {
+                showsAvailableComposer -> with(density) { compactComposerHeightPx.toDp() }
+                isSearching -> (contentPadding.calculateBottomPadding() -
+                    with(density) { keyboardAndNavigation.getBottom(this).toDp() }).coerceAtLeast(0.dp)
+                else -> 0.dp
+            }
         }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(appliedContentPadding)
                 .consumeWindowInsets(appliedContentPadding)
-                .then(if (overlaysBottomContent) Modifier.imePadding() else Modifier),
+                .then(if (overlaysBottomContent) Modifier.windowInsetsPadding(keyboardAndNavigation) else Modifier),
         ) {
+            // Measure the composer first: its size callback supplies this frame's
+            // timeline padding. zIndex retains the overlay's foreground drawing.
+            if (showsAvailableComposer) {
+                AdaptiveContent(
+                    modifier = Modifier.fillMaxSize().zIndex(1f),
+                ) {
+                    FullConversationComposer(
+                        writingToolsEnabled = editMessageId == null && readerMessageId == null && selectingTextId == null,
+                        profile = profile,
+                        chat = chat,
+                        onDraftTextChanged = onDraftTextChanged,
+                        onAddAttachments = onAddDraftAttachments,
+                        onRemoveAttachment = onRemoveDraftAttachment,
+                        onSuppressLink = onSuppressDraftLink,
+                        onCancelReply = onCancelDraftReply,
+                        onSendDraft = {
+                            val previousCount = listState.layoutInfo.totalItemsCount
+                            onSendDraft().also { sent ->
+                                if (sent) settleAfterNextTimelineItem(previousCount)
+                            }
+                        },
+                        onLocationSent = { sentLocationTarget = it },
+                        onSendVoice = { submission ->
+                            val previousCount = listState.layoutInfo.totalItemsCount
+                            onSendVoice(submission).also { sent ->
+                                if (sent) settleAfterNextTimelineItem(previousCount)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        onCompactHeightChanged = { measuredHeight ->
+                            compactComposerHeightPx = measuredHeight
+                            floatingComposerHeight(measuredHeight.toFloat())
+                        },
+                        onOverlayPresentationChanged = { composerOverlayActive = it },
+                        onExpansionPresentationChanged = { active, travel ->
+                            if (active && !composerPresentationActive) {
+                                pushTimelineWithComposer = ComposerExpansionPolicy.shouldPushTimeline(
+                                    !listState.canScrollForward,
+                                )
+                            }
+                            if (!active) pushTimelineWithComposer = false
+                            composerPresentationActive = active
+                            composerTravelPx = travel
+                        },
+                    )
+                }
+            }
             AdaptiveContent(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
                     modifier = Modifier.observeSpeechScroll(readAloudController, speechSession != null)
                         .fillMaxSize()
                         .testTag("conversation.timeline")
+                        .layout { measurable, constraints ->
+                            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                            val position = resizeAnchor.update(
+                                height = constraints.maxHeight,
+                                bottomPadding = transcriptBottomPadding().roundToPx(),
+                                canScrollForward = listState.canScrollForward,
+                                scrolling = listState.isScrollInProgress,
+                                first = dev.ipf.whitenoise.model.TimelineResizeAnchor.Position(
+                                    listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset),
+                                last = last?.let { dev.ipf.whitenoise.model.TimelineResizeAnchor.Position(it.index, it.size) },
+                            )
+                            if (position != null && initialViewportSettled && showsAvailableComposer &&
+                                history.readyTarget == null && history.request?.dateJump != true) {
+                                listState.requestScrollToItem(position.index, position.offset)
+                            }
+                            val placeable = measurable.measure(constraints)
+                            layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                        }
                         .graphicsLayer {
                             translationY = if (pushTimelineWithComposer) -composerTravelPx else 0f
                         }
@@ -1102,12 +1176,12 @@ fun ConversationScreen(
                             if (composerPresentationActive) Modifier.clearAndSetSemantics { } else Modifier,
                         ),
                     state = listState,
-                    contentPadding = PaddingValues(
-                        start = WhiteNoiseSpacing.CompactScreenMargin,
-                        top = WhiteNoiseSpacing.Related,
-                        end = WhiteNoiseSpacing.CompactScreenMargin,
-                        bottom = WhiteNoiseSpacing.Related + transcriptBottomPadding,
-                    ),
+                    contentPadding = object : PaddingValues {
+                        override fun calculateLeftPadding(layoutDirection: androidx.compose.ui.unit.LayoutDirection) = WhiteNoiseSpacing.CompactScreenMargin
+                        override fun calculateRightPadding(layoutDirection: androidx.compose.ui.unit.LayoutDirection) = WhiteNoiseSpacing.CompactScreenMargin
+                        override fun calculateTopPadding() = WhiteNoiseSpacing.Related
+                        override fun calculateBottomPadding() = WhiteNoiseSpacing.Related + transcriptBottomPadding()
+                    },
                     verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Bottom),
                     userScrollEnabled = !composerPresentationActive,
                 ) {
@@ -1228,59 +1302,7 @@ fun ConversationScreen(
                     }
                 }
             }
-            if (showsAvailableComposer) {
-                AdaptiveContent(
-                    modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-                ) {
-                    FullConversationComposer(
-                        writingToolsEnabled = editMessageId == null && readerMessageId == null && selectingTextId == null,
-                        profile = profile,
-                        chat = chat,
-                        onDraftTextChanged = onDraftTextChanged,
-                        onAddAttachments = onAddDraftAttachments,
-                        onRemoveAttachment = onRemoveDraftAttachment,
-                        onSuppressLink = onSuppressDraftLink,
-                        onCancelReply = onCancelDraftReply,
-                        onSendDraft = {
-                            val previousCount = listState.layoutInfo.totalItemsCount
-                            onSendDraft().also { sent ->
-                                if (sent) settleAfterNextTimelineItem(previousCount)
-                            }
-                        },
-                        onLocationSent = { sentLocationTarget = it },
-                        onSendVoice = { submission ->
-                            val previousCount = listState.layoutInfo.totalItemsCount
-                            onSendVoice(submission).also { sent ->
-                                if (sent) settleAfterNextTimelineItem(previousCount)
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                        onCompactHeightChanged = { measuredHeight ->
-                            val wasAtBottom = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ==
-                                listState.layoutInfo.totalItemsCount - 1
-                            if (compactComposerHeightPx != measuredHeight) {
-                                compactComposerHeightPx = measuredHeight
-                                if ((wasAtBottom || !initialViewportSettled) &&
-                                    history.readyTarget?.dateJump != true && history.request?.dateJump != true) {
-                                    pendingEndSettlement = true
-                                }
-                            }
-                        },
-                        onOverlayPresentationChanged = { composerOverlayActive = it },
-                        onExpansionPresentationChanged = { active, travel ->
-                            if (active && !composerPresentationActive) {
-                                pushTimelineWithComposer = ComposerExpansionPolicy.shouldPushTimeline(
-                                    listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ==
-                                        listState.layoutInfo.totalItemsCount - 1,
-                                )
-                            }
-                            if (!active) pushTimelineWithComposer = false
-                            composerPresentationActive = active
-                            composerTravelPx = travel
-                        },
-                    )
-                }
-            }
+
         }
     }
 

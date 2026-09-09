@@ -4904,3 +4904,97 @@ NavHost composed with its lifecycle capped at CREATED while the temporary run
 is visible. Exit resumes the same entry rather than reusing destroyed lifecycle
 objects. The original subtree has no active scenario context and cannot control
 the visible session's window or keyboard. See `screens/scenario-catalog.md`.
+
+
+## Always full-width, two-row composer — 2026-09-09
+
+The user’s ChatGPT/Claude references approve one full-width container, with text
+above an internal button row from the empty state. Text grows vertically; no
+side expansion or button-integration animation remains. This supersedes the
+2026-09-05 through 2026-09-07 compact/multiline width decisions. Keep current
+controls, action spacing, vertical expansion/drag, selection, capture and
+attachments. See `screens/composer-media-and-speech.md` for evidence.
+
+
+### Empty composer reading mode — 2026-09-09
+
+User refinement to the full-width composer: empty and unfocused uses one row,
+with Add inside and Message directly after emoji. Native focus opens two rows;
+text or draft context keeps two rows after focus leaves. Clearing while focused
+does not collapse. Retain one editor, full width, existing controls and vertical
+expansion. See `screens/composer-media-and-speech.md`.
+
+
+### Linear composer motion; follow only the true timeline end — 2026-09-09
+
+User correction requires smooth linear composer growth and no history movement
+when opening the keyboard or expanding the composer. Use 220 ms linear tweens
+for reading/editing, text height and manual settling. Before resize measurement,
+pin only a timeline with no forward scroll remaining to its last item; otherwise
+preserve the first visible item and offset. Merely seeing the last message is
+insufficient. Remove delayed end-settlement from composer height callbacks and
+read animated keyboard/safe insets during layout. See the composer brief.
+
+
+### Halve padding between composer text and actions — 2026-09-09
+
+User screenshot correction reduces only the editing text's bottom inset from
+12 dp to 6 dp and removes the matching allocated height. Preserve the top
+inset, icon targets, reading row and coordinated linear motion.
+
+
+### Correct the combined composer gap — 2026-09-09
+
+User screenshot feedback rejects the subtle 6 dp trial. Remove the entire
+text-side bottom inset instead: the toolbar's 48 dp targets already leave
+12 dp above 24 dp icons. Combined explicit spacing drops from the original
+24 dp to 12 dp, with full action targets and matching height reduction.
+
+### Reduce composer height, not artwork alignment — 2026-09-09
+
+The user rejected the artwork-offset trial. Remove all icon offsets. Reduce
+editing layout height by 4 dp by sharing the lower text line box with the
+empty top edge of the toolbar. Icons remain centered in their existing buttons,
+text retains its full measured height, and the outer composer becomes shorter.
+Reading, recording and voice review retain their existing layouts.
+
+### Composer transition stability — 2026-09-09
+
+User video feedback requires fast, smooth motion without text blinking. Separate
+native text-field measurement from animated composer height so inserting a line
+does not temporarily scroll earlier text out of view. Use 160 ms linear focus
+and line-growth transitions. Measure the composer before the message list so
+bottom padding tracks the same frame; retain foreground overlay drawing and the
+accepted behavior for bottom-anchored versus scrolled-up conversations.
+
+### Fade the empty composer label between resting positions — 2026-09-09
+
+User rejects the sliding Message placeholder. Fade it out at the reading-row
+position, then in at the editing-text position during the existing expansion.
+Use the same progress in reverse on collapse. The visual overlay is separate
+from the native editor, with a single input accessibility label.
+
+### Synchronize composer and keyboard — 2026-09-09
+
+User requires keyboard and composer to travel together. Consolidate bottom
+inset ownership and use Android's keyboard animation progress for focus
+transitions, sampled during layout/drawing. Preserve fallback behavior for
+hardware/no-IME focus and preserve nonempty/focused drafts when the keyboard
+hides. Keep the accepted placeholder endpoint fade and compact spacing.
+
+### Reduce keyboard frame work — 2026-09-09
+
+Remaining keyboard jumpiness warrants reducing composition work rather than
+changing animation timing again. Keep composer constraint content stable through
+IME frames and apply current keyboard movement in layout placement. Cache manual
+expansion endpoints at settled sizes and stop restarting conversation settlement
+effects for intermediate height values. Preserve all accepted motion and spacing.
+
+### Keep keyboard input alive until background dismissal ends — 2026-09-09
+
+For the remaining close/rapid-retap jitter, hide the keyboard before clearing
+native focus. Retain the input session through the final IME animation frame,
+while the empty composer's visual state follows dismissal and hides its caret.
+A new consumed interaction invalidates the pending focus clear. Consume editor
+taps in Main pass before the app-shell Final-pass background observer. Preserve
+accepted spacing, inset ownership, placeholder fade and timeline anchoring.

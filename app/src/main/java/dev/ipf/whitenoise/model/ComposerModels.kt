@@ -306,14 +306,12 @@ object ComposerExpansionPolicy {
     const val CompactCaptionLines = 6
     const val CompactTranscriptLines = 8
 
-    fun usesFullWidth(compactLineCount: Int): Boolean = compactLineCount >= 4
-
     fun compactLineLimit(hasAttachments: Boolean): Int =
         if (hasAttachments) CompactCaptionLines else CompactTextLines
 
     fun clampProgress(progress: Float): Float = progress.coerceIn(0f, 1f)
 
-    fun shouldPushTimeline(newestMessageVisible: Boolean): Boolean = newestMessageVisible
+    fun shouldPushTimeline(fullyAtBottom: Boolean): Boolean = fullyAtBottom
 
     fun destinationExpanded(progress: Float, projectedTravelDp: Float): Boolean = when {
         projectedTravelDp <= -ProjectedTravelThresholdDp -> true

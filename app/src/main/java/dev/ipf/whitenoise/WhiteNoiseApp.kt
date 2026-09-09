@@ -4,9 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -17,10 +14,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -159,7 +152,6 @@ private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel:
             fontFamily = settings?.fontFamily ?: AppFontFamily.System,
             colors = settings?.colors ?: AppearanceColorPreferences(),
         ) {
-            val focusManager = LocalFocusManager.current
             dev.ipf.whitenoise.ui.settings.IncognitoKeyboardScope(profile?.settings?.incognitoKeyboard == true,blocked = !active || appLock.protects(profile) || appLock.shieldsBackground) {
                 dev.ipf.whitenoise.ui.settings.AuditLogHost(appViewModel.auditLogs) {
                     dev.ipf.whitenoise.ui.settings.AppLockScope(appLock,profile,
@@ -167,7 +159,7 @@ private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel:
                         // Suspending the catalog for a run is not backgrounding the real account.
                         changingConfiguration = { !active || view.context.findActivity()?.isChangingConfigurations == true },
                         credentialOverride = if (scenario?.definition?.id == "app-lock") true else null) {
-                        Box(Modifier.fillMaxSize().clearFocusOnBackgroundTap(focusManager)) {
+                        dev.ipf.whitenoise.ui.components.BackgroundKeyboardDismissalHost {
                             if (startup.phase != StartupPhase.Ready) StartupScreen(
                                 phase = startup.phase,
                                 hasProfiles = appViewModel.uiState.profiles.isNotEmpty(),
@@ -219,26 +211,6 @@ private val chatPrivacyRoutes = setOf(
     dev.ipf.whitenoise.navigation.AppRoute.ConversationNotifications::class.qualifiedName,
     dev.ipf.whitenoise.navigation.AppRoute.ConversationDebug::class.qualifiedName,
 )
-
-/**
- * Clears text focus only after descendants leave a complete tap unconsumed.
- *
- * Material controls and scroll gestures consume their input first. Waiting on the final pointer
- * pass keeps this app-shell behavior passive and prevents it from competing with those controls.
- */
-private fun Modifier.clearFocusOnBackgroundTap(
-    focusManager: FocusManager,
-): Modifier = pointerInput(focusManager) {
-    awaitEachGesture {
-        awaitFirstDown(
-            requireUnconsumed = true,
-            pass = PointerEventPass.Final,
-        )
-        if (waitForUpOrCancellation(pass = PointerEventPass.Final) != null) {
-            focusManager.clearFocus()
-        }
-    }
-}
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

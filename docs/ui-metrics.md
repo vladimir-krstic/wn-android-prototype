@@ -102,11 +102,12 @@ choice row rather than nesting settings-row padding inside dialog padding.
   padding. Closely related stacked buttons use an 8 dp gap.
 - Compact contextual actions, search bars, menus, and message composers keep
   their native component metrics instead of inheriting form spacing.
-- The conversation composer host is transparent: only the separate 48 dp Add
-  control and 48 dp-minimum editor capsule draw containers. Over mixed
-  timeline content, the idle Add control uses `primary`/`onPrimary` and the
-  capsule uses a 1 dp `outlineVariant`; these semantic roles adapt in dark mode
-  without restoring a full-width backing. Its attachment
+- The conversation composer host is transparent around one full-width surface
+  inside 16 dp screen margins. The surface uses a 24 dp radius and 1 dp
+  `outlineVariant` border. An empty, unfocused reading row is 48 dp minimum.
+  On focus or with draft content, a 48 dp-minimum text row sits above a 48 dp
+  action row; only height grows. Add is unfilled inside the same
+  surface, with no separate external slot or width animation. Its attachment
   popup uses the user-approved 10 dp visible trigger gap; this is a scoped optical
   placement exception to the 4/8 dp layout rhythm. Bottom composer menus use
   an above-anchor provider because Material's stock 48 dp window-edge margin
@@ -1211,3 +1212,88 @@ shape and interaction; a fixed 24 dp leading slot prevents status changes from
 moving text. Text and semantic status accompany the green success / orange
 attention symbols. Shared form metrics and one IME/navigation inset owner keep
 profile Save visible. No inline expanding checklist content or new sheet metric.
+
+
+### Always full-width composer — 2026-09-09
+
+This supersedes the multiline/action integration and side-width rules above.
+All composer states use the available width inside 16 dp screen margins. The
+empty/one-line text row plus internal action row is approximately 96 dp tall,
+with text/font scaling increasing it naturally. Text uses the existing 14 dp
+horizontal and 12 dp vertical insets; the outer vertical inset stays 6 dp.
+The 32 dp Add/emoji, 40 dp idle trailing, and 28 dp active dictation centers
+remain fixed. Add and review Cancel are internal toolbar children. No external
+button slot, four-line width threshold, or horizontal morph remains.
+
+
+### Composer reading row — 2026-09-09
+
+Latest user direction refines the full-width default: empty/unfocused is one
+48 dp-minimum row. Text begins directly after emoji, without the editing
+14 dp horizontal inset. Placeholder stays single-line, ellipsizes if needed,
+and grows vertically with font scale; controls center on that row. Focus or
+draft context restores text above the existing action row, approximately 96 dp
+at standard type size. Width and all internal action spacing remain fixed.
+
+
+### Composer transition motion — 2026-09-09
+
+Reading/editing row geometry and text-height growth use 220 ms linear tweens.
+Manual expansion settling uses the same non-bouncing linear specification;
+drag tracking remains direct. Width is fixed. Timeline clearance follows the
+presented height, and fully-bottom content follows each resize layout. Older
+history keeps its first visible item and offset. Platform IME motion supplies
+its own per-frame insets, consumed during measurement without another tween.
+
+
+### Composer text-to-toolbar spacing — 2026-09-09
+
+Latest user refinement reduces editing text's bottom inset from 12 dp to 6 dp.
+Top inset stays 12 dp and horizontal inset stays 14 dp. The compact editor's
+measured height shrinks by the same 6 dp, giving a roughly 90 dp one-line
+editing surface. Reading mode stays 48 dp minimum; internal action target
+sizes/spacing and linear motion remain unchanged.
+
+
+### Combined composer text/icon gap — 2026-09-09
+
+Supersedes the 6 dp trial: editing text has zero bottom padding. The 48 dp
+action targets already provide 12 dp above their 24 dp icons, so removing the
+original text-side 12 dp halves the combined explicit gap from 24 dp to 12 dp.
+Top text padding remains 12 dp and action targets stay intact. Measured editor
+height removes the same 12 dp; one-line editing is approximately 84 dp.
+
+### Composer 36 px gap correction — 2026-09-09
+
+The user rejected offsetting artwork inside unchanged buttons. Keep icons
+centered and reduce the editing composer's actual height by 4 dp (about
+10.5 px in the supplied screenshot). The toolbar shares 4 dp of the text row's
+lower line box with its empty top edge, without clipping text or shrinking the
+48 dp buttons. Keep the reading and voice layouts unchanged. Interpolate the
+reserved toolbar height with editing progress. Exact ink spacing depends on
+font metrics and density.
+
+### Stable text during composer motion — 2026-09-09
+
+Focus and automatic line-height transitions now use 160 ms LinearEasing.
+Manual expansion settling retains 220 ms. Preserve all accepted visible spacing,
+including the latest 4 dp actual height reduction. The native text field keeps
+constant vertical decoration inside a separately clipped, animated viewport;
+its hidden bottom inset does not increase the visible text-to-toolbar gap.
+
+### Placeholder fade — 2026-09-09
+
+The empty label uses fixed reading/editing endpoints: 72 dp and 14 dp from the
+logical start. It fades out/in across the two halves of existing 160 ms linear
+progress, changing position at zero opacity. There is no horizontal placeholder
+slide and no change to composer dimensions or entered-text rendering.
+
+### Keyboard-owned composer motion — 2026-09-09
+
+During an IME-driven focus change, expansion and placeholder fade follow the
+keyboard's reported progress rather than the independent 160 ms tween. One
+navigation/IME inset union positions the conversation's bottom content in
+layout. Preserve the 6 dp outer composer inset and all settled dimensions.
+Use the 160 ms linear focus fallback when no keyboard animation arrives, with
+a bounded 160 ms software-keyboard startup wait; hardware/blocked input has
+no startup wait. Automatic text-line growth remains 160 ms.

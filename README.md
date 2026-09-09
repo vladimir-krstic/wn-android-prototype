@@ -115,6 +115,21 @@ APKs build. Ten Python checks, 1,750 translated keys across four locales, and
 `git diff --check` pass. Repeated-run lifecycle/Exit/system-Back regression
 coverage is compiled but has not been executed on a device.
 
+Composer layout revision validated on 2026-09-09: the full Gradle gate above
+passes with 1,089 host tests, zero lint errors (16 warnings, 2 hints), and both
+APKs built. Updated fixed-width, two-row, growth, RTL/large-text and dictation
+interaction tests compile; device/visual verification remains pending. See
+[the composer brief](docs/screens/composer-media-and-speech.md).
+
+The empty/unfocused composer reading-row follow-up passes the same full gate
+(1,089 unit tests, no lint errors, both APKs). Focus/blur, draft retention and
+large-text/RTL layout regressions compile; current device verification is pending.
+
+Composer motion and viewport anchoring validated on 2026-09-09: the final full
+Gradle gate passes (1,095 host unit tests, lint zero errors / 16 warnings / 2
+hints, both APKs). Frame tests for progressive composer growth, bottom following
+and stationary history compile. Real keyboard/device testing remains pending.
+
 ## Repository map
 
 | Location | Responsibility |

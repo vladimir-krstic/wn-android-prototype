@@ -1,6 +1,7 @@
 package dev.ipf.whitenoise
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -21,20 +22,201 @@ import org.junit.runner.RunWith
 class ComposerLayoutFlowTest {
     @get:Rule val rule = createAndroidComposeRule<EmptyTestActivity>()
 
-    private fun show(initialText: String = "") {
+    private lateinit var clearEditorFocus: () -> Unit
+
+    private fun show(initialText: String = "", rtl: Boolean = false, fontScale: Float = 1f, blockKeyboard: Boolean = false) {
         val profile = ProfileFixtures.marmota
         val chat = mutableStateOf(profile.chats.first { it.id == "fiatjaf" }.copy(
             draftText = initialText, draftAttachments = emptyList(), draftReplyMessageId = null,
         ))
         rule.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val focus = androidx.compose.ui.platform.LocalFocusManager.current
+            clearEditorFocus = { focus.clearFocus() }
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalLayoutDirection provides
+                    if (rtl) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr,
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale),
+            ) {
+            dev.ipf.whitenoise.ui.settings.IncognitoKeyboardScope(enabled = false, blocked = blockKeyboard) {
             WhiteNoiseTheme {
                 ConversationScreen(profile, chat.value, {}, { true }, {}, {}, {},
                     onDraftTextChanged = { chat.value = chat.value.copy(draftText = it) })
+            }
+            }
             }
         }
     }
 
     private fun surface() = rule.onNodeWithTag("conversation.composer.surface")
+
+    private fun assertInternalActions() {
+        val container = bounds()
+        val editor = rule.onNodeWithTag("conversation.composer.editor").fetchSemanticsNode().boundsInRoot
+        assertEquals(container.width, editor.width, 1f)
+        listOf("conversation.attachment.add", "conversation.composer.emoji", "conversation.dictation.start").forEach { tag ->
+            val button = rule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+            assertTrue("$tag must remain inside the composer", button.left >= container.left - 1f &&
+                button.right <= container.right + 1f && button.bottom <= container.bottom + 1f)
+            val sharedLineBox = with(rule.density) { androidx.compose.ui.unit.Dp(4f).toPx() }
+            assertTrue("Text line box may share only 4 dp with $tag", editor.bottom <= button.top + sharedLineBox + 1f)
+        }
+    }
+
+    private fun assertReadingRow(rtl: Boolean = false) {
+        val editor = rule.onNodeWithTag("conversation.composer.editor").assertIsNotFocused().fetchSemanticsNode().boundsInRoot
+        val emoji = rule.onNodeWithTag("conversation.composer.emoji").fetchSemanticsNode().boundsInRoot
+        val mic = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
+        assertEquals(emoji.center.y, editor.center.y, 1f)
+        if (rtl) {
+            assertTrue(editor.right <= emoji.left + 1f)
+            assertTrue(editor.left >= mic.right - 1f)
+        } else {
+            assertTrue(editor.left >= emoji.right - 1f)
+            assertTrue(editor.right <= mic.left + 1f)
+        }
+        rule.onNodeWithTag("conversation.attachment.add").assertIsDisplayed()
+        rule.onNodeWithTag("conversation.composer.placeholder", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test fun emptyUnfocusedComposerUsesOneRowAndFocusOpensTwoWithoutChangingWidth() {
+        show()
+        val reading = bounds()
+        val host = rule.onNodeWithTag("conversation.composer.host").fetchSemanticsNode().boundsInRoot
+        val margin = with(rule.density) { androidx.compose.ui.unit.Dp(16f).toPx() }
+        assertEquals(host.width - 2 * margin, reading.width, 1f)
+        assertReadingRow()
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performClick().assertIsFocused()
+        val editing = bounds()
+        assertEquals(reading.width, editing.width, 1f)
+        assertTrue(editing.height > reading.height)
+        assertInternalActions()
+        rule.runOnIdle { clearEditorFocus() }
+        assertReadingRow()
+        assertEquals(reading.height, bounds().height, 1f)
+        editor.performClick().performTextReplacement("Hi")
+        rule.runOnIdle { clearEditorFocus() }
+        assertEquals(editing.height, bounds().height, 1f)
+        assertInternalActions()
+        editor.performClick().performTextReplacement("One\nTwo\nThree")
+        assertEquals(reading.width, bounds().width, 1f)
+        assertTrue(bounds().height > editing.height)
+        editor.performTextReplacement("")
+        editor.assertIsFocused()
+        assertEquals(editing.height, bounds().height, 1f)
+        assertInternalActions()
+        rule.runOnIdle { clearEditorFocus() }
+        assertReadingRow()
+        assertEquals(reading.height, bounds().height, 1f)
+    }
+
+    @Test fun emptyReadingRowAdaptsToLargeTextAndRtl() {
+        show(rtl = true, fontScale = 2f)
+        assertReadingRow(rtl = true)
+        val readingWidth = bounds().width
+        rule.onNodeWithTag("conversation.composer.editor").performClick()
+        assertInternalActions()
+        assertEquals(readingWidth, bounds().width, 1f)
+    }
+
+    @Test fun largeTextAndRtlKeepBothRowsAndActionsInsideTheContainer() {
+        show("Hello", rtl = true, fontScale = 2f)
+        assertInternalActions()
+        val add = rule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode().boundsInRoot
+        val microphone = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
+        assertTrue(add.center.x > microphone.center.x)
+    }
+
+    @Test fun multilineComposerShrinksWhileIconsRemainCentered() {
+        show("One\nTwo\nThree")
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val textLayout = layouts.single()
+        val lastLineBottom = editor.fetchSemanticsNode().boundsInRoot.top +
+            with(rule.density) { androidx.compose.ui.unit.Dp(12f).toPx() } +
+            textLayout.getLineBottom(textLayout.lineCount - 1)
+        val toolbarTop = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot.top
+        val reduction = with(rule.density) { androidx.compose.ui.unit.Dp(4f).toPx() }
+        assertEquals("Toolbar shares only the lower 4 dp of the line box", lastLineBottom - reduction, toolbarTop, 1f)
+        val microphone = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
+        val icon = rule.onNodeWithTag("conversation.dictation.icon", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertEquals("Artwork stays centered in its button", microphone.center.y, icon.center.y, 1f)
+        assertEquals("The composer must shrink, not move empty space below the icons",
+            lastLineBottom - bounds().top + microphone.height - reduction, bounds().height, 1f)
+    }
+
+    @Test fun addingAndDeletingLinesNeverClipsOrScrollsExistingTextDuringGrowth() {
+        show("First line\nSecond", blockKeyboard = true)
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        editor.performClick().performTextInputSelection(TextRange("First line\nSecond".length))
+        val reference = surface().captureToImage().toPixelMap()
+        val left = with(rule.density) { androidx.compose.ui.unit.Dp(14f).roundToPx() }
+        val top = with(rule.density) { androidx.compose.ui.unit.Dp(12f).roundToPx() }
+        val right = with(rule.density) { androidx.compose.ui.unit.Dp(140f).roundToPx() }
+        val bottom = with(rule.density) { androidx.compose.ui.unit.Dp(36f).roundToPx() }
+        rule.mainClock.autoAdvance = false
+        listOf("First line\nSecond\nThird", "First line\nSecond").forEach { draft ->
+            editor.performTextReplacement(draft)
+            repeat(14) {
+                rule.mainClock.advanceTimeBy(16)
+                val frame = surface().captureToImage().toPixelMap()
+                var changed = 0
+                for (y in top until bottom) for (x in left until right) {
+                    if (frame[x, y] != reference[x, y]) changed++
+                }
+                assertEquals("The first line must stay rendered at the same position inside the surface", 0, changed)
+            }
+        }
+        rule.mainClock.autoAdvance = true
+    }
+
+    @Test fun placeholderFadesAtFixedPositionsAndReversesWithoutSliding() {
+        show(blockKeyboard = true)
+        val reading = bounds()
+        val editor = rule.onNodeWithTag("conversation.composer.editor")
+        val placeholder = rule.onNodeWithTag("conversation.composer.placeholder", useUnmergedTree = true)
+        fun inkPixels(): Int {
+            val pixels = placeholder.captureToImage().toPixelMap()
+            var ink = 0
+            for (y in 0 until pixels.height) for (x in 0 until pixels.width) {
+                if (pixels[x, y].red < 0.5f) ink++
+            }
+            return ink
+        }
+        val ink = inkPixels()
+        assertTrue(ink > 0)
+        val readingX = placeholder.fetchSemanticsNode().boundsInRoot.left
+        val editingX = reading.left + with(rule.density) { androidx.compose.ui.unit.Dp(14f).toPx() }
+        fun assertFixedPosition() {
+            val x = placeholder.fetchSemanticsNode().boundsInRoot.left
+            assertTrue("Placeholder must stay at an endpoint, never slide between them",
+                kotlin.math.abs(x - readingX) <= 1f || kotlin.math.abs(x - editingX) <= 1f)
+        }
+        rule.mainClock.autoAdvance = false
+        editor.performClick()
+        val openingInk = buildList {
+            repeat(12) {
+                rule.mainClock.advanceTimeBy(16)
+                assertFixedPosition()
+                add(inkPixels())
+            }
+        }
+        assertTrue("Old placeholder fades before the new one appears", openingInk.min() < ink * 0.5f)
+        assertTrue(openingInk.last() >= ink * 0.9f)
+        assertEquals(editingX, placeholder.fetchSemanticsNode().boundsInRoot.left, 1f)
+        rule.runOnUiThread { clearEditorFocus() }
+        repeat(12) { rule.mainClock.advanceTimeBy(16); assertFixedPosition() }
+        assertEquals(reading.height, bounds().height, 1f)
+        assertEquals(readingX, placeholder.fetchSemanticsNode().boundsInRoot.left, 1f)
+        editor.performClick()
+        rule.mainClock.advanceTimeBy(48)
+        rule.runOnUiThread { clearEditorFocus() }
+        repeat(12) { rule.mainClock.advanceTimeBy(16); assertFixedPosition() }
+        assertEquals(reading.height, bounds().height, 1f)
+        rule.mainClock.autoAdvance = true
+    }
 
     @Test fun firstCharacterHidesVoiceAndKeepsEmojiAndDictation() {
         show()
@@ -68,17 +250,18 @@ class ComposerLayoutFlowTest {
         rule.runOnIdle { assertTrue(action.action()) }
     }
 
-    @Test fun fourthLineIntegratesAddAndKeepsTextAboveControlsThenContracts() {
+    @Test fun additionalLinesGrowVerticallyWithControlsInsideTheSameWidth() {
         show()
         val editor = rule.onNodeWithTag("conversation.composer.editor")
         editor.performClick().performTextReplacement("One\nTwo\nThree")
         val narrow = bounds()
         editor.performTextInput("\nFour")
         val wide = bounds()
+        assertTrue(wide.height > narrow.height)
         val add = rule.onNodeWithTag("conversation.attachment.add").fetchSemanticsNode().boundsInRoot
         val text = editor.fetchSemanticsNode().boundsInRoot
         val dictation = rule.onNodeWithTag("conversation.dictation.start").fetchSemanticsNode().boundsInRoot
-        assertTrue(wide.width > narrow.width)
+        assertEquals(narrow.width, wide.width, 1f)
         assertEquals(add.left, wide.left, 1f)
         val emoji = rule.onNodeWithTag("conversation.composer.emoji").fetchSemanticsNode().boundsInRoot
         assertEquals(wide.width, text.width, 1f)
@@ -103,7 +286,7 @@ class ComposerLayoutFlowTest {
         editor.performClick().performTextReplacement(text)
         editor.performTextInputSelection(TextRange(2, 14))
         val wide = bounds()
-        assertTrue(wide.width > narrow.width)
+        assertEquals(narrow.width, wide.width, 1f)
         rule.mainClock.advanceTimeBy(2_000)
         assertEquals(wide.width, bounds().width, 1f)
         editor.assertIsFocused().assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange(2, 14)))
@@ -168,7 +351,7 @@ class ComposerLayoutFlowTest {
         rule.mainClock.autoAdvance = true
     }
 
-    @Test fun manualExpansionAndCollapseMoveWidthAndHeightTogether() {
+    @Test fun manualExpansionAndCollapseOnlyChangeHeight() {
         show("Short draft")
         val narrow = bounds()
         rule.mainClock.autoAdvance = false
@@ -177,17 +360,18 @@ class ComposerLayoutFlowTest {
             repeat(100) { rule.mainClock.advanceTimeBy(16); add(bounds()) }
         }
         val wide = expansion.last()
-        assertTrue(wide.width > narrow.width)
+        assertEquals(narrow.width, wide.width, 1f)
         assertTrue(expansion.take(10).any {
-            it.height > narrow.height + 2f && it.width > narrow.width + 2f
+            it.height > narrow.height + 2f
         })
         action("Collapse Message")
         val contraction = buildList {
             repeat(100) { rule.mainClock.advanceTimeBy(16); add(bounds()) }
         }
         assertTrue(contraction.take(10).any {
-            it.height < wide.height - 2f && it.width < wide.width - 2f
+            it.height < wide.height - 2f
         })
+        (expansion + contraction).forEach { assertEquals(narrow.width, it.width, 1f) }
         contraction.zipWithNext().forEach { (before, after) ->
             assertTrue("Collapse must not grow again at the intrinsic-size handoff", after.height <= before.height + 1f)
         }

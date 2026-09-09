@@ -58,7 +58,7 @@ class DictationCaptureTest {
         val idle = rule.onNodeWithTag("conversation.composer.surface").fetchSemanticsNode().boundsInRoot
         startThroughComposer()
         val dictation = rule.onNodeWithTag("conversation.composer.surface").fetchSemanticsNode().boundsInRoot
-        assertTrue(dictation.width > idle.width)
+        assertEquals(idle.width, dictation.width, 1f)
         rule.onNodeWithText("External speech recognition").assertDoesNotExist()
         rule.onNodeWithText("Message", substring = false).assertDoesNotExist()
         rule.onNodeWithText("Cancel", substring = false).assertDoesNotExist()
@@ -69,6 +69,9 @@ class DictationCaptureTest {
         val pause = rule.onNodeWithTag("dictation.pause").fetchSemanticsNode().boundsInRoot
         val listening = rule.onNodeWithTag("dictation.listening").fetchSemanticsNode().boundsInRoot
         assertTrue(pause.right <= listening.left)
+        val text = rule.onNodeWithTag("conversation.composer.editor").fetchSemanticsNode().boundsInRoot
+        assertTrue(text.bottom <= pause.top + 1f)
+        assertTrue(pause.left >= dictation.left && listening.right <= dictation.right)
         assertEquals(with(rule.density) { 28.dp.toPx() }, listening.center.x - pause.center.x, 1f)
         rule.onNodeWithContentDescription("Cancel").assertDoesNotExist()
         rule.onNodeWithTag("conversation.attachment.add").assertDoesNotExist()

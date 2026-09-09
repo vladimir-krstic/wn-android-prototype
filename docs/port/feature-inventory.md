@@ -1148,3 +1148,79 @@ its navigation callback; Exit restores the retained launching selection page.
 and pauses its lifecycle instead of disposing it and later reusing destroyed
 back-stack entries. `ProfileSetupFlowTest` covers living-entry preservation
 across repeated launches, Restart, Exit and root Back; device execution is pending.
+
+
+2026-09-09 composer presentation: `ConversationComposer.kt` now uses one full-width
+surface with a text row and internal action row from the empty state. Removed
+four-line width eligibility and width/toolbar morph state. Text, dictation,
+recording and review share the full-width boundary; vertical expansion retains
+one editor. Updated `ComposerLayoutFlowTest` and `DictationCaptureTest` cover
+constant width, vertical growth and internal control placement. Current device
+and visual acceptance remain pending; host results are in the composer brief.
+
+
+2026-09-09 reading-mode refinement: `ConversationComposer.kt` observes editor
+focus and presents empty/unfocused text inline after emoji. Focus or draft
+context restores the two-row layout with unchanged width and internal Add.
+`ComposerLayoutFlowTest` adds focus/blur and large-text/RTL reading alignment
+regressions; current device/visual verification remains pending.
+
+
+2026-09-09 composer motion/viewport correction: linear reading/editing and text
+height transitions replace instant reflow; `TimelineResizeAnchor` preserves the
+true bottom or exact history offset during composer/IME-driven remeasurement.
+`TimelineResizeAnchorTest` covers six host cases; `ComposerViewportFlowTest`
+compiles frame checks for bottom following and stationary history. Actual IME
+and current-build visual verification remain pending.
+
+
+2026-09-09 composer spacing refinement: the editing text's bottom padding is
+6 dp instead of 12 dp, with matching measured-height reduction. Reading mode
+and action targets retain their accepted metrics. Evidence: ConversationComposer.kt
+and the composer brief; current-build device inspection remains pending.
+
+
+2026-09-09 combined composer-gap correction supersedes the 6 dp trial: zero
+text-side bottom inset leaves only the toolbar's native icon inset. The matching
+12 dp measured-height reduction and a last-line-to-toolbar layout regression
+are in ConversationComposer.kt and ComposerLayoutFlowTest. Device acceptance
+remains pending.
+
+2026-09-09 composer-gap correction: the user rejected the artwork-offset trial.
+ConversationComposer.kt now reduces actual editing height by 4 dp while keeping
+icons centered and text fully measured. ComposerLayoutFlowTest checks the
+surface-height reduction and icon centering. Device acceptance remains pending.
+
+2026-09-09 composer motion correction: stable native text measurement inside an
+animated viewport, 160 ms focus/line-growth timing, and composer-first timeline
+measurement are implemented. Evidence: ConversationComposer.kt,
+ConversationScreen.kt, rendered-frame regressions in ComposerLayoutFlowTest,
+and existing ComposerViewportFlowTest. User video was inspected; current-build
+device execution and visual acceptance remain pending.
+
+2026-09-09 empty composer placeholder now fades between fixed reading/editing
+positions instead of sliding. Evidence: ComposerPlaceholder in
+ConversationComposer.kt and updated ComposerLayoutFlowTest fade/reversal
+coverage. Current-build visual acceptance and device execution remain pending.
+
+2026-09-09 keyboard/composer synchronization: one navigation/IME inset owner and
+keyboard-driven focus progress are implemented in ConversationScreen.kt and
+ComposerKeyboardMotion.kt. Evidence includes pure motion-transition tests and
+an inset-driven frame regression in ComposerViewportFlowTest. Current-build
+device execution and visual acceptance remain pending.
+
+2026-09-09 keyboard frame-work reduction: stable keyboard-endpoint constraints,
+layout placement, settled composer size caching and measurement-readiness effect
+keys replace repeated constraint subcomposition/height-effect restarts. Evidence:
+ConversationComposer.kt, ConversationScreen.kt, ComposerKeyboardMotion.kt and
+ComposerViewportFlowTest composition-count regression. Runtime profiling and
+visual acceptance remain pending.
+
+
+2026-09-09 keyboard dismissal lifecycle correction: BackgroundKeyboardDismissalHost
+retains input focus through IME exit; ConversationComposer consumes editor taps
+before the background observer and separates dismissal visuals from native focus.
+Evidence: BackgroundKeyboardDismissalTest and compiled
+ComposerKeyboardDismissalFlowTest cover stale completion, final-inset focus
+retention and rapid retap cancellation. Supplied-video review informed this fix;
+current-build device motion verification and visual acceptance remain pending.
