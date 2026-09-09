@@ -6,6 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import dev.ipf.whitenoise.R
+import kotlinx.coroutines.launch
 import dev.ipf.whitenoise.ui.settings.*
 import dev.ipf.whitenoise.ui.theme.WhiteNoiseSpacing
 import dev.ipf.whitenoise.model.*
@@ -19,7 +22,7 @@ internal fun ScenarioCatalogScreen(onBack: () -> Unit, onOpen: (String) -> Unit)
     }
     SettingsScaffold(title = "Scenarios", onBack = onBack) {
         SettingsList {
-            item { SettingsCallout(title = "Test a flow", text = "Choose a scenario, then tap a variant to start immediately. Each run uses temporary accounts and chats. Exit Scenario restores your app session.") }
+            item { SettingsCallout(title = "Test a flow", text = "Choose a scenario, then tap a variant to start immediately. Each run uses temporary accounts and chats. Exit Scenario returns to the page you started from.") }
             item { OutlinedTextField(query, { query = it }, label = { Text("Search all scenarios") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin).testTag("scenarios.search")) }
             if (filtered.isEmpty()) item { SettingsExplainer("No scenarios match this search.") }
@@ -40,7 +43,7 @@ internal fun ScenarioVariantsScreen(definition: ScenarioDefinition, onBack: () -
     SettingsScaffold(title = definition.title, onBack = onBack) {
         SettingsList {
             item { SettingsCallout(title = "Scenario", text = definition.description) }
-            item { SettingsExplainer("Tap a variant to run it now. Restart resets its data and retry counters. Change Variant returns here. Exit Scenario restores your previous app session.") }
+            item { SettingsExplainer("Tap a variant to run it now. Restart resets its data and retry counters. Exit Scenario returns here. Tap the info icon during a run for its title and instructions.") }
             definition.deviceNote?.let { item { SettingsCallout(title = "Android integration", text = it) } }
             definition.variants.forEach { variant -> item(key = variant.id) {
                 SettingsGroup { row { SettingsLink(variant.title, variant.description, { onRun(variant) },
@@ -50,25 +53,42 @@ internal fun ScenarioVariantsScreen(definition: ScenarioDefinition, onBack: () -
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-internal fun ScenarioControls(run: ScenarioRun, onRestart: () -> Unit, onChange: () -> Unit, onExit: () -> Unit) {
-    var details by rememberSaveable(run.generation) { mutableStateOf(false) }
+internal fun ScenarioControls(run: ScenarioRun, onRestart: () -> Unit, onExit: () -> Unit) {
+    val tooltipState = rememberTooltipState(isPersistent = true)
+    val scope = rememberCoroutineScope()
     Surface(tonalElevation = WhiteNoiseSpacing.Related) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin)) {
-            TextButton(onClick = { details = !details }, modifier = Modifier.testTag("scenario.running")) {
-                Text("Scenario: ${run.definition.title} · ${run.variant.title}", style = MaterialTheme.typography.labelMedium)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(horizontal = WhiteNoiseSpacing.CompactScreenMargin).testTag("scenario.controls"),
+            horizontalArrangement = Arrangement.spacedBy(WhiteNoiseSpacing.Related),
+        ) {
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                state = tooltipState,
+                tooltip = {
+                    RichTooltip(title = { Text(run.definition.title, Modifier.testTag("scenario.info.title")) }) {
+                        Text(run.variant.description, Modifier.testTag("scenario.info.description"))
+                    }
+                },
+            ) {
+                IconButton(
+                    onClick = {
+                        if (tooltipState.isVisible) tooltipState.dismiss()
+                        else scope.launch { tooltipState.show() }
+                    },
+                    modifier = Modifier.testTag("scenario.info"),
+                ) {
+                    Icon(painterResource(R.drawable.ic_info), contentDescription = "Scenario information")
+                }
             }
-            if (details) Text(run.variant.description, style = MaterialTheme.typography.bodySmall)
-            FlowRow {
-                TextButton(onClick = onRestart, modifier = Modifier.testTag("scenario.restart")) { Text("Restart") }
-                TextButton(onClick = onChange, modifier = Modifier.testTag("scenario.change")) { Text("Change Variant") }
-                TextButton(onClick = onExit, modifier = Modifier.testTag("scenario.exit")) { Text("Exit Scenario") }
-                if (run.definition.id == "incoming-lock" && run.model.incoming.locked)
-                    TextButton(onClick = { run.model.incoming.chooseLock(false) }) { Text("Unlock") }
-                if (run.definition.id == "expiry")
-                    TextButton(onClick = { run.model.retention.advanceExampleClock(60_000) }) { Text("Advance Time 1 min") }
-            }
+            TextButton(onClick = onRestart, modifier = Modifier.testTag("scenario.restart")) { Text("Restart") }
+            TextButton(onClick = onExit, modifier = Modifier.testTag("scenario.exit")) { Text("Exit Scenario") }
+            if (run.definition.id == "incoming-lock" && run.model.incoming.locked)
+                TextButton(onClick = { run.model.incoming.chooseLock(false) }) { Text("Unlock") }
+            if (run.definition.id == "expiry")
+                TextButton(onClick = { run.model.retention.advanceExampleClock(60_000) }) { Text("Advance Time 1 min") }
         }
     }
 }

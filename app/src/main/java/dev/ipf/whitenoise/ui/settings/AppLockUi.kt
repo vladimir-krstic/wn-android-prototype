@@ -87,7 +87,8 @@ internal fun ProtectedAppContent(hidden: Boolean, lockedContent: @Composable () 
         parent.addObserver(observer); syncLifecycle()
         onDispose { parent.removeObserver(observer); owner.lifecycle.currentState = Lifecycle.State.DESTROYED }
     }
-    SideEffect { syncLifecycle(); if (hidden) { focus.clearFocus(force = true); keyboard?.hide() } }
+    SideEffect { syncLifecycle() }
+    LaunchedEffect(hidden) { if (hidden) { focus.clearFocus(force = true); keyboard?.hide() } }
     Layout(modifier = Modifier.fillMaxSize(),content = {
         Box(if (hidden) Modifier.clearAndSetSemantics { } else Modifier) {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) { content() }

@@ -4886,3 +4886,21 @@ buttons from feature pages. Only Developer Tools → Scenarios may select and
 launch a fixture variant. Feature screens retain ordinary product/diagnostic
 actions and consume the temporary run's state. Obsolete chooser components are
 deleted rather than hidden for later reuse. See `screens/scenario-catalog.md`.
+
+## 2026-09-09 — Compact scenario strip and return destination
+
+The user wants only an info icon, Restart and Exit Scenario in the standard
+scenario strip. Scenario/variant names and Change Variant are removed from the
+strip. Tapping the info icon opens a Material rich tooltip containing the title
+and description. Exit resumes the exact catalog selection entry that launched
+the run, including scroll position; it does not navigate to a new replacement
+page. See `screens/scenario-catalog.md`.
+
+
+### Scenario Exit keeps the launching host alive — 2026-09-09
+
+The user reported Exit closing/crashing the app. The root now keeps the original
+NavHost composed with its lifecycle capped at CREATED while the temporary run
+is visible. Exit resumes the same entry rather than reusing destroyed lifecycle
+objects. The original subtree has no active scenario context and cannot control
+the visible session's window or keyboard. See `screens/scenario-catalog.md`.

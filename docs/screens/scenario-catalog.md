@@ -19,10 +19,14 @@ Message editing, forwarding, deletion, writing tools,
 profile editing, translation, retention and group actions open their relevant
 controls directly. No separate Apply button or trip through the app is needed.
 
-The original model and navigation controller remain separate. **Restart**
-recreates the temporary model and resets retry counters. **Change Variant**
-returns to that scenario's variant page. **Exit Scenario** restores the original
-app session. System Back uses the temporary navigation stack; Back at its root
+The original model and navigation controller remain separate. The original host
+stays composed while a run is active, hidden from placement/accessibility and
+limited to the CREATED lifecycle state. Exit resumes that same living host; it
+must never reattach entries whose lifecycle was destroyed. **Restart**
+recreates the temporary model and resets retry counters. **Exit Scenario**
+returns to the exact scenario-selection entry that launched the run, preserving
+its scroll position and the original app data. It does not push a replacement
+page. The strip has no Change Variant action or visible scenario/variant name. System Back uses the temporary navigation stack; Back at its root
 exits the scenario. Native dialogs retain their ordinary Back-to-dismiss behavior;
 the scenario controls remain below the app content and become actionable again
 when a modal is dismissed.
@@ -31,8 +35,8 @@ when a modal is dismissed.
 
 - Scenarios; Search all scenarios; Scenario; Test a flow.
 - “Choose a scenario, then tap a variant to start immediately. Each run uses
-  temporary accounts and chats. Exit Scenario restores your app session.”
-- Restart; Change Variant; Exit Scenario.
+  temporary accounts and chats. Exit Scenario returns to the page you started from.”
+- Scenario information (info-icon accessibility label); Restart; Exit Scenario.
 - Unlock for deferred incoming requests; Advance Time 1 min for expiry examples.
 - Per-scenario and per-variant descriptions live next to their launch recipes in
   `scenarios/ScenarioCatalog.kt`; setup descriptions in `SetupScenarioDescriptions.kt`.
@@ -77,7 +81,11 @@ the in-memory run, consistent with the app's existing prototype boundary.
 Existing SettingsScaffold/SettingsList/SettingsGroup/SettingsLink components,
 a labeled Material text field and text buttons. A full page presents variants;
 selection is an action, not a radio setting. Descriptions wrap naturally and use
-standard semantic text. The control row wraps at larger text/display sizes.
+standard semantic text. The compact control row starts with a Material info
+IconButton. A tap opens a persistent Material RichTooltip with the scenario
+title and the selected run's description; outside tap or Back dismisses it.
+TooltipBox supplies anchoring, focus and accessibility behavior. The control
+row wraps at larger text/display sizes.
 Shared screen margins and edge-to-edge inset handling apply. No custom gestures,
 iOS onboarding sheets, fixed orientation or runtime dependencies are introduced.
 
@@ -92,6 +100,8 @@ cleared when the run ends. No connected testing is authorized by this task.
 
 ## Governing Android sources
 
+- https://developer.android.com/develop/ui/compose/components/tooltip — rich
+  tooltip with title, description and explicit tap-to-show behavior.
 - https://developer.android.com/guide/navigation — typed destinations and Back.
 - https://developer.android.com/develop/ui/compose/state-saving — saved UI state
   and the distinction between configuration changes and process death.
@@ -141,3 +151,46 @@ Exclusive-ownership follow-up validation: 1,089 unit tests pass; all 74 scenario
 and 372 variants remain registered. Ten Python checks and 1,750 translated keys
 across four locales pass. App and instrumentation APKs build; lint reports zero
 errors and 16 warnings. No device or emulator testing was performed.
+
+## Compact scenario strip — 2026-09-09
+
+User-directed change replaces the visible title/variant and inline expansion
+with an info icon and rich tooltip. Restart and Exit Scenario remain. Special
+Unlock and Advance Time controls remain available for the two flows that need
+them. Exit resumes the retained launching page; the former Change Variant
+callback and its replacement-route navigation were removed. The navigation test
+checks tooltip interaction, restart, and the exact launching back-stack entry
+on exit. Device execution and visual acceptance remain pending.
+
+2026-09-09 host validation: all five `ScenarioCatalogTest` tests, ten Python
+checks, locale verification, lint, app APK and instrumentation APK builds pass.
+The updated tooltip/navigation interaction test is compiled, not device-run.
+
+
+## Exit lifecycle correction — 2026-09-09
+
+The conditional root previously disposed the original AppLockScope and its
+ProtectedAppContent lifecycle owner when launching a run. Navigation forwarded
+that owner's ON_DESTROY to the retained back-stack entries. Restoring saved
+Compose values could not make those destroyed entries reusable on Exit.
+
+WhiteNoiseApp now retains the original host in ProtectedAppContent while showing
+a separate temporary host. Only the temporary subtree receives LocalScenarioRun;
+the hidden original host cannot overwrite the Activity's window privacy flags or
+open the keyboard. Suspending it does not trigger account background locking.
+Focus is cleared once on hiding, so later recompositions cannot steal focus from
+the visible scenario.
+
+ProfileSetupFlowTest adds repeated access/setup/startup launches, restart, Exit
+and root system Back. It asserts the original entry never reaches DESTROYED, is
+CREATED during a run, resumes as the same object, retains account state, and can
+still navigate Back to the catalog. These device regression tests are compiled;
+execution remains pending.
+
+Governing source: [Navigation back-stack lifecycle](https://developer.android.com/guide/navigation/use-graph/programmatic)
+and [lifecycle ownership](https://developer.android.com/topic/libraries/architecture/lifecycle).
+
+Exit correction host validation: the full `testDebugUnitTest lintDebug
+assembleDebug assembleDebugAndroidTest` gate passes (1,089 unit tests; lint
+0 errors, 16 warnings, 2 hints). Ten Python checks and all 1,750 translated
+keys in four locales pass. No device execution or visual verification.

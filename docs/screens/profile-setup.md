@@ -151,8 +151,9 @@ The earlier next-attempt chooser is superseded by
 [the app-wide catalog](scenario-catalog.md). Developer Tools → Scenarios →
 Profile setup lists all eleven described variants. Tapping one starts its checks
 immediately in a temporary session, even when Developer Tools is disabled in the
-original account. Restart resets the run; Change Variant returns to selection;
-Exit Scenario restores the original app session. Earlier instructions to select
+original account. Restart resets the run; Exit Scenario returns to the launching selection page
+and restores the original app data. The strip's info icon opens its title and
+instructions in a tooltip. Earlier instructions to select
 an outcome and then roam to Add Profile are obsolete.
 
 Latest catalog validation: 74 scenarios / 372 variants; 1,089 host unit tests pass,

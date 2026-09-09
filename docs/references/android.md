@@ -52,6 +52,7 @@ authority; this index does not freeze library versions.
 - [Add predictive Back support](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture)
 - [App bars](https://developer.android.com/develop/ui/compose/components/app-bars)
 - [Icon buttons](https://developer.android.com/develop/ui/compose/components/icon-button)
+- [Tooltips](https://developer.android.com/develop/ui/compose/components/tooltip)
 - [Floating action buttons](https://developer.android.com/develop/ui/compose/components/fab)
 - [Badges](https://developer.android.com/develop/ui/compose/components/badges)
 - [Material icon XML guidance](https://developer.android.com/develop/ui/compose/graphics/images/material)

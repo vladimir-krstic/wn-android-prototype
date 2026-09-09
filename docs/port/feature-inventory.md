@@ -1136,3 +1136,15 @@ messages, attachments, agents or event cards. The catalog is the only UI entry
 for those recipes. Legacy chooser components were removed, and host boundary
 checks enforce exclusive selector/injection ownership. Ordinary feature and
 diagnostic operations remain intact. See `screens/scenario-catalog.md`.
+
+2026-09-09 scenario-strip refinement: `ScenarioControls` now uses a tappable
+Material info tooltip plus Restart/Exit. The shell removes Change Variant and
+its navigation callback; Exit restores the retained launching selection page.
+`ProfileSetupFlowTest` checks tooltip, restart and exact source-entry restoration
+(compiled only; device/visual acceptance pending).
+
+
+2026-09-09 scenario-exit correction: `WhiteNoiseApp` retains the original host
+and pauses its lifecycle instead of disposing it and later reusing destroyed
+back-stack entries. `ProfileSetupFlowTest` covers living-entry preservation
+across repeated launches, Restart, Exit and root Back; device execution is pending.

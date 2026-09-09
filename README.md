@@ -90,9 +90,10 @@ forward. See [AGENTS.md](AGENTS.md) for the full workflow.
 
 Open **Settings → Developer Tools → Scenarios**, even when Developer Tools is off.
 Search or choose a feature, read its variants, then tap one to launch immediately
-into a temporary account/chat session. Use **Restart**, **Change Variant**, or
-**Exit Scenario** in the scenario controls. Exiting restores your original app
-session. Tap the scenario name during a run to reveal its instructions.
+into a temporary account/chat session. Use **Restart** or **Exit Scenario** in the compact scenario strip. Exiting
+returns to the scenario-selection page you launched from, preserving its scroll
+position and your original app data. Tap the info icon on the left to see the
+scenario title and instructions in a tooltip.
 
 The catalog includes **74 scenarios and 372 variants**, covering all existing
 scenario enums and the former switch/action examples across the app. Scenario
@@ -107,6 +108,12 @@ assembleDebugAndroidTest` passed: 1,089 unit tests, lint 0 errors / 16 warnings,
 and both APKs built. The ten Python checks and locale verification passed
 (1,750 keys, four complete locales). Instrumentation is compiled only; device
 and visual acceptance remain pending.
+
+Scenario Exit correction validated on 2026-09-09 with the same full Gradle gate:
+1,089 unit tests pass, lint has no errors (16 warnings, 2 hints), and app/test
+APKs build. Ten Python checks, 1,750 translated keys across four locales, and
+`git diff --check` pass. Repeated-run lifecycle/Exit/system-Back regression
+coverage is compiled but has not been executed on a device.
 
 ## Repository map
 

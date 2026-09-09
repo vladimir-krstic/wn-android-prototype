@@ -46,35 +46,52 @@ fun WhiteNoiseApp(
 ) {
     val sessions: dev.ipf.whitenoise.scenarios.ScenarioSessions = viewModel()
     val run = sessions.run
-    val saved = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     androidx.compose.runtime.CompositionLocalProvider(
         dev.ipf.whitenoise.scenarios.LocalScenarioSessions provides sessions,
-        dev.ipf.whitenoise.scenarios.LocalScenarioRun provides run,
     ) {
-        if (run == null) saved.SaveableStateProvider("main") {
-            WhiteNoiseAppContent(navController, appViewModel)
-        } else androidx.compose.runtime.key(run.generation) {
-            val scenarioNav = rememberNavController()
-            val scenarioEntry by scenarioNav.currentBackStackEntryAsState()
-            // Clear scenario navigation ViewModels as well as app state when a run ends.
-            val owner = androidx.compose.runtime.remember(run.generation) {
-                object : androidx.lifecycle.ViewModelStoreOwner {
-                    override val viewModelStore = androidx.lifecycle.ViewModelStore()
+        // Keep the original NavHost and its lifecycle owner attached. Disposing AppLockScope
+        // destroys that owner's back-stack lifecycles; those entries cannot be resumed on exit.
+        dev.ipf.whitenoise.ui.settings.ProtectedAppContent(
+            hidden = run != null,
+            lockedContent = {
+                if (run != null) androidx.compose.runtime.CompositionLocalProvider(
+                    dev.ipf.whitenoise.scenarios.LocalScenarioRun provides run,
+                ) {
+                    ScenarioApp(run, sessions)
                 }
+            },
+        ) {
+            androidx.compose.runtime.CompositionLocalProvider(
+                dev.ipf.whitenoise.scenarios.LocalScenarioRun provides null,
+            ) {
+                WhiteNoiseAppContent(navController, appViewModel, active = run == null)
             }
-            androidx.compose.runtime.DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
-            androidx.compose.runtime.CompositionLocalProvider(androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides owner) {
-                androidx.activity.compose.BackHandler(enabled = scenarioEntry != null && scenarioNav.previousBackStackEntry == null) { sessions.exit() }
-                WhiteNoiseTheme {
-                    androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
-                        Box(Modifier.weight(1f)) { WhiteNoiseAppContent(scenarioNav, run.model) }
-                        dev.ipf.whitenoise.scenarios.ScenarioControls(run, sessions::restart, {
-                            val id = run.definition.id
-                            sessions.exit()
-                            // The main navigation stack is retained while the test session runs.
-                            navController.navigate(dev.ipf.whitenoise.navigation.AppRoute.ScenarioVariants(id)) { launchSingleTop = true }
-                        }, sessions::exit)
-                    }
+        }
+    }
+}
+
+@Composable
+private fun ScenarioApp(
+    run: dev.ipf.whitenoise.scenarios.ScenarioRun,
+    sessions: dev.ipf.whitenoise.scenarios.ScenarioSessions,
+) {
+    androidx.compose.runtime.key(run.generation) {
+        val scenarioNav = rememberNavController()
+        val scenarioEntry by scenarioNav.currentBackStackEntryAsState()
+        // Clear scenario navigation ViewModels as well as app state when a run ends.
+        val owner = androidx.compose.runtime.remember(run.generation) {
+            object : androidx.lifecycle.ViewModelStoreOwner {
+                override val viewModelStore = androidx.lifecycle.ViewModelStore()
+            }
+        }
+        androidx.compose.runtime.DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
+        androidx.compose.runtime.CompositionLocalProvider(androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner provides owner) {
+            androidx.activity.compose.BackHandler(enabled = scenarioEntry != null && scenarioNav.previousBackStackEntry == null) { sessions.exit() }
+            WhiteNoiseTheme {
+                androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(1f)) { WhiteNoiseAppContent(scenarioNav, run.model) }
+                    // Exit resumes the retained catalog entry, including its scroll position.
+                    dev.ipf.whitenoise.scenarios.ScenarioControls(run, sessions::restart, sessions::exit)
                 }
             }
         }
@@ -82,7 +99,7 @@ fun WhiteNoiseApp(
 }
 
 @Composable
-private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel: AppViewModel) {
+private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel: AppViewModel, active: Boolean = true) {
     val scenario = dev.ipf.whitenoise.scenarios.LocalScenarioRun.current
     val view = LocalView.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -101,7 +118,10 @@ private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel:
     val hideScreenInRecents = settings?.hideScreenInRecents == true
     val blockScreenshotsInChats = settings?.blockScreenshotsInChats == true
     val chatPrivacySurface = isChatPrivacyRoute(currentBackStackEntry?.destination?.route)
+    val currentActive = androidx.compose.runtime.rememberUpdatedState(active)
     SideEffect {
+        // Only the visible session may control the shared Activity window.
+        if (!active) return@SideEffect
         view.context.findActivity()?.window?.let { window ->
             if (WindowPrivacyPolicy.shouldSecure(
                     paused = paused.value,
@@ -124,7 +144,7 @@ private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel:
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
                 paused.value = true
-                if (requireAuthentication.value || hideRecents.value) {
+                if (currentActive.value && (requireAuthentication.value || hideRecents.value)) {
                     view.context.findActivity()?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 }
             } else if (event == Lifecycle.Event.ON_RESUME) paused.value = false
@@ -140,11 +160,12 @@ private fun WhiteNoiseAppContent(navController: NavHostController, appViewModel:
             colors = settings?.colors ?: AppearanceColorPreferences(),
         ) {
             val focusManager = LocalFocusManager.current
-            dev.ipf.whitenoise.ui.settings.IncognitoKeyboardScope(profile?.settings?.incognitoKeyboard == true,blocked = appLock.protects(profile) || appLock.shieldsBackground) {
+            dev.ipf.whitenoise.ui.settings.IncognitoKeyboardScope(profile?.settings?.incognitoKeyboard == true,blocked = !active || appLock.protects(profile) || appLock.shieldsBackground) {
                 dev.ipf.whitenoise.ui.settings.AuditLogHost(appViewModel.auditLogs) {
                     dev.ipf.whitenoise.ui.settings.AppLockScope(appLock,profile,
                         onLeaveApp = { view.context.findActivity()?.moveTaskToBack(true) },
-                        changingConfiguration = { view.context.findActivity()?.isChangingConfigurations == true },
+                        // Suspending the catalog for a run is not backgrounding the real account.
+                        changingConfiguration = { !active || view.context.findActivity()?.isChangingConfigurations == true },
                         credentialOverride = if (scenario?.definition?.id == "app-lock") true else null) {
                         Box(Modifier.fillMaxSize().clearFocusOnBackgroundTap(focusManager)) {
                             if (startup.phase != StartupPhase.Ready) StartupScreen(

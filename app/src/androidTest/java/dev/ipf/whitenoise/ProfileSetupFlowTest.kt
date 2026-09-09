@@ -132,22 +132,69 @@ class ProfileSetupFlowTest {
         rule.onNodeWithTag("developer.scenarios").performScrollTo().performClick()
         rule.onNodeWithTag("scenario.setup").performScrollTo().performClick()
         rule.onNodeWithTag("scenario.variant.Recovery").performScrollTo().performClick()
-        rule.onNodeWithTag("scenario.running").assertIsDisplayed()
+        rule.onNodeWithTag("scenario.info").assertIsDisplayed()
         rule.onNodeWithTag("scenario.exit").performClick()
         rule.onNodeWithTag("scenario.variant.Recovery").assertExists()
         rule.runOnIdle { assertEquals(original, vm.uiState) }
     }
 
-    @Test fun changeVariantReturnsToItsPageAndRestartKeepsTheChosenVariant() {
+    @Test fun restartKeepsTheChosenVariantAndExitReturnsToTheExactLaunchingEntry() {
+        val vm = AppViewModel().apply { completeSignIn(OnboardingOrigin.Initial) }
+        lateinit var nav: NavHostController
+        var launchingEntryId: String? = null
+        rule.setContent { nav = rememberNavController(); WhiteNoiseApp(nav, vm) }
+        rule.runOnIdle { nav.navigate(AppRoute.ScenarioVariants("setup")) }
+        rule.runOnIdle { launchingEntryId = nav.currentBackStackEntry!!.id }
+        rule.onNodeWithTag("scenario.variant.Attention").performScrollTo().performClick()
+        rule.onNodeWithTag("scenario.change").assertDoesNotExist()
+        rule.onNodeWithTag("scenario.restart").performClick()
+        rule.onNodeWithTag("scenario.info").performClick()
+        rule.onNodeWithTag("scenario.info.title").assertTextEquals("Profile setup")
+        rule.onNodeWithTag("scenario.info.description").assertTextContains("Edit your profile or skip it.", substring = true)
+        androidx.test.espresso.Espresso.pressBack()
+        rule.onNodeWithTag("scenario.info.description").assertDoesNotExist()
+        rule.onNodeWithTag("scenario.exit").performClick()
+        rule.onNodeWithTag("scenario.variant.Attention").assertIsDisplayed()
+        rule.runOnIdle { assertEquals(launchingEntryId, nav.currentBackStackEntry!!.id) }
+    }
+
+    @Test fun scenarioExitAndRootBackResumeTheLivingLaunchingEntryAcrossRepeatedRuns() {
         val vm = AppViewModel().apply { completeSignIn(OnboardingOrigin.Initial) }
         lateinit var nav: NavHostController
         rule.setContent { nav = rememberNavController(); WhiteNoiseApp(nav, vm) }
-        rule.runOnIdle { nav.navigate(AppRoute.ScenarioVariants("setup")) }
-        rule.onNodeWithTag("scenario.variant.Attention").performScrollTo().performClick()
-        rule.onNodeWithTag("scenario.restart").performClick()
-        rule.onNodeWithTag("scenario.running").assertTextContains("Needs attention", substring = true)
-        rule.onNodeWithTag("scenario.change").performClick()
-        rule.onNodeWithTag("scenario.variant.MessagingFailure").performScrollTo().assertExists()
+        rule.runOnIdle { nav.navigate(AppRoute.Scenarios) }
+        val original = rule.runOnIdle { vm.uiState }
+        listOf("access" to "SignInFailure", "setup" to "Attention", "startup" to "Ready").forEach { (id, variant) ->
+            rule.runOnIdle { nav.navigate(AppRoute.ScenarioVariants(id)) }
+            val entry = rule.runOnIdle { nav.currentBackStackEntry!! }
+            var destroyed = false
+            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                if (event == androidx.lifecycle.Lifecycle.Event.ON_DESTROY) destroyed = true
+            }
+            rule.runOnIdle { entry.lifecycle.addObserver(observer) }
+            rule.onNodeWithTag("scenario.variant.$variant").performScrollTo().performClick()
+            rule.onNodeWithTag("scenario.exit").assertIsDisplayed()
+            rule.onNodeWithTag("scenario.variant.$variant").assertDoesNotExist()
+            rule.runOnIdle {
+                assertFalse("Launching page was destroyed during $id", destroyed)
+                assertSame(entry, nav.currentBackStackEntry)
+                assertEquals(androidx.lifecycle.Lifecycle.State.CREATED, entry.lifecycle.currentState)
+            }
+            rule.onNodeWithTag("scenario.restart").performClick()
+            if (id == "startup") androidx.test.espresso.Espresso.pressBack()
+            else rule.onNodeWithTag("scenario.exit").performClick()
+            rule.onNodeWithTag("scenario.variant.$variant").assertIsDisplayed()
+            rule.runOnIdle {
+                assertFalse("Launching page was destroyed on exit from $id", destroyed)
+                assertSame(entry, nav.currentBackStackEntry)
+                assertEquals(androidx.lifecycle.Lifecycle.State.RESUMED, entry.lifecycle.currentState)
+                assertEquals(original, vm.uiState)
+                entry.lifecycle.removeObserver(observer)
+            }
+            // Ordinary Back must still return to the catalog after leaving the run.
+            androidx.test.espresso.Espresso.pressBack()
+            rule.onNodeWithTag("scenarios.search").assertIsDisplayed()
+        }
     }
 
     @Test fun restoredSetupRouteWithoutAttemptReturnsToInitialWelcome() {
